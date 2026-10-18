@@ -39,7 +39,7 @@ export * from './lib/checkbox';
 
 export * from './lib/combobox';
 
-// @slot command
+export * from './lib/command';
 
 // @slot context-menu
 

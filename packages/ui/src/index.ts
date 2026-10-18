@@ -37,7 +37,7 @@ export * from './lib/checkbox';
 
 // @slot color-picker
 
-// @slot combobox
+export * from './lib/combobox';
 
 // @slot command
 

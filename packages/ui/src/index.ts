@@ -61,7 +61,7 @@ export * from './lib/combobox';
 
 // @slot float-button
 
-// @slot form-field
+export * from './lib/form-field';
 
 // @slot grid
 

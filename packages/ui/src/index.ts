@@ -149,7 +149,7 @@ export * from './lib/textarea';
 
 // @slot tour
 
-// @slot transfer
+export * from './lib/transfer';
 
 // @slot tree
 

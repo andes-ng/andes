@@ -145,7 +145,7 @@ export * from './lib/textarea';
 
 // @slot toggle
 
-// @slot tooltip
+export * from './lib/tooltip';
 
 // @slot tour
 

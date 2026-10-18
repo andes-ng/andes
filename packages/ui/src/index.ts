@@ -83,7 +83,7 @@ export * from './lib/input-number';
 
 // @slot mentions
 
-// @slot menu
+export * from './lib/menu';
 
 // @slot menubar
 

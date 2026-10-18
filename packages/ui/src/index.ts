@@ -107,7 +107,7 @@ export * from './lib/rate';
 
 // @slot result
 
-// @slot scroll-area
+export * from './lib/scroll-area';
 
 // @slot segmented
 

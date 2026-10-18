@@ -99,7 +99,7 @@ export * from './lib/input-number';
 
 // @slot progress
 
-// @slot qr-code
+export * from './lib/qr-code';
 
 // @slot radio-group
 

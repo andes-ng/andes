@@ -93,9 +93,9 @@ export * from './lib/input-number';
 
 // @slot palette
 
-// @slot popconfirm
+export * from './lib/popconfirm';
 
-// @slot popover
+export * from './lib/popover';
 
 // @slot progress
 

@@ -131,7 +131,7 @@ export * from './lib/select';
 
 // @slot switch
 
-// @slot table
+export * from './lib/table';
 
 // @slot tabs
 

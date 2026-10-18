@@ -133,7 +133,7 @@ export * from './lib/select';
 
 // @slot table
 
-// @slot tabs
+export * from './lib/tabs';
 
 // @slot tag
 

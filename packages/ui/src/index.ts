@@ -81,7 +81,7 @@ export * from './lib/input-number';
 
 // @slot masonry
 
-// @slot mentions
+export * from './lib/mentions';
 
 // @slot menu
 

@@ -119,7 +119,7 @@ export * from './lib/select';
 
 // @slot slider
 
-// @slot space
+export * from './lib/space';
 
 // @slot spinner
 

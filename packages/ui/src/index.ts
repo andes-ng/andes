@@ -49,7 +49,7 @@ export * from './lib/combobox';
 
 // @slot dialog
 
-// @slot divider
+export * from './lib/divider';
 
 // @slot drawer
 

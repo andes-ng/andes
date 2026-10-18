@@ -89,7 +89,7 @@ export * from './lib/input-number';
 
 // @slot navigation-menu
 
-// @slot pagination
+export * from './lib/pagination';
 
 // @slot palette
 

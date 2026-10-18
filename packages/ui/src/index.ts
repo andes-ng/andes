@@ -157,6 +157,6 @@ export * from './lib/textarea';
 
 // @slot typography
 
-// @slot upload
+export * from './lib/upload';
 
 // @slot watermark

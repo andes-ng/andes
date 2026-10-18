@@ -151,7 +151,7 @@ export * from './lib/toggle';
 
 // @slot transfer
 
-// @slot tree
+export * from './lib/tree';
 
 // @slot tree-select
 

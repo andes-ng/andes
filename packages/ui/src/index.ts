@@ -159,4 +159,4 @@ export * from './lib/textarea';
 
 // @slot upload
 
-// @slot watermark
+export * from './lib/watermark';

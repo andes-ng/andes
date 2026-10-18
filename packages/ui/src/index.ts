@@ -57,7 +57,7 @@ export * from './lib/combobox';
 
 // @slot empty
 
-// @slot flex
+export * from './lib/flex';
 
 // @slot float-button
 

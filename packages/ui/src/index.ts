@@ -139,7 +139,7 @@ export * from './lib/select';
 
 export * from './lib/textarea';
 
-// @slot timeline
+export * from './lib/timeline';
 
 // @slot toast
 

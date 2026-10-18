@@ -45,7 +45,7 @@ export * from './lib/combobox';
 
 // @slot date-picker
 
-// @slot descriptions
+export * from './lib/descriptions';
 
 // @slot dialog
 

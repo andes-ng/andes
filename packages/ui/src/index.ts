@@ -97,7 +97,7 @@ export * from './lib/input-number';
 
 // @slot popover
 
-// @slot progress
+export * from './lib/progress';
 
 // @slot qr-code
 

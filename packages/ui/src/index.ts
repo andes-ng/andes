@@ -53,7 +53,7 @@ export * from './lib/combobox';
 
 // @slot drawer
 
-// @slot dropdown-menu
+export * from './lib/dropdown-menu';
 
 // @slot empty
 

@@ -83,55 +83,55 @@ type Story = StoryObj<AndesTransfer>;
 
 export const Default: Story = {};
 
-/** Each list has its own search box; hidden items keep their selection. */
+/**
+ * Each list has its own search box; hidden items keep their selection. The second transfer
+ * sets `filterOption`, which decides what a search matches: here the start of the group shown
+ * in the description.
+ */
 export const Search: Story = {
   render: () => ({
     props: {
       permissionItems: permissions,
       chosen: signal<readonly string[]>(['stock.read']),
-    },
-    template: `<andes-transfer aria-label="Role permissions" showSearch searchPlaceholder="Search permissions" [dataSource]="permissionItems" [(targetKeys)]="chosen" />`,
-  }),
-};
-
-/**
- * `filterOption` decides what a search matches. This one matches the start of the group
- * shown in the description.
- */
-export const CustomSearchMatch: Story = {
-  render: () => ({
-    props: {
-      permissionItems: permissions,
-      chosen: signal<readonly string[]>([]),
+      chosenByGroup: signal<readonly string[]>([]),
       byGroup: (query: string, item: AndesTransferItem) =>
         (item.description ?? '').toLowerCase().startsWith(query.toLowerCase()),
     },
-    template: `<andes-transfer aria-label="Role permissions" showSearch searchPlaceholder="Type a group" [dataSource]="permissionItems" [(targetKeys)]="chosen" [filterOption]="byGroup" />`,
-  }),
-};
-
-export const DisabledItems: Story = {
-  render: () => ({
-    props: {
-      permissionItems: permissions,
-      chosen: signal<readonly string[]>(['users.manage']),
-    },
     template: `
-      <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-        <span style="${caption}">"Manage users" is disabled: it can't be selected or moved.</span>
-        <andes-transfer aria-label="Role permissions" [dataSource]="permissionItems" [(targetKeys)]="chosen" />
+      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <andes-transfer aria-label="Role permissions" showSearch searchPlaceholder="Search permissions" [dataSource]="permissionItems" [(targetKeys)]="chosen" />
+        <andes-transfer aria-label="Role permissions, search by group" showSearch searchPlaceholder="Type a group" [dataSource]="permissionItems" [(targetKeys)]="chosenByGroup" [filterOption]="byGroup" />
       </div>
     `,
   }),
 };
 
-export const Disabled: Story = {
+/**
+ * The non-default states, one transfer each: an item with `disabled` (it can't be selected
+ * or moved, even when it is already in the target), the whole component `disabled`, and the
+ * validation `status` (`error`, `warning`).
+ */
+export const States: Story = {
   render: () => ({
     props: {
       permissionItems: permissions,
-      chosen: signal<readonly string[]>(['invoices.read', 'stock.read']),
+      warehouseItems: warehouses,
+      withDisabledItem: signal<readonly string[]>(['users.manage']),
+      locked: signal<readonly string[]>(['invoices.read', 'stock.read']),
+      none: signal<readonly string[]>([]),
+      some: signal<readonly string[]>(['lim']),
     },
-    template: `<andes-transfer aria-label="Role permissions" disabled [dataSource]="permissionItems" [(targetKeys)]="chosen" />`,
+    template: `
+      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <span style="${caption}">"Manage users" is disabled: it can't be selected or moved.</span>
+          <andes-transfer aria-label="Role permissions, disabled item" [dataSource]="permissionItems" [(targetKeys)]="withDisabledItem" />
+        </div>
+        <andes-transfer aria-label="Role permissions, disabled" disabled [dataSource]="permissionItems" [(targetKeys)]="locked" />
+        <andes-transfer aria-label="Warehouses, error" status="error" [dataSource]="warehouseItems" [(targetKeys)]="none" />
+        <andes-transfer aria-label="Warehouses, warning" status="warning" [dataSource]="warehouseItems" [(targetKeys)]="some" />
+      </div>
+    `,
   }),
 };
 
@@ -157,83 +157,20 @@ export const Pagination: Story = {
   }),
 };
 
-export const Status: Story = {
-  render: () => ({
-    props: {
-      warehouseItems: warehouses,
-      none: signal<readonly string[]>([]),
-      some: signal<readonly string[]>(['lim']),
-    },
-    template: `
-      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-        <andes-transfer aria-label="Warehouses, error" status="error" [dataSource]="warehouseItems" [(targetKeys)]="none" />
-        <andes-transfer aria-label="Warehouses, warning" status="warning" [dataSource]="warehouseItems" [(targetKeys)]="some" />
-      </div>
-    `,
-  }),
-};
-
-/** `render` draws each item; here with a secondary line and a trailing badge. */
-export const CustomItem: Story = {
+/**
+ * The three template slots. `render` draws each item (here with a secondary line and a
+ * trailing badge), `footer` draws under each list and receives its side and visible items,
+ * and `empty` replaces the empty-list message (the third transfer starts with every item
+ * assigned).
+ */
+export const Templates: Story = {
   render: () => ({
     props: {
       productItems: products.slice(0, 12),
-      chosen: signal<readonly string[]>([]),
-    },
-    template: `
-      <ng-template #productRow let-item let-direction="direction">
-        <span style="display: flex; justify-content: space-between; gap: 0.5rem; width: 100%;">
-          <span>{{ item.title }}<br /><span style="${caption}">{{ item.description }}</span></span>
-          <span style="${caption} align-self: center;">{{ direction === 'target' ? 'on offer' : 'in stock' }}</span>
-        </span>
-      </ng-template>
-      <andes-transfer aria-label="Products" [dataSource]="productItems" [(targetKeys)]="chosen" [render]="productRow" />
-    `,
-  }),
-};
-
-/** `footer` draws under each list and receives its side and visible items. */
-export const CustomFooter: Story = {
-  render: () => ({
-    props: {
       warehouseItems: warehouses,
-      chosen: signal<readonly string[]>(['lim']),
-    },
-    template: `
-      <ng-template #listFooter let-direction let-visible="items">
-        <span style="${caption}">{{ visible.length }} in {{ direction === 'source' ? 'the pool' : 'this plan' }}</span>
-      </ng-template>
-      <andes-transfer aria-label="Warehouses" [dataSource]="warehouseItems" [(targetKeys)]="chosen" [footer]="listFooter" />
-    `,
-  }),
-};
-
-export const CustomOperations: Story = {
-  render: () => ({
-    props: {
-      warehouseItems: warehouses,
-      chosen: signal<readonly string[]>([]),
-    },
-    template: `<andes-transfer aria-label="Warehouses" [operations]="['Assign', 'Unassign']" [titles]="['Warehouses', 'Assigned']" [dataSource]="warehouseItems" [(targetKeys)]="chosen" />`,
-  }),
-};
-
-/** Size the lists with `--andes-transfer-list-width` and `--andes-transfer-list-height`. */
-export const ListSize: Story = {
-  render: () => ({
-    props: {
-      warehouseItems: warehouses,
-      chosen: signal<readonly string[]>(['ari']),
-    },
-    template: `<andes-transfer aria-label="Warehouses" style="--andes-transfer-list-width: 20rem; --andes-transfer-list-height: 14rem;" [dataSource]="warehouseItems" [(targetKeys)]="chosen" />`,
-  }),
-};
-
-export const CustomEmptyState: Story = {
-  render: () => ({
-    props: {
-      warehouseItems: warehouses,
-      chosen: signal<readonly string[]>([
+      chosenProducts: signal<readonly string[]>([]),
+      chosenFooter: signal<readonly string[]>(['lim']),
+      chosenAll: signal<readonly string[]>([
         'lim',
         'ari',
         'tru',
@@ -243,10 +180,43 @@ export const CustomEmptyState: Story = {
       ]),
     },
     template: `
+      <ng-template #productRow let-item let-direction="direction">
+        <span style="display: flex; justify-content: space-between; gap: 0.5rem; width: 100%;">
+          <span>{{ item.title }}<br /><span style="${caption}">{{ item.description }}</span></span>
+          <span style="${caption} align-self: center;">{{ direction === 'target' ? 'on offer' : 'in stock' }}</span>
+        </span>
+      </ng-template>
+      <ng-template #listFooter let-direction let-visible="items">
+        <span style="${caption}">{{ visible.length }} in {{ direction === 'source' ? 'the pool' : 'this plan' }}</span>
+      </ng-template>
       <ng-template #nothing let-direction>
         <span style="${text}">{{ direction === 'source' ? 'Every warehouse is assigned.' : 'No warehouse assigned yet.' }}</span>
       </ng-template>
-      <andes-transfer aria-label="Warehouses" [dataSource]="warehouseItems" [(targetKeys)]="chosen" [empty]="nothing" />
+      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <andes-transfer aria-label="Products" [dataSource]="productItems" [(targetKeys)]="chosenProducts" [render]="productRow" />
+        <andes-transfer aria-label="Warehouses, with footer" [dataSource]="warehouseItems" [(targetKeys)]="chosenFooter" [footer]="listFooter" />
+        <andes-transfer aria-label="Warehouses, empty state" [dataSource]="warehouseItems" [(targetKeys)]="chosenAll" [empty]="nothing" />
+      </div>
+    `,
+  }),
+};
+
+/**
+ * Wording and size. `operations` renames the two move buttons and `titles` the list headers;
+ * the lists are sized with `--andes-transfer-list-width` and `--andes-transfer-list-height`.
+ */
+export const Customization: Story = {
+  render: () => ({
+    props: {
+      warehouseItems: warehouses,
+      chosenLabels: signal<readonly string[]>([]),
+      chosenSized: signal<readonly string[]>(['ari']),
+    },
+    template: `
+      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <andes-transfer aria-label="Warehouses, custom operations" [operations]="['Assign', 'Unassign']" [titles]="['Warehouses', 'Assigned']" [dataSource]="warehouseItems" [(targetKeys)]="chosenLabels" />
+        <andes-transfer aria-label="Warehouses, sized" style="--andes-transfer-list-width: 20rem; --andes-transfer-list-height: 14rem;" [dataSource]="warehouseItems" [(targetKeys)]="chosenSized" />
+      </div>
     `,
   }),
 };

@@ -291,38 +291,30 @@ export default meta;
 
 type Story = StoryObj<AndesCommand>;
 
-/** Type "ord", "dark" (a keyword) or "gh"-style initials: matches are fuzzy and ranked. */
+/**
+ * Type "ord", "dark" (a keyword), "theme" or "clients": matches are fuzzy and ranked. The list
+ * shows icons, descriptions, keyboard shortcuts at the end of the row, a disabled item, and
+ * `keywords` that match words which are not shown (type "theme" to find "Appearance").
+ */
 export const Default: Story = {};
 
-/** Without the surrounding rounding and with a custom empty text. */
-export const EmptyState: Story = {
-  args: { emptyText: 'Nothing here. Try another word.' },
-  render: (args) => ({
-    props: { ...args, items: NAVIGATION },
-    template: `
-      <div style="width: 30rem;">
-        <andes-command [items]="items" [emptyText]="emptyText" [autoFocus]="false" />
-      </div>
-    `,
-  }),
-};
-
-/** `loading` shows a row while results are on their way. */
-export const Loading: Story = {
-  args: { loading: true },
-};
-
-/** Icons, descriptions, keyboard shortcuts at the end of the row and a disabled item. */
-export const IconsAndShortcuts: Story = {};
-
-/** `keywords` match words that are not shown: type "theme" to find "Appearance". */
-export const Keywords: Story = {
+/**
+ * The two states with no list to show: a custom `emptyText` (type a word that matches nothing)
+ * and `loading`, which shows a row while results are on their way.
+ */
+export const States: Story = {
   render: () => ({
     props: { items: NAVIGATION },
     template: `
-      <div style="width: 30rem;">
-        <andes-command [items]="items" [autoFocus]="false" />
-        <p style="${CAPTION}">Try "theme", "clients" or "dark".</p>
+      <div style="display: flex; flex-direction: column; gap: 1.5rem; width: 30rem;">
+        <div>
+          <p style="${CAPTION}">Custom empty text: type a word that matches nothing.</p>
+          <andes-command [items]="items" emptyText="Nothing here. Try another word." label="Empty state" [autoFocus]="false" />
+        </div>
+        <div>
+          <p style="${CAPTION}">loading</p>
+          <andes-command [items]="items" [loading]="true" label="Loading" [autoFocus]="false" />
+        </div>
       </div>
     `,
   }),
@@ -349,38 +341,19 @@ export const ServerSideFiltering: Story = {
   }),
 };
 
-/** A custom row template: a coloured status dot and the label cut into matched slices. */
-export const CustomItem: Story = {
+/**
+ * Two customizations, one command each: a custom row template (a coloured status dot and the
+ * label cut into matched slices) and a custom `filter` that ranks by anything you like - here,
+ * only names that start with the text.
+ */
+export const Customization: Story = {
   render: () => ({
     props: {
-      items: [
+      statusItems: [
         { value: 'ok', label: 'Warehouse north', data: 'ok' },
         { value: 'late', label: 'Warehouse south', data: 'late' },
         { value: 'off', label: 'Warehouse east', data: 'off' },
       ] as AndesCommandItem[],
-    },
-    template: `
-      <div style="width: 30rem;">
-        <andes-command [items]="items" [itemTemplate]="row" [autoFocus]="false" />
-        <ng-template #row let-item let-segments="segments">
-          <span aria-hidden="true" style="width: 0.5rem; height: 0.5rem; border-radius: 9999px;"
-            [style.background]="item.data === 'ok' ? 'var(--andes-color-success)' : item.data === 'late' ? 'var(--andes-color-warning)' : 'var(--andes-color-muted-foreground)'"></span>
-          <span style="flex: 1;">
-            @for (segment of segments; track $index) {
-              @if (segment.match) { <mark style="background: transparent; color: inherit; font-weight: 700;">{{ segment.text }}</mark> } @else { {{ segment.text }} }
-            }
-          </span>
-          <span style="font-size: 0.75rem; color: var(--andes-color-muted-foreground);">{{ item.data }}</span>
-        </ng-template>
-      </div>
-    `,
-  }),
-};
-
-/** A custom `filter` ranks by anything you like: here, only names that start with the text. */
-export const CustomFilter: Story = {
-  render: () => ({
-    props: {
       items: NAVIGATION,
       startsWith: (item: AndesCommandItem, search: string) =>
         (item.label ?? item.value)
@@ -390,8 +363,25 @@ export const CustomFilter: Story = {
           : 0,
     },
     template: `
-      <div style="width: 30rem;">
-        <andes-command [items]="items" [filter]="startsWith" [autoFocus]="false" />
+      <div style="display: flex; flex-direction: column; gap: 1.5rem; width: 30rem;">
+        <div>
+          <p style="${CAPTION}">Custom row template</p>
+          <andes-command [items]="statusItems" [itemTemplate]="row" label="Warehouses" [autoFocus]="false" />
+          <ng-template #row let-item let-segments="segments">
+            <span aria-hidden="true" style="width: 0.5rem; height: 0.5rem; border-radius: 9999px;"
+              [style.background]="item.data === 'ok' ? 'var(--andes-color-success)' : item.data === 'late' ? 'var(--andes-color-warning)' : 'var(--andes-color-muted-foreground)'"></span>
+            <span style="flex: 1;">
+              @for (segment of segments; track $index) {
+                @if (segment.match) { <mark style="background: transparent; color: inherit; font-weight: 700;">{{ segment.text }}</mark> } @else { {{ segment.text }} }
+              }
+            </span>
+            <span style="font-size: 0.75rem; color: var(--andes-color-muted-foreground);">{{ item.data }}</span>
+          </ng-template>
+        </div>
+        <div>
+          <p style="${CAPTION}">Custom filter: only names that start with the text</p>
+          <andes-command [items]="items" [filter]="startsWith" label="Starts with" [autoFocus]="false" />
+        </div>
       </div>
     `,
   }),

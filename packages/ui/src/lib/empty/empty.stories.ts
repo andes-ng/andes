@@ -39,52 +39,46 @@ const panel =
 
 export const Playground: Story = {};
 
-export const Default: Story = {
-  render: () => ({ template: `<andes-empty />` }),
-};
-
-export const Simple: Story = {
-  render: () => ({ template: `<andes-empty image="simple" />` }),
-};
-
 export const Illustrations: Story = {
   parameters: {
     docs: {
       description: {
         story:
-          'Both illustrations are inline SVG drawn with theme tokens, so they follow light and dark mode. Switch the toolbar theme to compare.',
+          'The built-in illustrations, `default` (also what a bare `<andes-empty />` shows) and `simple`. Both are inline SVG drawn with theme tokens, so they follow light and dark mode. Switch the toolbar theme to compare.',
       },
     },
   },
   render: () => ({
     template: `
       <div style="${surface} display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem;">
-        <div style="${panel}"><andes-empty image="default" description="default" /></div>
+        <div style="${panel}"><andes-empty /></div>
         <div style="${panel}"><andes-empty image="simple" description="simple" /></div>
       </div>`,
   }),
 };
 
-export const CustomDescription: Story = {
-  render: () => ({
-    template: `<andes-empty description="No invoices match your filters" />`,
-  }),
-};
-
-export const DescriptionTemplate: Story = {
+export const Description: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`description` takes a string, a template for rich content (a link here), or `false` to hide the message altogether.',
+      },
+    },
+  },
   render: () => ({
     template: `
-      <andes-empty [description]="text">
-        <ng-template #text>
-          <span style="${surface}">No members yet. <a href="#" style="color: var(--andes-color-primary-text, var(--andes-color-primary));">Learn how to invite people</a></span>
-        </ng-template>
-      </andes-empty>`,
-  }),
-};
-
-export const NoDescription: Story = {
-  render: () => ({
-    template: `<andes-empty [description]="false" />`,
+      <div style="${surface} display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem;">
+        <div style="${panel}"><andes-empty description="No invoices match your filters" /></div>
+        <div style="${panel}">
+          <andes-empty [description]="text">
+            <ng-template #text>
+              <span style="${surface}">No members yet. <a href="#" style="color: var(--andes-color-primary-text, var(--andes-color-primary));">Learn how to invite people</a></span>
+            </ng-template>
+          </andes-empty>
+        </div>
+        <div style="${panel}"><andes-empty [description]="false" /></div>
+      </div>`,
   }),
 };
 
@@ -105,17 +99,28 @@ export const WithActions: Story = {
   }),
 };
 
-export const Small: Story = {
+export const Sizes: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`size="small"` shrinks the state for tight containers (with either illustration). For any other size, set `--andes-empty-image-size` on the element or through `imageStyle`.',
+      },
+    },
+  },
   render: () => ({
     template: `
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem; ${panel}">
         <andes-empty size="small" />
         <andes-empty size="small" image="simple" />
+        <andes-empty style="--andes-empty-image-size: 64px;" description="64px" />
+        <andes-empty [imageStyle]="{ '--andes-empty-image-size': '140px' }" description="140px" />
       </div>`,
   }),
 };
 
-export const CustomImageUrl: Story = {
+/** `image` accepts a URL or data URI (with `imageAlt`), or a template for inline artwork. */
+export const CustomImage: Story = {
   render: () => ({
     props: {
       art:
@@ -124,37 +129,18 @@ export const CustomImageUrl: Story = {
           '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 90"><rect x="10" y="20" width="100" height="60" rx="10" fill="#94a3b8" fill-opacity=".25" stroke="#94a3b8" stroke-width="3"/><path d="M10 40l50 22 50-22" fill="none" stroke="#94a3b8" stroke-width="3"/></svg>',
         ),
     },
-    template: `<andes-empty [image]="art" imageAlt="An empty mailbox" description="Your inbox is empty" />`,
-  }),
-};
-
-export const CustomImageTemplate: Story = {
-  render: () => ({
     template: `
-      <andes-empty description="No chart data for this period">
-        <ng-template #art>
-          <svg viewBox="0 0 120 70" width="120" height="70" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" style="color: var(--andes-color-muted-foreground);">
-            <path d="M8 62h104M20 52V38M44 52V26M68 52V44M92 52V18" />
-          </svg>
-        </ng-template>
-      </andes-empty>`,
-  }),
-};
-
-export const ImageSize: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          'Resize the picture with `--andes-empty-image-size`, either on the element or through `imageStyle`.',
-      },
-    },
-  },
-  render: () => ({
-    template: `
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem; ${panel}">
-        <andes-empty style="--andes-empty-image-size: 64px;" description="64px" />
-        <andes-empty [imageStyle]="{ '--andes-empty-image-size': '140px' }" description="140px" />
+      <div style="${surface} display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem;">
+        <div style="${panel}"><andes-empty [image]="art" imageAlt="An empty mailbox" description="Your inbox is empty" /></div>
+        <div style="${panel}">
+          <andes-empty [image]="chart" description="No chart data for this period">
+            <ng-template #chart>
+              <svg viewBox="0 0 120 70" width="120" height="70" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" style="color: var(--andes-color-muted-foreground);">
+                <path d="M8 62h104M20 52V38M44 52V26M68 52V44M92 52V18" />
+              </svg>
+            </ng-template>
+          </andes-empty>
+        </div>
       </div>`,
   }),
 };

@@ -20,7 +20,7 @@ const BRAND_MARK =
   );
 
 const meta: Meta<AndesQrCode> = {
-  title: 'QR Code',
+  title: 'Data Display/QR Code',
   component: AndesQrCode,
   tags: ['autodocs'],
   decorators: [moduleMetadata({ imports: [AndesQrCode, AndesButton] })],

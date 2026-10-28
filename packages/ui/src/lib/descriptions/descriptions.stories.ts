@@ -5,7 +5,7 @@ import { AndesDescriptionItem } from './description-item';
 import { AndesDescriptions } from './descriptions';
 
 const meta: Meta<AndesDescriptions> = {
-  title: 'Descriptions',
+  title: 'Data Display/Descriptions',
   component: AndesDescriptions,
   tags: ['autodocs'],
   decorators: [

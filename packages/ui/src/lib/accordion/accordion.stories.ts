@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
-import { AndesAccordion, type AndesAccordionItemConfig } from './accordion';
+import { AndesAccordion } from './accordion';
 import { AndesAccordionContent } from './accordion-content';
 import { AndesAccordionItem } from './accordion-item';
 import { AndesAccordionLazy } from './accordion-lazy';
@@ -72,7 +72,7 @@ const FIELD_STYLES = `
 `;
 
 const meta: Meta<AndesAccordion> = {
-  title: 'Accordion',
+  title: 'Data Display/Accordion/Basics/Accordion',
   component: AndesAccordion,
   tags: ['autodocs'],
   argTypes: {
@@ -127,111 +127,66 @@ export default meta;
 
 type Story = StoryObj<AndesAccordion>;
 
-export const Single: Story = {
-  args: { type: 'single' },
-};
+/** The playground: every input of the accordion is a control. */
+export const Default: Story = {};
 
-export const Multiple: Story = {
-  args: { type: 'multiple' },
-};
-
-export const Disabled: Story = {
-  args: { disabled: true },
-};
-
-export const DisabledItem: Story = {
-  render: (args) => ({
-    moduleMetadata: { imports: PARTS },
-    props: args,
-    template: `
-      <andes-accordion [type]="type" style="${WIDTH}">
-        <andes-accordion-item value="one">
-          <andes-accordion-trigger>Available section</andes-accordion-trigger>
-          <andes-accordion-content>This one can be toggled normally.</andes-accordion-content>
-        </andes-accordion-item>
-        <andes-accordion-item value="two" disabled>
-          <andes-accordion-trigger>Disabled section</andes-accordion-trigger>
-          <andes-accordion-content>This content is not reachable while disabled.</andes-accordion-content>
-        </andes-accordion-item>
-        <andes-accordion-item value="three">
-          <andes-accordion-trigger>Another available section</andes-accordion-trigger>
-          <andes-accordion-content>More content here.</andes-accordion-content>
-        </andes-accordion-item>
-      </andes-accordion>
-    `,
-  }),
-};
-
-export const Preopened: Story = {
-  name: 'Pre-opened item (multiple mode)',
+/**
+ * `type` decides how many panels stay open: `single` (left) closes the open panel when another
+ * opens, `multiple` (right) lets several stay open at the same time.
+ */
+export const Types: Story = {
   render: () => ({
     moduleMetadata: { imports: PARTS },
     template: `
-      <andes-accordion type="multiple" [activeKey]="['one']" style="${WIDTH}">
-        <andes-accordion-item value="one">
-          <andes-accordion-trigger>First section</andes-accordion-trigger>
-          <andes-accordion-content>
-            Opened initially through a one-way [activeKey] binding (an initial
-            value only). Click any trigger to expand/collapse it independently.
-          </andes-accordion-content>
-        </andes-accordion-item>
-        <andes-accordion-item value="two">
-          <andes-accordion-trigger>Second section</andes-accordion-trigger>
-          <andes-accordion-content>
-            Multiple mode lets several panels stay open at the same time.
-          </andes-accordion-content>
-        </andes-accordion-item>
-      </andes-accordion>
-    `,
-  }),
-};
-
-export const ControlledActiveKey: Story = {
-  name: 'Controlled activeKey (two-way)',
-  render: () => ({
-    moduleMetadata: { imports: PARTS },
-    props: { keys: ['styling'], changes: 0 },
-    template: `
-      <div style="${WIDTH} display: grid; gap: 0.75rem;">
-        <andes-accordion
-          type="multiple"
-          [(activeKey)]="keys"
-          (activeKeyChange)="changes = changes + 1"
-        >${FAQ_ITEMS}</andes-accordion>
-        <p style="margin: 0; font-family: var(--andes-font-family), sans-serif; color: var(--andes-color-muted-foreground);">
-          activeKey: [{{ keys.join(', ') }}] - activeKeyChange fired {{ changes }} time(s)
-        </p>
-        <div style="display: flex; gap: 0.5rem;">
-          <button type="button" (click)="keys = ['what-is', 'styling', 'a11y']">Open all</button>
-          <button type="button" (click)="keys = []">Close all</button>
-        </div>
+      <div style="display: flex; flex-wrap: wrap; align-items: flex-start; gap: 2rem;">
+        <andes-accordion type="single" bordered style="${WIDTH}">${FAQ_ITEMS}</andes-accordion>
+        <andes-accordion type="multiple" bordered style="${WIDTH}">${FAQ_ITEMS}</andes-accordion>
       </div>
     `,
   }),
 };
 
-export const Bordered: Story = {
-  args: { bordered: true, type: 'multiple' },
-  render: (args) => ({
-    moduleMetadata: { imports: PARTS },
-    props: args,
-    template: `
-      <andes-accordion bordered [type]="type" [activeKey]="['styling']" style="${WIDTH}">
-        ${FAQ_ITEMS}
-      </andes-accordion>
-    `,
-  }),
-};
-
-export const Ghost: Story = {
+/** `disabled` locks the whole accordion (top); an item's own `disabled` locks just that panel (bottom). */
+export const Disabled: Story = {
   render: () => ({
     moduleMetadata: { imports: PARTS },
     template: `
-      <andes-accordion ghost [activeKey]="['what-is']" style="${WIDTH}">${FAQ_ITEMS}</andes-accordion>
+      <div style="${WIDTH} display: grid; gap: 1.5rem;">
+        <andes-accordion disabled>${FAQ_ITEMS}</andes-accordion>
+        <andes-accordion>
+          <andes-accordion-item value="one">
+            <andes-accordion-trigger>Available section</andes-accordion-trigger>
+            <andes-accordion-content>This one can be toggled normally.</andes-accordion-content>
+          </andes-accordion-item>
+          <andes-accordion-item value="two" disabled>
+            <andes-accordion-trigger>Disabled section</andes-accordion-trigger>
+            <andes-accordion-content>This content is not reachable while disabled.</andes-accordion-content>
+          </andes-accordion-item>
+          <andes-accordion-item value="three">
+            <andes-accordion-trigger>Another available section</andes-accordion-trigger>
+            <andes-accordion-content>More content here.</andes-accordion-content>
+          </andes-accordion-item>
+        </andes-accordion>
+      </div>
     `,
   }),
 };
 
+/** The three looks: plain dividers (default), `bordered` and `ghost`. Each starts with a panel open. */
+export const Variants: Story = {
+  render: () => ({
+    moduleMetadata: { imports: PARTS },
+    template: `
+      <div style="${WIDTH} display: grid; gap: 1.5rem;">
+        <andes-accordion [activeKey]="['what-is']">${FAQ_ITEMS}</andes-accordion>
+        <andes-accordion bordered type="multiple" [activeKey]="['styling']">${FAQ_ITEMS}</andes-accordion>
+        <andes-accordion ghost [activeKey]="['what-is']">${FAQ_ITEMS}</andes-accordion>
+      </div>
+    `,
+  }),
+};
+
+/** The `sm`, `md` and `lg` sizes. */
 export const Sizes: Story = {
   render: () => ({
     moduleMetadata: { imports: PARTS },
@@ -245,8 +200,57 @@ export const Sizes: Story = {
   }),
 };
 
-export const CustomExpandIcon: Story = {
-  name: 'Custom expandIcon (receives isActive)',
+/**
+ * `activeKey` as an initial value and as two-way state. The first accordion opens "First section"
+ * through a one-way binding (an initial value only). The second is controlled with
+ * `[(activeKey)]`: the buttons set it from outside and the line below shows its value and how
+ * many times `activeKeyChange` fired.
+ */
+export const ActiveKey: Story = {
+  render: () => ({
+    moduleMetadata: { imports: PARTS },
+    props: { keys: ['styling'], changes: 0 },
+    template: `
+      <div style="${WIDTH} display: grid; gap: 1.5rem;">
+        <andes-accordion type="multiple" [activeKey]="['one']">
+          <andes-accordion-item value="one">
+            <andes-accordion-trigger>First section</andes-accordion-trigger>
+            <andes-accordion-content>
+              Opened initially through a one-way [activeKey] binding (an initial
+              value only). Click any trigger to expand/collapse it independently.
+            </andes-accordion-content>
+          </andes-accordion-item>
+          <andes-accordion-item value="two">
+            <andes-accordion-trigger>Second section</andes-accordion-trigger>
+            <andes-accordion-content>
+              Multiple mode lets several panels stay open at the same time.
+            </andes-accordion-content>
+          </andes-accordion-item>
+        </andes-accordion>
+        <div style="display: grid; gap: 0.75rem;">
+          <andes-accordion
+            type="multiple"
+            [(activeKey)]="keys"
+            (activeKeyChange)="changes = changes + 1"
+          >${FAQ_ITEMS}</andes-accordion>
+          <p style="margin: 0; font-family: var(--andes-font-family), sans-serif; color: var(--andes-color-muted-foreground);">
+            activeKey: [{{ keys.join(', ') }}] - activeKeyChange fired {{ changes }} time(s)
+          </p>
+          <div style="display: flex; gap: 0.5rem;">
+            <button type="button" (click)="keys = ['what-is', 'styling', 'a11y']">Open all</button>
+            <button type="button" (click)="keys = []">Close all</button>
+          </div>
+        </div>
+      </div>
+    `,
+  }),
+};
+
+/**
+ * `expandIcon` takes a template that receives `isActive` (a plus that turns into a minus, top), and
+ * `expandIconPosition="start"` moves the icon to the leading edge (bottom).
+ */
+export const ExpandIcon: Story = {
   render: () => ({
     moduleMetadata: { imports: PARTS },
     template: `
@@ -257,18 +261,16 @@ export const CustomExpandIcon: Story = {
           @if (!active) { <line x1="12" y1="5" x2="12" y2="19" /> }
         </svg>
       </ng-template>
-      <andes-accordion bordered [expandIcon]="plusMinus" style="${WIDTH}">${FAQ_ITEMS}</andes-accordion>
+      <div style="${WIDTH} display: grid; gap: 1.5rem;">
+        <andes-accordion bordered [expandIcon]="plusMinus">${FAQ_ITEMS}</andes-accordion>
+        <andes-accordion bordered expandIconPosition="start">${FAQ_ITEMS}</andes-accordion>
+      </div>
     `,
   }),
 };
 
-export const IconAtStart: Story = {
-  name: 'expandIconPosition="start"',
-  args: { expandIconPosition: 'start', bordered: true },
-};
-
+/** `collapsible` on an item picks what toggles it: the whole row, the header, the icon or nothing. */
 export const CollapsibleModes: Story = {
-  name: 'collapsible (header / icon / disabled)',
   render: () => ({
     moduleMetadata: { imports: PARTS },
     template: `
@@ -294,8 +296,8 @@ export const CollapsibleModes: Story = {
   }),
 };
 
-export const Extra: Story = {
-  name: 'Extra slot and showArrow',
+/** The `extra` slot (projected or via the input) does not toggle the panel; `showArrow` hides the arrow. */
+export const ExtraAndArrow: Story = {
   render: () => ({
     moduleMetadata: { imports: [...PARTS, AndesButton] },
     props: { edits: 0 },
@@ -323,161 +325,8 @@ export const Extra: Story = {
   }),
 };
 
-export const LazyContent: Story = {
-  name: 'Lazy content, forceRender and destroyOnHidden',
-  args: { destroyOnHidden: false },
-  render: (args) => ({
-    moduleMetadata: { imports: PARTS },
-    props: args,
-    template: `${FIELD_STYLES}
-      <andes-accordion type="multiple" [destroyOnHidden]="destroyOnHidden" style="${WIDTH}">
-        <andes-accordion-item value="eager">
-          <andes-accordion-trigger>Projected (always rendered)</andes-accordion-trigger>
-          <andes-accordion-content>
-            <label>Type something, close, reopen: <input class="sb-field-input" aria-label="Eager field" /></label>
-          </andes-accordion-content>
-        </andes-accordion-item>
-        <andes-accordion-item value="lazy">
-          <andes-accordion-trigger>Lazy template (rendered on first open)</andes-accordion-trigger>
-          <andes-accordion-content>
-            <ng-template andesAccordionLazy>
-              <label>Kept after close unless destroyOnHidden: <input class="sb-field-input" aria-label="Lazy field" /></label>
-            </ng-template>
-          </andes-accordion-content>
-        </andes-accordion-item>
-        <andes-accordion-item value="forced" forceRender>
-          <andes-accordion-trigger>Lazy + forceRender (rendered up front)</andes-accordion-trigger>
-          <andes-accordion-content>
-            <ng-template andesAccordionLazy>Rendered before the first open.</ng-template>
-          </andes-accordion-content>
-        </andes-accordion-item>
-      </andes-accordion>
-    `,
-  }),
-};
-
-const ITEMS: AndesAccordionItemConfig[] = [
-  {
-    key: 'profile',
-    label: 'Profile',
-    content: 'Name, avatar and bio.',
-    extra: 'Complete',
-  },
-  {
-    key: 'billing',
-    label: 'Billing',
-    content: 'Invoices and payment methods.',
-    collapsible: 'header',
-  },
-  {
-    key: 'danger',
-    label: 'Danger zone',
-    content: 'Delete the workspace.',
-    disabled: true,
-  },
-];
-
-export const ItemsInput: Story = {
-  name: 'items input (data-driven panels)',
-  render: () => ({
-    props: { items: ITEMS },
-    template: `
-      <andes-accordion bordered [items]="items" [activeKey]="['profile']" style="${WIDTH}" />
-    `,
-  }),
-};
-
-export const ArrowNavigation: Story = {
-  name: 'arrowNavigation (opt-in)',
-  args: { arrowNavigation: true, bordered: true },
-};
-
-export const Nested: Story = {
-  name: 'Nested accordions',
-  render: () => ({
-    moduleMetadata: { imports: PARTS },
-    props: { outer: ['orders'], inner: [] as string[] },
-    template: `
-      <div style="${WIDTH} display: grid; gap: 0.75rem;">
-        <andes-accordion bordered type="multiple" [(activeKey)]="outer">
-          <andes-accordion-item value="orders">
-            <andes-accordion-trigger>Orders</andes-accordion-trigger>
-            <andes-accordion-content>
-              <andes-accordion size="sm" [(activeKey)]="inner">
-                <andes-accordion-item value="open">
-                  <andes-accordion-trigger extra="12">Open orders</andes-accordion-trigger>
-                  <andes-accordion-content>Awaiting fulfilment.</andes-accordion-content>
-                </andes-accordion-item>
-                <andes-accordion-item value="closed">
-                  <andes-accordion-trigger extra="48">Closed orders</andes-accordion-trigger>
-                  <andes-accordion-content>Shipped and invoiced.</andes-accordion-content>
-                </andes-accordion-item>
-              </andes-accordion>
-            </andes-accordion-content>
-          </andes-accordion-item>
-          <andes-accordion-item value="customers">
-            <andes-accordion-trigger>Customers</andes-accordion-trigger>
-            <andes-accordion-content>Each accordion keeps its own open state.</andes-accordion-content>
-          </andes-accordion-item>
-        </andes-accordion>
-        <p style="margin: 0; font-family: var(--andes-font-family), sans-serif; font-size: 0.875rem; color: var(--andes-color-muted-foreground);">
-          outer: [{{ outer.join(', ') }}] - inner: [{{ inner.join(', ') }}]
-        </p>
-      </div>
-    `,
-  }),
-};
-
-const CARD_STYLE =
-  'margin-bottom: 0.75rem; padding-inline: var(--andes-space-4); border: none; border-radius: var(--andes-radius-lg); background-color: var(--andes-color-muted);';
-
-const CARD_ITEMS: AndesAccordionItemConfig[] = [
-  {
-    key: 'shipping',
-    label: 'Shipping address',
-    content: 'Warehouse 3, North Industrial Park.',
-    style: CARD_STYLE,
-  },
-  {
-    key: 'payment',
-    label: 'Payment terms',
-    content: 'Net 30, invoiced at the end of each month.',
-    style: CARD_STYLE,
-  },
-  {
-    key: 'notes',
-    label: 'Internal notes',
-    content: 'Prefers deliveries before noon.',
-    style: CARD_STYLE,
-  },
-];
-
-export const CustomPanels: Story = {
-  name: 'Custom panels (per-item class/style)',
-  render: () => ({
-    props: { items: CARD_ITEMS },
-    template: `
-      <ng-template #caret let-active>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"
-             [style.transform]="active ? 'rotate(90deg)' : null"
-             style="transition: transform 0.2s ease;">
-          <path d="M8 5l10 7-10 7z" />
-        </svg>
-      </ng-template>
-      <andes-accordion
-        ghost
-        expandIconPosition="start"
-        [expandIcon]="caret"
-        [items]="items"
-        [activeKey]="['shipping']"
-        style="${WIDTH}"
-      />
-    `,
-  }),
-};
-
+/** A leading icon projected inside the trigger. */
 export const HeaderIcon: Story = {
-  name: 'Header with a leading icon',
   render: () => ({
     moduleMetadata: { imports: PARTS },
     template: `
@@ -507,6 +356,49 @@ export const HeaderIcon: Story = {
             </span>
           </andes-accordion-trigger>
           <andes-accordion-content>Units on hand per warehouse.</andes-accordion-content>
+        </andes-accordion-item>
+      </andes-accordion>
+    `,
+  }),
+};
+
+/** `arrowNavigation` (opt-in) moves focus between the triggers with the arrow keys; Home and End jump to the ends. */
+export const ArrowNavigation: Story = {
+  args: { arrowNavigation: true, bordered: true },
+};
+
+/**
+ * Panels that render lazily. The first is projected and always rendered; the second is a
+ * `andesAccordionLazy` template rendered on first open and kept after close unless
+ * `destroyOnHidden`; the third adds `forceRender` to render up front. Type in a field, close and
+ * reopen to see what survives.
+ */
+export const LazyContent: Story = {
+  args: { destroyOnHidden: false },
+  render: (args) => ({
+    moduleMetadata: { imports: PARTS },
+    props: args,
+    template: `${FIELD_STYLES}
+      <andes-accordion type="multiple" [destroyOnHidden]="destroyOnHidden" style="${WIDTH}">
+        <andes-accordion-item value="eager">
+          <andes-accordion-trigger>Projected (always rendered)</andes-accordion-trigger>
+          <andes-accordion-content>
+            <label>Type something, close, reopen: <input class="sb-field-input" aria-label="Eager field" /></label>
+          </andes-accordion-content>
+        </andes-accordion-item>
+        <andes-accordion-item value="lazy">
+          <andes-accordion-trigger>Lazy template (rendered on first open)</andes-accordion-trigger>
+          <andes-accordion-content>
+            <ng-template andesAccordionLazy>
+              <label>Kept after close unless destroyOnHidden: <input class="sb-field-input" aria-label="Lazy field" /></label>
+            </ng-template>
+          </andes-accordion-content>
+        </andes-accordion-item>
+        <andes-accordion-item value="forced" forceRender>
+          <andes-accordion-trigger>Lazy + forceRender (rendered up front)</andes-accordion-trigger>
+          <andes-accordion-content>
+            <ng-template andesAccordionLazy>Rendered before the first open.</ng-template>
+          </andes-accordion-content>
         </andes-accordion-item>
       </andes-accordion>
     `,

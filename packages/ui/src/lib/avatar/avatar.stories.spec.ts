@@ -2,6 +2,9 @@ import type { Type } from '@angular/core';
 import { reflectComponentType } from '@angular/core';
 import type { Meta, StoryObj } from '@storybook/angular';
 
+import * as avatarFeaturesStories from './avatar-features.stories';
+import * as avatarGroupStories from './avatar-group.stories';
+import * as avatarOverflowStories from './avatar-overflow.stories';
 import * as avatarStories from './avatar.stories';
 // Deliberately reaching into ANOTHER component's story file from the Avatar
 // folder. The bug this suite exists for is a Storybook-configuration bug, and
@@ -13,6 +16,9 @@ import * as avatarStories from './avatar.stories';
 // asserted over every story file in the library. No Button source is touched -
 // this only reads its story definitions.
 import * as buttonStories from '../button/button.stories';
+import * as buttonFeaturesStories from '../button/button-features.stories';
+import * as buttonGroupStories from '../button/button-group.stories';
+import * as buttonLoadingStories from '../button/button-loading.stories';
 
 /**
  * Regression coverage for the meta-level decorator in avatar.stories.ts.
@@ -151,7 +157,22 @@ function collectStories(file: string, module: StoryModule): ResolvedStory[] {
 
 const storyFiles: Array<[string, StoryModule]> = [
   ['avatar.stories.ts', avatarStories as unknown as StoryModule],
+  [
+    'avatar-features.stories.ts',
+    avatarFeaturesStories as unknown as StoryModule,
+  ],
+  ['avatar-group.stories.ts', avatarGroupStories as unknown as StoryModule],
+  [
+    'avatar-overflow.stories.ts',
+    avatarOverflowStories as unknown as StoryModule,
+  ],
   ['button.stories.ts', buttonStories as unknown as StoryModule],
+  [
+    'button-features.stories.ts',
+    buttonFeaturesStories as unknown as StoryModule,
+  ],
+  ['button-group.stories.ts', buttonGroupStories as unknown as StoryModule],
+  ['button-loading.stories.ts', buttonLoadingStories as unknown as StoryModule],
 ];
 
 const allStories = storyFiles.flatMap(([file, module]) =>
@@ -160,8 +181,8 @@ const allStories = storyFiles.flatMap(([file, module]) =>
 
 describe('Storybook story module metadata', () => {
   it('finds the Avatar stories (guards against this suite silently testing nothing)', () => {
-    const avatar = allStories.filter(
-      (story) => story.file === 'avatar.stories.ts',
+    const avatar = allStories.filter((story) =>
+      story.file.startsWith('avatar'),
     );
 
     expect(avatar.length).toBeGreaterThanOrEqual(8);
@@ -193,7 +214,8 @@ describe('Storybook story module metadata', () => {
   it('keeps the Avatar parts available to the Group story specifically', () => {
     const group = allStories.find(
       (story) =>
-        story.file === 'avatar.stories.ts' && story.exportName === 'Group',
+        story.file === 'avatar-group.stories.ts' &&
+        story.exportName === 'Group',
     );
 
     // Before the fix this story's own `moduleMetadata` (group components

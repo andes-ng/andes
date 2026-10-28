@@ -105,17 +105,6 @@ type Story = StoryObj<AndesColorPicker>;
 
 export const Default: Story = {};
 
-export const Empty: Story = {
-  render: () => ({
-    moduleMetadata: { imports: IMPORTS },
-    template: `
-      <div style="display: flex; flex-direction: column; gap: 0.75rem; align-items: flex-start;">
-        <andes-color-picker aria-label="Accent color" showText placeholder="Pick a color" />
-      </div>
-    `,
-  }),
-};
-
 export const Sizes: Story = {
   render: () => ({
     moduleMetadata: { imports: IMPORTS },
@@ -134,13 +123,19 @@ export const Sizes: Story = {
   }),
 };
 
+/**
+ * The text next to the swatch (`showText`): the placeholder while there is no value, the
+ * value in the format the user picked (here `defaultFormat="rgb"`), and a template that
+ * receives the color and its text.
+ */
 export const ShowText: Story = {
   render: () => ({
     moduleMetadata: { imports: IMPORTS },
-    props: { value: 'rgba(22, 119, 255, 0.6)' },
+    props: { picked: 'rgba(22, 119, 255, 0.6)' },
     template: `
       <div style="display: flex; flex-direction: column; gap: 1rem; align-items: flex-start;">
-        <andes-color-picker aria-label="Text color" [(value)]="value" showText defaultFormat="rgb" />
+        <andes-color-picker aria-label="Accent color" showText placeholder="Pick a color" />
+        <andes-color-picker aria-label="Text color" [(value)]="picked" showText defaultFormat="rgb" />
         <ng-template #named let-color let-text="value">
           <span style="display: inline-flex; gap: 0.5rem;">
             <strong>Brand</strong>
@@ -153,36 +148,45 @@ export const ShowText: Story = {
   }),
 };
 
-export const TwoWayBinding: Story = {
+/**
+ * Three ways to hold the value: `[(value)]` with the `colorChange` / `colorChangeComplete`
+ * events logged, an `AndesColor` object as the value (read back as RGB and HSB strings), and
+ * a reactive `FormControl` driven from outside - set a value, toggle `disabled` - named by a
+ * `<label for>`.
+ */
+export const Binding: Story = {
   render: () => ({
     moduleMetadata: { imports: IMPORTS },
-    props: { value: '#fa8c16', events: [] as string[] },
+    props: {
+      picked: '#fa8c16',
+      events: [] as string[],
+      color: AndesColor.parse('#13a8a8'),
+      control: new FormControl('#fa541c', { nonNullable: true }),
+    },
     template: `
       <div style="display: flex; flex-direction: column; gap: 0.75rem; align-items: flex-start; width: 22rem;">
         <andes-color-picker
           aria-label="Warning color"
-          [(value)]="value"
+          [(value)]="picked"
           showText
           (colorChange)="events = ['change ' + $event.value, ...events].slice(0, 4)"
           (colorChangeComplete)="events = ['complete ' + $event.value, ...events].slice(0, 4)"
         />
-        <code style="font-size: 0.75rem;">value: {{ value }}</code>
+        <code style="font-size: 0.75rem;">value: {{ picked }}</code>
         <code style="font-size: 0.75rem; white-space: pre;">{{ events.join('\\n') }}</code>
-      </div>
-    `,
-  }),
-};
-
-export const ColorObject: Story = {
-  render: () => ({
-    moduleMetadata: { imports: IMPORTS },
-    props: { color: AndesColor.parse('#13a8a8') },
-    template: `
-      <div style="display: flex; flex-direction: column; gap: 0.75rem; align-items: flex-start;">
         <andes-color-picker aria-label="Accent" [(value)]="color" showText />
         <code style="font-size: 0.75rem;">
           {{ color.toRgbString() }} · {{ color.toHsbString() }}
         </code>
+        <label for="story-accent" style="font-size: 0.875rem;">Accent color</label>
+        <andes-color-picker id="story-accent" [formControl]="control" showText />
+        <div style="display: flex; gap: 0.5rem;">
+          <button type="button" (click)="control.setValue('#13c2c2')">Set teal</button>
+          <button type="button" (click)="control.disabled ? control.enable() : control.disable()">
+            Toggle disabled
+          </button>
+        </div>
+        <code style="font-size: 0.75rem;">value: {{ control.value | json }} · {{ control.status }}</code>
       </div>
     `,
   }),
@@ -191,9 +195,9 @@ export const ColorObject: Story = {
 export const Presets: Story = {
   render: () => ({
     moduleMetadata: { imports: IMPORTS },
-    props: { presets: PRESETS, value: '#1677ff' },
+    props: { presets: PRESETS, picked: '#1677ff' },
     template: `
-      <andes-color-picker aria-label="Theme color" [(value)]="value" [presets]="presets" showText />
+      <andes-color-picker aria-label="Theme color" [(value)]="picked" [presets]="presets" showText />
     `,
   }),
 };
@@ -201,18 +205,18 @@ export const Presets: Story = {
 export const AllowClear: Story = {
   render: () => ({
     moduleMetadata: { imports: IMPORTS },
-    props: { value: '#eb2f96', cleared: 0 },
+    props: { picked: '#eb2f96', cleared: 0 },
     template: `
       <div style="display: flex; flex-direction: column; gap: 0.75rem; align-items: flex-start;">
         <andes-color-picker
           aria-label="Highlight"
-          [(value)]="value"
+          [(value)]="picked"
           allowClear
           showText
           placeholder="No highlight"
           (clear)="cleared = cleared + 1"
         />
-        <code style="font-size: 0.75rem;">value: {{ value ?? 'null' }} · cleared {{ cleared }}×</code>
+        <code style="font-size: 0.75rem;">value: {{ picked ?? 'null' }} · cleared {{ cleared }}×</code>
       </div>
     `,
   }),
@@ -221,7 +225,7 @@ export const AllowClear: Story = {
 export const Formats: Story = {
   render: () => ({
     moduleMetadata: { imports: IMPORTS },
-    props: { value: '#2f54eb', format: 'rgb' },
+    props: { picked: '#2f54eb', format: 'rgb' },
     template: `
       <div style="display: flex; flex-direction: column; gap: 1rem; align-items: flex-start;">
         <div style="display: flex; flex-direction: column; gap: 0.25rem;">
@@ -232,7 +236,7 @@ export const Formats: Story = {
           <span style="font-size: 0.75rem;">Controlled: the format is {{ format }}</span>
           <andes-color-picker
             aria-label="Controlled format"
-            [(value)]="value"
+            [(value)]="picked"
             [format]="format"
             (formatChange)="format = $event"
             showText
@@ -276,11 +280,11 @@ export const States: Story = {
 export const CustomTrigger: Story = {
   render: () => ({
     moduleMetadata: { imports: IMPORTS },
-    props: { value: '#722ed1' },
+    props: { picked: '#722ed1' },
     template: `
-      <andes-color-picker aria-label="Heading color" [(value)]="value">
+      <andes-color-picker aria-label="Heading color" [(value)]="picked">
         <span andesColorPickerTrigger style="display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: underline; text-decoration-color: currentColor;">
-          <span style="width: 0.75rem; height: 0.75rem; border-radius: 9999px;" [style.background]="value"></span>
+          <span style="width: 0.75rem; height: 0.75rem; border-radius: 9999px;" [style.background]="picked"></span>
           Heading color
         </span>
       </andes-color-picker>
@@ -296,26 +300,6 @@ export const Placement: Story = {
       <div style="display: flex; justify-content: space-between; align-items: flex-end; height: 26rem; padding: 1rem;">
         <andes-color-picker aria-label="Opens upwards, start" placement="topLeft" value="#1677ff" />
         <andes-color-picker aria-label="Opens upwards, end" placement="topRight" value="#52c41a" />
-      </div>
-    `,
-  }),
-};
-
-export const ReactiveForm: Story = {
-  render: () => ({
-    moduleMetadata: { imports: IMPORTS },
-    props: { control: new FormControl('#fa541c', { nonNullable: true }) },
-    template: `
-      <div style="display: flex; flex-direction: column; gap: 0.75rem; align-items: flex-start;">
-        <label for="story-accent" style="font-size: 0.875rem;">Accent color</label>
-        <andes-color-picker id="story-accent" [formControl]="control" showText />
-        <div style="display: flex; gap: 0.5rem;">
-          <button type="button" (click)="control.setValue('#13c2c2')">Set teal</button>
-          <button type="button" (click)="control.disabled ? control.enable() : control.disable()">
-            Toggle disabled
-          </button>
-        </div>
-        <code style="font-size: 0.75rem;">value: {{ control.value | json }} · {{ control.status }}</code>
       </div>
     `,
   }),

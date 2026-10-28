@@ -1,11 +1,9 @@
 import { CommonModule } from '@angular/common';
 import {
-  type AbstractControl,
   FormControl,
   FormGroup,
   FormsModule,
   ReactiveFormsModule,
-  type ValidationErrors,
   Validators,
 } from '@angular/forms';
 import type { Decorator, Meta, StoryObj } from '@storybook/angular';
@@ -18,7 +16,7 @@ import { AndesFormError } from './form-error';
 import { AndesFormField } from './form-field';
 import { AndesFormLabel } from './form-label';
 
-const fieldModuleMetadata = {
+export const fieldModuleMetadata = {
   imports: [
     CommonModule,
     ReactiveFormsModule,
@@ -43,7 +41,7 @@ const fieldModuleMetadata = {
  * an inline `style` attribute: an inline border would outrank - and so hide - the field's own
  * status tint (`.andes-form-field--invalid :where(input)`), which is part of what these
  * stories demonstrate. Everything sits in zero-specificity `:where()` so any library rule wins.
- * Also used by form.stories.ts, hence exported (and excluded from the story list).
+ * Also used by the other form story files, hence exported (and excluded from the story list).
  */
 export const DEMO_CONTROL_CSS = `
 :where(.andes-demo-control) {
@@ -102,10 +100,14 @@ export const withDemoControls: Decorator = (story) => {
 };
 
 const meta: Meta<AndesFormField> = {
-  title: 'Data Entry/Form Field',
+  title: 'Data Entry/Form/Field/Basics',
   component: AndesFormField,
   tags: ['autodocs'],
-  excludeStories: ['DEMO_CONTROL_CSS', 'withDemoControls'],
+  excludeStories: [
+    'DEMO_CONTROL_CSS',
+    'withDemoControls',
+    'fieldModuleMetadata',
+  ],
   decorators: [withDemoControls],
   parameters: {
     docs: {
@@ -203,7 +205,7 @@ const meta: Meta<AndesFormField> = {
           '',
           '### Why these stories still render native controls',
           '',
-          'Only `AndesButton` (used for the submit action in **Reactive Form Example**) has landed',
+          'Only `AndesButton` (used for the submit action in **Binding**) has landed',
           'on `develop` so far. `AndesInput` and `AndesSelect` are still open, unmerged PRs of',
           'their own - and `AndesSelect` additionally depends on the overlay and list-navigation',
           'primitives, which are two further unmerged PRs. Importing them here would make this',
@@ -226,6 +228,10 @@ type Story = StoryObj<AndesFormField>;
  * anything to see the error appear - it stays hidden on load even though the field is
  * already invalid (empty + required), matching the idiomatic Angular
  * "invalid && (touched || dirty)" rule instead of shouting at the user immediately.
+ *
+ * The second field shows that the parts are optional: a description with no error slot at
+ * all (an error slot with no description works too), and `aria-describedby` only ever
+ * includes the parts actually present.
  */
 export const Basic: Story = {
   render: () => ({
@@ -234,9 +240,10 @@ export const Basic: Story = {
       email: new FormControl('', {
         validators: [Validators.required, Validators.email],
       }),
+      coupon: new FormControl(''),
     },
     template: `
-      <div style="max-width: 320px;">
+      <div style="max-width: 320px; display: flex; flex-direction: column; gap: 1.25rem;">
         <andes-form-field>
           <andes-form-label>Email</andes-form-label>
           <input
@@ -251,23 +258,31 @@ export const Basic: Story = {
           </andes-form-description>
           <andes-form-error>Enter a valid email address.</andes-form-error>
         </andes-form-field>
+        <andes-form-field>
+          <andes-form-label>Coupon code</andes-form-label>
+          <input andesFormControl [formControl]="coupon" class="andes-demo-control" />
+          <andes-form-description>Optional - leave blank if you don't have one.</andes-form-description>
+        </andes-form-field>
       </div>
     `,
   }),
 };
 
 /**
- * A small reactive form (`FormGroup`) with two fields, each independently wired, plus an
- * `AndesButton` submit that force-marks everything as touched (`markAllAsTouched`) - the
- * standard Angular pattern for surfacing every remaining error on a failed submit attempt.
+ * The two Angular forms APIs side by side - `AndesFormControl` reads whichever `NgControl` is
+ * present (`FormControlName`, `FormControlDirective` or `NgModel`) without caring which.
  *
- * The submit uses the library's own `<andes-button type="submit">`: its internal `<button>`
- * is still a descendant of this `<form>`, so implicit submission and `(ngSubmit)` behave
- * exactly as with a native button. The two controls are native `<input>`/`<select>` for the
- * reason documented on the component above - `AndesInput`/`AndesSelect` are not on `develop`
- * yet - and are the fully-automatic wiring path in the meantime.
+ * The first form is a reactive `FormGroup` with two independently wired fields, plus an
+ * `AndesButton` submit that force-marks everything as touched (`markAllAsTouched`) - the
+ * standard pattern for surfacing every remaining error on a failed submit attempt. The
+ * library's `<andes-button type="submit">` keeps implicit submission and `(ngSubmit)` working
+ * as with a native button. Its controls are native `<input>`/`<select>` for the reason
+ * documented on the component above.
+ *
+ * The second is template-driven (`[(ngModel)]`); its `AndesButton` only echoes the current
+ * value, since the field needs no submit to work.
  */
-export const ReactiveFormExample: Story = {
+export const Binding: Story = {
   render: () => {
     const form = new FormGroup({
       name: new FormControl('', { validators: Validators.required }),
@@ -285,183 +300,62 @@ export const ReactiveFormExample: Story = {
           }
           this.submitted = true;
         },
+        nickname: '',
+        echoed: '',
       },
       template: `
-        <form
-          [formGroup]="form"
-          (ngSubmit)="submit()"
-          style="max-width: 360px; display: flex; flex-direction: column; gap: 1.25rem;"
-        >
-          <andes-form-field>
-            <andes-form-label>Full name</andes-form-label>
-            <input andesFormControl formControlName="name" class="andes-demo-control" />
-            <andes-form-error>Your name is required.</andes-form-error>
-          </andes-form-field>
-
-          <andes-form-field>
-            <andes-form-label>Country</andes-form-label>
-            <select andesFormControl formControlName="country" class="andes-demo-control">
-              <option value="">Select a country</option>
-              <option value="pe">Peru</option>
-              <option value="cl">Chile</option>
-              <option value="co">Colombia</option>
-            </select>
-            <andes-form-description>Used to calculate shipping.</andes-form-description>
-            <andes-form-error>Please pick a country.</andes-form-error>
-          </andes-form-field>
-
-          <andes-button type="submit" style="align-self: flex-start;">Submit</andes-button>
-          @if (submitted) {
-            <p>Submitted: {{ form.value | json }}</p>
-          }
-        </form>
-      `,
-    };
-  },
-};
-
-/**
- * Works identically with `[(ngModel)]` (template-driven forms) instead of Reactive Forms -
- * `AndesFormControl` reads whichever `NgControl` is present (`FormControlName`,
- * `FormControlDirective` or `NgModel`) without caring which. The `AndesButton` here only
- * echoes the current value; the field itself needs no submit to work.
- */
-export const WithNgModel: Story = {
-  render: () => ({
-    moduleMetadata: fieldModuleMetadata,
-    props: { nickname: '', echoed: '' },
-    template: `
-      <div style="max-width: 320px; display: flex; flex-direction: column; gap: 1rem;">
-        <andes-form-field>
-          <andes-form-label>Nickname</andes-form-label>
-          <input
-            andesFormControl
-            name="nickname"
-            required
-            [(ngModel)]="nickname"
-            class="andes-demo-control"
-          />
-          <andes-form-error>A nickname is required.</andes-form-error>
-        </andes-form-field>
-        <andes-button
-          variant="secondary"
-          style="align-self: flex-start;"
-          (click)="echoed = nickname"
-          >Greet me</andes-button
-        >
-        @if (echoed) {
-          <p>Hello, {{ echoed }}!</p>
-        }
-      </div>
-    `,
-  }),
-};
-
-/**
- * A description with no error slot at all, and an error slot with no description - both
- * parts are fully optional and `aria-describedby` only ever includes the ones actually
- * present.
- */
-export const DescriptionOnly: Story = {
-  render: () => ({
-    moduleMetadata: fieldModuleMetadata,
-    props: {
-      value: new FormControl(''),
-    },
-    template: `
-      <div style="max-width: 320px;">
-        <andes-form-field>
-          <andes-form-label>Coupon code</andes-form-label>
-          <input andesFormControl [formControl]="value" class="andes-demo-control" />
-          <andes-form-description>Optional - leave blank if you don't have one.</andes-form-description>
-        </andes-form-field>
-      </div>
-    `,
-  }),
-};
-
-/**
- * `validateStatus` set by hand, each with `hasFeedback` and a `help` line - the full status
- * vocabulary (`success`, `warning`, `error`, `validating`). Only `error` and `warning` tint a
- * plain native control; `success`/`validating` are carried by the icon alone.
- */
-export const ValidateStatus: Story = {
-  render: () => ({
-    moduleMetadata: fieldModuleMetadata,
-    props: {
-      rows: [
-        { status: 'success', label: 'Success', help: 'Looks good.' },
-        { status: 'warning', label: 'Warning', help: 'This name is unusual.' },
-        { status: 'error', label: 'Error', help: 'This name is taken.' },
-        { status: 'validating', label: 'Validating', help: 'Checking…' },
-      ],
-      value: new FormControl('andes'),
-    },
-    template: `
-      <div andesForm style="max-width: 360px;">
-        @for (row of rows; track row.status) {
-          <andes-form-field
-            [label]="row.label"
-            [validateStatus]="row.status"
-            [help]="row.help"
-            hasFeedback
+        <div style="max-width: 360px; display: flex; flex-direction: column; gap: 2rem;">
+          <form
+            [formGroup]="form"
+            (ngSubmit)="submit()"
+            style="display: flex; flex-direction: column; gap: 1.25rem;"
           >
-            <input andesFormControl [formControl]="value" class="andes-demo-control" />
-          </andes-form-field>
-        }
-      </div>
-    `,
-  }),
-};
+            <andes-form-field>
+              <andes-form-label>Full name</andes-form-label>
+              <input andesFormControl formControlName="name" class="andes-demo-control" />
+              <andes-form-error>Your name is required.</andes-form-error>
+            </andes-form-field>
 
-/**
- * Status *derived* from the control, with `hasFeedback`. The username runs an async
- * validator (≈0.8 s) - type to see `validating` (spinner, `aria-busy` on the input), then
- * `success`, or `error` for "admin". Messages come from the validators themselves; the
- * async one returns its own string (`{ taken: 'That username is taken.' }`), which is used
- * as-is since no message map entry exists for `taken`.
- */
-export const DerivedStatusWithFeedback: Story = {
-  render: () => {
-    const takenValidator = (control: AbstractControl) =>
-      new Promise<ValidationErrors | null>((resolve) =>
-        setTimeout(
-          () =>
-            resolve(
-              control.value === 'admin'
-                ? { taken: 'That username is taken.' }
-                : null,
-            ),
-          800,
-        ),
-      );
-    const username = new FormControl('admin', {
-      validators: [Validators.required, Validators.minLength(3)],
-      asyncValidators: takenValidator,
-    });
-    const email = new FormControl('ada@', {
-      validators: [Validators.required, Validators.email],
-    });
-    const city = new FormControl('Lima', Validators.required);
-    [username, email, city].forEach((c) => c.markAsTouched());
-    return {
-      moduleMetadata: fieldModuleMetadata,
-      props: { username, email, city },
-      template: `
-        <div andesForm style="max-width: 360px;">
-          <andes-form-field label="Username" hasFeedback>
-            <input andesFormControl [formControl]="username" class="andes-demo-control" />
-          </andes-form-field>
-          <andes-form-field label="Email" hasFeedback>
-            <input andesFormControl [formControl]="email" class="andes-demo-control" />
-          </andes-form-field>
-          <andes-form-field label="City" hasFeedback>
-            <select andesFormControl [formControl]="city" class="andes-demo-control">
-              <option value="">Select a city</option>
-              <option value="Lima">Lima</option>
-              <option value="Cusco">Cusco</option>
-            </select>
-          </andes-form-field>
+            <andes-form-field>
+              <andes-form-label>Country</andes-form-label>
+              <select andesFormControl formControlName="country" class="andes-demo-control">
+                <option value="">Select a country</option>
+                <option value="pe">Peru</option>
+                <option value="cl">Chile</option>
+                <option value="co">Colombia</option>
+              </select>
+              <andes-form-description>Used to calculate shipping.</andes-form-description>
+              <andes-form-error>Please pick a country.</andes-form-error>
+            </andes-form-field>
+
+            <andes-button type="submit" style="align-self: flex-start;">Submit</andes-button>
+            @if (submitted) {
+              <p>Submitted: {{ form.value | json }}</p>
+            }
+          </form>
+
+          <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <andes-form-field>
+              <andes-form-label>Nickname</andes-form-label>
+              <input
+                andesFormControl
+                name="nickname"
+                required
+                [(ngModel)]="nickname"
+                class="andes-demo-control"
+              />
+              <andes-form-error>A nickname is required.</andes-form-error>
+            </andes-form-field>
+            <andes-button
+              variant="secondary"
+              style="align-self: flex-start;"
+              (click)="echoed = nickname"
+              >Greet me</andes-button
+            >
+            @if (echoed) {
+              <p>Hello, {{ echoed }}!</p>
+            }
+          </div>
         </div>
       `,
     };
@@ -469,121 +363,70 @@ export const DerivedStatusWithFeedback: Story = {
 };
 
 /**
- * No `<andes-form-error>` authored: the field renders a message per failing validator from
- * the control's real `ValidationErrors`. Messages resolve field `errorMessages` → the
- * `andesForm`'s → `provideAndesFormErrorMessages()` → built-in defaults, and may use
- * `{label}` or any key of the validator's error object (`{requiredLength}`), or be a function.
- * Here the form localizes to Spanish and one field overrides `pattern`.
- */
-export const GeneratedErrorMessages: Story = {
-  render: () => {
-    const form = new FormGroup({
-      name: new FormControl('', Validators.required),
-      code: new FormControl('ab', [
-        Validators.minLength(4),
-        Validators.pattern(/^[0-9]+$/),
-      ]),
-      email: new FormControl('ada@', Validators.email),
-    });
-    form.markAllAsTouched();
-    return {
-      moduleMetadata: fieldModuleMetadata,
-      props: {
-        form,
-        spanish: {
-          required: '{label} es obligatorio.',
-          minlength: 'Ingresa al menos {requiredLength} caracteres.',
-          email: 'Ingresa un correo válido.',
-        },
-        codeMessages: { pattern: 'Solo dígitos, por favor.' },
-      },
-      template: `
-        <form andesForm [formGroup]="form" [errorMessages]="spanish" style="max-width: 360px;">
-          <andes-form-field label="Nombre">
-            <input andesFormControl formControlName="name" class="andes-demo-control" />
-          </andes-form-field>
-          <andes-form-field label="Código" [errorMessages]="codeMessages">
-            <input andesFormControl formControlName="code" class="andes-demo-control" />
-          </andes-form-field>
-          <andes-form-field label="Correo">
-            <input andesFormControl formControlName="email" class="andes-demo-control" />
-          </andes-form-field>
-        </form>
-      `,
-    };
-  },
-};
-
-/**
- * `help` replaces the generated messages (and is coloured by the status), `extra` always
- * sits underneath. Both are folded into the control's `aria-describedby`.
- */
-export const HelpAndExtra: Story = {
-  render: () => {
-    const password = new FormControl('abc', Validators.minLength(8));
-    password.markAsTouched();
-    return {
-      moduleMetadata: fieldModuleMetadata,
-      props: { password, plain: new FormControl('') },
-      template: `
-        <div andesForm style="max-width: 360px;">
-          <andes-form-field
-            label="Password"
-            help="Use 8 or more characters."
-            extra="We never store your password in plain text."
-          >
-            <input andesFormControl type="password" [formControl]="password" class="andes-demo-control" />
-          </andes-form-field>
-          <andes-form-field label="Nickname" extra="Shown on your public profile.">
-            <input andesFormControl [formControl]="plain" class="andes-demo-control" />
-          </andes-form-field>
-        </div>
-      `,
-    };
-  },
-};
-
-/**
+ * Text around the control. `help` replaces the generated messages (and is coloured by the
+ * status), `extra` always sits underneath; both are folded into the control's
+ * `aria-describedby`.
+ *
  * The required mark is detected from `Validators.required`/`requiredTrue` (or a native
  * `required` attribute); `requiredMark` on the form switches between the asterisk, nothing,
  * and `'optional'` (marks the *non*-required fields instead). `tooltip` adds an info button
  * next to the label - hover or focus it; Escape closes it.
  */
-export const RequiredMarkAndTooltip: Story = {
-  render: () => ({
-    moduleMetadata: fieldModuleMetadata,
-    props: {
-      groups: [true, 'optional', false].map((mark) => ({
-        mark,
-        name: new FormControl('', Validators.required),
-        company: new FormControl(''),
-      })),
-    },
-    template: `
-      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2rem; max-width: 900px;">
-        @for (c of groups; track $index) {
-          <div andesForm [requiredMark]="c.mark">
-            <p style="margin: 0; font-family: var(--andes-font-family), sans-serif; font-size: 0.75rem; color: var(--andes-color-muted-foreground);">
-              requiredMark = {{ c.mark }}
-            </p>
-            <andes-form-field label="Full name" tooltip="As printed on your ID.">
-              <input andesFormControl [formControl]="c.name" class="andes-demo-control" />
+export const Hints: Story = {
+  render: () => {
+    const password = new FormControl('abc', Validators.minLength(8));
+    password.markAsTouched();
+    return {
+      moduleMetadata: fieldModuleMetadata,
+      props: {
+        password,
+        plain: new FormControl(''),
+        groups: [true, 'optional', false].map((mark) => ({
+          mark,
+          name: new FormControl('', Validators.required),
+          company: new FormControl(''),
+        })),
+      },
+      template: `
+        <div style="display: flex; flex-direction: column; gap: 2rem; max-width: 900px;">
+          <div andesForm style="max-width: 360px;">
+            <andes-form-field
+              label="Password"
+              help="Use 8 or more characters."
+              extra="We never store your password in plain text."
+            >
+              <input andesFormControl type="password" [formControl]="password" class="andes-demo-control" />
             </andes-form-field>
-            <andes-form-field label="Company">
-              <input andesFormControl [formControl]="c.company" class="andes-demo-control" />
+            <andes-form-field label="Nickname" extra="Shown on your public profile.">
+              <input andesFormControl [formControl]="plain" class="andes-demo-control" />
             </andes-form-field>
           </div>
-        }
-      </div>
-    `,
-  }),
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2rem;">
+            @for (c of groups; track $index) {
+              <div andesForm [requiredMark]="c.mark">
+                <p style="margin: 0; font-family: var(--andes-font-family), sans-serif; font-size: 0.75rem; color: var(--andes-color-muted-foreground);">
+                  requiredMark = {{ c.mark }}
+                </p>
+                <andes-form-field label="Full name" tooltip="As printed on your ID.">
+                  <input andesFormControl [formControl]="c.name" class="andes-demo-control" />
+                </andes-form-field>
+                <andes-form-field label="Company">
+                  <input andesFormControl [formControl]="c.company" class="andes-demo-control" />
+                </andes-form-field>
+              </div>
+            }
+          </div>
+        </div>
+      `,
+    };
+  },
 };
 
 /**
  * `noStyle` fields render only their control - several of them can share one labelled
  * parent field, whose status and messages aggregate theirs (a compound field).
  */
-export const NoStyleCompound: Story = {
+export const Compound: Story = {
   render: () => {
     const prefix = new FormControl('+51', Validators.required);
     const phone = new FormControl('98', [
@@ -613,46 +456,11 @@ export const NoStyleCompound: Story = {
 };
 
 /**
- * `warningValidators` - ordinary `ValidatorFn`s whose errors never block the form: the field
- * goes `warning` with a message from the same message maps, while the control stays valid.
- * A real error still wins. Try a price under the 12.50 cost, then clear it.
- */
-export const WarningValidators: Story = {
-  render: () => {
-    const belowCost = (control: AbstractControl): ValidationErrors | null =>
-      control.value !== '' && Number(control.value) < 12.5
-        ? { belowCost: { cost: '12.50' } }
-        : null;
-    const price = new FormControl('9.90', Validators.required);
-    price.markAsTouched();
-    return {
-      moduleMetadata: fieldModuleMetadata,
-      props: { price, warnings: [belowCost] },
-      template: `
-        <div andesForm style="max-width: 360px;">
-          <andes-form-field
-            label="Unit price"
-            hasFeedback
-            [warningValidators]="warnings"
-            [errorMessages]="{ belowCost: 'Below the unit cost of {cost}.' }"
-          >
-            <input andesFormControl [formControl]="price" inputmode="decimal" class="andes-demo-control" />
-          </andes-form-field>
-          <p style="margin: 0; font-family: var(--andes-font-family), sans-serif; font-size: 0.75rem; line-height: 1.25rem; color: var(--andes-color-muted-foreground);">
-            control.valid = {{ price.valid }}
-          </p>
-        </div>
-      `,
-    };
-  },
-};
-
-/**
  * `hidden` hides a field but keeps its control in the form - its value and validity still
  * count (here the record id travels with the value). `feedbackIcons` swaps the built-in
  * status icons for a template, and `tooltip` accepts a template for rich hint content.
  */
-export const HiddenFieldTemplatesAndIcons: Story = {
+export const HiddenAndTemplates: Story = {
   render: () => {
     const form = new FormGroup({
       id: new FormControl('INV-0042'),

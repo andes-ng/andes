@@ -78,178 +78,186 @@ export default meta;
 
 type Story = StoryObj<AndesSteps>;
 
+const CAPTION =
+  'margin: 0 0 0.5rem; font: 0.75rem var(--andes-font-family), sans-serif; color: var(--andes-color-muted-foreground);';
+
 export const Default: Story = {};
 
-export const WithDescriptions: Story = {
-  render: (args) => ({
-    props: args,
+/**
+ * How a trail is laid out: with descriptions and timestamps at the default and `small` sizes,
+ * with the label placed below the marker (`labelPlacement="vertical"`) and stacked
+ * (`orientation="vertical"`).
+ */
+export const Layouts: Story = {
+  render: () => ({
     template: `
-      <andes-steps aria-label="Order fulfilment" [current]="current" [size]="size">
-        <andes-step title="Requested" subtitle="Mon 14:20" description="Created by Lucia Paredes" />
-        <andes-step title="Approved" subtitle="Tue 09:05" description="Finance signed off" />
-        <andes-step title="Shipped" description="Carrier pickup scheduled" />
-        <andes-step title="Delivered" description="Goes to warehouse 4" />
-      </andes-steps>`,
-  }),
-};
-
-export const Small: Story = {
-  args: { size: 'small' },
-};
-
-export const Vertical: Story = {
-  args: { orientation: 'vertical', current: 2 },
-  render: (args) => ({
-    props: args,
-    template: `
-      <andes-steps aria-label="Onboarding" [current]="current" orientation="vertical" [size]="size">
-        <andes-step title="Create workspace" description="Name it and pick a region." />
-        <andes-step title="Invite your team" description="Teammates join with a single link." />
-        <andes-step title="Connect a data source" description="Import customers, items and open orders." />
-        <andes-step title="Go live" />
-      </andes-steps>`,
-  }),
-};
-
-export const LabelBelow: Story = {
-  args: { labelPlacement: 'vertical', current: 2 },
-  render: (args) => ({
-    props: args,
-    template: `
-      <andes-steps aria-label="Checkout" [current]="current" labelPlacement="vertical">
-        <andes-step title="Cart" description="3 items" />
-        <andes-step title="Shipping" description="Lima, PE" />
-        <andes-step title="Payment" description="Card ending 4242" />
-        <andes-step title="Confirmation" />
-      </andes-steps>`,
-  }),
-};
-
-export const Dot: Story = {
-  args: { variant: 'dot', current: 2 },
-  render: (args) => ({
-    props: args,
-    template: `
-      <div style="display:grid; gap:2.5rem">
-        <andes-steps aria-label="Release train" [current]="current" variant="dot">
-          <andes-step title="Planned" description="Sprint 41" />
-          <andes-step title="Built" description="CI green" />
-          <andes-step title="In QA" description="Regression suite" />
-          <andes-step title="Released" />
-        </andes-steps>
-        <andes-steps aria-label="Release train, stacked" [current]="current" variant="dot" orientation="vertical">
-          <andes-step title="Planned" description="Sprint 41" />
-          <andes-step title="Built" description="CI green" />
-          <andes-step title="In QA" description="Regression suite" />
-          <andes-step title="Released" />
-        </andes-steps>
+      <div style="display: grid; gap: 2.5rem;">
+        <div>
+          <p style="${CAPTION}">Descriptions, default size</p>
+          <andes-steps aria-label="Order fulfilment" [current]="1">
+            <andes-step title="Requested" subtitle="Mon 14:20" description="Created by Lucia Paredes" />
+            <andes-step title="Approved" subtitle="Tue 09:05" description="Finance signed off" />
+            <andes-step title="Shipped" description="Carrier pickup scheduled" />
+            <andes-step title="Delivered" description="Goes to warehouse 4" />
+          </andes-steps>
+        </div>
+        <div>
+          <p style="${CAPTION}">Small</p>
+          <andes-steps aria-label="Order fulfilment, small" [current]="1" size="small">
+            <andes-step title="Requested" subtitle="Mon 14:20" description="Created by Lucia Paredes" />
+            <andes-step title="Approved" subtitle="Tue 09:05" description="Finance signed off" />
+            <andes-step title="Shipped" description="Carrier pickup scheduled" />
+            <andes-step title="Delivered" description="Goes to warehouse 4" />
+          </andes-steps>
+        </div>
+        <div>
+          <p style="${CAPTION}">Label below</p>
+          <andes-steps aria-label="Checkout" [current]="2" labelPlacement="vertical">
+            <andes-step title="Cart" description="3 items" />
+            <andes-step title="Shipping" description="Lima, PE" />
+            <andes-step title="Payment" description="Card ending 4242" />
+            <andes-step title="Confirmation" />
+          </andes-steps>
+        </div>
+        <div>
+          <p style="${CAPTION}">Vertical</p>
+          <andes-steps aria-label="Onboarding" [current]="2" orientation="vertical">
+            <andes-step title="Create workspace" description="Name it and pick a region." />
+            <andes-step title="Invite your team" description="Teammates join with a single link." />
+            <andes-step title="Connect a data source" description="Import customers, items and open orders." />
+            <andes-step title="Go live" />
+          </andes-steps>
+        </div>
       </div>`,
   }),
 };
 
-export const Navigation: Story = {
-  args: { variant: 'navigation', current: 1 },
-  render: (args) => ({
-    props: args,
+/**
+ * The visual variants: `dot` (horizontal and stacked), `navigation` (clickable, with a disabled
+ * step) and `inline` (compact, for a narrow column).
+ */
+export const Variants: Story = {
+  render: () => ({
     template: `
-      <andes-steps aria-label="Report wizard" [current]="current" variant="navigation" [clickable]="true">
-        <andes-step title="Filters" description="Period and branch" />
-        <andes-step title="Columns" description="What to include" />
-        <andes-step title="Schedule" description="Who gets it" />
-        <andes-step title="Review" [disabled]="true" />
-      </andes-steps>`,
-  }),
-};
-
-export const Inline: Story = {
-  args: { variant: 'inline', current: 1 },
-  render: (args) => ({
-    props: args,
-    template: `
-      <div style="max-width: 28rem">
-        <andes-steps aria-label="Upload status" [current]="current" variant="inline">
-          <andes-step title="Upload" description="orders.csv" />
-          <andes-step title="Validate" description="1,204 rows" />
-          <andes-step title="Import" />
-        </andes-steps>
+      <div style="display: grid; gap: 2.5rem;">
+        <div>
+          <p style="${CAPTION}">Dot</p>
+          <andes-steps aria-label="Release train" [current]="2" variant="dot">
+            <andes-step title="Planned" description="Sprint 41" />
+            <andes-step title="Built" description="CI green" />
+            <andes-step title="In QA" description="Regression suite" />
+            <andes-step title="Released" />
+          </andes-steps>
+        </div>
+        <div>
+          <p style="${CAPTION}">Dot, stacked</p>
+          <andes-steps aria-label="Release train, stacked" [current]="2" variant="dot" orientation="vertical">
+            <andes-step title="Planned" description="Sprint 41" />
+            <andes-step title="Built" description="CI green" />
+            <andes-step title="In QA" description="Regression suite" />
+            <andes-step title="Released" />
+          </andes-steps>
+        </div>
+        <div>
+          <p style="${CAPTION}">Navigation</p>
+          <andes-steps aria-label="Report wizard" [current]="1" variant="navigation" [clickable]="true">
+            <andes-step title="Filters" description="Period and branch" />
+            <andes-step title="Columns" description="What to include" />
+            <andes-step title="Schedule" description="Who gets it" />
+            <andes-step title="Review" [disabled]="true" />
+          </andes-steps>
+        </div>
+        <div style="max-width: 28rem">
+          <p style="${CAPTION}">Inline</p>
+          <andes-steps aria-label="Upload status" [current]="1" variant="inline">
+            <andes-step title="Upload" description="orders.csv" />
+            <andes-step title="Validate" description="1,204 rows" />
+            <andes-step title="Import" />
+          </andes-steps>
+        </div>
       </div>`,
   }),
 };
 
-export const ErrorStatus: Story = {
-  args: { current: 2, status: 'error' },
-  render: (args) => ({
-    props: args,
-    template: `
-      <andes-steps aria-label="Import progress" [current]="current" [status]="status">
-        <andes-step title="Upload" description="orders.csv" />
-        <andes-step title="Validate" description="1,204 rows" />
-        <andes-step title="Import" description="Failed on row 311" />
-        <andes-step title="Done" />
-      </andes-steps>`,
-  }),
-};
-
-export const PerStepStatus: Story = {
+/**
+ * Status and progress: a trail with `status="error"` on the current step, one step with its own
+ * `status="error"` (the later steps stay waiting), and `percent` on the current step.
+ */
+export const Status: Story = {
   render: () => ({
     template: `
-      <andes-steps aria-label="Approval chain" [current]="3">
-        <andes-step title="Draft" />
-        <andes-step title="Legal" status="error" description="Clause 4 rejected" />
-        <andes-step title="Finance" />
-        <andes-step title="Director" />
-      </andes-steps>`,
+      <div style="display: grid; gap: 2.5rem;">
+        <div>
+          <p style="${CAPTION}">status="error" on the trail</p>
+          <andes-steps aria-label="Import progress" [current]="2" status="error">
+            <andes-step title="Upload" description="orders.csv" />
+            <andes-step title="Validate" description="1,204 rows" />
+            <andes-step title="Import" description="Failed on row 311" />
+            <andes-step title="Done" />
+          </andes-steps>
+        </div>
+        <div>
+          <p style="${CAPTION}">status on a single step</p>
+          <andes-steps aria-label="Approval chain" [current]="3">
+            <andes-step title="Draft" />
+            <andes-step title="Legal" status="error" description="Clause 4 rejected" />
+            <andes-step title="Finance" />
+            <andes-step title="Director" />
+          </andes-steps>
+        </div>
+        <div>
+          <p style="${CAPTION}">percent: 60</p>
+          <andes-steps aria-label="Sync progress" [current]="1" [percent]="60">
+            <andes-step title="Extract" />
+            <andes-step title="Transform" description="60% of 5,000 rows" />
+            <andes-step title="Load" />
+          </andes-steps>
+        </div>
+      </div>`,
   }),
 };
 
-export const WithPercent: Story = {
-  args: { current: 1, percent: 60 },
-  render: (args) => ({
-    props: args,
-    template: `
-      <andes-steps aria-label="Sync progress" [current]="current" [percent]="percent">
-        <andes-step title="Extract" />
-        <andes-step title="Transform" description="60% of 5,000 rows" />
-        <andes-step title="Load" />
-      </andes-steps>`,
-  }),
-};
-
-export const Clickable: Story = {
-  render: () => ({
-    props: { current: 1 },
-    template: `
-      <andes-steps aria-label="Edit profile" [(current)]="current" [clickable]="true">
-        <andes-step title="Personal" description="Name and contact" />
-        <andes-step title="Work" description="Role and manager" />
-        <andes-step title="Access" [disabled]="true" description="Needs admin" />
-        <andes-step title="Summary" />
-      </andes-steps>
-      <p style="margin-top: 1rem; font-size: 0.875rem">Selected step: {{ current + 1 }}</p>`,
-  }),
-};
-
-export const WizardWithButtons: Story = {
+/**
+ * Two ways to drive the current step: a clickable trail with two-way `[(current)]` (a disabled
+ * step cannot be selected), and a wizard whose Back and Next buttons move `current`. The demo
+ * state is named `pickedStep` / `wizardStep`, not `current`, because `current` is an input of
+ * the meta component and Storybook would forward it onto the first instance.
+ */
+export const Interaction: Story = {
   render: () => ({
     props: {
-      current: 0,
-      next(this: { current: number }) {
-        this.current = Math.min(this.current + 1, 3);
+      pickedStep: 1,
+      wizardStep: 0,
+      next(this: { wizardStep: number }) {
+        this.wizardStep = Math.min(this.wizardStep + 1, 3);
       },
-      back(this: { current: number }) {
-        this.current = Math.max(this.current - 1, 0);
+      back(this: { wizardStep: number }) {
+        this.wizardStep = Math.max(this.wizardStep - 1, 0);
       },
     },
     template: `
-      <andes-steps aria-label="New supplier" [current]="current">
-        <andes-step title="Company" description="Legal name and tax id" />
-        <andes-step title="Contacts" description="Buyers and billing" />
-        <andes-step title="Terms" description="Payment and delivery" />
-        <andes-step title="Review" />
-      </andes-steps>
-      <div style="display:flex; gap: .5rem; margin-top: 1.5rem">
-        <andes-button variant="outline" [disabled]="current === 0" (click)="back()">Back</andes-button>
-        <andes-button [disabled]="current === 3" (click)="next()">Next</andes-button>
+      <div style="display: grid; gap: 2.5rem;">
+        <div>
+          <andes-steps aria-label="Edit profile" [(current)]="pickedStep" [clickable]="true">
+            <andes-step title="Personal" description="Name and contact" />
+            <andes-step title="Work" description="Role and manager" />
+            <andes-step title="Access" [disabled]="true" description="Needs admin" />
+            <andes-step title="Summary" />
+          </andes-steps>
+          <p style="margin-top: 1rem; font-size: 0.875rem">Selected step: {{ pickedStep + 1 }}</p>
+        </div>
+        <div>
+          <andes-steps aria-label="New supplier" [current]="wizardStep">
+            <andes-step title="Company" description="Legal name and tax id" />
+            <andes-step title="Contacts" description="Buyers and billing" />
+            <andes-step title="Terms" description="Payment and delivery" />
+            <andes-step title="Review" />
+          </andes-steps>
+          <div style="display:flex; gap: .5rem; margin-top: 1.5rem">
+            <andes-button variant="outline" [disabled]="wizardStep === 0" (click)="back()">Back</andes-button>
+            <andes-button [disabled]="wizardStep === 3" (click)="next()">Next</andes-button>
+          </div>
+        </div>
       </div>`,
   }),
 };

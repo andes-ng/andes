@@ -263,7 +263,7 @@ class DialogServiceDemo {
  * settings with a custom close icon.
  */
 const meta: Meta<DialogServiceDemo> = {
-  title: 'Dialog/Service',
+  title: 'Feedback/Dialog/Service',
   component: DialogServiceDemo,
 };
 

@@ -78,7 +78,7 @@ const TRIGGER_STYLES = `
 `;
 
 const meta: Meta<AndesDialog> = {
-  title: 'Dialog',
+  title: 'Feedback/Dialog',
   component: AndesDialog,
   tags: ['autodocs'],
   argTypes: {

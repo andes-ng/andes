@@ -40,7 +40,7 @@ const TRIGGER_STYLES = `
 `;
 
 const meta: Meta<AndesAlertDialog> = {
-  title: 'Alert Dialog',
+  title: 'Feedback/Alert Dialog',
   component: AndesAlertDialog,
   tags: ['autodocs'],
   argTypes: {

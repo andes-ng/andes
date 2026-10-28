@@ -45,7 +45,7 @@ const more = (existing: number) =>
   }));
 
 const meta: Meta<AndesMasonry> = {
-  title: 'Masonry',
+  title: 'Layout/Masonry',
   component: AndesMasonry,
   tags: ['autodocs'],
   decorators: [moduleMetadata({ imports: [AndesMasonry, AndesMasonryItem] })],

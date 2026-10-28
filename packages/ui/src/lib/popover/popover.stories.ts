@@ -59,7 +59,7 @@ const FIELD_STYLES = `
 `;
 
 const meta: Meta<AndesPopover> = {
-  title: 'Popover',
+  title: 'Data Display/Popover',
   component: AndesPopover,
   tags: ['autodocs'],
   argTypes: {

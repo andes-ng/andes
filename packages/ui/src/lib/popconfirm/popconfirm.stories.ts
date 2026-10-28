@@ -8,7 +8,7 @@ import { AndesPopconfirm } from './popconfirm';
 const imports = [AndesButton, AndesPopconfirmTrigger];
 
 const meta: Meta<AndesPopconfirm> = {
-  title: 'Popconfirm',
+  title: 'Feedback/Popconfirm',
   component: AndesPopconfirm,
   tags: ['autodocs'],
   argTypes: {

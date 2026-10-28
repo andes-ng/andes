@@ -71,7 +71,7 @@ const BASIC_TABS = `
 `;
 
 const meta: Meta<AndesTabs> = {
-  title: 'Tabs',
+  title: 'Navigation/Tabs',
   component: AndesTabs,
   tags: ['autodocs'],
   decorators: [

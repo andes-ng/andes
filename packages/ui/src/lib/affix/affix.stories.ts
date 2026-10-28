@@ -19,7 +19,7 @@ function filler(lines: number, label = 'Row'): string {
 }
 
 const meta: Meta<AndesAffix> = {
-  title: 'Affix',
+  title: 'Layout/Affix',
   component: AndesAffix,
   tags: ['autodocs'],
   decorators: [moduleMetadata({ imports: [AndesAffix] })],

@@ -45,11 +45,8 @@ export default meta;
 
 type Story = StoryObj<AndesCalendar>;
 
+/** The playground: the `mode` control switches to range selection (see Selection for ranges). */
 export const Single: Story = {};
-
-export const Range: Story = {
-  args: { mode: 'range' },
-};
 
 const CAPTION =
   'margin: 0 0 0.5rem; font: 0.75rem/1.25rem var(--andes-font-family), sans-serif; color: var(--andes-color-muted-foreground);';
@@ -137,7 +134,10 @@ export const Constraints: Story = {
 /**
  * Grid layout options (also available as controls on the playground): `weekStartsOn`
  * (Monday first), `showOutsideDays` off, `fixedWeeks` (always six rows) and `showWeek`,
- * the ISO week numbers (Monday-first) in their own row-header column.
+ * the ISO week numbers (Monday-first) in their own row-header column. Then months that stress
+ * the grid: February 2024 is a leap February (the grid must run to the 29th), and December
+ * 2024 has trailing cells that belong to January *2025*. Last, month and weekday names come
+ * from `Intl`, so no locale is hard-coded.
  */
 export const Layout: Story = {
   render: () => ({
@@ -165,25 +165,6 @@ export const Layout: Story = {
           <p [style]="caption">Week numbers</p>
           <andes-calendar locale="en-GB" [weekStartsOn]="1" showWeek [defaultMonth]="december" />
         </div>
-      </div>
-    `,
-  }),
-};
-
-/**
- * Months that stress the grid: February 2024 is a leap February (the grid must run to the
- * 29th), and December 2024 has trailing cells that belong to January *2025*.
- */
-export const EdgeMonths: Story = {
-  render: () => ({
-    props: {
-      febMonth: FEBRUARY_2024,
-      december: new Date(2024, 11, 1),
-      caption: CAPTION,
-      row: ROW,
-    },
-    template: `
-      <div [style]="row">
         <div>
           <p [style]="caption">Leap February</p>
           <andes-calendar locale="en-US" [defaultMonth]="febMonth" />
@@ -192,20 +173,14 @@ export const EdgeMonths: Story = {
           <p [style]="caption">Month rollover</p>
           <andes-calendar locale="en-US" [defaultMonth]="december" />
         </div>
-      </div>
-    `,
-  }),
-};
-
-/** Month and weekday names come from `Intl`, so no locale is hard-coded. */
-export const Locales: Story = {
-  render: () => ({
-    props: { defaultMonth: FEBRUARY_2024 },
-    template: `
-      <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-        <andes-calendar locale="en-US" [defaultMonth]="defaultMonth" />
-        <andes-calendar locale="es-PE" [weekStartsOn]="1" [defaultMonth]="defaultMonth" />
-        <andes-calendar locale="ja-JP" [defaultMonth]="defaultMonth" />
+        <div>
+          <p [style]="caption">es-PE</p>
+          <andes-calendar locale="es-PE" [weekStartsOn]="1" [defaultMonth]="febMonth" />
+        </div>
+        <div>
+          <p [style]="caption">ja-JP</p>
+          <andes-calendar locale="ja-JP" [defaultMonth]="febMonth" />
+        </div>
       </div>
     `,
   }),

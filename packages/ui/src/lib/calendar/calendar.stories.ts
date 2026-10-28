@@ -51,95 +51,150 @@ export const Range: Story = {
   args: { mode: 'range' },
 };
 
+const CAPTION =
+  'margin: 0 0 0.5rem; font: 0.75rem/1.25rem var(--andes-font-family), sans-serif; color: var(--andes-color-muted-foreground);';
+const ROW =
+  'display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: flex-start;';
+
 /**
- * A pre-selected range, to show the boundary and interior treatments without
- * having to click through the selection first.
+ * Pre-selected values, so the treatments show without clicking through a selection
+ * first: a single day, a range (boundary and interior cells), two months side by side as
+ * the range picker shows them (with the start picked, hovering or arrowing previews the
+ * range the next pick would close), and a range of months picked in the month grid.
  */
-export const RangePreselected: Story = {
-  render: (args) => ({
+export const Selection: Story = {
+  render: () => ({
     props: {
-      ...args,
-      defaultMonth: FEBRUARY_2024,
-      value: { start: new Date(2024, 1, 10), end: new Date(2024, 1, 18) },
+      febMonth: FEBRUARY_2024,
+      day: new Date(2024, 1, 15),
+      range: { start: new Date(2024, 1, 10), end: new Date(2024, 1, 18) },
+      twoMonths: { start: new Date(2024, 1, 20), end: null },
+      monthRange: { start: new Date(2024, 2, 1), end: new Date(2024, 7, 1) },
+      caption: CAPTION,
+      row: ROW,
     },
-    template: `<andes-calendar mode="range" [locale]="locale" [value]="value" [defaultMonth]="defaultMonth" />`,
+    template: `
+      <div [style]="row">
+        <div>
+          <p [style]="caption">Single day</p>
+          <andes-calendar locale="en-US" [value]="day" [defaultMonth]="febMonth" />
+        </div>
+        <div>
+          <p [style]="caption">Range</p>
+          <andes-calendar mode="range" locale="en-US" [value]="range" [defaultMonth]="febMonth" />
+        </div>
+        <div>
+          <p [style]="caption">Two months, start picked</p>
+          <andes-calendar mode="range" locale="en-US" [numberOfMonths]="2" [defaultMonth]="febMonth" [(value)]="twoMonths" />
+        </div>
+        <div>
+          <p [style]="caption">Range of months</p>
+          <andes-calendar mode="range" picker="month" locale="en-US" [(value)]="monthRange" />
+        </div>
+      </div>
+    `,
   }),
 };
 
-export const WithSelection: Story = {
-  render: (args) => ({
-    props: { ...args, value: new Date(2024, 1, 15) },
-    template: `<andes-calendar [locale]="locale" [value]="value" />`,
-  }),
-};
-
-/** February 2024 is a leap February: the grid must run to the 29th. */
-export const LeapFebruary: Story = {
-  render: (args) => ({
-    props: { ...args, defaultMonth: FEBRUARY_2024 },
-    template: `<andes-calendar [locale]="locale" [defaultMonth]="defaultMonth" />`,
-  }),
-};
-
-/** December 2024, whose trailing cells belong to January *2025*. */
-export const MonthRollover: Story = {
-  render: (args) => ({
-    props: { ...args, defaultMonth: new Date(2024, 11, 1) },
-    template: `<andes-calendar [locale]="locale" [defaultMonth]="defaultMonth" />`,
-  }),
-};
-
-/** `min`/`max` landing exactly on the visible month's first and last day. */
-export const BoundsOnMonthEdges: Story = {
-  render: (args) => ({
+/**
+ * Limits on what can be picked: `min`/`max` inside the month, `min`/`max` landing exactly
+ * on the visible month's first and last day, a `dateDisabled` predicate (weekends) and
+ * the `disabled` calendar.
+ */
+export const Constraints: Story = {
+  render: () => ({
     props: {
-      ...args,
-      defaultMonth: FEBRUARY_2024,
-      min: new Date(2024, 1, 1),
-      max: new Date(2024, 1, 29),
+      febMonth: FEBRUARY_2024,
+      inside: [new Date(2024, 1, 8), new Date(2024, 1, 22)],
+      edges: [new Date(2024, 1, 1), new Date(2024, 1, 29)],
+      weekends: (date: Date) => date.getDay() === 0 || date.getDay() === 6,
+      caption: CAPTION,
+      row: ROW,
     },
-    template: `<andes-calendar [locale]="locale" [defaultMonth]="defaultMonth" [min]="min" [max]="max" />`,
+    template: `
+      <div [style]="row">
+        <div>
+          <p [style]="caption">min = Feb 8, max = Feb 22</p>
+          <andes-calendar locale="en-US" [defaultMonth]="febMonth" [min]="inside[0]" [max]="inside[1]" />
+        </div>
+        <div>
+          <p [style]="caption">min and max on the month edges</p>
+          <andes-calendar locale="en-US" [defaultMonth]="febMonth" [min]="edges[0]" [max]="edges[1]" />
+        </div>
+        <div>
+          <p [style]="caption">Weekends through dateDisabled</p>
+          <andes-calendar locale="en-US" [defaultMonth]="febMonth" [dateDisabled]="weekends" />
+        </div>
+        <div>
+          <p [style]="caption">disabled</p>
+          <andes-calendar locale="en-US" disabled [defaultMonth]="febMonth" />
+        </div>
+      </div>
+    `,
   }),
 };
 
-export const WithBounds: Story = {
-  render: (args) => ({
+/**
+ * Grid layout options (also available as controls on the playground): `weekStartsOn`
+ * (Monday first), `showOutsideDays` off, `fixedWeeks` (always six rows) and `showWeek`,
+ * the ISO week numbers (Monday-first) in their own row-header column.
+ */
+export const Layout: Story = {
+  render: () => ({
     props: {
-      ...args,
-      defaultMonth: FEBRUARY_2024,
-      min: new Date(2024, 1, 8),
-      max: new Date(2024, 1, 22),
+      febMonth: FEBRUARY_2024,
+      december: new Date(2024, 11, 1),
+      caption: CAPTION,
+      row: ROW,
     },
-    template: `<andes-calendar [locale]="locale" [defaultMonth]="defaultMonth" [min]="min" [max]="max" />`,
+    template: `
+      <div [style]="row">
+        <div>
+          <p [style]="caption">Monday first</p>
+          <andes-calendar locale="en-US" [weekStartsOn]="1" [defaultMonth]="febMonth" />
+        </div>
+        <div>
+          <p [style]="caption">Outside days hidden</p>
+          <andes-calendar locale="en-US" [showOutsideDays]="false" [defaultMonth]="febMonth" />
+        </div>
+        <div>
+          <p [style]="caption">Fixed weeks</p>
+          <andes-calendar locale="en-US" fixedWeeks [defaultMonth]="febMonth" />
+        </div>
+        <div>
+          <p [style]="caption">Week numbers</p>
+          <andes-calendar locale="en-GB" [weekStartsOn]="1" showWeek [defaultMonth]="december" />
+        </div>
+      </div>
+    `,
   }),
 };
 
-/** Weekends blocked through the `dateDisabled` predicate. */
-export const WeekendsDisabled: Story = {
-  render: (args) => ({
+/**
+ * Months that stress the grid: February 2024 is a leap February (the grid must run to the
+ * 29th), and December 2024 has trailing cells that belong to January *2025*.
+ */
+export const EdgeMonths: Story = {
+  render: () => ({
     props: {
-      ...args,
-      defaultMonth: FEBRUARY_2024,
-      dateDisabled: (date: Date) => date.getDay() === 0 || date.getDay() === 6,
+      febMonth: FEBRUARY_2024,
+      december: new Date(2024, 11, 1),
+      caption: CAPTION,
+      row: ROW,
     },
-    template: `<andes-calendar [locale]="locale" [defaultMonth]="defaultMonth" [dateDisabled]="dateDisabled" />`,
+    template: `
+      <div [style]="row">
+        <div>
+          <p [style]="caption">Leap February</p>
+          <andes-calendar locale="en-US" [defaultMonth]="febMonth" />
+        </div>
+        <div>
+          <p [style]="caption">Month rollover</p>
+          <andes-calendar locale="en-US" [defaultMonth]="december" />
+        </div>
+      </div>
+    `,
   }),
-};
-
-export const MondayFirst: Story = {
-  args: { weekStartsOn: 1 },
-};
-
-export const HideOutsideDays: Story = {
-  args: { showOutsideDays: false },
-};
-
-export const FixedWeeks: Story = {
-  args: { fixedWeeks: true },
-};
-
-export const Disabled: Story = {
-  args: { disabled: true },
 };
 
 /** Month and weekday names come from `Intl`, so no locale is hard-coded. */
@@ -179,38 +234,6 @@ export const PickerModes: Story = {
   }),
 };
 
-/** ISO week numbers (Monday-first), in their own row-header column. */
-export const WeekNumbers: Story = {
-  render: () => ({
-    props: { defaultMonth: new Date(2024, 11, 1) },
-    template: `<andes-calendar locale="en-GB" [weekStartsOn]="1" showWeek [defaultMonth]="defaultMonth" />`,
-  }),
-};
-
-/**
- * Two months side by side, as the range picker shows them. With the start picked,
- * hovering (or arrowing) previews the range the next pick would close.
- */
-export const TwoMonthRange: Story = {
-  render: () => ({
-    props: {
-      defaultMonth: FEBRUARY_2024,
-      value: { start: new Date(2024, 1, 20), end: null },
-    },
-    template: `<andes-calendar mode="range" locale="en-US" [numberOfMonths]="2" [defaultMonth]="defaultMonth" [(value)]="value" />`,
-  }),
-};
-
-/** A range of months, picked in the month grid. */
-export const MonthRange: Story = {
-  render: () => ({
-    props: {
-      value: { start: new Date(2024, 2, 1), end: new Date(2024, 7, 1) },
-    },
-    template: `<andes-calendar mode="range" picker="month" locale="en-US" [(value)]="value" />`,
-  }),
-};
-
 /**
  * `cellTemplate` customises each cell. The context carries the date, the
  * resolved cell state and the grid it belongs to.
@@ -235,15 +258,16 @@ export const CustomCells: Story = {
 };
 
 /**
- * `fullscreen`: a full-width grid whose cells hold `cellTemplate` content under
- * the day number.
+ * `fullscreen`: a full-width grid. The first calendar holds `cellTemplate` content under
+ * the day number; the second uses `fullCellTemplate`, which draws each cell from scratch,
+ * the day number included - here an availability board.
  */
 export const Fullscreen: Story = {
   parameters: { layout: 'fullscreen' },
   render: () => ({
     props: {
-      defaultMonth: FEBRUARY_2024,
-      value: new Date(2024, 1, 14),
+      febMonth: FEBRUARY_2024,
+      picked: new Date(2024, 1, 14),
       events: {
         '2024-02-05': ['Sprint planning'],
         '2024-02-14': ['Design review', 'Release 2.4'],
@@ -251,6 +275,7 @@ export const Fullscreen: Story = {
       } as Record<string, string[]>,
       key: (date: Date) =>
         `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
+      seats: (date: Date) => (date.getDate() * 7) % 13,
     },
     template: `
       <ng-template #cell let-date let-cell="cell">
@@ -260,8 +285,19 @@ export const Fullscreen: Story = {
           }
         }
       </ng-template>
-      <div style="padding: 1rem;">
-        <andes-calendar fullscreen locale="en-US" [defaultMonth]="defaultMonth" [(value)]="value" [cellTemplate]="cell" />
+      <ng-template #full let-date let-cell="cell">
+        <span style="display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+          <strong style="font-size: 1rem;">{{ cell.text }}</strong>
+          @if (!cell.outside) {
+            <span style="font-size: 0.75rem;" [style.color]="seats(date) ? 'var(--andes-color-muted-foreground)' : 'var(--andes-color-danger)'">
+              {{ seats(date) ? seats(date) + ' seats left' : 'Full' }}
+            </span>
+          }
+        </span>
+      </ng-template>
+      <div style="padding: 1rem; display: flex; flex-direction: column; gap: 2rem;">
+        <andes-calendar fullscreen locale="en-US" [defaultMonth]="febMonth" [(value)]="picked" [cellTemplate]="cell" />
+        <andes-calendar fullscreen locale="en-US" [defaultMonth]="febMonth" [fullCellTemplate]="full" />
       </div>
     `,
   }),
@@ -322,35 +358,6 @@ export const CustomHeader: Story = {
       }
       `,
     ],
-  }),
-};
-
-/**
- * `fullCellTemplate` draws each cell from scratch, the day number included —
- * here an availability board where the template owns the whole cell.
- */
-export const FullCells: Story = {
-  parameters: { layout: 'fullscreen' },
-  render: () => ({
-    props: {
-      defaultMonth: FEBRUARY_2024,
-      seats: (date: Date) => (date.getDate() * 7) % 13,
-    },
-    template: `
-      <ng-template #full let-date let-cell="cell">
-        <span style="display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
-          <strong style="font-size: 1rem;">{{ cell.text }}</strong>
-          @if (!cell.outside) {
-            <span style="font-size: 0.75rem;" [style.color]="seats(date) ? 'var(--andes-color-muted-foreground)' : 'var(--andes-color-danger)'">
-              {{ seats(date) ? seats(date) + ' seats left' : 'Full' }}
-            </span>
-          }
-        </span>
-      </ng-template>
-      <div style="padding: 1rem;">
-        <andes-calendar fullscreen locale="en-US" [defaultMonth]="defaultMonth" [fullCellTemplate]="full" />
-      </div>
-    `,
   }),
 };
 

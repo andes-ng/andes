@@ -201,23 +201,45 @@ type Story = StoryObj<AndesMentions>;
 /** Type `@` and a few letters of a name. */
 export const Default: Story = {};
 
-/** A single line instead of a text area. */
-export const SingleLine: Story = {
-  args: { type: 'input', placeholder: 'Reply to @' },
+/**
+ * Field types and limits: `type="input"` gives a single line instead of a text area; a
+ * counter with `maxLength` (a pick that would pass the limit is refused); and `autoSize`,
+ * where the field grows with its text between `minRows` and `maxRows`.
+ */
+export const Field: Story = {
+  render: () => ({
+    props: { people: PEOPLE, grow: { minRows: 2, maxRows: 6 } },
+    template: `
+      <div style="display: flex; flex-direction: column; gap: 1rem; width: 26rem; padding-bottom: 14rem;">
+        <andes-mentions type="input" [options]="people" placeholder="Reply to @" aria-label="Reply" />
+        <andes-mentions [options]="people" showCount [maxLength]="60" [rows]="2" placeholder="At most 60 characters" aria-label="Short note" />
+        <andes-mentions [options]="people" [autoSize]="grow" [rows]="2" placeholder="Grows between 2 and 6 rows" aria-label="Long note" />
+      </div>
+    `,
+  }),
 };
 
-/** Several triggers, each with its own list: `@` for people, `#` for topics. */
-export const MultipleTriggers: Story = {
+/**
+ * Triggers and what follows a pick. Several triggers, each with its own list: `@` for
+ * people, `#` for topics. `split` is what follows a picked value: a comma and a space in
+ * the second field, nothing in the third. `validateSearch` decides when a search ends; in
+ * the last field, names with a space are still searched.
+ */
+export const Triggers: Story = {
   render: () => ({
-    props: { prefix: ['@', '#'], options: { '@': PEOPLE, '#': TOPICS } },
+    props: {
+      people: PEOPLE,
+      triggers: ['@', '#'],
+      triggerOptions: { '@': PEOPLE, '#': TOPICS },
+      allowSpaces: (query: string) =>
+        query.length < 24 && !query.includes('\n'),
+    },
     template: `
-      <div style="width: 26rem; padding-bottom: 14rem;">
-        <andes-mentions
-          [prefix]="prefix"
-          [options]="options"
-          placeholder="Try @ana and #urgent"
-          aria-label="Message"
-        />
+      <div style="display: flex; flex-direction: column; gap: 1rem; width: 26rem; padding-bottom: 14rem;">
+        <andes-mentions [prefix]="triggers" [options]="triggerOptions" placeholder="Try @ana and #urgent" aria-label="Message" />
+        <andes-mentions type="input" split=", " [options]="people" placeholder="split = ', '" aria-label="Recipients" />
+        <andes-mentions type="input" split="" [options]="people" placeholder="split = ''" aria-label="Notes" />
+        <andes-mentions [options]="people" [validateSearch]="allowSpaces" placeholder="Type @maria s - the search keeps going after a space" aria-label="Comment" />
       </div>
     `,
   }),
@@ -245,35 +267,6 @@ export const CustomOption: Story = {
             <span style="font-size: 0.75rem; color: var(--andes-color-muted-foreground);">{{ option.data }}</span>
           </span>
         </ng-template>
-      </div>
-    `,
-  }),
-};
-
-/** `split` is what follows a picked value: a comma and a space here, nothing in the next field. */
-export const Split: Story = {
-  render: () => ({
-    props: { people: PEOPLE },
-    template: `
-      <div style="display: flex; flex-direction: column; gap: 1rem; width: 26rem; padding-bottom: 14rem;">
-        <andes-mentions type="input" split=", " [options]="people" placeholder="split = ', '" aria-label="Recipients" />
-        <andes-mentions type="input" split="" [options]="people" placeholder="split = ''" aria-label="Notes" />
-      </div>
-    `,
-  }),
-};
-
-/** `validateSearch` decides when a search ends; here names with a space are still searched. */
-export const ValidateSearch: Story = {
-  render: () => ({
-    props: {
-      people: PEOPLE,
-      allowSpaces: (query: string) =>
-        query.length < 24 && !query.includes('\n'),
-    },
-    template: `
-      <div style="width: 26rem; padding-bottom: 14rem;">
-        <andes-mentions [options]="people" [validateSearch]="allowSpaces" placeholder="Type @maria s - the search keeps going after a space" aria-label="Comment" />
       </div>
     `,
   }),
@@ -307,38 +300,19 @@ export const Variants: Story = {
   }),
 };
 
-export const Statuses: Story = {
+/** `status` as an error or a warning, `disabled` and `readonly`. */
+export const States: Story = {
   render: () => ({
     props: { people: PEOPLE },
     template: `
       <div style="display: flex; flex-direction: column; gap: 1rem; width: 26rem; padding-bottom: 12rem;">
         <andes-mentions status="error" [rows]="1" [options]="people" value="Something is wrong here" aria-label="Error" />
         <andes-mentions status="warning" [rows]="1" [options]="people" value="Check this before sending" aria-label="Warning" />
-      </div>
-    `,
-  }),
-};
-
-export const DisabledAndReadonly: Story = {
-  render: () => ({
-    props: { people: PEOPLE },
-    template: `
-      <div style="display: flex; flex-direction: column; gap: 1rem; width: 26rem;">
         <andes-mentions [disabled]="true" [rows]="1" [options]="people" value="Disabled, @ana.torres" aria-label="Disabled" />
         <andes-mentions [readonly]="true" [rows]="1" [options]="people" value="Read-only, @ana.torres" aria-label="Read-only" />
       </div>
     `,
   }),
-};
-
-/** A counter with `maxLength`; a pick that would pass the limit is refused. */
-export const WithCount: Story = {
-  args: { showCount: true, maxLength: 60, rows: 2 },
-};
-
-/** The field grows with its text between `minRows` and `maxRows`. */
-export const AutoSize: Story = {
-  args: { autoSize: { minRows: 2, maxRows: 6 } as unknown as boolean, rows: 2 },
 };
 
 /** `placement="top"` opens the list above the line; it flips by itself when there is no room. */
@@ -365,14 +339,14 @@ export const WithForms: Story = {
 export const RightToLeft: Story = {
   render: () => ({
     props: {
-      options: [
+      rtlOptions: [
         { value: 'ahmed', label: 'أحمد' },
         { value: 'sara', label: 'سارة' },
       ],
     },
     template: `
       <div dir="rtl" style="width: 26rem; padding-bottom: 10rem;">
-        <andes-mentions [options]="options" placeholder="اكتب @" aria-label="تعليق" />
+        <andes-mentions [options]="rtlOptions" placeholder="اكتب @" aria-label="تعليق" />
       </div>
     `,
   }),

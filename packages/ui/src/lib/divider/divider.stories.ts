@@ -5,7 +5,7 @@ import { AndesButton } from '../button/button';
 import { AndesDivider } from './divider';
 
 const meta: Meta<AndesDivider> = {
-  title: 'Divider',
+  title: 'Layout/Divider',
   component: AndesDivider,
   tags: ['autodocs'],
   decorators: [moduleMetadata({ imports: [AndesButton] })],

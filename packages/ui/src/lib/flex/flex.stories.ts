@@ -11,7 +11,7 @@ const CAPTION =
   'margin:0 0 0.5rem;font:12px/20px var(--andes-font-family),sans-serif;color:var(--andes-color-muted-foreground);';
 
 const meta: Meta<AndesFlex> = {
-  title: 'Flex',
+  title: 'Layout/Flex',
   component: AndesFlex,
   tags: ['autodocs'],
   decorators: [moduleMetadata({ imports: [AndesFlexLayout] })],

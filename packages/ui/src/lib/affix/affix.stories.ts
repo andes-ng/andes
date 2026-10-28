@@ -52,12 +52,15 @@ const meta: Meta<AndesAffix> = {
 export default meta;
 type Story = StoryObj<AndesAffix>;
 
+/** The playground: the toolbar pins to the top of its scroll container, and `(changed)` reports whether it is pinned. */
 export const ScrollContainer: Story = {};
 
+/** `offsetTop` keeps a gap between the pinned element and the top edge. */
 export const OffsetFromTop: Story = {
   args: { offsetTop: 40 },
 };
 
+/** `offsetBottom` pins an element that starts below the fold to the bottom edge. */
 export const PinnedToBottom: Story = {
   args: { offsetTop: undefined, offsetBottom: 8 },
   render: (args) => ({
@@ -73,10 +76,12 @@ export const PinnedToBottom: Story = {
   }),
 };
 
+/** `disabled` leaves the element in place whatever the scroll position. */
 export const Disabled: Story = {
   args: { disabled: true },
 };
 
+/** Without a `target`, the page itself is the scroll container. */
 export const PageScroll: Story = {
   name: 'Page scroll',
   parameters: { layout: 'fullscreen' },
@@ -93,6 +98,7 @@ export const PageScroll: Story = {
   }),
 };
 
+/** `mode="fixed"` pins an element whose parent is too short for native sticky positioning. */
 export const FixedStrategy: Story = {
   name: 'Fixed strategy (short parent)',
   render: () => ({

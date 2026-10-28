@@ -63,7 +63,7 @@ const goalBody = `
 `;
 
 const meta: Meta<AndesDrawer> = {
-  title: 'Drawer',
+  title: 'Feedback/Drawer',
   component: AndesDrawer,
   tags: ['autodocs'],
   argTypes: {

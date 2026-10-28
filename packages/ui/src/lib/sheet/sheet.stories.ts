@@ -71,7 +71,7 @@ const profileForm = `
 `;
 
 const meta: Meta<AndesSheet> = {
-  title: 'Sheet',
+  title: 'Feedback/Sheet',
   component: AndesSheet,
   tags: ['autodocs'],
   argTypes: {

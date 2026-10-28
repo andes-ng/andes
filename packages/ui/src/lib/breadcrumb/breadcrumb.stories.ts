@@ -43,7 +43,7 @@ interface BreadcrumbStoryArgs {
 }
 
 const meta: Meta<BreadcrumbStoryArgs> = {
-  title: 'Breadcrumb',
+  title: 'Navigation/Breadcrumb',
   component: AndesBreadcrumb,
   tags: ['autodocs'],
   argTypes: {

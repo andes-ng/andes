@@ -202,7 +202,7 @@ class TourDemo {
 }
 
 const meta: Meta<AndesTour> = {
-  title: 'Tour',
+  title: 'Data Display/Tour',
   component: AndesTour,
   tags: ['autodocs'],
   decorators: [moduleMetadata({ imports: [TourDemo] })],

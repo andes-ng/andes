@@ -340,22 +340,27 @@ type Story = StoryObj<AndesMenu>;
 /** An expanding sidebar: sections open in place and nested levels are indented. */
 export const Inline: Story = {};
 
-/** Submenus open as popups beside their row, on hover or click. */
-export const Vertical: Story = {
-  args: { mode: 'vertical' },
+/**
+ * How the submenus open, side by side: `vertical` mode with the default hover trigger (popups
+ * beside their row), `vertical` with `triggerSubMenuAction="click"` (useful on touch and for
+ * dense menus), and an `inline` sidebar in `accordion` mode, where opening one section closes
+ * its siblings.
+ */
+export const OpenBehavior: Story = {
+  render: () => ({
+    template: `
+      <div style="display: flex; gap: 2rem; align-items: flex-start; flex-wrap: wrap;">
+        <andes-story-sidebar mode="vertical" width="14rem" />
+        <andes-story-sidebar mode="vertical" trigger="click" width="14rem" />
+        <andes-story-sidebar [accordion]="true" width="14rem" />
+      </div>`,
+  }),
 };
 
-/** Click to open instead of hover; useful on touch and for dense menus. */
-export const ClickToOpen: Story = {
-  args: { mode: 'vertical', triggerSubMenuAction: 'click' },
-};
-
-/** Opening one section closes its siblings. */
-export const Accordion: Story = {
-  args: { accordion: true },
-};
-
-/** A dark sidebar on a light page: the tokens are re-scoped on the menu and its popups. */
+/**
+ * A dark sidebar on a light page: the tokens are re-scoped on the menu and its popups. Shown
+ * as an inline sidebar, a vertical one with popups and the dark icon rail.
+ */
 export const DarkSidebar: Story = {
   args: { theme: 'dark' },
   render: (args) => ({
@@ -364,6 +369,7 @@ export const DarkSidebar: Story = {
       <div style="display: flex; gap: 2rem; align-items: flex-start; flex-wrap: wrap;">
         <andes-story-sidebar [theme]="theme" [mode]="mode" style="display:block; padding: 0.5rem; background: #0f172a;" />
         <andes-story-sidebar theme="dark" mode="vertical" width="14rem" style="display:block; padding: 0.5rem; background: #0f172a;" />
+        <div style="background:#0f172a; padding: 1rem; display:inline-block;"><andes-story-rail theme="dark" /></div>
       </div>`,
   }),
 };
@@ -390,31 +396,26 @@ export const CollapsedRail: Story = {
   }),
 };
 
-export const CollapsedRailDark: Story = {
-  render: () => ({
-    template: `<div style="background:#0f172a; padding: 1rem; display:inline-block;"><andes-story-rail theme="dark" /></div>`,
-  }),
-};
-
-/** A bar. Drag the slider: what no longer fits moves into the "…" submenu. */
-export const HorizontalOverflow: Story = {
-  render: () => ({
-    template: `<andes-story-bar />`,
-  }),
-};
-
+/**
+ * A bar. The first one is static, with a disabled item and a submenu; the second sits in a
+ * container whose width you change with the slider: what no longer fits moves into the "…"
+ * submenu.
+ */
 export const Horizontal: Story = {
   render: () => ({
     template: `
-      <andes-menu mode="horizontal" ariaLabel="Sections" style="width: min(46rem, 100%);">
-        <andes-menu-item key="dashboard">Dashboard</andes-menu-item>
-        <andes-sub-menu key="sales" label="Sales">
-          <andes-menu-item key="orders">Orders</andes-menu-item>
-          <andes-menu-item key="invoices">Invoices</andes-menu-item>
-        </andes-sub-menu>
-        <andes-menu-item key="reports">Reports</andes-menu-item>
-        <andes-menu-item key="settings" [disabled]="true">Settings</andes-menu-item>
-      </andes-menu>`,
+      <div style="display: flex; flex-direction: column; gap: 2rem;">
+        <andes-menu mode="horizontal" ariaLabel="Sections" style="width: min(46rem, 100%);">
+          <andes-menu-item key="dashboard">Dashboard</andes-menu-item>
+          <andes-sub-menu key="sales" label="Sales">
+            <andes-menu-item key="orders">Orders</andes-menu-item>
+            <andes-menu-item key="invoices">Invoices</andes-menu-item>
+          </andes-sub-menu>
+          <andes-menu-item key="reports">Reports</andes-menu-item>
+          <andes-menu-item key="settings" [disabled]="true">Settings</andes-menu-item>
+        </andes-menu>
+        <andes-story-bar />
+      </div>`,
   }),
 };
 

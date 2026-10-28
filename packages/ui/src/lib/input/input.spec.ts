@@ -25,6 +25,7 @@ import { AndesInputSearch } from './input-search';
     [required]="required()"
     [readOnly]="readOnly()"
     [clearable]="clearable()"
+    [loading]="loading()"
     [placeholder]="placeholder()"
     [id]="id()"
     [name]="name()"
@@ -37,6 +38,7 @@ class HostComponent {
   readonly required = signal(false);
   readonly readOnly = signal(false);
   readonly clearable = signal(false);
+  readonly loading = signal(false);
   readonly placeholder = signal<string | undefined>(undefined);
   readonly id = signal<string | undefined>(undefined);
   readonly name = signal<string | undefined>(undefined);
@@ -214,6 +216,61 @@ describe('AndesInput', () => {
         .querySelector('.andes-input__suffix')
         .textContent.trim(),
     ).toBe('USD');
+  });
+
+  describe('loading', () => {
+    const spinner = (root: HTMLElement) =>
+      root.querySelector('.andes-input__spinner');
+
+    it('shows no spinner by default', () => {
+      const { fixture, input } = createHost();
+
+      expect(spinner(fixture.nativeElement)).toBeNull();
+      expect(input.hasAttribute('aria-busy')).toBe(false);
+    });
+
+    it('shows a decorative spinner and marks the field busy while loading', () => {
+      const { fixture, input } = createHost();
+      fixture.componentInstance.loading.set(true);
+      fixture.detectChanges();
+
+      const el = spinner(fixture.nativeElement);
+      expect(el).not.toBeNull();
+      expect(el?.getAttribute('aria-hidden')).toBe('true');
+      expect(input.getAttribute('aria-busy')).toBe('true');
+    });
+
+    it('keeps the field editable while loading', () => {
+      const { fixture, input } = createHost();
+      fixture.componentInstance.loading.set(true);
+      fixture.detectChanges();
+
+      expect(input.disabled).toBe(false);
+      expect(input.readOnly).toBe(false);
+    });
+
+    it('goes away when loading ends', () => {
+      const { fixture, input } = createHost();
+      fixture.componentInstance.loading.set(true);
+      fixture.detectChanges();
+      fixture.componentInstance.loading.set(false);
+      fixture.detectChanges();
+
+      expect(spinner(fixture.nativeElement)).toBeNull();
+      expect(input.hasAttribute('aria-busy')).toBe(false);
+    });
+
+    it('animates the spinner and slows it under reduced motion', () => {
+      const sheet = readFileSync(
+        join(dirname(fileURLToPath(import.meta.url)), 'input.css'),
+        'utf-8',
+      );
+
+      expect(sheet).toContain(
+        'animation: andes-input-spin 0.8s linear infinite',
+      );
+      expect(sheet).toContain('animation-duration: 2.4s');
+    });
   });
 
   describe('clearable', () => {

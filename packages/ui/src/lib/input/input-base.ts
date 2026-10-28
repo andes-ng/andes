@@ -116,6 +116,12 @@ export abstract class AndesInputBase implements ControlValueAccessor {
   readonly required = input(false, { transform: booleanAttribute });
   readonly readOnly = input(false, { transform: booleanAttribute });
   readonly clearable = input(false, { transform: booleanAttribute });
+  /**
+   * Shows a spinner at the end of the field and marks it `aria-busy`, for a value that is being
+   * checked or fetched (a username against the server, say). Typing stays possible. On a search
+   * field the spinner goes on the search button instead and `(searched)` is suppressed.
+   */
+  readonly loading = input(false, { transform: booleanAttribute });
   readonly showCount = input(false, { transform: booleanAttribute });
   readonly countFormatter = input<AndesInputCountFormatter | undefined>(
     undefined,

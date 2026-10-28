@@ -1,6 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
 import {
-  booleanAttribute,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -74,9 +73,6 @@ export class AndesInputSearch extends AndesInputBase {
   >(false, { transform: enterButtonAttribute });
   /** Replaces the magnifier icon of an icon-only search button. */
   readonly searchIcon = input<TemplateRef<unknown> | undefined>(undefined);
-  /** Shows a spinner on the button and suppresses `(searched)` until it clears. */
-  readonly loading = input(false, { transform: booleanAttribute });
-
   /**
    * Enter in the field, a button click, or the clear button (with `source: 'clear'`). Not named
    * `search`: that is a native DOM event of `type="search"` inputs, and an output shadowing it

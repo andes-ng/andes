@@ -189,6 +189,26 @@ export const FocusControl: Story = {
   }),
 };
 
+/**
+ * `loading` puts a spinner at the end of the field and marks it `aria-busy` while a value is
+ * being checked or fetched. The field stays editable. On a search field the spinner goes on the
+ * search button instead (see the Search stories).
+ */
+export const Loading: Story = {
+  render: () => ({
+    template: `
+      <div style="display: flex; flex-direction: column; gap: 1rem; width: 20rem;">
+        <andes-input aria-label="Username" loading value="andes-ng" />
+        <andes-input aria-label="Username, small" size="sm" loading placeholder="Checking…" />
+        <andes-input aria-label="Username, large" size="lg" loading clearable value="andes-ng" />
+        <andes-input aria-label="Username, available" loading status="warning" value="taken-name">
+          <span slot="prefix">@</span>
+        </andes-input>
+      </div>
+    `,
+  }),
+};
+
 /** Three ways to bind the value: `ngModel`, a reactive `FormControl`, or the `value` model with no Angular Forms. */
 export const Binding: Story = {
   render: () => ({

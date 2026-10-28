@@ -23,6 +23,7 @@
       [attr.aria-labelledby]="ariaLabelledby()"
       [attr.aria-describedby]="describedBy()"
       [attr.aria-invalid]="isInvalid() || null"
+      [attr.aria-busy]="loading() || null"
       [disabled]="isDisabled()"
       [required]="required()"
       [readOnly]="readOnly()"
@@ -33,7 +34,13 @@
       (focus)="onFocus($event)"
       (blur)="onBlur($event)"
     />
-    @if (showClear()) {
+    @if (loading() && !searchButton()) {
+    <span
+      class="andes-input__spinner"
+      data-slot="input-spinner"
+      aria-hidden="true"
+    ></span>
+    } @if (showClear()) {
     <button
       type="button"
       class="andes-input__clear"

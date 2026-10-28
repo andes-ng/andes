@@ -132,6 +132,10 @@ describe('AndesInputSearch', () => {
 
     expect(button().getAttribute('aria-busy')).toBe('true');
     expect(button().disabled).toBe(true);
+    // The spinner is the button's: the field itself does not draw a second one.
+    expect(
+      fixture.nativeElement.querySelector('.andes-input__spinner'),
+    ).toBeNull();
 
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
 

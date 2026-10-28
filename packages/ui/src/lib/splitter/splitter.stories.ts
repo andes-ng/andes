@@ -11,7 +11,7 @@ const pane =
 const muted = 'color: var(--andes-color-muted-foreground, #64748b);';
 
 const meta: Meta<AndesSplitter> = {
-  title: 'Layout/Splitter',
+  title: 'Layout/Splitter/Basics/Splitter',
   component: AndesSplitter,
   tags: ['autodocs'],
   decorators: [
@@ -45,11 +45,39 @@ const meta: Meta<AndesSplitter> = {
 
 export default meta;
 type Story = StoryObj<AndesSplitter>;
-
 export const Default: Story = {};
 
-export const Vertical: Story = {
-  args: { orientation: 'vertical' },
+/** Three panes with a fixed, a flexible and a percentage size; a vertical splitter; and splitters nested in each other. */
+export const Layouts: Story = {
+  render: () => ({
+    template: `
+      <div style="display: grid; gap: 1rem;">
+        <div style="${frame}">
+          <andes-splitter>
+            <andes-splitter-panel size="200" min="120"><div style="${pane}">Filters (200px)</div></andes-splitter-panel>
+            <andes-splitter-panel><div style="${pane}">Results (takes the rest)</div></andes-splitter-panel>
+            <andes-splitter-panel size="25%" min="160"><div style="${pane}">Preview (25%)</div></andes-splitter-panel>
+          </andes-splitter>
+        </div>
+        <div style="${frame}">
+          <andes-splitter orientation="vertical">
+            <andes-splitter-panel size="30%" min="60"><div style="${pane}">Vertical: top</div></andes-splitter-panel>
+            <andes-splitter-panel min="60"><div style="${pane}">Vertical: bottom</div></andes-splitter-panel>
+          </andes-splitter>
+        </div>
+        <div style="${frame} height: 360px;">
+          <andes-splitter>
+            <andes-splitter-panel size="220" min="140"><div style="${pane}"><strong>Explorer</strong></div></andes-splitter-panel>
+            <andes-splitter-panel>
+              <andes-splitter orientation="vertical">
+                <andes-splitter-panel size="65%" min="80"><div style="${pane}"><strong>Editor</strong></div></andes-splitter-panel>
+                <andes-splitter-panel min="60"><div style="${pane}"><strong>Console</strong></div></andes-splitter-panel>
+              </andes-splitter>
+            </andes-splitter-panel>
+          </andes-splitter>
+        </div>
+      </div>`,
+  }),
 };
 
 export const Lazy: Story = {
@@ -64,100 +92,57 @@ export const Lazy: Story = {
   },
 };
 
-export const ThreePanes: Story = {
+/** `min` and `max` (pixels or percentages) bound a pane, and `[resizable]="false"` pins one so its handle cannot be dragged. */
+export const Limits: Story = {
   render: () => ({
     template: `
-      <div style="${frame}">
-        <andes-splitter>
-          <andes-splitter-panel size="200" min="120"><div style="${pane}">Filters (200px)</div></andes-splitter-panel>
-          <andes-splitter-panel><div style="${pane}">Results (takes the rest)</div></andes-splitter-panel>
-          <andes-splitter-panel size="25%" min="160"><div style="${pane}">Preview (25%)</div></andes-splitter-panel>
-        </andes-splitter>
+      <div style="display: grid; gap: 1rem;">
+        <div style="${frame}">
+          <andes-splitter>
+            <andes-splitter-panel size="50%" min="25%" max="75%"><div style="${pane}">Between 25% and 75%</div></andes-splitter-panel>
+            <andes-splitter-panel><div style="${pane}">Takes whatever is left</div></andes-splitter-panel>
+          </andes-splitter>
+        </div>
+        <div style="${frame}">
+          <andes-splitter>
+            <andes-splitter-panel size="180" [resizable]="false"><div style="${pane}">Fixed rail - its handle cannot be dragged.</div></andes-splitter-panel>
+            <andes-splitter-panel><div style="${pane}">Flexible area</div></andes-splitter-panel>
+          </andes-splitter>
+        </div>
       </div>`,
   }),
 };
 
-export const CollapsiblePane: Story = {
+/** A pane that collapses to nothing (with `[(collapsed)]` driven from outside), one that collapses to a narrow rail, and collapsible panes on both sides. */
+export const Collapsible: Story = {
   render: () => ({
     props: { collapsed: signal(false) },
     template: `
-      <div style="${frame}">
-        <andes-splitter>
-          <andes-splitter-panel size="240" min="160" collapsible [collapsedSize]="0" [(collapsed)]="collapsed">
-            <div style="${pane}"><strong>Navigation</strong><p style="${muted}">Use the button on the handle, or press Enter while it is focused.</p></div>
-          </andes-splitter-panel>
-          <andes-splitter-panel><div style="${pane}">Main content</div></andes-splitter-panel>
-        </andes-splitter>
-      </div>
-      <p style="${pane}">Navigation is {{ collapsed() ? 'collapsed' : 'open' }}.</p>`,
-  }),
-};
-
-export const CollapsedRail: Story = {
-  name: 'Collapsed to a rail',
-  render: () => ({
-    template: `
-      <div style="${frame}">
-        <andes-splitter>
-          <andes-splitter-panel size="220" min="160" collapsible [collapsedSize]="48" [collapsed]="true">
-            <div style="${pane} white-space: nowrap;">Workspaces</div>
-          </andes-splitter-panel>
-          <andes-splitter-panel><div style="${pane}">A collapsed pane can keep a narrow rail.</div></andes-splitter-panel>
-        </andes-splitter>
-      </div>`,
-  }),
-};
-
-export const CollapsibleBothSides: Story = {
-  render: () => ({
-    template: `
-      <div style="${frame}">
-        <andes-splitter>
-          <andes-splitter-panel size="22%" min="120" collapsible><div style="${pane}">Left</div></andes-splitter-panel>
-          <andes-splitter-panel><div style="${pane}">Centre</div></andes-splitter-panel>
-          <andes-splitter-panel size="22%" min="120" collapsible><div style="${pane}">Right</div></andes-splitter-panel>
-        </andes-splitter>
-      </div>`,
-  }),
-};
-
-export const FixedPane: Story = {
-  render: () => ({
-    template: `
-      <div style="${frame}">
-        <andes-splitter>
-          <andes-splitter-panel size="180" [resizable]="false"><div style="${pane}">Fixed rail - its handle cannot be dragged.</div></andes-splitter-panel>
-          <andes-splitter-panel><div style="${pane}">Flexible area</div></andes-splitter-panel>
-        </andes-splitter>
-      </div>`,
-  }),
-};
-
-export const MinAndMax: Story = {
-  render: () => ({
-    template: `
-      <div style="${frame}">
-        <andes-splitter>
-          <andes-splitter-panel size="50%" min="25%" max="75%"><div style="${pane}">Between 25% and 75%</div></andes-splitter-panel>
-          <andes-splitter-panel><div style="${pane}">Takes whatever is left</div></andes-splitter-panel>
-        </andes-splitter>
-      </div>`,
-  }),
-};
-
-export const Nested: Story = {
-  render: () => ({
-    template: `
-      <div style="${frame} height: 360px;">
-        <andes-splitter>
-          <andes-splitter-panel size="220" min="140"><div style="${pane}"><strong>Explorer</strong></div></andes-splitter-panel>
-          <andes-splitter-panel>
-            <andes-splitter orientation="vertical">
-              <andes-splitter-panel size="65%" min="80"><div style="${pane}"><strong>Editor</strong></div></andes-splitter-panel>
-              <andes-splitter-panel min="60"><div style="${pane}"><strong>Console</strong></div></andes-splitter-panel>
-            </andes-splitter>
-          </andes-splitter-panel>
-        </andes-splitter>
+      <div style="display: grid; gap: 1rem;">
+        <div style="${frame}">
+          <andes-splitter>
+            <andes-splitter-panel size="240" min="160" collapsible [collapsedSize]="0" [(collapsed)]="collapsed">
+              <div style="${pane}"><strong>Navigation</strong><p style="${muted}">Use the button on the handle, or press Enter while it is focused.</p></div>
+            </andes-splitter-panel>
+            <andes-splitter-panel><div style="${pane}">Main content</div></andes-splitter-panel>
+          </andes-splitter>
+        </div>
+        <p style="${pane} margin: 0;">Navigation is {{ collapsed() ? 'collapsed' : 'open' }}.</p>
+        <div style="${frame}">
+          <andes-splitter>
+            <andes-splitter-panel size="220" min="160" collapsible [collapsedSize]="48" [collapsed]="true">
+              <div style="${pane} white-space: nowrap;">Workspaces</div>
+            </andes-splitter-panel>
+            <andes-splitter-panel><div style="${pane}">A collapsed pane can keep a narrow rail.</div></andes-splitter-panel>
+          </andes-splitter>
+        </div>
+        <div style="${frame}">
+          <andes-splitter>
+            <andes-splitter-panel size="22%" min="120" collapsible><div style="${pane}">Left</div></andes-splitter-panel>
+            <andes-splitter-panel><div style="${pane}">Centre</div></andes-splitter-panel>
+            <andes-splitter-panel size="22%" min="120" collapsible><div style="${pane}">Right</div></andes-splitter-panel>
+          </andes-splitter>
+        </div>
       </div>`,
   }),
 };

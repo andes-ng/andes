@@ -11,7 +11,7 @@ const CAPTION =
   'margin:0 0 0.5rem;font:12px/20px var(--andes-font-family),sans-serif;color:var(--andes-color-muted-foreground);';
 
 const meta: Meta<AndesFlex> = {
-  title: 'Layout/Flex',
+  title: 'Layout/Flex/Basics/Flex',
   component: AndesFlex,
   tags: ['autodocs'],
   decorators: [moduleMetadata({ imports: [AndesFlexLayout] })],
@@ -79,15 +79,28 @@ const meta: Meta<AndesFlex> = {
 export default meta;
 
 type Story = StoryObj<AndesFlex>;
-
 export const Default: Story = {};
 
-export const Vertical: Story = {
-  args: { vertical: true, gap: 'sm' },
+/** `vertical` stacks the items in a column, `reverse` flips the order of either direction. */
+export const Direction: Story = {
+  render: () => ({
+    props: { box: BOX, panel: PANEL, cap: CAPTION },
+    template: `
+      <div style="display:grid;gap:1rem;max-width:36rem">
+        <div>
+          <p [style]="cap">vertical, gap = sm</p>
+          <andes-flex vertical gap="sm"><div [style]="box">Item 1</div><div [style]="box">Item 2</div><div [style]="box">Item 3</div></andes-flex>
+        </div>
+        <div>
+          <p [style]="cap">reverse, gap = sm</p>
+          <andes-flex reverse gap="sm"><div [style]="box">Item 1</div><div [style]="box">Item 2</div><div [style]="box">Item 3</div></andes-flex>
+        </div>
+      </div>`,
+  }),
 };
 
 /** Gap presets resolve to the spacing tokens; a number is pixels and any CSS length works too. */
-export const GapSizes: Story = {
+export const Gap: Story = {
   render: () => ({
     props: { box: BOX, panel: PANEL, cap: CAPTION },
     template: `
@@ -128,9 +141,10 @@ export const Wrap: Story = {
   }),
 };
 
-export const Justify: Story = {
+/** `justify` distributes the items on the main axis and `align` places them on the cross axis. */
+export const Alignment: Story = {
   render: () => ({
-    props: { box: BOX, panel: PANEL, cap: CAPTION },
+    props: { box: BOX, tall: TALL, panel: PANEL, cap: CAPTION },
     template: `
       <div style="display:grid;gap:1rem;max-width:36rem">
         @for (j of ['flex-start', 'center', 'flex-end', 'space-between', 'space-around', 'space-evenly']; track j) {
@@ -139,15 +153,6 @@ export const Justify: Story = {
             <andes-flex [justify]="j" gap="sm" [style]="panel"><div [style]="box">A</div><div [style]="box">B</div><div [style]="box">C</div></andes-flex>
           </div>
         }
-      </div>`,
-  }),
-};
-
-export const Align: Story = {
-  render: () => ({
-    props: { box: BOX, tall: TALL, panel: PANEL, cap: CAPTION },
-    template: `
-      <div style="display:grid;gap:1rem;max-width:36rem">
         @for (a of ['flex-start', 'center', 'flex-end', 'stretch', 'baseline']; track a) {
           <div>
             <p [style]="cap">align = {{ a }}</p>
@@ -162,34 +167,32 @@ export const Align: Story = {
   }),
 };
 
-/** `flex` on a child decides how it shares the leftover space, exactly as in plain CSS. */
-export const GrowingChildren: Story = {
+/** `flex` on a child decides how it shares the leftover space, exactly as in plain CSS; the container's own `flex` makes nested containers share a row. */
+export const Children: Story = {
   render: () => ({
-    props: { box: BOX, panel: PANEL },
+    props: { box: BOX, panel: PANEL, cap: CAPTION },
     template: `
-      <div [style]="panel" style="max-width:36rem">
-        <andes-flex gap="sm">
-          <div [style]="box">Fixed</div>
-          <div [style]="box + 'flex:1'">flex: 1</div>
-          <div [style]="box + 'flex:2'">flex: 2</div>
-        </andes-flex>
+      <div style="display:grid;gap:1rem;max-width:36rem">
+        <div>
+          <p [style]="cap">Growing children</p>
+          <andes-flex gap="sm" [style]="panel">
+            <div [style]="box">Fixed</div>
+            <div [style]="box + 'flex:1'">flex: 1</div>
+            <div [style]="box + 'flex:2'">flex: 2</div>
+          </andes-flex>
+        </div>
+        <div>
+          <p [style]="cap">Nested containers</p>
+          <andes-flex gap="md">
+            <andes-flex vertical gap="sm" flex="1" [style]="panel">
+              <div [style]="box">Sidebar 1</div><div [style]="box">Sidebar 2</div>
+            </andes-flex>
+            <andes-flex vertical gap="sm" flex="2" [style]="panel">
+              <div [style]="box">Main 1</div><div [style]="box">Main 2</div><div [style]="box">Main 3</div>
+            </andes-flex>
+          </andes-flex>
+        </div>
       </div>`,
-  }),
-};
-
-/** The container's own `flex` makes nested containers share a row. */
-export const NestedFlex: Story = {
-  render: () => ({
-    props: { box: BOX, panel: PANEL },
-    template: `
-      <andes-flex gap="md" style="max-width:36rem">
-        <andes-flex vertical gap="sm" flex="1" [style]="panel">
-          <div [style]="box">Sidebar 1</div><div [style]="box">Sidebar 2</div>
-        </andes-flex>
-        <andes-flex vertical gap="sm" flex="2" [style]="panel">
-          <div [style]="box">Main 1</div><div [style]="box">Main 2</div><div [style]="box">Main 3</div>
-        </andes-flex>
-      </andes-flex>`,
   }),
 };
 
@@ -215,6 +218,18 @@ export const AsAnyElement: Story = {
   }),
 };
 
+export const Inline: Story = {
+  render: () => ({
+    props: { box: BOX },
+    template: `
+      <p style="font:14px/22px var(--andes-font-family),sans-serif;max-width:36rem">
+        Text before
+        <andes-flex inline gap="4" align="center" style="vertical-align:middle"><span [style]="box">A</span><span [style]="box">B</span></andes-flex>
+        and after, on the same line.
+      </p>`,
+  }),
+};
+
 /** A page toolbar: title on the start side, actions on the end, wrapping on narrow screens. */
 export const Toolbar: Story = {
   render: () => ({
@@ -231,21 +246,5 @@ export const Toolbar: Story = {
           <span [style]="box + 'height:2rem;background:var(--andes-color-primary);color:var(--andes-color-primary-foreground);border-color:transparent'">New order</span>
         </andes-flex>
       </andes-flex>`,
-  }),
-};
-
-export const Reverse: Story = {
-  args: { reverse: true, gap: 'sm' },
-};
-
-export const Inline: Story = {
-  render: () => ({
-    props: { box: BOX },
-    template: `
-      <p style="font:14px/22px var(--andes-font-family),sans-serif;max-width:36rem">
-        Text before
-        <andes-flex inline gap="4" align="center" style="vertical-align:middle"><span [style]="box">A</span><span [style]="box">B</span></andes-flex>
-        and after, on the same line.
-      </p>`,
   }),
 };

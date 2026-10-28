@@ -4,7 +4,7 @@ import { AndesButton } from '../button/button';
 import { AndesStatistic } from './statistic';
 
 const meta: Meta<AndesStatistic> = {
-  title: 'Data Display/Statistic',
+  title: 'Data Display/Statistic/Basics/Statistic',
   component: AndesStatistic,
   tags: ['autodocs'],
   decorators: [moduleMetadata({ imports: [AndesStatistic, AndesButton] })],
@@ -55,71 +55,6 @@ type Story = StoryObj<AndesStatistic>;
 
 export const Default: Story = {};
 
-export const Precision: Story = {
-  args: { title: 'Average order value', value: 1284.5, precision: 2 },
-};
-
-export const Currency: Story = {
-  render: () => ({
-    props: { opts: { style: 'currency', currency: 'PEN' } },
-    template: `
-      <andes-statistic title="Revenue" [value]="1284500.5" locale="es-PE" [formatOptions]="opts" />`,
-  }),
-};
-
-export const Compact: Story = {
-  render: () => ({
-    props: { opts: { notation: 'compact', maximumFractionDigits: 1 } },
-    template: `
-      <div style="display:flex; gap: 3rem">
-        <andes-statistic title="Page views" [value]="1534000" locale="en-US" [formatOptions]="opts" />
-        <andes-statistic title="Units shipped" [value]="48200" locale="en-US" [formatOptions]="opts" />
-      </div>`,
-  }),
-};
-
-export const Locales: Story = {
-  render: () => ({
-    template: `
-      <div style="display:flex; gap: 3rem; flex-wrap: wrap">
-        <andes-statistic title="en-US" [value]="1234567.891" locale="en-US" [precision]="2" />
-        <andes-statistic title="de-DE" [value]="1234567.891" locale="de-DE" [precision]="2" />
-        <andes-statistic title="fr-FR" [value]="1234567.891" locale="fr-FR" [precision]="2" />
-        <andes-statistic title="es-PE" [value]="1234567.891" locale="es-PE" [precision]="2" />
-      </div>`,
-  }),
-};
-
-export const Separators: Story = {
-  render: () => ({
-    template: `
-      <div style="display:flex; gap: 3rem; flex-wrap: wrap">
-        <andes-statistic title="Custom separators" [value]="1234567.5" groupSeparator=" " decimalSeparator="," [precision]="2" />
-        <andes-statistic title="No grouping" [value]="1234567" [grouping]="false" />
-      </div>`,
-  }),
-};
-
-export const Affixes: Story = {
-  render: () => ({
-    template: `
-      <div style="display:flex; gap: 3rem; flex-wrap: wrap">
-        <andes-statistic title="Uptime" [value]="99.982" [precision]="2" suffix="%" />
-        <andes-statistic title="Balance" [value]="4120" prefix="S/" />
-        <andes-statistic title="Capacity" [value]="72" [suffix]="unitTpl" />
-      </div>
-      <ng-template #unitTpl><span style="color: var(--andes-color-muted-foreground)">/ 100 seats</span></ng-template>`,
-  }),
-};
-
-export const TemplateTitle: Story = {
-  render: () => ({
-    template: `
-      <andes-statistic [title]="titleTpl" [value]="37" />
-      <ng-template #titleTpl><span>Open tickets <em style="font-size: .75rem">(last 24h)</em></span></ng-template>`,
-  }),
-};
-
 export const Sizes: Story = {
   render: () => ({
     template: `
@@ -131,8 +66,22 @@ export const Sizes: Story = {
   }),
 };
 
-export const Loading: Story = {
-  args: { loading: true },
+/**
+ * Affixes and titles. `prefix` and `suffix` take a string, a unit such as `%`, or a template; the
+ * `title` takes a template too, for markup next to the label.
+ */
+export const Affixes: Story = {
+  render: () => ({
+    template: `
+      <div style="display:flex; gap: 3rem; flex-wrap: wrap">
+        <andes-statistic title="Uptime" [value]="99.982" [precision]="2" suffix="%" />
+        <andes-statistic title="Balance" [value]="4120" prefix="S/" />
+        <andes-statistic title="Capacity" [value]="72" [suffix]="unitTpl" />
+        <andes-statistic [title]="titleTpl" [value]="37" />
+      </div>
+      <ng-template #unitTpl><span style="color: var(--andes-color-muted-foreground)">/ 100 seats</span></ng-template>
+      <ng-template #titleTpl><span>Open tickets <em style="font-size: .75rem">(last 24h)</em></span></ng-template>`,
+  }),
 };
 
 export const Trend: Story = {
@@ -167,28 +116,6 @@ export const StyledWithProperties: Story = {
   }),
 };
 
-export const CustomFormatter: Story = {
-  render: () => ({
-    props: {
-      hours: (value: string | number | bigint) => {
-        const minutes = Math.round(Number(value) * 60);
-        return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m`;
-      },
-    },
-    template: `<andes-statistic title="Time on site" [value]="2.75" [formatter]="hours" />`,
-  }),
-};
-
-export const NonNumericAndEmpty: Story = {
-  render: () => ({
-    template: `
-      <div style="display:flex; gap: 3rem">
-        <andes-statistic title="Status" value="On track" />
-        <andes-statistic title="Not computed" [value]="null" />
-      </div>`,
-  }),
-};
-
 export const DashboardRow: Story = {
   render: () => ({
     template: `
@@ -206,21 +133,26 @@ export const DashboardRow: Story = {
   }),
 };
 
+/**
+ * `loading` swaps the value for a skeleton while data is on its way: the statistic starts loading
+ * and Refresh loads it again. The demo state is named `isLoading` and `current` so Storybook does
+ * not forward them onto the statistic's own inputs.
+ */
 export const Interactive: Story = {
   render: () => ({
     props: {
-      loading: true,
-      value: 0,
-      reload(this: { loading: boolean; value: number }) {
-        this.loading = true;
+      isLoading: true,
+      current: 0,
+      reload(this: { isLoading: boolean; current: number }) {
+        this.isLoading = true;
         setTimeout(() => {
-          this.value = Math.round(Math.random() * 90000);
-          this.loading = false;
+          this.current = Math.round(Math.random() * 90000);
+          this.isLoading = false;
         }, 900);
       },
     },
     template: `
-      <andes-statistic title="Orders today" [value]="value" [loading]="loading" />
+      <andes-statistic title="Orders today" [value]="current" [loading]="isLoading" />
       <andes-button style="margin-top: 1rem" variant="outline" (click)="reload()">Refresh</andes-button>`,
   }),
 };

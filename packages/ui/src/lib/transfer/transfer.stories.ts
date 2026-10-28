@@ -50,7 +50,7 @@ const products: AndesTransferItem[] = Array.from({ length: 120 }, (_, i) => ({
 }));
 
 const meta: Meta<AndesTransfer> = {
-  title: 'Transfer',
+  title: 'Data Entry/Transfer',
   component: AndesTransfer,
   tags: ['autodocs'],
   argTypes: {

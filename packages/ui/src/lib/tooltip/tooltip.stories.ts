@@ -51,7 +51,7 @@ class StoryGrowingTrigger {
 }
 
 const meta: Meta<AndesTooltip> = {
-  title: 'Tooltip',
+  title: 'Data Display/Tooltip',
   component: AndesTooltip,
   tags: ['autodocs'],
   argTypes: {

@@ -1,8 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/angular';
 
-import { AndesBackTop } from './back-top';
 import { AndesFloatButton } from './float-button';
-import { AndesFloatButtonGroup } from './float-button-group';
 
 const chat = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z"/></svg>`;
 const help = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M6.2 6.3a1.9 1.9 0 1 1 2.6 1.8c-.5.3-.8.6-.8 1.2M8 11.4h.01"/></svg>`;
@@ -20,7 +18,7 @@ const styles = [
 ];
 
 const meta: Meta<AndesFloatButton> = {
-  title: 'General/FloatButton',
+  title: 'General/FloatButton/Basics/Button',
   component: AndesFloatButton,
   tags: ['autodocs'],
   argTypes: {
@@ -59,14 +57,11 @@ const meta: Meta<AndesFloatButton> = {
 export default meta;
 
 type Story = StoryObj<AndesFloatButton>;
-
+/** The playground: the fixed button is positioned against the dashed stage, not the whole viewport. */
 export const Default: Story = {};
 
-export const Primary: Story = { args: { type: 'primary' } };
-
-export const Square: Story = { args: { shape: 'square' } };
-
-export const Sizes: Story = {
+/** `type`, `shape` and `size` together, plus the disabled state. These render inline (`fixed` off) so they can sit in a row. */
+export const Appearance: Story = {
   render: () => ({
     styles,
     template: `
@@ -77,6 +72,9 @@ export const Sizes: Story = {
         <andes-float-button [fixed]="false" size="sm" type="primary" shape="square" aria-label="Small">${chat}</andes-float-button>
         <andes-float-button [fixed]="false" size="md" type="primary" shape="square" aria-label="Medium">${chat}</andes-float-button>
         <andes-float-button [fixed]="false" size="lg" type="primary" shape="square" aria-label="Large">${chat}</andes-float-button>
+        <andes-float-button [fixed]="false" type="primary" aria-label="Primary circle">${chat}</andes-float-button>
+        <andes-float-button [fixed]="false" shape="square" aria-label="Default square">${chat}</andes-float-button>
+        <andes-float-button [fixed]="false" disabled aria-label="Disabled">${chat}</andes-float-button>
       </div>
     `,
   }),
@@ -124,8 +122,6 @@ export const AsLink: Story = {
   }),
 };
 
-export const Disabled: Story = { args: { disabled: true } };
-
 /** `right`, `bottom`, `left` and `top` are CSS lengths; safe-area insets are added automatically. */
 export const CustomPosition: Story = {
   render: () => ({
@@ -133,159 +129,6 @@ export const CustomPosition: Story = {
     template: `
       <div class="stage"><p>Anchored 2rem from the start edge and 1rem from the top.</p>
         <andes-float-button left="2rem" top="1rem" type="primary" aria-label="Chat">${chat}</andes-float-button>
-      </div>
-    `,
-  }),
-};
-
-export const GroupStack: Story = {
-  render: () => ({
-    moduleMetadata: { imports: [AndesFloatButtonGroup] },
-    styles,
-    template: `
-      <div class="row">
-        <div class="stage" style="width: 12rem;"><p>Circles</p>
-          <andes-float-button-group aria-label="Support" right="1rem" bottom="1rem">
-            <andes-float-button aria-label="Chat">${chat}</andes-float-button>
-            <andes-float-button aria-label="Help">${help}</andes-float-button>
-            <andes-float-button aria-label="Docs">${doc}</andes-float-button>
-          </andes-float-button-group>
-        </div>
-        <div class="stage" style="width: 12rem;"><p>Squares</p>
-          <andes-float-button-group aria-label="Support" shape="square" right="1rem" bottom="1rem">
-            <andes-float-button aria-label="Chat">${chat}</andes-float-button>
-            <andes-float-button aria-label="Help">${help}</andes-float-button>
-            <andes-float-button aria-label="Docs">${doc}</andes-float-button>
-          </andes-float-button-group>
-        </div>
-      </div>
-    `,
-  }),
-};
-
-/** Click the trigger to open a menu; Escape or a press outside closes it. */
-export const GroupClickTrigger: Story = {
-  render: () => ({
-    moduleMetadata: { imports: [AndesFloatButtonGroup] },
-    styles,
-    props: { open: false },
-    template: `
-      <div class="stage"><p>{{ open ? 'Menu open' : 'Menu closed' }}</p>
-        <andes-float-button-group trigger="click" type="primary" aria-label="Support actions" [(open)]="open">
-          <andes-float-button aria-label="Chat" tooltip="Chat">${chat}</andes-float-button>
-          <andes-float-button aria-label="Help" tooltip="Help">${help}</andes-float-button>
-          <andes-float-button aria-label="Docs" tooltip="Docs">${doc}</andes-float-button>
-        </andes-float-button-group>
-      </div>
-    `,
-  }),
-};
-
-/** Hover (or keyboard focus) opens the menu; leaving closes it after a short grace period. */
-export const GroupHoverTrigger: Story = {
-  render: () => ({
-    moduleMetadata: { imports: [AndesFloatButtonGroup] },
-    styles,
-    template: `
-      <div class="stage"><p>Hover or Tab to the trigger.</p>
-        <andes-float-button-group trigger="hover" shape="square" aria-label="Quick actions">
-          <andes-float-button aria-label="Chat">${chat}</andes-float-button>
-          <andes-float-button aria-label="Help">${help}</andes-float-button>
-          <andes-float-button aria-label="Docs">${doc}</andes-float-button>
-        </andes-float-button-group>
-      </div>
-    `,
-  }),
-};
-
-/** The menu can open up, down, towards the start edge or towards the end edge. */
-export const GroupPlacements: Story = {
-  render: () => ({
-    moduleMetadata: { imports: [AndesFloatButtonGroup] },
-    styles,
-    template: `
-      <div class="row">
-        <div class="stage" style="width: 13rem;"><p>up</p>
-          <andes-float-button-group trigger="click" placement="up" [open]="true" right="1rem" bottom="1rem" aria-label="Actions (up)">
-            <andes-float-button aria-label="Chat">${chat}</andes-float-button>
-            <andes-float-button aria-label="Help">${help}</andes-float-button>
-          </andes-float-button-group>
-        </div>
-        <div class="stage" style="width: 13rem;"><p>down</p>
-          <andes-float-button-group trigger="click" placement="down" [open]="true" right="1rem" top="1rem" aria-label="Actions (down)">
-            <andes-float-button aria-label="Chat">${chat}</andes-float-button>
-            <andes-float-button aria-label="Help">${help}</andes-float-button>
-          </andes-float-button-group>
-        </div>
-        <div class="stage" style="width: 13rem;"><p>start</p>
-          <andes-float-button-group trigger="click" placement="start" [open]="true" right="1rem" bottom="1rem" aria-label="Actions (start)">
-            <andes-float-button aria-label="Chat">${chat}</andes-float-button>
-            <andes-float-button aria-label="Help">${help}</andes-float-button>
-          </andes-float-button-group>
-        </div>
-        <div class="stage" style="width: 13rem;"><p>end</p>
-          <andes-float-button-group trigger="click" placement="end" [open]="true" left="1rem" bottom="1rem" aria-label="Actions (end)">
-            <andes-float-button aria-label="Chat">${chat}</andes-float-button>
-            <andes-float-button aria-label="Help">${help}</andes-float-button>
-          </andes-float-button-group>
-        </div>
-      </div>
-    `,
-  }),
-};
-
-export const GroupCustomTriggerIcons: Story = {
-  render: () => ({
-    moduleMetadata: { imports: [AndesFloatButtonGroup] },
-    styles,
-    template: `
-      <ng-template #closed>${help}</ng-template>
-      <ng-template #opened>${chat}</ng-template>
-      <div class="stage"><p>Custom trigger icons.</p>
-        <andes-float-button-group trigger="click" [triggerIcon]="closed" [closeIcon]="opened" aria-label="Support">
-          <andes-float-button aria-label="Docs">${doc}</andes-float-button>
-          <andes-float-button aria-label="Mail" [badgeDot]="true">${mail}</andes-float-button>
-        </andes-float-button-group>
-      </div>
-    `,
-  }),
-};
-
-/** Appears after 150px of scroll inside the box and eases back to the top over 450ms. */
-export const BackTop: Story = {
-  render: () => ({
-    moduleMetadata: { imports: [AndesBackTop] },
-    styles: [
-      ...styles,
-      `.scroller { height: 100%; overflow: auto; } .scroller p { padding: 0.5rem 1rem; }`,
-    ],
-    props: { rows: Array.from({ length: 40 }, (_, i) => i + 1) },
-    template: `
-      <div class="stage">
-        <div class="scroller" #scroller tabindex="0" role="region" aria-label="Long list">
-          @for (row of rows; track row) { <p>Row {{ row }} - scroll down</p> }
-        </div>
-        <andes-back-top [target]="scroller" [visibilityHeight]="150" tooltip="Back to top" />
-      </div>
-    `,
-  }),
-};
-
-export const BackTopCustom: Story = {
-  render: () => ({
-    moduleMetadata: { imports: [AndesBackTop] },
-    styles: [
-      ...styles,
-      `.scroller { height: 100%; overflow: auto; } .scroller p { padding: 0.5rem 1rem; }`,
-    ],
-    props: { rows: Array.from({ length: 40 }, (_, i) => i + 1), count: 0 },
-    template: `
-      <div class="stage">
-        <div class="scroller" #scroller tabindex="0" role="region" aria-label="Long list">
-          @for (row of rows; track row) { <p>Row {{ row }} - scroll down</p> }
-        </div>
-        <andes-back-top [target]="scroller" [visibilityHeight]="80" [duration]="0" type="primary" shape="square" size="lg" aria-label="Jump to the top" (clicked)="count = count + 1" />
-        <span style="position: absolute; inset-block-start: 0.25rem; inset-inline-end: 0.75rem; font-size: 0.75rem;">clicks: {{ count }}</span>
       </div>
     `,
   }),

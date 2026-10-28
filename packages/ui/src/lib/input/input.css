@@ -548,8 +548,10 @@
   border-color: var(--_andes-input-border);
 }
 
+/* A search field draws its own clear button (`clearable`), so the browser's built-in cross is hidden
+   on every `type="search"` control, not only inside `andes-input-search`; otherwise two crosses show. */
 /* prettier-ignore */
-.andes-input-wrapper--search .andes-input__control::-webkit-search-cancel-button {
+.andes-input__control::-webkit-search-cancel-button {
   appearance: none;
 }
 

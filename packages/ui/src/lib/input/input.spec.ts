@@ -302,6 +302,17 @@ describe('AndesInput', () => {
         'utf-8',
       ).replace(/\/\*[\s\S]*?\*\//g, '');
 
+    it("hides the browser's own search cross on every field, so a clearable search shows one", () => {
+      const sheet = css();
+
+      expect(sheet).toContain(
+        '.andes-input__control::-webkit-search-cancel-button',
+      );
+      expect(sheet).not.toContain(
+        '.andes-input-wrapper--search .andes-input__control::-webkit-search-cancel-button',
+      );
+    });
+
     it('keys the ring off `:focus-within` on the group, so mouse focus shows it too', () => {
       const { input, group } = createHost();
 

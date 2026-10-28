@@ -96,50 +96,33 @@ type Story = StoryObj<AndesQrCode>;
 
 export const Default: Story = {};
 
-export const Canvas: Story = {
-  args: { type: 'canvas' },
-  parameters: {
-    docs: {
-      description: {
-        story:
-          'The same symbol painted on a canvas, sized for the device pixel ratio. It repaints when the theme attribute on the root element changes; call `redraw()` for themes switched any other way.',
-      },
-    },
-  },
-};
-
-export const Sizes: Story = {
+/**
+ * Look and format. Sizes (96, 128 and 192 px), colours (by default the modules use the foreground
+ * token and the background the background token; any CSS colour, including a token, replaces
+ * either), the frame (`bordered` off), and the canvas renderer: the same symbol painted on a
+ * canvas, sized for the device pixel ratio. It repaints when the theme attribute on the root
+ * element changes; call `redraw()` for themes switched any other way.
+ */
+export const Appearance: Story = {
   render: () => ({
     template: `
-      <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1rem;">
-        <andes-qr-code value="https://andes.example/pay/42" [size]="96" aria-label="Small QR code" />
-        <andes-qr-code value="https://andes.example/pay/42" [size]="128" aria-label="Medium QR code" />
-        <andes-qr-code value="https://andes.example/pay/42" [size]="192" aria-label="Large QR code" />
+      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1rem;">
+          <andes-qr-code value="https://andes.example/pay/42" [size]="96" aria-label="Small QR code" />
+          <andes-qr-code value="https://andes.example/pay/42" [size]="128" aria-label="Medium QR code" />
+          <andes-qr-code value="https://andes.example/pay/42" [size]="192" aria-label="Large QR code" />
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
+          <andes-qr-code value="https://andes.example/pay/42" [size]="128" aria-label="Themed QR code" />
+          <andes-qr-code value="https://andes.example/pay/42" [size]="128" color="var(--andes-color-primary)" bgColor="#ffffff" aria-label="Brand QR code" />
+          <andes-qr-code value="https://andes.example/pay/42" [size]="128" color="#0f172a" bgColor="#ffffff" aria-label="Always dark-on-light QR code" />
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
+          <andes-qr-code value="https://andes.example/pay/42" [size]="128" [bordered]="false" aria-label="Borderless QR code" />
+          <andes-qr-code value="https://andes.example/pay/42" [size]="128" type="canvas" aria-label="Canvas QR code" />
+        </div>
       </div>`,
   }),
-};
-
-export const Colors: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          'By default the modules use the foreground token and the background the background token. Any CSS colour, including a token, can replace either.',
-      },
-    },
-  },
-  render: () => ({
-    template: `
-      <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
-        <andes-qr-code value="https://andes.example/pay/42" [size]="128" aria-label="Themed QR code" />
-        <andes-qr-code value="https://andes.example/pay/42" [size]="128" color="var(--andes-color-primary)" bgColor="#ffffff" aria-label="Brand QR code" />
-        <andes-qr-code value="https://andes.example/pay/42" [size]="128" color="#0f172a" bgColor="#ffffff" aria-label="Always dark-on-light QR code" />
-      </div>`,
-  }),
-};
-
-export const Borderless: Story = {
-  args: { bordered: false },
 };
 
 export const ErrorLevels: Story = {
@@ -184,50 +167,31 @@ export const WithLogo: Story = {
   }),
 };
 
+/**
+ * A non-active status hides the code behind an overlay so an outdated code cannot be scanned.
+ * `expired` offers a refresh button that emits `refresh`. The second row replaces the overlay
+ * content with `statusRender` (the template context carries the status and a `refresh()`
+ * function), and the third localises the labels.
+ */
 export const Statuses: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          'A non-active status hides the code behind an overlay so an outdated code cannot be scanned. `expired` offers a refresh button that emits `refresh`.',
-      },
-    },
-  },
   render: () => ({
     template: `
-      <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
-        <andes-qr-code value="https://andes.example/pay/42" status="loading" aria-label="Loading QR code" />
-        <andes-qr-code value="https://andes.example/pay/42" status="expired" aria-label="Expired QR code" />
-        <andes-qr-code value="https://andes.example/pay/42" status="scanned" aria-label="Scanned QR code" />
+      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
+          <andes-qr-code value="https://andes.example/pay/42" status="loading" aria-label="Loading QR code" />
+          <andes-qr-code value="https://andes.example/pay/42" status="expired" aria-label="Expired QR code" />
+          <andes-qr-code value="https://andes.example/pay/42" status="scanned" aria-label="Scanned QR code" />
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
+          <andes-qr-code value="https://andes.example/pay/42" status="expired" [statusRender]="custom" aria-label="Custom expired QR code" />
+          <andes-qr-code value="https://andes.example/pago/42" status="expired" [labels]="{ qrCode: 'Codigo QR', expired: 'El codigo vencio', refresh: 'Actualizar', scanned: 'Escaneado', loading: 'Cargando' }" />
+        </div>
+        <ng-template #custom let-status let-refresh="refresh">
+          <span style="font-weight: 600;">Session {{ status }}</span>
+          <span style="font-size: 0.75rem; line-height: 1.25rem; color: var(--andes-color-muted-foreground);">Ask for a new code to continue.</span>
+          <andes-button size="sm" variant="outline" (click)="refresh()">Get a new code</andes-button>
+        </ng-template>
       </div>`,
-  }),
-};
-
-export const CustomStatus: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          '`statusRender` replaces the overlay content; the template context carries the status and a `refresh()` function.',
-      },
-    },
-  },
-  render: () => ({
-    template: `
-      <andes-qr-code value="https://andes.example/pay/42" status="expired" [statusRender]="custom" aria-label="Expired QR code">
-      </andes-qr-code>
-      <ng-template #custom let-status let-refresh="refresh">
-        <span style="font-weight: 600;">Session {{ status }}</span>
-        <span style="font-size: 0.75rem; line-height: 1.25rem; color: var(--andes-color-muted-foreground);">Ask for a new code to continue.</span>
-        <andes-button size="sm" variant="outline" (click)="refresh()">Get a new code</andes-button>
-      </ng-template>`,
-  }),
-};
-
-export const Localised: Story = {
-  render: () => ({
-    template: `
-      <andes-qr-code value="https://andes.example/pago/42" status="expired" [labels]="{ qrCode: 'Codigo QR', expired: 'El codigo vencio', refresh: 'Actualizar', scanned: 'Escaneado', loading: 'Cargando' }" />`,
   }),
 };
 

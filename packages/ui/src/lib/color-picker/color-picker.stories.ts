@@ -42,7 +42,7 @@ const PRESETS: readonly AndesColorPreset[] = [
 ];
 
 const meta: Meta<AndesColorPicker> = {
-  title: 'Color Picker',
+  title: 'Data Entry/Color Picker',
   component: AndesColorPicker,
   tags: ['autodocs'],
   // The panel opens below the trigger, so the stories sit at the top of the canvas.

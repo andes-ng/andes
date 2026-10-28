@@ -1,6 +1,3 @@
-import { CdkDrag, CdkDragHandle } from '@angular/cdk/drag-drop';
-import { NgTemplateOutlet } from '@angular/common';
-import { signal } from '@angular/core';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
@@ -78,7 +75,7 @@ const TRIGGER_STYLES = `
 `;
 
 const meta: Meta<AndesDialog> = {
-  title: 'Feedback/Dialog',
+  title: 'Feedback/Dialog/Basics',
   component: AndesDialog,
   tags: ['autodocs'],
   argTypes: {
@@ -151,66 +148,153 @@ export default meta;
 
 type Story = StoryObj<AndesDialog>;
 
+/** The playground: use the controls to try every dialog input on one dialog. */
 export const Default: Story = {};
 
-export const Small: Story = { args: { size: 'sm' } };
-
-export const Large: Story = { args: { size: 'lg' } };
-
-/** `showCloseButton` drops the built-in "x", for a dialog that must be answered. */
-export const WithoutCloseButton: Story = {
-  render: (args) => ({
+/**
+ * `size` is `sm`, `md` (the default), `lg` or `xl`. Each trigger opens the same dialog at a
+ * different size.
+ */
+export const Sizes: Story = {
+  render: () => ({
     moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS, AndesButton] },
-    props: args,
+    props: { sizes: ['sm', 'md', 'lg', 'xl'] },
     template: `
       ${TRIGGER_STYLES}
-      <andes-dialog [size]="size">
-        <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Terms of service</button>
+      <div style="display: flex; flex-wrap: wrap; gap: var(--andes-space-2);">
+        @for (size of sizes; track size) {
+          <andes-dialog [size]="size">
+            <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Size {{ size }}</button>
 
-        <andes-dialog-content *andesDialogContent [showCloseButton]="false">
-          <div andesDialogHeader>
-            <h2 andesDialogTitle>Terms of service</h2>
-            <p andesDialogDescription>Please accept the terms to continue.</p>
-          </div>
+            <andes-dialog-content *andesDialogContent>
+              <div andesDialogHeader>
+                <h2 andesDialogTitle>Size {{ size }}</h2>
+                <p andesDialogDescription>
+                  Make changes to your profile here. Click save when you are done.
+                </p>
+              </div>
 
-          <div andesDialogFooter>
-            <andes-button variant="secondary" andesDialogClose>Decline</andes-button>
-            <andes-button variant="primary" andesDialogClose>Accept</andes-button>
-          </div>
-        </andes-dialog-content>
-      </andes-dialog>
+              <div andesDialogFooter>
+                <andes-button variant="secondary" andesDialogClose>Cancel</andes-button>
+                <andes-button variant="primary" andesDialogClose>Save changes</andes-button>
+              </div>
+            </andes-dialog-content>
+          </andes-dialog>
+        }
+      </div>
     `,
   }),
 };
 
-/** Neither Escape nor an outside click dismisses this one - only its own actions do. */
-export const NotDismissible: Story = {
-  args: { closeOnEscape: false, closeOnOutsideClick: false },
-};
-
-/** Driving `[(open)]` from outside, with no trigger of its own inside the dialog. */
-export const ControlledOpenState: Story = {
+/**
+ * Ways a dialog can be answered or refused. `[showCloseButton]="false"` drops the built-in "x",
+ * for a dialog that must be answered. `closeOnEscape` and `closeOnOutsideClick` set to false
+ * leave only the dialog's own actions. `closeIcon` swaps the glyph (and `closeLabel` renames
+ * the button); the button, its label and hit area stay the component's.
+ */
+export const Dismissal: Story = {
   render: () => ({
     moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS, AndesButton] },
-    props: { open: false },
     template: `
       ${TRIGGER_STYLES}
-      <button type="button" class="sb-dialog-trigger" (click)="open = true">Open from outside</button>
+      <div style="display: flex; flex-wrap: wrap; gap: var(--andes-space-2);">
+        <andes-dialog>
+          <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Without close button</button>
 
-      <andes-dialog [(open)]="open">
-        <andes-dialog-content *andesDialogContent>
-          <div andesDialogHeader>
-            <h2 andesDialogTitle>Controlled dialog</h2>
-            <p andesDialogDescription>
-              Open state lives in the host component, not in the dialog.
-            </p>
-          </div>
+          <andes-dialog-content *andesDialogContent [showCloseButton]="false">
+            <div andesDialogHeader>
+              <h2 andesDialogTitle>Terms of service</h2>
+              <p andesDialogDescription>Please accept the terms to continue.</p>
+            </div>
 
-          <div andesDialogFooter>
-            <andes-button variant="primary" andesDialogClose>Done</andes-button>
-          </div>
-        </andes-dialog-content>
-      </andes-dialog>
+            <div andesDialogFooter>
+              <andes-button variant="secondary" andesDialogClose>Decline</andes-button>
+              <andes-button variant="primary" andesDialogClose>Accept</andes-button>
+            </div>
+          </andes-dialog-content>
+        </andes-dialog>
+
+        <andes-dialog [closeOnEscape]="false" [closeOnOutsideClick]="false">
+          <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Not dismissible</button>
+
+          <andes-dialog-content *andesDialogContent>
+            <div andesDialogHeader>
+              <h2 andesDialogTitle>Not dismissible</h2>
+              <p andesDialogDescription>
+                Neither Escape nor an outside click dismisses this one - only its own actions do.
+              </p>
+            </div>
+
+            <div andesDialogFooter>
+              <andes-button variant="primary" andesDialogClose>Done</andes-button>
+            </div>
+          </andes-dialog-content>
+        </andes-dialog>
+
+        <andes-dialog>
+          <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Custom close icon</button>
+
+          <andes-dialog-content *andesDialogContent [closeIcon]="icon" closeLabel="Dismiss">
+            <div andesDialogHeader>
+              <h2 andesDialogTitle>Custom close icon</h2>
+              <p andesDialogDescription>The glyph is yours; the button is still the component's.</p>
+            </div>
+          </andes-dialog-content>
+        </andes-dialog>
+      </div>
+
+      <ng-template #icon>
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" style="fill: none; stroke: currentcolor; stroke-width: 2; stroke-linecap: round;">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M9 9l6 6M15 9l-6 6" />
+        </svg>
+      </ng-template>
+    `,
+  }),
+};
+
+/**
+ * The scrim. The default mask dims the page; `maskBlur` frosts it as well; `[mask]="false"`
+ * drops it altogether. In every case the dialog keeps its focus trap and scroll lock.
+ */
+export const Mask: Story = {
+  render: () => ({
+    moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS, AndesButton] },
+    template: `
+      ${TRIGGER_STYLES}
+      <div style="display: flex; flex-wrap: wrap; gap: var(--andes-space-2);">
+        <andes-dialog [maskBlur]="true">
+          <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Blurred mask</button>
+
+          <andes-dialog-content *andesDialogContent>
+            <div andesDialogHeader>
+              <h2 andesDialogTitle>Blurred mask</h2>
+              <p andesDialogDescription>The page behind the scrim is frosted as well as dimmed.</p>
+            </div>
+
+            <div andesDialogFooter>
+              <andes-button variant="primary" andesDialogClose>Done</andes-button>
+            </div>
+          </andes-dialog-content>
+        </andes-dialog>
+
+        <andes-dialog [mask]="false">
+          <button type="button" class="sb-dialog-trigger" andesDialogTrigger>No mask</button>
+
+          <andes-dialog-content *andesDialogContent>
+            <div andesDialogHeader>
+              <h2 andesDialogTitle>Without a mask</h2>
+              <p andesDialogDescription>
+                <code>[mask]="false"</code> drops the scrim; focus stays trapped and scroll stays locked.
+              </p>
+            </div>
+
+            <div andesDialogFooter>
+              <andes-button variant="primary" andesDialogClose>Done</andes-button>
+            </div>
+          </andes-dialog-content>
+        </andes-dialog>
+      </div>
     `,
   }),
 };
@@ -246,131 +330,6 @@ export const ScrollingContent: Story = {
   }),
 };
 
-const LOG_STYLE =
-  'font-family: var(--andes-font-family), sans-serif; font-size: 0.875rem; color: var(--andes-color-foreground);';
-
-/**
- * `footer="default"` renders the built-in Cancel/OK pair. OK emits `(ok)` and does
- * not close on its own - the handler flips `confirmLoading` around the async work and
- * closes when it is done. Cancel, the
- * "x", Escape and a backdrop click all emit `(cancelled)`.
- */
-export const BuiltInFooter: Story = {
-  render: () => {
-    const open = signal(false);
-    const saving = signal(false);
-    const log = signal<string[]>([]);
-    return {
-      moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS] },
-      props: {
-        open,
-        saving,
-        log,
-        push: (entry: string) => log.update((l) => [...l.slice(-5), entry]),
-        save() {
-          saving.set(true);
-          log.update((l) => [...l.slice(-5), 'ok']);
-          setTimeout(() => {
-            saving.set(false);
-            open.set(false);
-          }, 1500);
-        },
-      },
-      template: `
-        ${TRIGGER_STYLES}
-        <andes-dialog
-          [(open)]="open"
-          footer="default"
-          okText="Save changes"
-          cancelText="Cancel"
-          [confirmLoading]="saving()"
-          (ok)="save()"
-          (cancelled)="push('cancelled: ' + $event)"
-        >
-          <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Edit profile</button>
-
-          <andes-dialog-content *andesDialogContent>
-            <div andesDialogHeader>
-              <h2 andesDialogTitle>Edit profile</h2>
-              <p andesDialogDescription>OK spins for 1.5s, then the dialog closes.</p>
-            </div>
-
-            <label class="sb-field">
-              Name
-              <input value="Ada Lovelace" />
-            </label>
-          </andes-dialog-content>
-        </andes-dialog>
-        <p style="${LOG_STYLE}">Events: {{ log().join(', ') || '-' }}</p>
-      `,
-    };
-  },
-};
-
-/** `okType="danger"` for a destructive action, with focus on Cancel. */
-export const DangerousAction: Story = {
-  render: () => ({
-    moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS] },
-    template: `
-      ${TRIGGER_STYLES}
-      <andes-dialog
-        #dialog
-        size="sm"
-        footer="default"
-        okText="Delete"
-        okType="danger"
-        autoFocusButton="cancel"
-        (ok)="dialog.hide()"
-      >
-        <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Delete file</button>
-
-        <andes-dialog-content *andesDialogContent>
-          <div andesDialogHeader>
-            <h2 andesDialogTitle>Delete report.pdf?</h2>
-            <p andesDialogDescription>The file moves to the bin for 30 days.</p>
-          </div>
-        </andes-dialog-content>
-      </andes-dialog>
-    `,
-  }),
-};
-
-/**
- * A custom `footer` template keeps the footer box (pinning, stacking) and receives
- * `ok()`/`cancel()`, so bespoke actions keep the built-in OK/Cancel semantics.
- */
-export const CustomFooter: Story = {
-  render: () => ({
-    moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS, AndesButton] },
-    props: { lastAction: '' },
-    template: `
-      ${TRIGGER_STYLES}
-      <andes-dialog
-        #dialog
-        [footer]="footer"
-        (ok)="lastAction = 'publish'; dialog.hide()"
-        (cancelled)="lastAction = 'cancel'"
-      >
-        <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Publish post</button>
-
-        <andes-dialog-content *andesDialogContent>
-          <div andesDialogHeader>
-            <h2 andesDialogTitle>Publish post</h2>
-            <p andesDialogDescription>Publish now, or keep it as a draft.</p>
-          </div>
-        </andes-dialog-content>
-      </andes-dialog>
-
-      <ng-template #footer let-ok="ok" let-cancel="cancel">
-        <andes-button variant="ghost" (click)="cancel()">Cancel</andes-button>
-        <andes-button variant="secondary" (click)="lastAction = 'draft'; dialog.hide()">Save draft</andes-button>
-        <andes-button variant="primary" (click)="ok()">Publish</andes-button>
-      </ng-template>
-      <p style="${LOG_STYLE}">Last action: {{ lastAction || '-' }}</p>
-    `,
-  }),
-};
-
 /**
  * `[centered]="false"` parks the dialog near the top so the surface
  * does not jump as its content grows. `width` takes px, any CSS length or a
@@ -391,250 +350,6 @@ export const TopAlignedResponsiveWidth: Story = {
             <p andesDialogDescription>
               100% below 768px, 80% up to 992px, 720px up to 1200px, 960px beyond.
             </p>
-          </div>
-        </andes-dialog-content>
-      </andes-dialog>
-    `,
-  }),
-};
-
-/**
- * `loading` swaps the body for a skeleton: the title stays so the
- * dialog is still labelled, the footer is withheld until there is something to act on.
- */
-export const LoadingSkeleton: Story = {
-  render: () => {
-    const loading = signal(false);
-    return {
-      moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS] },
-      props: {
-        loading,
-        load() {
-          loading.set(true);
-          setTimeout(() => loading.set(false), 2000);
-        },
-      },
-      template: `
-        ${TRIGGER_STYLES}
-        <andes-dialog [loading]="loading()" footer="default" (opened)="load()" #dialog (ok)="dialog.hide()">
-          <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Load invoice</button>
-
-          <andes-dialog-content *andesDialogContent>
-            <div andesDialogHeader>
-              <h2 andesDialogTitle>Invoice #1042</h2>
-            </div>
-            <p style="margin: 0; font-size: 0.875rem;">
-              Issued 3 March, due 2 April. Total: 1,240.00.
-            </p>
-          </andes-dialog-content>
-        </andes-dialog>
-      `,
-    };
-  },
-};
-
-/**
- * `[destroyOnClose]="false"` keeps the content alive across a close: type something,
- * close, reopen. The default destroys it, and `forceRender` builds it before the first
- * open.
- */
-export const KeepContentAlive: Story = {
-  render: () => ({
-    moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS] },
-    template: `
-      ${TRIGGER_STYLES}
-      <andes-dialog [destroyOnClose]="false" footer="default" okText="Close" [showCancel]="false" #dialog (ok)="dialog.hide()">
-        <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Draft message</button>
-
-        <andes-dialog-content *andesDialogContent>
-          <div andesDialogHeader>
-            <h2 andesDialogTitle>Draft message</h2>
-            <p andesDialogDescription>What you type survives closing the dialog.</p>
-          </div>
-
-          <label class="sb-field">
-            Message
-            <input placeholder="Type, close, reopen" />
-          </label>
-        </andes-dialog-content>
-      </andes-dialog>
-    `,
-  }),
-};
-
-/** `closeIcon` swaps the glyph; the button, its label and hit area stay the component's. */
-export const CustomCloseIcon: Story = {
-  render: () => ({
-    moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS] },
-    template: `
-      ${TRIGGER_STYLES}
-      <andes-dialog [mask]="false">
-        <button type="button" class="sb-dialog-trigger" andesDialogTrigger>No mask, custom close</button>
-
-        <andes-dialog-content *andesDialogContent [closeIcon]="icon" closeLabel="Dismiss">
-          <div andesDialogHeader>
-            <h2 andesDialogTitle>Without a mask</h2>
-            <p andesDialogDescription>
-              <code>[mask]="false"</code> drops the scrim; focus stays trapped and scroll stays locked.
-            </p>
-          </div>
-        </andes-dialog-content>
-      </andes-dialog>
-
-      <ng-template #icon>
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" style="fill: none; stroke: currentcolor; stroke-width: 2; stroke-linecap: round;">
-          <circle cx="12" cy="12" r="9" />
-          <path d="M9 9l6 6M15 9l-6 6" />
-        </svg>
-      </ng-template>
-    `,
-  }),
-};
-
-/** Lifecycle outputs: `opened`, `afterOpenChange` (after the entry transition) and `closed`. */
-export const LifecycleEvents: Story = {
-  render: () => {
-    const log = signal<string[]>([]);
-    const push = (entry: string) => log.update((l) => [...l.slice(-5), entry]);
-    return {
-      moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS] },
-      props: { log, push },
-      template: `
-        ${TRIGGER_STYLES}
-        <andes-dialog
-          footer="default"
-          [showCancel]="false"
-          #dialog
-          (ok)="dialog.hide()"
-          (opened)="push('opened')"
-          (afterOpenChange)="push('afterOpenChange: ' + $event)"
-          (cancelled)="push('cancelled: ' + $event)"
-          (closed)="push('closed: ' + $event)"
-        >
-          <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Open</button>
-
-          <andes-dialog-content *andesDialogContent>
-            <div andesDialogHeader>
-              <h2 andesDialogTitle>Lifecycle</h2>
-              <p andesDialogDescription>Close it any way you like.</p>
-            </div>
-          </andes-dialog-content>
-        </andes-dialog>
-        <p style="${LOG_STYLE}">{{ log().join(' -> ') || '-' }}</p>
-      `,
-    };
-  },
-};
-
-/**
- * A custom `footer` template also receives the built-in buttons as templates
- * (`defaultButtons`, or `okButton` and `cancelButton` one by one), already labelled,
- * styled and wired - so a footer can add an action beside the default pair instead of
- * rebuilding it.
- */
-export const ExtendDefaultFooter: Story = {
-  render: () => ({
-    moduleMetadata: {
-      imports: [ANDES_DIALOG_IMPORTS, AndesButton, NgTemplateOutlet],
-    },
-    props: { lastAction: '' },
-    template: `
-      ${TRIGGER_STYLES}
-      <andes-dialog
-        #dialog
-        [footer]="footer"
-        okText="Submit"
-        (ok)="lastAction = 'submit'; dialog.hide()"
-        (cancelled)="lastAction = 'cancel'"
-      >
-        <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Submit expense</button>
-
-        <andes-dialog-content *andesDialogContent>
-          <div andesDialogHeader>
-            <h2 andesDialogTitle>Submit expense report</h2>
-            <p andesDialogDescription>Send it for approval, or come back to it later.</p>
-          </div>
-        </andes-dialog-content>
-      </andes-dialog>
-
-      <ng-template #footer let-buttons="defaultButtons">
-        <andes-button
-          variant="ghost"
-          style="margin-inline-end: auto"
-          (click)="lastAction = 'draft'; dialog.hide()"
-        >
-          Save draft
-        </andes-button>
-        <ng-container *ngTemplateOutlet="buttons" />
-      </ng-template>
-      <p style="${LOG_STYLE}">Last action: {{ lastAction || '-' }}</p>
-    `,
-  }),
-};
-
-/**
- * `okButtonProps` and `cancelButtonProps` reach past the dedicated inputs: size,
- * ghost, an accessible name or extra classes. `variant` wins over `okType`, while
- * `disabled`/`loading` add to `okDisabled`/`confirmLoading`.
- */
-export const FooterButtonProps: Story = {
-  render: () => ({
-    moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS] },
-    template: `
-      ${TRIGGER_STYLES}
-      <andes-dialog
-        #dialog
-        footer="default"
-        okText="Remove 3 users"
-        cancelText="Keep them"
-        [okButtonProps]="{ variant: 'danger', ariaLabel: 'Remove the 3 selected users' }"
-        [cancelButtonProps]="{ variant: 'ghost' }"
-        autoFocusButton="cancel"
-        (ok)="dialog.hide()"
-      >
-        <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Remove users</button>
-
-        <andes-dialog-content *andesDialogContent>
-          <div andesDialogHeader>
-            <h2 andesDialogTitle>Remove selected users?</h2>
-            <p andesDialogDescription>They lose access to this workspace immediately.</p>
-          </div>
-        </andes-dialog-content>
-      </andes-dialog>
-    `,
-  }),
-};
-
-/**
- * `maskBlur` frosts the page behind the scrim as well as dimming it; the dialog
- * keeps its focus trap and scroll lock exactly as with the plain mask.
- */
-export const BlurredMask: Story = {
-  args: { maskBlur: true },
-};
-
-/**
- * The surface is ordinary markup, so the CDK's drag-and-drop directives make it
- * movable without any dialog-specific API: `cdkDrag` on the surface and
- * `cdkDragHandle` on the header, so text and controls in the body stay selectable.
- */
-export const Draggable: Story = {
-  render: () => ({
-    moduleMetadata: {
-      imports: [ANDES_DIALOG_IMPORTS, AndesButton, CdkDrag, CdkDragHandle],
-    },
-    template: `
-      ${TRIGGER_STYLES}
-      <style>
-        .sb-drag-handle { cursor: move; user-select: none; }
-      </style>
-      <andes-dialog footer="default" okText="Done" [showCancel]="false" #dialog (ok)="dialog.hide()">
-        <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Open movable dialog</button>
-
-        <andes-dialog-content *andesDialogContent cdkDrag>
-          <div andesDialogHeader class="sb-drag-handle" cdkDragHandle>
-            <h2 andesDialogTitle>Drag me by the header</h2>
-            <p andesDialogDescription>Move the dialog aside to compare with the page behind it.</p>
           </div>
         </andes-dialog-content>
       </andes-dialog>

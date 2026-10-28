@@ -101,7 +101,39 @@ export const EscapeRefused: Story = {
   args: { closeOnEscape: false },
 };
 
-export const Small: Story = { args: { size: 'sm' } };
+/** `size` is `sm`, `md` (the default), `lg` or `xl`; each trigger opens the same confirmation at a different size. */
+export const Sizes: Story = {
+  render: () => ({
+    moduleMetadata: { imports: [ANDES_ALERT_DIALOG_IMPORTS, AndesButton] },
+    props: { sizes: ['sm', 'md', 'lg', 'xl'] },
+    template: `
+      ${TRIGGER_STYLES}
+      <div style="display: flex; flex-wrap: wrap; gap: var(--andes-space-2);">
+        @for (size of sizes; track size) {
+          <andes-alert-dialog [size]="size">
+            <button type="button" class="sb-alert-trigger" andesAlertDialogTrigger>
+              Size {{ size }}
+            </button>
+
+            <andes-alert-dialog-content *andesAlertDialogContent>
+              <div andesAlertDialogHeader>
+                <h2 andesAlertDialogTitle>Delete this project?</h2>
+                <p andesAlertDialogDescription>
+                  This permanently removes the project and everything in it.
+                </p>
+              </div>
+
+              <div andesAlertDialogFooter>
+                <andes-button variant="secondary" andesAlertDialogCancel>Cancel</andes-button>
+                <andes-button variant="danger" andesAlertDialogAction>Delete project</andes-button>
+              </div>
+            </andes-alert-dialog-content>
+          </andes-alert-dialog>
+        }
+      </div>
+    `,
+  }),
+};
 
 /** Reporting the outcome: `closed` carries why the dialog went away. */
 export const ReportsTheOutcome: Story = {

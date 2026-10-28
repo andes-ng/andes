@@ -4,7 +4,7 @@ import type { Meta, StoryObj } from '@storybook/angular';
 import { AndesTextarea } from './textarea';
 
 const meta: Meta<AndesTextarea> = {
-  title: 'Data Entry/Textarea/Basics/Field',
+  title: 'Data Entry/Input/Textarea/Basics/Field',
   component: AndesTextarea,
   tags: ['autodocs'],
   argTypes: {

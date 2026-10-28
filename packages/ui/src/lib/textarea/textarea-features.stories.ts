@@ -19,7 +19,7 @@ const keepGraphemes: AndesTextareaExceedFormatter = (value, { max }) =>
     .join('');
 
 const meta: Meta<AndesTextarea> = {
-  title: 'Data Entry/Textarea/Basics/Features',
+  title: 'Data Entry/Input/Textarea/Basics/Features',
   component: AndesTextarea,
 };
 

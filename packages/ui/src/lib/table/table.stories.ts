@@ -67,7 +67,7 @@ import { andesSortRows, type AndesSortState } from './table-sort';
 import { andesFlattenTableTree, andesTreeIndex } from './table-tree';
 import { AndesTableVirtualRows } from './table-virtual';
 
-const TABLE_PARTS = [
+export const TABLE_PARTS = [
   AndesTable,
   AndesTableBody,
   AndesTableCaption,
@@ -192,7 +192,7 @@ function money(value: number): string {
     }
   `,
 })
-class AndesTableSortingDemo {
+export class AndesTableSortingDemo {
   readonly sort = signal<AndesSortState | null>(null);
 
   readonly sortedInvoices = computed(() =>
@@ -432,7 +432,7 @@ const DEMO_STYLES = `
   `,
   styles: DEMO_STYLES,
 })
-class AndesTableSelectionDemo {
+export class AndesTableSelectionDemo {
   readonly type = input<AndesTableSelectionType>('checkbox');
   readonly selected = signal<readonly AndesTableRowKey[]>(['ORD-102']);
   readonly selectedLabel = computed(() =>
@@ -494,7 +494,7 @@ class AndesTableSelectionDemo {
   `,
   styles: DEMO_STYLES,
 })
-class AndesTableExpandDemo {
+export class AndesTableExpandDemo {
   readonly byClick = input(false);
   readonly expanded = signal<readonly AndesTableRowKey[]>(['ORD-102']);
   protected readonly orders = ORDERS.slice(0, 5);
@@ -659,7 +659,7 @@ const METHOD_OPTIONS: readonly AndesTableFilterOption[] = [
     `,
   ],
 })
-class AndesTableFilterDemo {
+export class AndesTableFilterDemo {
   readonly filters = signal<AndesTableFilters>({ status: ['Paid', 'Pending'] });
   readonly sort = signal<AndesSortState | null>(null);
 
@@ -744,7 +744,7 @@ const STATUS_RANK: readonly Invoice['status'][] = [
   `,
   styles: DEMO_STYLES,
 })
-class AndesTableMultiSortDemo {
+export class AndesTableMultiSortDemo {
   readonly sorts = signal<readonly AndesSortState[]>([
     { columnId: 'region', direction: 'asc' },
     { columnId: 'total', direction: 'desc' },
@@ -845,7 +845,7 @@ class AndesTableMultiSortDemo {
   `,
   styles: DEMO_STYLES,
 })
-class AndesTableScrollDemo {
+export class AndesTableScrollDemo {
   readonly selected = signal<readonly AndesTableRowKey[]>([]);
   protected readonly orders = ORDERS;
   protected readonly total = ORDERS.reduce(
@@ -916,7 +916,7 @@ const PAGE_SIZE = 4;
   `,
   styles: DEMO_STYLES,
 })
-class AndesTablePaginationDemo {
+export class AndesTablePaginationDemo {
   readonly sort = signal<AndesSortState | null>(null);
   readonly page = signal(1);
   readonly loading = signal(false);
@@ -1103,7 +1103,7 @@ const ACCOUNT_TREE = {
   `,
   styles: DEMO_STYLES,
 })
-class AndesTableTreeDemo {
+export class AndesTableTreeDemo {
   readonly tree = andesTreeIndex(ACCOUNTS, ACCOUNT_TREE);
   readonly selected = signal<readonly AndesTableRowKey[]>([]);
   readonly expanded = signal<readonly AndesTableRowKey[]>(['1']);
@@ -1168,7 +1168,7 @@ class AndesTableTreeDemo {
   `,
   styles: DEMO_STYLES,
 })
-class AndesTableSelectionMenuDemo {
+export class AndesTableSelectionMenuDemo {
   readonly selected = signal<readonly AndesTableRowKey[]>([]);
   readonly lastEvent = signal('');
   protected readonly orders = ORDERS.slice(0, 6);
@@ -1292,7 +1292,7 @@ const UNPAID: readonly AndesFilterValue[] = ['Pending', 'Overdue'];
   `,
   styles: DEMO_STYLES,
 })
-class AndesTableTreeFilterDemo {
+export class AndesTableTreeFilterDemo {
   protected readonly unpaid = UNPAID;
   readonly filters = signal<AndesTableFilters>({ status: UNPAID });
   protected readonly regionOptions = REGION_OPTIONS;
@@ -1417,7 +1417,7 @@ const LEDGER: readonly LedgerLine[] = Array.from(
   `,
   styles: [DEMO_STYLES, FIELD_STYLES, '.demo-input { width: 6rem; }'],
 })
-class AndesTableVirtualDemo {
+export class AndesTableVirtualDemo {
   protected readonly lines = LEDGER;
   protected readonly allIds = LEDGER.map((line) => line.id);
   /** Compact density: a 32px row, line and separator included. */
@@ -1471,7 +1471,7 @@ class AndesTableVirtualDemo {
   `,
   styles: DEMO_STYLES,
 })
-class AndesTableResizeDemo {
+export class AndesTableResizeDemo {
   readonly widths = signal<Readonly<Record<string, number>>>({
     order: 110,
     client: 180,
@@ -1548,7 +1548,7 @@ class AndesTableResizeDemo {
     'fieldset { margin: 0; padding-inline: 0; border: 0; }',
   ],
 })
-class AndesTableColumnsDemo {
+export class AndesTableColumnsDemo {
   protected readonly columns = [
     { id: 'client', label: 'Client' },
     { id: 'region', label: 'Region (hidden below 768px)' },
@@ -1641,7 +1641,7 @@ class AndesTableColumnsDemo {
   `,
   styles: DEMO_STYLES,
 })
-class AndesTableServerDemo {
+export class AndesTableServerDemo {
   protected readonly statusOptions: readonly AndesTableFilterOption[] = [
     { text: 'Paid', value: 'Paid' },
     { text: 'Pending', value: 'Pending' },
@@ -1760,7 +1760,7 @@ class AndesTableServerDemo {
   `,
   styles: [DEMO_STYLES, FIELD_STYLES],
 })
-class AndesTableEditableDemo {
+export class AndesTableEditableDemo {
   readonly orders = signal<readonly Order[]>(ORDERS.slice(0, 4));
   readonly editing = signal<string | null>(null);
   readonly draft = signal<Pick<Order, 'client' | 'total'>>({
@@ -1870,7 +1870,7 @@ class AndesTableEditableDemo {
     `,
   ],
 })
-class AndesTableDragDemo {
+export class AndesTableDragDemo {
   readonly orders = signal<Order[]>(ORDERS.slice(0, 5));
 
   protected drop(event: CdkDragDrop<unknown>): void {
@@ -1968,7 +1968,7 @@ const ORDER_LINES: Readonly<
   `,
   styles: DEMO_STYLES,
 })
-class AndesTableNestedDemo {
+export class AndesTableNestedDemo {
   readonly selected = signal<readonly AndesTableRowKey[]>([]);
   protected readonly orders = ORDERS.slice(0, 3);
   protected readonly money = money;
@@ -2195,7 +2195,7 @@ const BILLING_PAGE_SIZE = 8;
     `,
   ],
 })
-class AndesTableAdvancedFilterDemo {
+export class AndesTableAdvancedFilterDemo {
   readonly filters = signal<AndesTableFilters>({});
   readonly sort = signal<AndesSortState | null>(null);
   readonly page = signal(1);
@@ -2402,7 +2402,7 @@ const COLUMN_SETTINGS: readonly AndesTableColumnSetting[] = [
     `,
   ],
 })
-class AndesTableColumnSettingsDemo {
+export class AndesTableColumnSettingsDemo {
   protected readonly settings = COLUMN_SETTINGS;
   protected readonly statusOptions = STATUS_OPTIONS;
   protected readonly sortable = new Set(['id', 'client', 'total']);
@@ -2490,35 +2490,12 @@ const STATIC_TABLE = `
 `;
 
 const meta: Meta<AndesTable> = {
-  title: 'Data Display/Table',
+  title: 'Data Display/Table/Basics/Table',
   component: AndesTable,
   tags: ['autodocs'],
-  decorators: [
-    moduleMetadata({
-      imports: [
-        ...TABLE_PARTS,
-        AndesTableSortingDemo,
-        AndesTableSelectionDemo,
-        AndesTableExpandDemo,
-        AndesTableFilterDemo,
-        AndesTableMultiSortDemo,
-        AndesTableScrollDemo,
-        AndesTablePaginationDemo,
-        AndesTableTreeDemo,
-        AndesTableSelectionMenuDemo,
-        AndesTableTreeFilterDemo,
-        AndesTableVirtualDemo,
-        AndesTableResizeDemo,
-        AndesTableColumnsDemo,
-        AndesTableServerDemo,
-        AndesTableEditableDemo,
-        AndesTableDragDemo,
-        AndesTableNestedDemo,
-        AndesTableAdvancedFilterDemo,
-        AndesTableColumnSettingsDemo,
-      ],
-    }),
-  ],
+  // The demo components above are shared with the other table story files.
+  excludeStories: /^(TABLE_PARTS|AndesTable\w+Demo)$/,
+  decorators: [moduleMetadata({ imports: TABLE_PARTS })],
   argTypes: {
     bordered: { control: 'boolean' },
     density: {
@@ -2548,17 +2525,61 @@ export default meta;
 
 type Story = StoryObj<AndesTable>;
 
+/** The playground: the controls switch the frame, density, row hover, caption side, loading and layout. */
 export const Default: Story = {};
 
-export const Bordered: Story = {
-  args: { bordered: true },
+/**
+ * Look of the table, one variation per table: the cell grid (`bordered`), the caption above the
+ * table (`captionSide="top"`), no row hover (`rowHover` off) and the three densities.
+ */
+export const Appearance: Story = {
+  render: () => ({
+    props: { densities: ['compact', 'default', 'comfortable'] },
+    template: `
+      <div style="display: grid; gap: 2rem; width: min(40rem, calc(100vw - 2rem));">
+        <andes-table bordered>
+          <caption andesTableCaption>Bordered: the cell grid is on</caption>
+          <thead andesTableHeader>
+            <tr andesTableRow><th andesTableHead>Client</th><th andesTableHead align="end">Total</th></tr>
+          </thead>
+          <tbody andesTableBody>
+            <tr andesTableRow><td andesTableCell>Andes Mining</td><td andesTableCell align="end">$250.00</td></tr>
+            <tr andesTableRow><td andesTableCell>Tamci Peru</td><td andesTableCell align="end">$150.00</td></tr>
+          </tbody>
+        </andes-table>
+        <andes-table captionSide="top" [rowHover]="false">
+          <caption andesTableCaption>Caption on top, and no row hover</caption>
+          <thead andesTableHeader>
+            <tr andesTableRow><th andesTableHead>Client</th><th andesTableHead align="end">Total</th></tr>
+          </thead>
+          <tbody andesTableBody>
+            <tr andesTableRow><td andesTableCell>Andes Mining</td><td andesTableCell align="end">$250.00</td></tr>
+            <tr andesTableRow><td andesTableCell>Tamci Peru</td><td andesTableCell align="end">$150.00</td></tr>
+          </tbody>
+        </andes-table>
+        @for (density of densities; track density) {
+          <andes-table [density]="density">
+            <caption andesTableCaption>Density: {{ density }}</caption>
+            <thead andesTableHeader>
+              <tr andesTableRow><th andesTableHead>Client</th><th andesTableHead align="end">Total</th></tr>
+            </thead>
+            <tbody andesTableBody>
+              <tr andesTableRow><td andesTableCell>Andes Mining</td><td andesTableCell align="end">$250.00</td></tr>
+              <tr andesTableRow><td andesTableCell>Tamci Peru</td><td andesTableCell align="end">$150.00</td></tr>
+            </tbody>
+          </andes-table>
+        }
+      </div>
+    `,
+  }),
 };
 
 /**
- * With the cell grid on, the rounded frame keeps its corners in every state: with a
- * header that sticks inside a scrolling body, while empty, and under the loading overlay.
+ * States of the frame. With the cell grid on, the rounded frame keeps its corners in every
+ * state: with a header that sticks inside a scrolling body, while empty (the default message and
+ * a custom one) and under the loading overlay.
  */
-export const BorderedStates: Story = {
+export const States: Story = {
   render: () => ({
     props: { rows: Array.from({ length: 12 }, (_, i) => i + 1) },
     template: `
@@ -2575,166 +2596,6 @@ export const BorderedStates: Story = {
           </tbody>
         </andes-table>
         <andes-table bordered>
-          <caption andesTableCaption>Empty</caption>
-          <thead andesTableHeader>
-            <tr andesTableRow><th andesTableHead>Invoice</th><th andesTableHead>Client</th><th andesTableHead align="end">Total</th></tr>
-          </thead>
-          <tbody andesTableBody>
-            <tr andesTableRow><td andesTableCell colspan="3"><andes-table-empty /></td></tr>
-          </tbody>
-        </andes-table>
-        <andes-table bordered loading loadingLabel="Loading invoices">
-          <caption andesTableCaption>Loading</caption>
-          <thead andesTableHeader>
-            <tr andesTableRow><th andesTableHead>Invoice</th><th andesTableHead>Client</th><th andesTableHead align="end">Total</th></tr>
-          </thead>
-          <tbody andesTableBody>
-            <tr andesTableRow><td andesTableCell>INV-001</td><td andesTableCell>Acme</td><td andesTableCell align="end">250.00</td></tr>
-            <tr andesTableRow><td andesTableCell>INV-002</td><td andesTableCell>Globex</td><td andesTableCell align="end">150.00</td></tr>
-          </tbody>
-        </andes-table>
-      </div>
-    `,
-  }),
-};
-
-export const CaptionOnTop: Story = {
-  args: { captionSide: 'top' },
-};
-
-export const WithoutRowHover: Story = {
-  args: { rowHover: false },
-};
-
-export const Densities: Story = {
-  render: () => ({
-    template: `
-      <div style="display: grid; gap: 2rem;">
-        <andes-table density="compact">
-          <caption andesTableCaption>Compact</caption>
-          <thead andesTableHeader>
-            <tr andesTableRow><th andesTableHead>Client</th><th andesTableHead align="end">Total</th></tr>
-          </thead>
-          <tbody andesTableBody>
-            <tr andesTableRow><td andesTableCell>Andes Mining</td><td andesTableCell align="end">$250.00</td></tr>
-            <tr andesTableRow><td andesTableCell>Tamci Peru</td><td andesTableCell align="end">$150.00</td></tr>
-          </tbody>
-        </andes-table>
-        <andes-table density="default">
-          <caption andesTableCaption>Default</caption>
-          <thead andesTableHeader>
-            <tr andesTableRow><th andesTableHead>Client</th><th andesTableHead align="end">Total</th></tr>
-          </thead>
-          <tbody andesTableBody>
-            <tr andesTableRow><td andesTableCell>Andes Mining</td><td andesTableCell align="end">$250.00</td></tr>
-            <tr andesTableRow><td andesTableCell>Tamci Peru</td><td andesTableCell align="end">$150.00</td></tr>
-          </tbody>
-        </andes-table>
-        <andes-table density="comfortable">
-          <caption andesTableCaption>Comfortable</caption>
-          <thead andesTableHeader>
-            <tr andesTableRow><th andesTableHead>Client</th><th andesTableHead align="end">Total</th></tr>
-          </thead>
-          <tbody andesTableBody>
-            <tr andesTableRow><td andesTableCell>Andes Mining</td><td andesTableCell align="end">$250.00</td></tr>
-            <tr andesTableRow><td andesTableCell>Tamci Peru</td><td andesTableCell align="end">$150.00</td></tr>
-          </tbody>
-        </andes-table>
-      </div>
-    `,
-  }),
-};
-
-export const RowHeaders: Story = {
-  render: () => ({
-    template: `
-      <andes-table bordered>
-        <caption andesTableCaption>Quarterly revenue by region</caption>
-        <thead andesTableHeader>
-          <tr andesTableRow>
-            <td andesTableCell></td>
-            <th andesTableHead align="end">Q1</th>
-            <th andesTableHead align="end">Q2</th>
-          </tr>
-        </thead>
-        <tbody andesTableBody>
-          <tr andesTableRow>
-            <th andesTableHead scope="row">North</th>
-            <td andesTableCell align="end">$1,200.00</td>
-            <td andesTableCell align="end">$1,450.00</td>
-          </tr>
-          <tr andesTableRow>
-            <th andesTableHead scope="row">South</th>
-            <td andesTableCell align="end">$980.00</td>
-            <td andesTableCell align="end">$1,120.00</td>
-          </tr>
-        </tbody>
-      </andes-table>
-    `,
-  }),
-};
-
-export const Sortable: Story = {
-  parameters: { docs: { source: { type: 'code' } } },
-  render: () => ({
-    template: `<andes-table-sorting-demo />`,
-  }),
-};
-
-export const RowSelection: Story = {
-  parameters: { docs: { source: { type: 'code' } } },
-  render: () => ({ template: `<andes-table-selection-demo />` }),
-};
-
-export const RadioSelection: Story = {
-  parameters: { docs: { source: { type: 'code' } } },
-  render: () => ({ template: `<andes-table-selection-demo type="radio" />` }),
-};
-
-export const ExpandableRows: Story = {
-  parameters: { docs: { source: { type: 'code' } } },
-  render: () => ({ template: `<andes-table-expand-demo />` }),
-};
-
-export const ExpandRowByClick: Story = {
-  parameters: { docs: { source: { type: 'code' } } },
-  render: () => ({ template: `<andes-table-expand-demo [byClick]="true" />` }),
-};
-
-export const Filters: Story = {
-  parameters: { docs: { source: { type: 'code' } } },
-  render: () => ({ template: `<andes-table-filter-demo />` }),
-};
-
-export const AdvancedFilters: Story = {
-  parameters: { docs: { source: { type: 'code' } } },
-  render: () => ({ template: `<andes-table-advanced-filter-demo />` }),
-};
-
-export const MultiSort: Story = {
-  parameters: { docs: { source: { type: 'code' } } },
-  render: () => ({ template: `<andes-table-multi-sort-demo />` }),
-};
-
-export const ScrollAndFixedColumns: Story = {
-  parameters: { docs: { source: { type: 'code' } } },
-  render: () => ({ template: `<andes-table-scroll-demo />` }),
-};
-
-export const Pagination: Story = {
-  parameters: { docs: { source: { type: 'code' } } },
-  render: () => ({ template: `<andes-table-pagination-demo />` }),
-};
-
-export const Loading: Story = {
-  args: { loading: true },
-};
-
-export const Empty: Story = {
-  render: () => ({
-    template: `
-      <div style="display: grid; gap: 2rem; width: min(40rem, calc(100vw - 2rem));">
-        <andes-table>
           <caption andesTableCaption>Default empty state</caption>
           <thead andesTableHeader>
             <tr andesTableRow><th andesTableHead>Invoice</th><th andesTableHead>Client</th><th andesTableHead align="end">Total</th></tr>
@@ -2752,100 +2613,52 @@ export const Empty: Story = {
             <tr andesTableRow><td andesTableCell colspan="3"><andes-table-empty>No invoices this month</andes-table-empty></td></tr>
           </tbody>
         </andes-table>
+        <andes-table bordered loading loadingLabel="Loading invoices">
+          <caption andesTableCaption>Loading</caption>
+          <thead andesTableHeader>
+            <tr andesTableRow><th andesTableHead>Invoice</th><th andesTableHead>Client</th><th andesTableHead align="end">Total</th></tr>
+          </thead>
+          <tbody andesTableBody>
+            <tr andesTableRow><td andesTableCell>INV-001</td><td andesTableCell>Acme</td><td andesTableCell align="end">250.00</td></tr>
+            <tr andesTableRow><td andesTableCell>INV-002</td><td andesTableCell>Globex</td><td andesTableCell align="end">150.00</td></tr>
+          </tbody>
+        </andes-table>
       </div>
     `,
   }),
 };
 
-export const Ellipsis: Story = {
+/**
+ * Header structure. Row headers (`th` with `scope="row"`) name each row of a matrix, and header
+ * cells can span columns and rows; with `scrollY` both header rows stick, stacked.
+ */
+export const Headers: Story = {
   render: () => ({
     template: `
-      <andes-table tableLayout="fixed" style="display: block; width: min(36rem, calc(100vw - 2rem));">
-        <caption andesTableCaption>Fixed layout: long notes are truncated with an ellipsis; hover one for the full text</caption>
-        <thead andesTableHeader>
-          <tr andesTableRow>
-            <th andesTableHead style="width: 7rem">Order</th>
-            <th andesTableHead ellipsis>Notes</th>
-            <th andesTableHead align="end" style="width: 7rem">Total</th>
-          </tr>
-        </thead>
-        <tbody andesTableBody>
-          <tr andesTableRow>
-            <td andesTableCell>ORD-101</td>
-            <td andesTableCell ellipsis>Quarterly supply contract, renewed automatically every three months unless cancelled in writing.</td>
-            <td andesTableCell align="end">$1,250.00</td>
-          </tr>
-          <tr andesTableRow>
-            <td andesTableCell>ORD-103</td>
-            <td andesTableCell ellipsis>Second reminder sent; account on hold until the outstanding balance is settled in full.</td>
-            <td andesTableCell align="end">$2,310.00</td>
-          </tr>
-        </tbody>
-      </andes-table>
-    `,
-  }),
-};
-
-export const TreeData: Story = {
-  parameters: { docs: { source: { type: 'code' } } },
-  render: () => ({ template: `<andes-table-tree-demo />` }),
-};
-
-export const SelectionMenu: Story = {
-  parameters: { docs: { source: { type: 'code' } } },
-  render: () => ({ template: `<andes-table-selection-menu-demo />` }),
-};
-
-export const TreeAndCustomFilters: Story = {
-  parameters: { docs: { source: { type: 'code' } } },
-  render: () => ({ template: `<andes-table-tree-filter-demo />` }),
-};
-
-export const VirtualRows: Story = {
-  parameters: { docs: { source: { type: 'code' } } },
-  render: () => ({ template: `<andes-table-virtual-demo />` }),
-};
-
-export const ResizableColumns: Story = {
-  parameters: { docs: { source: { type: 'code' } } },
-  render: () => ({ template: `<andes-table-resize-demo />` }),
-};
-
-export const ResizeReorderAndHideColumns: Story = {
-  parameters: { docs: { source: { type: 'code' } } },
-  render: () => ({ template: `<andes-table-column-settings-demo />` }),
-};
-
-export const ColumnVisibility: Story = {
-  parameters: { docs: { source: { type: 'code' } } },
-  render: () => ({ template: `<andes-table-columns-demo />` }),
-};
-
-export const ServerSideData: Story = {
-  parameters: { docs: { source: { type: 'code' } } },
-  render: () => ({ template: `<andes-table-server-demo />` }),
-};
-
-export const EditableRows: Story = {
-  parameters: { docs: { source: { type: 'code' } } },
-  render: () => ({ template: `<andes-table-editable-demo />` }),
-};
-
-export const DragToReorder: Story = {
-  parameters: { docs: { source: { type: 'code' } } },
-  render: () => ({ template: `<andes-table-drag-demo />` }),
-};
-
-export const NestedTables: Story = {
-  parameters: { docs: { source: { type: 'code' } } },
-  render: () => ({ template: `<andes-table-nested-demo />` }),
-};
-
-/** Header cells spanning columns and rows; with `scrollY` both header rows stick, stacked. */
-export const GroupedHeaders: Story = {
-  render: () => ({
-    template: `
-      <andes-table bordered scrollY="220" style="display: block; width: min(48rem, calc(100vw - 2rem));">
+      <div style="display: grid; gap: 2rem; width: min(48rem, calc(100vw - 2rem));">
+        <andes-table bordered>
+          <caption andesTableCaption>Quarterly revenue by region</caption>
+          <thead andesTableHeader>
+            <tr andesTableRow>
+              <td andesTableCell></td>
+              <th andesTableHead align="end">Q1</th>
+              <th andesTableHead align="end">Q2</th>
+            </tr>
+          </thead>
+          <tbody andesTableBody>
+            <tr andesTableRow>
+              <th andesTableHead scope="row">North</th>
+              <td andesTableCell align="end">$1,200.00</td>
+              <td andesTableCell align="end">$1,450.00</td>
+            </tr>
+            <tr andesTableRow>
+              <th andesTableHead scope="row">South</th>
+              <td andesTableCell align="end">$980.00</td>
+              <td andesTableCell align="end">$1,120.00</td>
+            </tr>
+          </tbody>
+        </andes-table>
+      <andes-table bordered scrollY="220" style="display: block;">
         <caption andesTableCaption>Sales by region and quarter</caption>
         <thead andesTableHeader>
           <tr andesTableRow>
@@ -2879,6 +2692,37 @@ export const GroupedHeaders: Story = {
           </tr>
         </tbody>
       </andes-table>
+      </div>
+    `,
+  }),
+};
+
+/** `ellipsis` on a header and its cells truncates long text in a fixed layout. */
+export const Ellipsis: Story = {
+  render: () => ({
+    template: `
+      <andes-table tableLayout="fixed" style="display: block; width: min(36rem, calc(100vw - 2rem));">
+        <caption andesTableCaption>Fixed layout: long notes are truncated with an ellipsis; hover one for the full text</caption>
+        <thead andesTableHeader>
+          <tr andesTableRow>
+            <th andesTableHead style="width: 7rem">Order</th>
+            <th andesTableHead ellipsis>Notes</th>
+            <th andesTableHead align="end" style="width: 7rem">Total</th>
+          </tr>
+        </thead>
+        <tbody andesTableBody>
+          <tr andesTableRow>
+            <td andesTableCell>ORD-101</td>
+            <td andesTableCell ellipsis>Quarterly supply contract, renewed automatically every three months unless cancelled in writing.</td>
+            <td andesTableCell align="end">$1,250.00</td>
+          </tr>
+          <tr andesTableRow>
+            <td andesTableCell>ORD-103</td>
+            <td andesTableCell ellipsis>Second reminder sent; account on hold until the outstanding balance is settled in full.</td>
+            <td andesTableCell align="end">$2,310.00</td>
+          </tr>
+        </tbody>
+      </andes-table>
     `,
   }),
 };
@@ -2908,32 +2752,6 @@ export const StickyHeader: Story = {
               <td andesTableCell align="end">{{ row * 37 }}.00</td>
             </tr>
           }
-        </tbody>
-      </andes-table>
-    `,
-  }),
-};
-
-/**
- * `sortTooltip` names the next sort step; `[sortIcon]="false"` plus the
- * `andesTableHead` export lets a header draw its own indicator.
- */
-export const SortTooltipAndCustomIcon: Story = {
-  render: () => ({
-    template: `
-      <andes-table sortTooltip>
-        <thead andesTableHeader>
-          <tr andesTableRow>
-            <th andesTableHead sortKey="client">Client</th>
-            <th andesTableHead sortKey="total" align="end" [sortIcon]="false" #total="andesTableHead">
-              Total
-              <span aria-hidden="true">{{ total.direction() === 'asc' ? '↑' : total.direction() === 'desc' ? '↓' : '↕' }}</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody andesTableBody>
-          <tr andesTableRow><td andesTableCell>Andes Mining</td><td andesTableCell align="end">$250.00</td></tr>
-          <tr andesTableRow><td andesTableCell>Tamci Peru</td><td andesTableCell align="end">$150.00</td></tr>
         </tbody>
       </andes-table>
     `,

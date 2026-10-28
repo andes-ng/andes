@@ -686,13 +686,15 @@ export const FilterAndSorter: Story = {
   render: () => ({ template: `<andes-filter-sorter-demo />` }),
 };
 
+/** Filtering inside a tree table: the default filter, then the menu mode with a custom search. */
 export const FilterInTree: Story = {
-  render: () => ({ template: `<andes-filter-tree-demo />` }),
-};
-
-export const FilterSearch: Story = {
   render: () => ({
-    template: `<andes-filter-tree-demo mode="menu" [customSearch]="true" />`,
+    template: `
+      <div style="display: grid; gap: 3rem;">
+        <andes-filter-tree-demo />
+        <andes-filter-tree-demo mode="menu" [customSearch]="true" />
+      </div>
+    `,
   }),
 };
 

@@ -360,7 +360,7 @@ class ReorderDemo {
 }
 
 const meta: Meta = {
-  title: 'Data Display/Table/Columns',
+  title: 'Data Display/Table/Columns/Resize and reorder',
   decorators: [
     moduleMetadata({
       imports: [ResizeDemo, ResizeFixedDemo, ReorderDemo],
@@ -372,26 +372,39 @@ export default meta;
 
 type Story = StoryObj;
 
-export const ResizableColumns: Story = {
-  render: () => ({ template: `<andes-resize-demo />` }),
+/** Resizable columns on an auto layout, plain and with the cell grid (`bordered`). */
+export const Resizing: Story = {
+  render: () => ({
+    template: `
+      <div style="display: grid; gap: 3rem;">
+        <andes-resize-demo />
+        <andes-resize-demo [bordered]="true" />
+      </div>
+    `,
+  }),
 };
 
-export const ResizableBordered: Story = {
-  render: () => ({ template: `<andes-resize-demo [bordered]="true" />` }),
+/** Resizing with a fixed table layout, then the same in a right-to-left page. */
+export const FixedLayoutAndRtl: Story = {
+  name: 'Fixed layout and RTL',
+  render: () => ({
+    template: `
+      <div style="display: grid; gap: 3rem;">
+        <andes-resize-fixed-demo />
+        <andes-resize-fixed-demo dir="rtl" />
+      </div>
+    `,
+  }),
 };
 
-export const ResizableFixedLayout: Story = {
-  render: () => ({ template: `<andes-resize-fixed-demo />` }),
-};
-
-export const ResizableRtl: Story = {
-  render: () => ({ template: `<andes-resize-fixed-demo dir="rtl" />` }),
-};
-
-export const ReorderableColumns: Story = {
-  render: () => ({ template: `<andes-reorder-demo />` }),
-};
-
-export const ReorderableAndResizable: Story = {
-  render: () => ({ template: `<andes-reorder-demo [resizable]="true" />` }),
+/** Drag headers to reorder columns, alone and combined with resizing. */
+export const Reordering: Story = {
+  render: () => ({
+    template: `
+      <div style="display: grid; gap: 3rem;">
+        <andes-reorder-demo />
+        <andes-reorder-demo [resizable]="true" />
+      </div>
+    `,
+  }),
 };

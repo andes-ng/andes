@@ -75,7 +75,7 @@ const imports = [AndesImage, AndesImageGroup, AndesImagePreview];
 const BROKEN = 'data:image/png;base64,AAAA';
 
 const meta: Meta<AndesImage> = {
-  title: 'Image',
+  title: 'Data Display/Image',
   component: AndesImage,
   tags: ['autodocs'],
   decorators: [moduleMetadata({ imports })],

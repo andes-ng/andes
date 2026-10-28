@@ -55,43 +55,12 @@ const CORE_IMPORTS = [
   AndesDropdownMenuShortcut,
 ];
 
+/**
+ * The basic menu and the icon variant side by side: shortcuts, a disabled row, a separator
+ * and a destructive row on the left; leading icons on every row on the right. Right-click an
+ * area, or focus it and press Shift+F10 (or the context-menu key).
+ */
 export const Basic: Story = {
-  render: () => ({
-    moduleMetadata: { imports: CORE_IMPORTS },
-    props: { last: 'Nothing chosen yet' },
-    template: `
-      <andes-context-menu (itemClick)="last = 'Chose ' + $event.key">
-        <div
-          andesContextMenuTrigger
-          tabindex="0"
-          role="region"
-          aria-label="Canvas. Right-click, or press Shift+F10, for actions."
-          style="${AREA_STYLE}"
-        >
-          Right-click anywhere here
-          <br />
-          (or focus it and press Shift+F10)
-        </div>
-        <andes-dropdown-menu-item key="cut">
-          Cut <andes-dropdown-menu-shortcut>⌘X</andes-dropdown-menu-shortcut>
-        </andes-dropdown-menu-item>
-        <andes-dropdown-menu-item key="copy">
-          Copy <andes-dropdown-menu-shortcut>⌘C</andes-dropdown-menu-shortcut>
-        </andes-dropdown-menu-item>
-        <andes-dropdown-menu-item key="paste" [disabled]="true">
-          Paste <andes-dropdown-menu-shortcut>⌘V</andes-dropdown-menu-shortcut>
-        </andes-dropdown-menu-item>
-        <andes-dropdown-menu-separator />
-        <andes-dropdown-menu-item key="delete" variant="destructive">
-          Delete <andes-dropdown-menu-shortcut>⌫</andes-dropdown-menu-shortcut>
-        </andes-dropdown-menu-item>
-      </andes-context-menu>
-      <p style="${OUTPUT_STYLE}" aria-live="polite">{{ last }}</p>
-    `,
-  }),
-};
-
-export const WithIcons: Story = {
   render: () => ({
     moduleMetadata: {
       imports: [NgIcon, ...CORE_IMPORTS],
@@ -105,37 +74,69 @@ export const WithIcons: Story = {
         }),
       ],
     },
+    props: { last: 'Nothing chosen yet' },
     template: `
-      <andes-context-menu>
-        <div
-          andesContextMenuTrigger
-          tabindex="0"
-          role="region"
-          aria-label="Document. Right-click for actions."
-          style="${AREA_STYLE}"
-        >
-          Right-click for actions with icons
+      <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start;">
+        <div>
+          <andes-context-menu (itemClick)="last = 'Chose ' + $event.key">
+            <div
+              andesContextMenuTrigger
+              tabindex="0"
+              role="region"
+              aria-label="Canvas. Right-click, or press Shift+F10, for actions."
+              style="${AREA_STYLE}"
+            >
+              Right-click anywhere here
+              <br />
+              (or focus it and press Shift+F10)
+            </div>
+            <andes-dropdown-menu-item key="cut">
+              Cut <andes-dropdown-menu-shortcut>⌘X</andes-dropdown-menu-shortcut>
+            </andes-dropdown-menu-item>
+            <andes-dropdown-menu-item key="copy">
+              Copy <andes-dropdown-menu-shortcut>⌘C</andes-dropdown-menu-shortcut>
+            </andes-dropdown-menu-item>
+            <andes-dropdown-menu-item key="paste" [disabled]="true">
+              Paste <andes-dropdown-menu-shortcut>⌘V</andes-dropdown-menu-shortcut>
+            </andes-dropdown-menu-item>
+            <andes-dropdown-menu-separator />
+            <andes-dropdown-menu-item key="delete" variant="destructive">
+              Delete <andes-dropdown-menu-shortcut>⌫</andes-dropdown-menu-shortcut>
+            </andes-dropdown-menu-item>
+          </andes-context-menu>
+          <p style="${OUTPUT_STYLE}" aria-live="polite">{{ last }}</p>
         </div>
-        <andes-dropdown-menu-item key="rename">
-          <ng-icon slot="icon-start" name="lucidePencil" /> Rename
-        </andes-dropdown-menu-item>
-        <andes-dropdown-menu-item key="cut">
-          <ng-icon slot="icon-start" name="lucideScissors" /> Cut
-          <andes-dropdown-menu-shortcut>⌘X</andes-dropdown-menu-shortcut>
-        </andes-dropdown-menu-item>
-        <andes-dropdown-menu-item key="copy">
-          <ng-icon slot="icon-start" name="lucideCopy" /> Copy
-          <andes-dropdown-menu-shortcut>⌘C</andes-dropdown-menu-shortcut>
-        </andes-dropdown-menu-item>
-        <andes-dropdown-menu-item key="paste">
-          <ng-icon slot="icon-start" name="lucideClipboardPaste" /> Paste
-          <andes-dropdown-menu-shortcut>⌘V</andes-dropdown-menu-shortcut>
-        </andes-dropdown-menu-item>
-        <andes-dropdown-menu-separator />
-        <andes-dropdown-menu-item key="delete" variant="destructive">
-          <ng-icon slot="icon-start" name="lucideTrash2" /> Delete
-        </andes-dropdown-menu-item>
-      </andes-context-menu>
+        <andes-context-menu>
+          <div
+            andesContextMenuTrigger
+            tabindex="0"
+            role="region"
+            aria-label="Document. Right-click for actions."
+            style="${AREA_STYLE}"
+          >
+            Right-click for actions with icons
+          </div>
+          <andes-dropdown-menu-item key="rename">
+            <ng-icon slot="icon-start" name="lucidePencil" /> Rename
+          </andes-dropdown-menu-item>
+          <andes-dropdown-menu-item key="cut">
+            <ng-icon slot="icon-start" name="lucideScissors" /> Cut
+            <andes-dropdown-menu-shortcut>⌘X</andes-dropdown-menu-shortcut>
+          </andes-dropdown-menu-item>
+          <andes-dropdown-menu-item key="copy">
+            <ng-icon slot="icon-start" name="lucideCopy" /> Copy
+            <andes-dropdown-menu-shortcut>⌘C</andes-dropdown-menu-shortcut>
+          </andes-dropdown-menu-item>
+          <andes-dropdown-menu-item key="paste">
+            <ng-icon slot="icon-start" name="lucideClipboardPaste" /> Paste
+            <andes-dropdown-menu-shortcut>⌘V</andes-dropdown-menu-shortcut>
+          </andes-dropdown-menu-item>
+          <andes-dropdown-menu-separator />
+          <andes-dropdown-menu-item key="delete" variant="destructive">
+            <ng-icon slot="icon-start" name="lucideTrash2" /> Delete
+          </andes-dropdown-menu-item>
+        </andes-context-menu>
+      </div>
     `,
   }),
 };
@@ -331,59 +332,52 @@ export const TableRows: Story = {
   }),
 };
 
+/**
+ * Where the native menu stays. A disabled menu (`[disabled]`) leaves the browser's own menu
+ * in its area; with an enabled menu shared by two areas, `[andesContextMenuDisabled]` turns
+ * the custom menu off for just one of them.
+ */
 export const Disabled: Story = {
   render: () => ({
     moduleMetadata: { imports: CORE_IMPORTS },
     template: `
-      <andes-context-menu [disabled]="true">
-        <div
-          andesContextMenuTrigger
-          tabindex="0"
-          role="region"
-          aria-label="Disabled area. The browser menu is used here."
-          style="${AREA_STYLE}"
-        >
-          Disabled: right-click shows the browser's own menu
-        </div>
-        <andes-dropdown-menu-item key="copy">Copy</andes-dropdown-menu-item>
-      </andes-context-menu>
-    `,
-  }),
-};
-
-export const DisabledAreaInsideEnabledMenu: Story = {
-  render: () => ({
-    moduleMetadata: {
-      imports: [
-        AndesContextMenu,
-        AndesContextMenuTrigger,
-        AndesDropdownMenuItem,
-      ],
-    },
-    template: `
-      <andes-context-menu #menu="andesContextMenu">
-        <andes-dropdown-menu-item key="open">Open</andes-dropdown-menu-item>
-        <andes-dropdown-menu-item key="rename">Rename</andes-dropdown-menu-item>
-      </andes-context-menu>
-      <div style="display: flex; gap: 1rem;">
-        <div
-          [andesContextMenuTrigger]="menu"
-          tabindex="0"
-          role="region"
-          aria-label="Enabled area"
-          style="${AREA_STYLE} width: 12rem;"
-        >
-          Custom menu here
-        </div>
-        <div
-          [andesContextMenuTrigger]="menu"
-          [andesContextMenuDisabled]="true"
-          tabindex="0"
-          role="region"
-          aria-label="Disabled area"
-          style="${AREA_STYLE} width: 12rem;"
-        >
-          Browser menu here
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <andes-context-menu [disabled]="true">
+          <div
+            andesContextMenuTrigger
+            tabindex="0"
+            role="region"
+            aria-label="Disabled menu. The browser menu is used here."
+            style="${AREA_STYLE}"
+          >
+            Disabled: right-click shows the browser's own menu
+          </div>
+          <andes-dropdown-menu-item key="copy">Copy</andes-dropdown-menu-item>
+        </andes-context-menu>
+        <andes-context-menu #menu="andesContextMenu">
+          <andes-dropdown-menu-item key="open">Open</andes-dropdown-menu-item>
+          <andes-dropdown-menu-item key="rename">Rename</andes-dropdown-menu-item>
+        </andes-context-menu>
+        <div style="display: flex; gap: 1rem;">
+          <div
+            [andesContextMenuTrigger]="menu"
+            tabindex="0"
+            role="region"
+            aria-label="Enabled area"
+            style="${AREA_STYLE} width: 12rem;"
+          >
+            Custom menu here
+          </div>
+          <div
+            [andesContextMenuTrigger]="menu"
+            [andesContextMenuDisabled]="true"
+            tabindex="0"
+            role="region"
+            aria-label="Disabled area"
+            style="${AREA_STYLE} width: 12rem;"
+          >
+            Browser menu here
+          </div>
         </div>
       </div>
     `,

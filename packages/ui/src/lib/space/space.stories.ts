@@ -40,7 +40,7 @@ const DEMO_CONTROLS = `
 `;
 
 const meta: Meta<AndesSpace> = {
-  title: 'Space',
+  title: 'Layout/Space',
   component: AndesSpace,
   tags: ['autodocs'],
   decorators: [

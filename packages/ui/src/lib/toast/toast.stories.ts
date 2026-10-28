@@ -686,7 +686,7 @@ class RtlToastStoryHost {
 }
 
 const meta: Meta<ToastStoryHost> = {
-  title: 'Toast',
+  title: 'Feedback/Toast',
   component: ToastStoryHost,
   tags: ['autodocs'],
   argTypes: {

@@ -61,16 +61,49 @@ type Story = StoryObj<AndesDescriptions>;
 
 export const Default: Story = {};
 
-export const Bordered: Story = {
-  args: { bordered: true },
-};
-
-export const BorderedVertical: Story = {
-  args: { bordered: true, layout: 'vertical' },
-};
-
-export const Vertical: Story = {
-  args: { layout: 'vertical' },
+/**
+ * The look and layout switches side by side: plain, `bordered`, `layout="vertical"` (label above
+ * the value), bordered and vertical together, and `[colon]="false"` to drop the label colon.
+ * Each one is also available through the controls on the playground story above.
+ */
+export const Variants: Story = {
+  render: () => ({
+    template: `
+      <div style="display:grid; gap: 2rem">
+        @for (variant of variants; track variant.title) {
+        <andes-descriptions [title]="variant.title" [bordered]="variant.bordered" [layout]="variant.layout" [colon]="variant.colon" [column]="3">
+          <andes-description-item label="Name">Andes Metals S.A.C.</andes-description-item>
+          <andes-description-item label="Tax id">20512345678</andes-description-item>
+          <andes-description-item label="Region">Lima</andes-description-item>
+          <andes-description-item label="Address" span="filled">Av. Industrial 1450, Callao, Peru</andes-description-item>
+        </andes-descriptions>
+        }
+      </div>`,
+    props: {
+      variants: [
+        { title: 'Plain', bordered: false, layout: 'horizontal', colon: true },
+        {
+          title: 'Bordered',
+          bordered: true,
+          layout: 'horizontal',
+          colon: true,
+        },
+        { title: 'Vertical', bordered: false, layout: 'vertical', colon: true },
+        {
+          title: 'Bordered and vertical',
+          bordered: true,
+          layout: 'vertical',
+          colon: true,
+        },
+        {
+          title: 'Without colon',
+          bordered: false,
+          layout: 'horizontal',
+          colon: false,
+        },
+      ],
+    },
+  }),
 };
 
 export const Sizes: Story = {
@@ -196,10 +229,6 @@ export const StyledWithProperties: Story = {
         <andes-description-item label="Status">Open</andes-description-item>
       </andes-descriptions>`,
   }),
-};
-
-export const WithoutColon: Story = {
-  args: { colon: false },
 };
 
 export const Rtl: Story = {

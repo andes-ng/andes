@@ -75,7 +75,7 @@ const PLACES: AndesCascaderOption[] = [
 ];
 
 const meta: Meta<AndesCascader> = {
-  title: 'Cascader',
+  title: 'Data Entry/Cascader',
   component: AndesCascader,
   tags: ['autodocs'],
   // The panel opens below the field, so the stories sit at the top of the canvas.

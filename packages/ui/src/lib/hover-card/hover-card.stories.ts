@@ -218,13 +218,11 @@ export default meta;
 
 type Story = StoryObj<AndesHoverCard>;
 
-/** Rest the pointer on the link for 600ms, or Tab to it. */
+/**
+ * Rest the pointer on the link for 600ms, or Tab to it. The `arrow` control turns on the optional
+ * arrow that points at the trigger and follows the card through flips and shifts.
+ */
 export const Default: Story = {};
-
-/** An optional arrow points at the trigger and follows the card through flips and shifts. */
-export const WithArrow: Story = {
-  args: { arrow: true },
-};
 
 /** A card that previews a mention inside running text. */
 export const InlineMentions: Story = {
@@ -258,7 +256,7 @@ export const InteractiveContent: Story = {
   }),
 };
 
-/** All twelve placements, one card per trigger, opened with no delay. */
+/** All twelve placements, one card per trigger with the arrow on, opened with no delay. */
 export const Placements: Story = {
   parameters: { layout: 'fullscreen' },
   render: () => ({

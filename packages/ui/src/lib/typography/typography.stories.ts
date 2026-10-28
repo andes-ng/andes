@@ -11,7 +11,7 @@ const LONG_TEXT =
   'Invoices are issued per series and numbered sequentially. A document that was rejected by the tax authority keeps its number until it is voided or corrected, so the next one in the series carries the following number. Review rejected documents every morning before the daily summary is sent.';
 
 const meta: Meta<AndesText> = {
-  title: 'Typography',
+  title: 'General/Typography',
   component: AndesText,
   tags: ['autodocs'],
   decorators: [

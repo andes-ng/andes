@@ -1,36 +1,7 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 
-import { AndesBreakpointService, ANDES_BREAKPOINTS } from './breakpoints';
 import { AndesCol } from './grid-col';
 import { AndesRow } from './grid-row';
-
-/** Shows the viewport breakpoint the service reports, live. */
-@Component({
-  selector: 'andes-story-breakpoint',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <p class="line">
-      Viewport breakpoint: <strong>{{ breakpoint.current() }}</strong> · at
-      least <code>lg</code>: <strong>{{ desktop() }}</strong>
-    </p>
-  `,
-  styles: [
-    `
-      .line {
-        margin: 0;
-        font:
-          14px/22px var(--andes-font-family),
-          sans-serif;
-        color: var(--andes-color-foreground);
-      }
-    `,
-  ],
-})
-class StoryBreakpoint {
-  protected readonly breakpoint = inject(AndesBreakpointService);
-  protected readonly desktop = this.breakpoint.atLeast('lg');
-}
 
 const CELLS = `
   .cell {
@@ -49,11 +20,11 @@ const CELLS = `
 `;
 
 const meta: Meta<AndesRow> = {
-  title: 'Layout/Grid',
+  title: 'Layout/Grid/Basics/Grid',
   component: AndesRow,
   subcomponents: { AndesCol },
   tags: ['autodocs'],
-  decorators: [moduleMetadata({ imports: [AndesCol, StoryBreakpoint] })],
+  decorators: [moduleMetadata({ imports: [AndesCol] })],
   parameters: { layout: 'padded' },
   argTypes: {
     gutter: {
@@ -105,7 +76,6 @@ const meta: Meta<AndesRow> = {
 export default meta;
 
 type Story = StoryObj<AndesRow>;
-
 export const Default: Story = {};
 
 /** Every row is 24 columns wide; the gutter is a `gap`, so rows never overflow their parent. */
@@ -150,43 +120,49 @@ export const Gutter: Story = {
   }),
 };
 
-/** Resize the window: 8px below 768px, 24px from 768px, 40px from 1200px (horizontal); vertical 8px then 24px. */
-export const ResponsiveGutter: Story = {
+/** `align` places the columns on the cross axis and `justify` distributes them on the main axis. */
+export const Alignment: Story = {
   render: () => ({
     styles: [CELLS],
-    props: {
-      gutter: [
-        { xs: 8, md: 24, xl: 40 },
-        { xs: 8, md: 24 },
-      ],
-    },
     template: `
-      <andes-row [gutter]="gutter">
-        @for (n of [1, 2, 3, 4, 5, 6]; track n) {
-          <andes-col [xs]="24" [sm]="12" [lg]="8"><div class="cell" [class.cell--alt]="n % 2 === 0">{{ n }}</div></andes-col>
-        }
-      </andes-row>`,
+      @for (a of ['top', 'middle', 'bottom', 'stretch']; track a) {
+        <p class="caption">align = {{ a }}</p>
+        <andes-row [gutter]="16" [align]="a" style="background:var(--andes-color-muted);border-radius:var(--andes-radius-md)">
+          <andes-col [span]="6"><div class="cell cell--tall">tall</div></andes-col>
+          <andes-col [span]="6"><div class="cell">short</div></andes-col>
+          <andes-col [span]="6"><div class="cell cell--tall">tall</div></andes-col>
+          <andes-col [span]="6"><div class="cell">short</div></andes-col>
+        </andes-row>
+      }
+      @for (j of ['start', 'center', 'end', 'space-between', 'space-around', 'space-evenly']; track j) {
+        <p class="caption">justify = {{ j }}</p>
+        <andes-row [gutter]="16" [justify]="j">
+          <andes-col [span]="4"><div class="cell">4</div></andes-col>
+          <andes-col [span]="4"><div class="cell cell--alt">4</div></andes-col>
+          <andes-col [span]="4"><div class="cell">4</div></andes-col>
+        </andes-row>
+      }`,
   }),
 };
 
-export const Offset: Story = {
+/**
+ * `offset` pushes a column to the right in the flow, `order` reorders columns (also per breakpoint: the
+ * sidebar comes first on small screens and last from 768px), and `push` and `pull` shift a column
+ * visually without moving its siblings.
+ */
+export const Placement: Story = {
   render: () => ({
     styles: [CELLS],
     template: `
+      <p class="caption">offset</p>
       <andes-row [gutter]="16" style="row-gap:8px">
         <andes-col [span]="8"><div class="cell">span 8</div></andes-col>
         <andes-col [span]="8" [offset]="8"><div class="cell cell--alt">span 8, offset 8</div></andes-col>
         <andes-col [span]="6" [offset]="6"><div class="cell">span 6, offset 6</div></andes-col>
         <andes-col [span]="6" [offset]="6"><div class="cell cell--alt">span 6, offset 6</div></andes-col>
         <andes-col [span]="8" [offset]="8"><div class="cell">centred: span 8, offset 8</div></andes-col>
-      </andes-row>`,
-  }),
-};
-
-export const Order: Story = {
-  render: () => ({
-    styles: [CELLS],
-    template: `
+      </andes-row>
+      <p class="caption">order</p>
       <andes-row [gutter]="16">
         <andes-col [span]="6" [order]="4"><div class="cell">1 (order 4)</div></andes-col>
         <andes-col [span]="6" [order]="3"><div class="cell cell--alt">2 (order 3)</div></andes-col>
@@ -197,15 +173,8 @@ export const Order: Story = {
       <andes-row [gutter]="16">
         <andes-col [xs]="{ span: 24, order: 1 }" [md]="{ span: 8, order: 2 }"><div class="cell cell--alt">Sidebar</div></andes-col>
         <andes-col [xs]="{ span: 24, order: 2 }" [md]="{ span: 16, order: 1 }"><div class="cell">Content</div></andes-col>
-      </andes-row>`,
-  }),
-};
-
-/** `push` and `pull` shift a column visually without moving its siblings. */
-export const PushAndPull: Story = {
-  render: () => ({
-    styles: [CELLS],
-    template: `
+      </andes-row>
+      <p class="caption">push and pull</p>
       <andes-row [gutter]="16">
         <andes-col [span]="18" [push]="6"><div class="cell">span 18, push 6</div></andes-col>
         <andes-col [span]="6" [pull]="18"><div class="cell cell--alt">span 6, pull 18</div></andes-col>
@@ -224,76 +193,6 @@ export const FlexColumns: Story = {
         <andes-col [flex]="2"><div class="cell">flex 2</div></andes-col>
         <andes-col flex="0 0 20%"><div class="cell cell--alt">0 0 20%</div></andes-col>
       </andes-row>`,
-  }),
-};
-
-export const Align: Story = {
-  render: () => ({
-    styles: [CELLS],
-    template: `
-      @for (a of ['top', 'middle', 'bottom', 'stretch']; track a) {
-        <p class="caption">align = {{ a }}</p>
-        <andes-row [gutter]="16" [align]="a" style="background:var(--andes-color-muted);border-radius:var(--andes-radius-md)">
-          <andes-col [span]="6"><div class="cell cell--tall">tall</div></andes-col>
-          <andes-col [span]="6"><div class="cell">short</div></andes-col>
-          <andes-col [span]="6"><div class="cell cell--tall">tall</div></andes-col>
-          <andes-col [span]="6"><div class="cell">short</div></andes-col>
-        </andes-row>
-      }`,
-  }),
-};
-
-export const Justify: Story = {
-  render: () => ({
-    styles: [CELLS],
-    template: `
-      @for (j of ['start', 'center', 'end', 'space-between', 'space-around', 'space-evenly']; track j) {
-        <p class="caption">justify = {{ j }}</p>
-        <andes-row [gutter]="16" [justify]="j">
-          <andes-col [span]="4"><div class="cell">4</div></andes-col>
-          <andes-col [span]="4"><div class="cell cell--alt">4</div></andes-col>
-          <andes-col [span]="4"><div class="cell">4</div></andes-col>
-        </andes-row>
-      }`,
-  }),
-};
-
-/** Props set per breakpoint; they are cumulative and apply from the named width up. */
-export const Responsive: Story = {
-  render: () => ({
-    styles: [CELLS],
-    template: `
-      <andes-story-breakpoint />
-      <andes-row [gutter]="16" style="margin-top:1rem;row-gap:16px">
-        <andes-col [xs]="24" [sm]="12" [md]="8" [lg]="6" [xl]="4" [xxl]="3"><div class="cell">xs 24 · sm 12 · md 8 · lg 6 · xl 4 · xxl 3</div></andes-col>
-        <andes-col [xs]="24" [sm]="12" [md]="8" [lg]="6" [xl]="4" [xxl]="3"><div class="cell cell--alt">same</div></andes-col>
-        <andes-col [xs]="24" [sm]="12" [md]="8" [lg]="6" [xl]="4" [xxl]="3"><div class="cell">same</div></andes-col>
-        <andes-col [xs]="24" [sm]="12" [md]="8" [lg]="6" [xl]="4" [xxl]="3"><div class="cell cell--alt">same</div></andes-col>
-      </andes-row>
-      <p class="caption">Objects set several props at once; span 0 hides the column at that width.</p>
-      <andes-row [gutter]="16">
-        <andes-col [xs]="24" [md]="{ span: 10, offset: 2 }"><div class="cell">offset 2 from md</div></andes-col>
-        <andes-col [xs]="0" [md]="12"><div class="cell cell--alt">hidden below md</div></andes-col>
-      </andes-row>`,
-  }),
-};
-
-/**
- * In a resizable panel the viewport says nothing about the space a row really has. With
- * `breakpointSource="container"` the breakpoints follow the row's own width: drag the corner.
- */
-export const ContainerBreakpoints: Story = {
-  render: () => ({
-    styles: [CELLS],
-    template: `
-      <div style="resize:horizontal;overflow:auto;width:min(42rem,100%);min-width:12rem;max-width:100%;padding:1rem;border:1px solid var(--andes-color-border);border-radius:var(--andes-radius-lg);">
-        <andes-row #row breakpointSource="container" [gutter]="{ xs: 8, md: 24 }" style="row-gap:8px">
-          <andes-col [xs]="24" [sm]="12" [md]="8"><div class="cell">A</div></andes-col>
-          <andes-col [xs]="24" [sm]="12" [md]="8"><div class="cell cell--alt">B</div></andes-col>
-          <andes-col [xs]="24" [sm]="24" [md]="8"><div class="cell">C</div></andes-col>
-        </andes-row>
-        <p class="caption">Row breakpoint: <strong>{{ row.breakpoint() }}</strong> (drag the bottom-right corner; the page width does not matter)</p>
-      </div>`,
   }),
 };
 
@@ -343,17 +242,5 @@ export const RightToLeft: Story = {
           <andes-col [span]="6" [pull]="18"><div class="cell cell--alt">4 (pull 18)</div></andes-col>
         </andes-row>
       </div>`,
-  }),
-};
-
-/** The breakpoint thresholds and the live signal are exported for your own code. */
-export const BreakpointService: Story = {
-  render: () => ({
-    props: { thresholds: Object.entries(ANDES_BREAKPOINTS) },
-    template: `
-      <andes-story-breakpoint />
-      <ul style="font:14px/22px var(--andes-font-family),sans-serif;color:var(--andes-color-foreground);padding-inline-start:1.25rem">
-        @for (t of thresholds; track t[0]) {<li><code>{{ t[0] }}</code>: from {{ t[1] }}px</li>}
-      </ul>`,
   }),
 };

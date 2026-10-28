@@ -152,32 +152,17 @@ type Story = StoryObj<AndesTreeSelect>;
 /** A single choice: any enabled node can be picked, parents included. */
 export const Default: Story = {};
 
-/** The panel opens on the branch that holds the current value. */
-export const WithValue: Story = {
-  render: () => ({
-    moduleMetadata: { imports: IMPORTS },
-    props: { nodes: regions(), selected: 'cusco-urubamba' as AndesTreeKey },
-    styles: STORY_STYLES,
-    template: `
-      <div class="stack">
-        <andes-tree-select aria-label="Region" allowClear [nodes]="nodes" [(value)]="selected" />
-        <p class="caption">Value: <code>{{ selected | json }}</code></p>
-      </div>
-    `,
-  }),
-};
-
 /** Heights are 24, 32 and 40px, like the other fields. */
 export const Sizes: Story = {
   render: () => ({
     moduleMetadata: { imports: IMPORTS },
-    props: { nodes: regions() },
+    props: { regionNodes: regions() },
     styles: STORY_STYLES,
     template: `
       <div class="stack">
-        <andes-tree-select aria-label="Region (small)" size="sm" placeholder="Small" [nodes]="nodes" />
-        <andes-tree-select aria-label="Region (medium)" size="md" placeholder="Medium" [nodes]="nodes" />
-        <andes-tree-select aria-label="Region (large)" size="lg" placeholder="Large" [nodes]="nodes" />
+        <andes-tree-select aria-label="Region (small)" size="sm" placeholder="Small" [nodes]="regionNodes" />
+        <andes-tree-select aria-label="Region (medium)" size="md" placeholder="Medium" [nodes]="regionNodes" />
+        <andes-tree-select aria-label="Region (large)" size="lg" placeholder="Large" [nodes]="regionNodes" />
       </div>
     `,
   }),
@@ -186,72 +171,97 @@ export const Sizes: Story = {
 export const Variants: Story = {
   render: () => ({
     moduleMetadata: { imports: IMPORTS },
-    props: { nodes: regions() },
+    props: { regionNodes: regions() },
     styles: STORY_STYLES,
     template: `
       <div class="stack">
-        <andes-tree-select aria-label="Outlined" variant="outlined" placeholder="Outlined" [nodes]="nodes" />
-        <andes-tree-select aria-label="Filled" variant="filled" placeholder="Filled" [nodes]="nodes" />
-        <andes-tree-select aria-label="Borderless" variant="borderless" placeholder="Borderless" [nodes]="nodes" />
-        <andes-tree-select aria-label="Underlined" variant="underlined" placeholder="Underlined" [nodes]="nodes" />
+        <andes-tree-select aria-label="Outlined" variant="outlined" placeholder="Outlined" [nodes]="regionNodes" />
+        <andes-tree-select aria-label="Filled" variant="filled" placeholder="Filled" [nodes]="regionNodes" />
+        <andes-tree-select aria-label="Borderless" variant="borderless" placeholder="Borderless" [nodes]="regionNodes" />
+        <andes-tree-select aria-label="Underlined" variant="underlined" placeholder="Underlined" [nodes]="regionNodes" />
       </div>
     `,
   }),
 };
 
-export const Statuses: Story = {
+/**
+ * The states of the field: `disabled` (single and multiple), `status` as an error or a
+ * warning, an empty `nodes` list (the panel shows an empty state) and `loading` (a spinner
+ * in the field and in the panel).
+ */
+export const States: Story = {
   render: () => ({
     moduleMetadata: { imports: IMPORTS },
-    props: { nodes: regions() },
+    props: { regionNodes: regions() },
     styles: STORY_STYLES,
     template: `
       <div class="stack">
-        <andes-tree-select aria-label="Error" status="error" placeholder="Error" [nodes]="nodes" />
-        <andes-tree-select aria-label="Warning" status="warning" placeholder="Warning" [nodes]="nodes" />
+        <andes-tree-select aria-label="Disabled" disabled value="cusco" [nodes]="regionNodes" />
+        <andes-tree-select aria-label="Disabled, several" multiple disabled [value]="['cusco', 'iquitos']" [nodes]="regionNodes" />
+        <andes-tree-select aria-label="Error" status="error" placeholder="Error" [nodes]="regionNodes" />
+        <andes-tree-select aria-label="Warning" status="warning" placeholder="Warning" [nodes]="regionNodes" />
+        <andes-tree-select aria-label="Empty" placeholder="No options" [nodes]="[]" />
+        <andes-tree-select aria-label="Loading" placeholder="Loading options" loading [nodes]="[]" />
       </div>
     `,
   }),
 };
 
-export const Disabled: Story = {
-  render: () => ({
-    moduleMetadata: { imports: IMPORTS },
-    props: { nodes: regions() },
-    styles: STORY_STYLES,
-    template: `
-      <div class="stack">
-        <andes-tree-select aria-label="Disabled" disabled value="cusco" [nodes]="nodes" />
-        <andes-tree-select aria-label="Disabled, several" multiple disabled [value]="['cusco', 'iquitos']" [nodes]="nodes" />
-      </div>
-    `,
-  }),
+/**
+ * Two ways to hold the value. A two-way `[(value)]` whose panel opens on the branch that
+ * holds the current value, and a form control: bind it with `formControl` or `ngModel`, and
+ * show validation with `status`.
+ */
+export const Binding: Story = {
+  render: () => {
+    const control = new FormControl<AndesTreeKey | null>(
+      null,
+      Validators.required,
+    );
+    return {
+      moduleMetadata: { imports: IMPORTS },
+      props: {
+        regionNodes: regions(),
+        selected: 'cusco-urubamba' as AndesTreeKey,
+        control,
+      },
+      styles: STORY_STYLES,
+      template: `
+        <div class="stack">
+          <andes-tree-select aria-label="Region" allowClear [nodes]="regionNodes" [(value)]="selected" />
+          <p class="caption">Value: <code>{{ selected | json }}</code></p>
+          <div>
+            <label class="label" for="region-field">Region</label>
+            <andes-tree-select
+              id="region-field"
+              allowClear
+              placeholder="Required"
+              [nodes]="regionNodes"
+              [formControl]="control"
+              [status]="control.invalid && control.touched ? 'error' : undefined"
+            />
+            @if (control.invalid && control.touched) {
+              <p class="error">Pick a region.</p>
+            }
+          </div>
+          <p class="caption">Value: <code>{{ control.value | json }}</code> · {{ control.status }}</p>
+        </div>
+      `,
+    };
+  },
 };
 
-/** `multiple` shows each pick as a removable tag; Backspace removes the last one. */
+/**
+ * `multiple` shows each pick as a removable tag; Backspace removes the last one. Tags past
+ * `maxTagCount` collapse into one tag, which `maxTagPlaceholder` can reword (second field).
+ */
 export const Multiple: Story = {
   render: () => ({
     moduleMetadata: { imports: IMPORTS },
     props: {
-      nodes: regions(),
+      regionNodes: regions(),
       selected: ['lima-sur', 'iquitos'] as AndesTreeKey[],
-    },
-    styles: STORY_STYLES,
-    template: `
-      <div class="stack">
-        <andes-tree-select aria-label="Regions" multiple allowClear placeholder="Pick regions" [nodes]="nodes" [(value)]="selected" />
-        <p class="caption">Value: <code>{{ selected | json }}</code></p>
-      </div>
-    `,
-  }),
-};
-
-/** Tags past `maxTagCount` collapse into one tag, which `maxTagPlaceholder` can reword. */
-export const MaxTagCount: Story = {
-  render: () => ({
-    moduleMetadata: { imports: IMPORTS },
-    props: {
-      nodes: regions(),
-      selected: [
+      collapsed: [
         'lima-sur',
         'iquitos',
         'cusco-ciudad',
@@ -262,8 +272,10 @@ export const MaxTagCount: Story = {
     styles: STORY_STYLES,
     template: `
       <div class="stack">
-        <andes-tree-select aria-label="Regions" multiple [maxTagCount]="2" [nodes]="nodes" [(value)]="selected" />
-        <andes-tree-select aria-label="Regions (custom)" multiple [maxTagCount]="1" [maxTagPlaceholder]="more" [nodes]="nodes" [(value)]="selected" />
+        <andes-tree-select aria-label="Regions" multiple allowClear placeholder="Pick regions" [nodes]="regionNodes" [(value)]="selected" />
+        <p class="caption">Value: <code>{{ selected | json }}</code></p>
+        <andes-tree-select aria-label="Regions (max two tags)" multiple [maxTagCount]="2" [nodes]="regionNodes" [(value)]="collapsed" />
+        <andes-tree-select aria-label="Regions (custom)" multiple [maxTagCount]="1" [maxTagPlaceholder]="more" [nodes]="regionNodes" [(value)]="collapsed" />
       </div>
     `,
   }),
@@ -272,82 +284,67 @@ export const MaxTagCount: Story = {
 /**
  * `checkable` shows cascading checkboxes. `showCheckedStrategy` decides what the value and the
  * tags hold when a parent is checked: only the leaves (`child`), the topmost checked nodes
- * (`parent`) or every checked node (`all`).
+ * (`parent`) or every checked node (`all`). With `checkStrictly` a parent and its children are
+ * checked independently (last field).
  */
 export const Checkable: Story = {
   render: () => ({
     moduleMetadata: { imports: IMPORTS },
     props: {
-      nodes: regions(),
+      regionNodes: regions(),
       child: ['cusco-ciudad'],
       parent: ['cusco', 'iquitos'],
       all: ['arequipa'],
+      strict: ['lima'] as AndesTreeKey[],
     },
     styles: STORY_STYLES,
     template: `
       <div class="stack">
         <div>
           <span class="label">child (default)</span>
-          <andes-tree-select aria-label="Leaves" checkable treeDefaultExpandAll [nodes]="nodes" [(value)]="child" />
+          <andes-tree-select aria-label="Leaves" checkable treeDefaultExpandAll [nodes]="regionNodes" [(value)]="child" />
           <p class="caption">Value: <code>{{ child | json }}</code></p>
         </div>
         <div>
           <span class="label">parent</span>
-          <andes-tree-select aria-label="Topmost" checkable showCheckedStrategy="parent" [nodes]="nodes" [(value)]="parent" />
+          <andes-tree-select aria-label="Topmost" checkable showCheckedStrategy="parent" [nodes]="regionNodes" [(value)]="parent" />
           <p class="caption">Value: <code>{{ parent | json }}</code></p>
         </div>
         <div>
           <span class="label">all</span>
-          <andes-tree-select aria-label="Every node" checkable showCheckedStrategy="all" [nodes]="nodes" [(value)]="all" />
+          <andes-tree-select aria-label="Every node" checkable showCheckedStrategy="all" [nodes]="regionNodes" [(value)]="all" />
           <p class="caption">Value: <code>{{ all | json }}</code></p>
+        </div>
+        <div>
+          <span class="label">checkStrictly</span>
+          <andes-tree-select aria-label="Regions, strict" checkable checkStrictly [nodes]="regionNodes" [(value)]="strict" />
+          <p class="caption">Value: <code>{{ strict | json }}</code></p>
         </div>
       </div>
     `,
   }),
 };
 
-/** With `checkStrictly` a parent and its children are checked independently. */
-export const CheckStrictly: Story = {
-  render: () => ({
-    moduleMetadata: { imports: IMPORTS },
-    props: { nodes: regions(), selected: ['lima'] as AndesTreeKey[] },
-    styles: STORY_STYLES,
-    template: `
-      <div class="stack">
-        <andes-tree-select aria-label="Regions" checkable checkStrictly [nodes]="nodes" [(value)]="selected" />
-      </div>
-    `,
-  }),
-};
-
-/** A search box at the top of the panel filters the tree, keeping the ancestors of each match. */
-export const SearchInPanel: Story = {
-  render: () => ({
-    moduleMetadata: { imports: IMPORTS },
-    props: { nodes: regions(), selected: null },
-    styles: STORY_STYLES,
-    template: `
-      <div class="stack">
-        <andes-tree-select aria-label="Region" showSearch placeholder="Search a region" [nodes]="nodes" [(value)]="selected" />
-      </div>
-    `,
-  }),
-};
-
-/** `searchPlacement="trigger"` types straight into the field. */
-export const SearchInField: Story = {
+/**
+ * `showSearch` puts a search box at the top of the panel; it filters the tree, keeping the
+ * ancestors of each match. `searchPlacement="trigger"` types straight into the field
+ * instead, single or multiple.
+ */
+export const Search: Story = {
   render: () => ({
     moduleMetadata: { imports: IMPORTS },
     props: {
-      nodes: regions(),
+      regionNodes: regions(),
+      inPanel: null,
       one: 'iquitos',
       many: ['lima-sur'] as AndesTreeKey[],
     },
     styles: STORY_STYLES,
     template: `
       <div class="stack">
-        <andes-tree-select aria-label="Region" showSearch searchPlacement="trigger" placeholder="Type to search" [nodes]="nodes" [(value)]="one" />
-        <andes-tree-select aria-label="Regions" multiple showSearch searchPlacement="trigger" placeholder="Type to search" [nodes]="nodes" [(value)]="many" />
+        <andes-tree-select aria-label="Region" showSearch placeholder="Search a region" [nodes]="regionNodes" [(value)]="inPanel" />
+        <andes-tree-select aria-label="Region (in the field)" showSearch searchPlacement="trigger" placeholder="Type to search" [nodes]="regionNodes" [(value)]="one" />
+        <andes-tree-select aria-label="Regions (in the field)" multiple showSearch searchPlacement="trigger" placeholder="Type to search" [nodes]="regionNodes" [(value)]="many" />
       </div>
     `,
   }),
@@ -357,7 +354,7 @@ export const SearchInField: Story = {
 export const LoadOnDemand: Story = {
   render: () => {
     const component = {
-      nodes: [
+      lazyNodes: [
         { key: 'sedes', title: 'Sedes' },
         { key: 'areas', title: 'Áreas' },
       ] as AndesTreeNode[],
@@ -370,7 +367,7 @@ export const LoadOnDemand: Story = {
               title: `${String(node.title)} ${n}`,
               isLeaf: true,
             }));
-            component.nodes = component.nodes.map((n) =>
+            component.lazyNodes = component.lazyNodes.map((n) =>
               n.key === node.key ? { ...n, children } : n,
             );
             resolve();
@@ -383,7 +380,7 @@ export const LoadOnDemand: Story = {
       styles: STORY_STYLES,
       template: `
         <div class="stack">
-          <andes-tree-select aria-label="Lazy" placeholder="Open a branch" [nodes]="nodes" [loadData]="loadData" [(value)]="selected" />
+          <andes-tree-select aria-label="Lazy" placeholder="Open a branch" [nodes]="lazyNodes" [loadData]="loadData" [(value)]="selected" />
         </div>
       `,
     };
@@ -396,7 +393,7 @@ export const FieldNames: Story = {
     moduleMetadata: { imports: IMPORTS },
     props: {
       names: { key: 'codigo', title: 'nombre', children: 'hijos' },
-      nodes: [
+      accountNodes: [
         {
           codigo: 100,
           nombre: 'Activo',
@@ -416,7 +413,7 @@ export const FieldNames: Story = {
     styles: STORY_STYLES,
     template: `
       <div class="stack">
-        <andes-tree-select aria-label="Cuenta" [fieldNames]="names" [nodes]="nodes" [(value)]="selected" />
+        <andes-tree-select aria-label="Cuenta" [fieldNames]="names" [nodes]="accountNodes" [(value)]="selected" />
       </div>
     `,
   }),
@@ -426,11 +423,11 @@ export const FieldNames: Story = {
 export const DefaultExpandAll: Story = {
   render: () => ({
     moduleMetadata: { imports: IMPORTS },
-    props: { nodes: regions(), selected: null },
+    props: { regionNodes: regions(), selected: null },
     styles: STORY_STYLES,
     template: `
       <div class="stack">
-        <andes-tree-select aria-label="Region" treeDefaultExpandAll [nodes]="nodes" [(value)]="selected" />
+        <andes-tree-select aria-label="Region" treeDefaultExpandAll [nodes]="regionNodes" [(value)]="selected" />
       </div>
     `,
   }),
@@ -441,7 +438,7 @@ export const CustomNodeContent: Story = {
   render: () => ({
     moduleMetadata: { imports: IMPORTS },
     props: {
-      nodes: [
+      stockNodes: [
         {
           key: 'a',
           title: 'Almacén Lima',
@@ -458,25 +455,11 @@ export const CustomNodeContent: Story = {
     ],
     template: `
       <div class="stack">
-        <andes-tree-select aria-label="Almacén" treeDefaultExpandAll [nodes]="nodes" [(value)]="selected">
+        <andes-tree-select aria-label="Almacén" treeDefaultExpandAll [nodes]="stockNodes" [(value)]="selected">
           <ng-template andesTreeNode let-node>
             <span>{{ node.title }}</span><span class="stock">{{ node.stock }} u.</span>
           </ng-template>
         </andes-tree-select>
-      </div>
-    `,
-  }),
-};
-
-/** With no options the panel shows an empty state; `loading` shows a spinner in the field and the panel. */
-export const EmptyAndLoading: Story = {
-  render: () => ({
-    moduleMetadata: { imports: IMPORTS },
-    styles: STORY_STYLES,
-    template: `
-      <div class="stack">
-        <andes-tree-select aria-label="Empty" placeholder="No options" [nodes]="[]" />
-        <andes-tree-select aria-label="Loading" placeholder="Loading options" loading [nodes]="[]" />
       </div>
     `,
   }),
@@ -487,7 +470,7 @@ export const PlacementAbove: Story = {
   parameters: { layout: 'padded' },
   render: () => ({
     moduleMetadata: { imports: IMPORTS },
-    props: { nodes: regions() },
+    props: { regionNodes: regions() },
     styles: [
       ...STORY_STYLES,
       `.bottom { display: flex; align-items: flex-end; min-height: 420px; }`,
@@ -495,43 +478,9 @@ export const PlacementAbove: Story = {
     template: `
       <div class="bottom">
         <div class="stack">
-          <andes-tree-select aria-label="Region" placement="topLeft" treeDefaultExpandAll [nodes]="nodes" />
+          <andes-tree-select aria-label="Region" placement="topLeft" treeDefaultExpandAll [nodes]="regionNodes" />
         </div>
       </div>
     `,
   }),
-};
-
-/** It is a form control: bind it with `formControl` or `ngModel`, and show validation with `status`. */
-export const WithForms: Story = {
-  render: () => {
-    const control = new FormControl<AndesTreeKey | null>(
-      null,
-      Validators.required,
-    );
-    return {
-      moduleMetadata: { imports: IMPORTS },
-      props: { nodes: regions(), control },
-      styles: STORY_STYLES,
-      template: `
-        <div class="stack">
-          <div>
-            <label class="label" for="region-field">Region</label>
-            <andes-tree-select
-              id="region-field"
-              allowClear
-              placeholder="Required"
-              [nodes]="nodes"
-              [formControl]="control"
-              [status]="control.invalid && control.touched ? 'error' : undefined"
-            />
-            @if (control.invalid && control.touched) {
-              <p class="error">Pick a region.</p>
-            }
-          </div>
-          <p class="caption">Value: <code>{{ control.value | json }}</code> · {{ control.status }}</p>
-        </div>
-      `,
-    };
-  },
 };

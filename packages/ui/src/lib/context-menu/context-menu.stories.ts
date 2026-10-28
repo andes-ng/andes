@@ -23,7 +23,7 @@ import { AndesContextMenu } from './context-menu';
 import { AndesContextMenuTrigger } from './context-menu-trigger';
 
 const meta: Meta<AndesContextMenu> = {
-  title: 'Context Menu',
+  title: 'Navigation/Context Menu',
   component: AndesContextMenu,
   tags: ['autodocs'],
   parameters: {

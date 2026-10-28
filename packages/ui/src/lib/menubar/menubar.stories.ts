@@ -22,7 +22,7 @@ import { AndesMenubarMenu } from './menubar-menu';
 import { AndesMenubarTrigger } from './menubar-trigger';
 
 const meta: Meta<AndesMenubar> = {
-  title: 'Menubar',
+  title: 'Navigation/Menubar',
   component: AndesMenubar,
   tags: ['autodocs'],
   parameters: {

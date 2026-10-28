@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from '@storybook/angular';
 import { AndesSpinner } from './spinner';
 
 const meta: Meta<AndesSpinner> = {
-  title: 'Spinner',
+  title: 'Feedback/Spinner',
   component: AndesSpinner,
   tags: ['autodocs'],
   argTypes: {

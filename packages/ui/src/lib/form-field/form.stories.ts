@@ -93,7 +93,7 @@ interface FormArgs {
 }
 
 const meta: Meta<FormArgs> = {
-  title: 'Form',
+  title: 'Data Entry/Form',
   tags: ['autodocs'],
   decorators: [withDemoControls],
   parameters: {

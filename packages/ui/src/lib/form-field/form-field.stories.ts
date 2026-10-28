@@ -102,7 +102,7 @@ export const withDemoControls: Decorator = (story) => {
 };
 
 const meta: Meta<AndesFormField> = {
-  title: 'Form Field',
+  title: 'Data Entry/Form Field',
   component: AndesFormField,
   tags: ['autodocs'],
   excludeStories: ['DEMO_CONTROL_CSS', 'withDemoControls'],

@@ -5,7 +5,7 @@ import { AndesButton } from '../button/button';
 import { AndesCheckbox } from './checkbox';
 
 const meta: Meta<AndesCheckbox> = {
-  title: 'Checkbox',
+  title: 'Data Entry/Checkbox',
   component: AndesCheckbox,
   tags: ['autodocs'],
   argTypes: {

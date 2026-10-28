@@ -8,7 +8,7 @@ import { AndesCheckboxSelectAll } from './checkbox-select-all';
 import { AndesCheckboxOptionLabel } from './checkbox-option-label';
 
 const meta: Meta<AndesCheckboxGroup> = {
-  title: 'CheckboxGroup',
+  title: 'Data Entry/CheckboxGroup',
   component: AndesCheckboxGroup,
   tags: ['autodocs'],
   argTypes: {

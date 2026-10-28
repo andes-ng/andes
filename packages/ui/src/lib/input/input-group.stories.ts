@@ -5,7 +5,7 @@ import { AndesInputSearch } from './input-search';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 const meta: Meta<AndesInputGroup> = {
-  title: 'Input/Layout/Group',
+  title: 'Data Entry/Input/Layout/Group',
   component: AndesInputGroup,
 };
 

@@ -6,7 +6,7 @@ import { AndesInput } from './input';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 const meta: Meta<AndesInput> = {
-  title: 'Input/Basics/Features',
+  title: 'Data Entry/Input/Basics/Features',
   component: AndesInput,
 };
 

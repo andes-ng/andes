@@ -4,7 +4,7 @@ import { AndesInputSearch } from './input-search';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 const meta: Meta<AndesInputSearch> = {
-  title: 'Input/Specialized/Search',
+  title: 'Data Entry/Input/Specialized/Search',
   component: AndesInputSearch,
 };
 

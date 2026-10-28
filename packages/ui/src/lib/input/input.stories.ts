@@ -4,7 +4,7 @@ import type { Meta, StoryObj } from '@storybook/angular';
 import { AndesInput } from './input';
 
 const meta: Meta<AndesInput> = {
-  title: 'Input/Basics/Field',
+  title: 'Data Entry/Input/Basics/Field',
   component: AndesInput,
   tags: ['autodocs'],
   argTypes: {

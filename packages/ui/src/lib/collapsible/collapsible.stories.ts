@@ -34,7 +34,7 @@ const styles = [
 ];
 
 const meta: Meta<AndesCollapsible> = {
-  title: 'Collapsible',
+  title: 'Data Display/Collapsible',
   component: AndesCollapsible,
   tags: ['autodocs'],
   argTypes: {

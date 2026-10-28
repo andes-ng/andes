@@ -1,13 +1,11 @@
-import { JsonPipe, NgTemplateOutlet } from '@angular/common';
-import { Component, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import type { Meta, StoryObj } from '@storybook/angular';
 import { moduleMetadata } from '@storybook/angular';
 
-import { AndesButton } from '../button/button';
-import { AndesPagination, AndesPaginationChange } from './pagination';
+import { AndesPagination } from './pagination';
 
 const meta: Meta<AndesPagination> = {
-  title: 'Navigation/Pagination',
+  title: 'Navigation/Pagination/Basics/Pages',
   component: AndesPagination,
   tags: ['autodocs'],
   decorators: [moduleMetadata({ imports: [NgTemplateOutlet] })],
@@ -68,172 +66,110 @@ export default meta;
 
 type Story = StoryObj<AndesPagination>;
 
+const CAPTION =
+  'margin: 0 0 0.5rem; font: 0.75rem var(--andes-font-family), sans-serif; color: var(--andes-color-muted-foreground);';
+
 export const Default: Story = {};
 
-export const FewPages: Story = {
-  args: { totalPages: 5, current: 3 },
-};
-
-export const NearStart: Story = {
-  args: { current: 1 },
-};
-
-export const Middle: Story = {
-  args: { totalPages: 20, current: 10 },
-};
-
-export const NearEnd: Story = {
-  args: { current: 10 },
-};
-
-export const LargerSiblingCount: Story = {
-  args: { totalPages: 20, current: 10, siblingCount: 2 },
-};
-
-export const LargerBoundaryCount: Story = {
-  args: { totalPages: 20, current: 10, boundaryCount: 2 },
-};
-
-/** Page count derived from `total` / `pageSize` instead of an explicit `totalPages`. */
-export const DerivedFromTotal: Story = {
-  args: { totalPages: undefined, total: 240, pageSize: 25, current: 4 },
-};
-
-export const Disabled: Story = {
-  args: {
-    current: 5,
-    disabled: true,
-    showSizeChanger: true,
-    showQuickJumper: true,
-  },
-};
-
-/** Collapsed ranges become jump buttons (5 pages; 3 with `showLessItems`). */
-export const PrevNextJumpers: Story = {
-  args: { totalPages: 50, current: 25 },
-};
-
-export const WithoutJumpers: Story = {
-  args: { totalPages: 50, current: 25, showPrevNextJumpers: false },
-};
-
-export const ShowLessItems: Story = {
-  args: { totalPages: 50, current: 25, siblingCount: 2, showLessItems: true },
+/**
+ * How the page window behaves, one pagination per case: few pages, near the start, in the
+ * middle and near the end of a long list, a wider `siblingCount` and `boundaryCount`, and a page
+ * count derived from `total` / `pageSize` instead of an explicit `totalPages`.
+ */
+export const PageWindows: Story = {
+  render: () => ({
+    template: `
+      <div style="display: grid; gap: 1.5rem;">
+        <div>
+          <p style="${CAPTION}">Few pages (5)</p>
+          <andes-pagination [totalPages]="5" [current]="3" aria-label="Few pages" />
+        </div>
+        <div>
+          <p style="${CAPTION}">Near the start</p>
+          <andes-pagination [totalPages]="10" [current]="1" aria-label="Near the start" />
+        </div>
+        <div>
+          <p style="${CAPTION}">Middle of a long list</p>
+          <andes-pagination [totalPages]="20" [current]="10" aria-label="Middle" />
+        </div>
+        <div>
+          <p style="${CAPTION}">Near the end</p>
+          <andes-pagination [totalPages]="10" [current]="10" aria-label="Near the end" />
+        </div>
+        <div>
+          <p style="${CAPTION}">siblingCount 2</p>
+          <andes-pagination [totalPages]="20" [current]="10" [siblingCount]="2" aria-label="Larger sibling count" />
+        </div>
+        <div>
+          <p style="${CAPTION}">boundaryCount 2</p>
+          <andes-pagination [totalPages]="20" [current]="10" [boundaryCount]="2" aria-label="Larger boundary count" />
+        </div>
+        <div>
+          <p style="${CAPTION}">Derived from total 240 / pageSize 25 instead of totalPages</p>
+          <andes-pagination [total]="240" [pageSize]="25" [current]="4" aria-label="Derived from total" />
+        </div>
+      </div>`,
+  }),
 };
 
 /**
- * Minimal native `<select>` size changer (swap for AndesSelect once it lands). It
- * also appears automatically when `total` exceeds `totalBoundaryShowSizeChanger` (50).
+ * Collapsed ranges become jump buttons (5 pages; 3 with `showLessItems`), and
+ * `showPrevNextJumpers` turns them off.
  */
-export const SizeChanger: Story = {
-  args: {
-    totalPages: undefined,
-    total: 500,
-    current: 3,
-    showSizeChanger: true,
-  },
+export const Jumpers: Story = {
+  render: () => ({
+    template: `
+      <div style="display: grid; gap: 1.5rem;">
+        <div>
+          <p style="${CAPTION}">Prev/next jumpers: collapsed ranges become jump buttons (5 pages)</p>
+          <andes-pagination [totalPages]="50" [current]="25" aria-label="With jumpers" />
+        </div>
+        <div>
+          <p style="${CAPTION}">showPrevNextJumpers off</p>
+          <andes-pagination [totalPages]="50" [current]="25" [showPrevNextJumpers]="false" aria-label="Without jumpers" />
+        </div>
+        <div>
+          <p style="${CAPTION}">showLessItems (3 pages per jump)</p>
+          <andes-pagination [totalPages]="50" [current]="25" [siblingCount]="2" [showLessItems]="true" aria-label="Show less items" />
+        </div>
+      </div>`,
+  }),
 };
 
-export const QuickJumper: Story = {
-  args: { totalPages: undefined, total: 500, showQuickJumper: true },
+/** The states with nothing to page through: disabled, no records at all, and a single page that is hidden. */
+export const States: Story = {
+  render: () => ({
+    template: `
+      <div style="display: grid; gap: 1.5rem;">
+        <div>
+          <p style="${CAPTION}">Disabled, with the size changer and the quick jumper</p>
+          <andes-pagination [totalPages]="10" [current]="5" [disabled]="true" [showSizeChanger]="true" [showQuickJumper]="true" aria-label="Disabled" />
+        </div>
+        <div>
+          <p style="${CAPTION}">total of 0: no page items, every control disabled</p>
+          <andes-pagination [total]="0" [showQuickJumper]="true" [showSizeChanger]="true" aria-label="Empty" />
+        </div>
+        <div>
+          <p style="${CAPTION}">hideOnSinglePage with a single page: renders nothing (the box below is empty on purpose)</p>
+          <andes-pagination [total]="8" [hideOnSinglePage]="true" aria-label="Hidden on a single page" />
+        </div>
+      </div>`,
+  }),
 };
 
-export const QuickJumperWithGoButton: Story = {
-  args: {
-    totalPages: undefined,
-    total: 500,
-    showQuickJumper: true,
-    goButton: true,
-  },
-};
-
-export const Simple: Story = {
-  args: { totalPages: undefined, total: 500, current: 2, simple: true },
-};
-
-export const SimpleReadOnly: Story = {
-  args: {
-    totalPages: undefined,
-    total: 500,
-    current: 2,
-    simple: { readOnly: true },
-  },
-};
-
-export const Small: Story = {
-  args: {
-    totalPages: undefined,
-    total: 500,
-    current: 4,
-    size: 'small',
-    showSizeChanger: true,
-    showQuickJumper: true,
-  },
-};
-
-export const Large: Story = {
-  args: {
-    totalPages: undefined,
-    total: 500,
-    current: 4,
-    size: 'large',
-    showSizeChanger: true,
-    showQuickJumper: true,
-    goButton: true,
-  },
-};
-
-/** The three control heights side by side: 24, 32 and 40px. */
+/**
+ * The three control heights side by side: 24, 32 and 40px, each with the size changer and the
+ * quick jumper (and the go button on the large one).
+ */
 export const Sizes: Story = {
   render: () => ({
     template: `
       <div style="display: grid; gap: 1rem;">
         <andes-pagination [total]="500" [current]="4" size="small" [showSizeChanger]="true" [showQuickJumper]="true" aria-label="Small" />
         <andes-pagination [total]="500" [current]="4" [showSizeChanger]="true" [showQuickJumper]="true" aria-label="Default" />
-        <andes-pagination [total]="500" [current]="4" size="large" [showSizeChanger]="true" [showQuickJumper]="true" aria-label="Large" />
+        <andes-pagination [total]="500" [current]="4" size="large" [showSizeChanger]="true" [showQuickJumper]="true" [goButton]="true" aria-label="Large" />
       </div>`,
   }),
-};
-
-/**
- * In editable simple mode, a quick-jumper go button confirms the typed page instead of
- * Enter-or-blur; blurring keeps the text until the button is pressed.
- */
-export const SimpleWithGoButton: Story = {
-  args: {
-    totalPages: undefined,
-    total: 500,
-    current: 2,
-    simple: true,
-    showQuickJumper: true,
-    goButton: true,
-  },
-};
-
-/** Resize the viewport below 576px to collapse into the small, simple layout. */
-export const Responsive: Story = {
-  args: {
-    totalPages: undefined,
-    total: 500,
-    current: 4,
-    responsive: true,
-    showSizeChanger: true,
-  },
-};
-
-/** Renders nothing: there is only one page. */
-export const HideOnSinglePage: Story = {
-  args: { totalPages: undefined, total: 8, hideOnSinglePage: true },
-};
-
-/** `total` of 0: no page items, every control disabled. */
-export const Empty: Story = {
-  args: {
-    totalPages: undefined,
-    total: 0,
-    showQuickJumper: true,
-    showSizeChanger: true,
-  },
 };
 
 export const Align: Story = {
@@ -245,148 +181,5 @@ export const Align: Story = {
         <andes-pagination [total]="50" align="center" aria-label="Center aligned" />
         <andes-pagination [total]="50" align="end" aria-label="End aligned" />
       </div>`,
-  }),
-};
-
-/**
- * `showTotal` takes a template, or a `(total, range) => string` function when plain
- * text is enough.
- */
-export const ShowTotal: Story = {
-  render: () => ({
-    props: {
-      totalText: (total: number, range: [number, number]) =>
-        `${range[0]}-${range[1]} of ${total} records`,
-    },
-    template: `
-      <div style="display: grid; gap: 1rem;">
-        <andes-pagination [total]="85" [current]="2" [showTotal]="totalTpl" aria-label="Total" />
-        <andes-pagination [total]="85" [current]="2" [showTotal]="rangeTpl" aria-label="Range" />
-        <andes-pagination [total]="85" [current]="2" [showTotal]="totalText" aria-label="Function" />
-      </div>
-      <ng-template #totalTpl let-total>Total {{ total }} items</ng-template>
-      <ng-template #rangeTpl let-total let-range="range">{{ range[0] }}-{{ range[1] }} of {{ total }} items</ng-template>`,
-  }),
-};
-
-/**
- * `itemRender` replaces the content of each control. The pagination keeps the
- * focusable button, its aria-label and aria-current; `originalElement` renders the
- * default content.
- */
-export const ItemRender: Story = {
-  render: () => ({
-    template: `
-      <andes-pagination [total]="500" [current]="3" [itemRender]="itemTpl" />
-      <ng-template #itemTpl let-page let-type="type" let-originalElement="originalElement">
-        @if (type === 'prev') {
-          <span>Previous</span>
-        } @else if (type === 'next') {
-          <span>Next</span>
-        } @else {
-          <ng-container *ngTemplateOutlet="originalElement; context: { $implicit: page, type: type }" />
-        }
-      </ng-template>`,
-  }),
-};
-
-/** Every visible and accessible label is its own input, so it can be localized. */
-export const CustomLabels: Story = {
-  render: () => ({
-    template: `<andes-pagination
-      [total]="500"
-      [current]="10"
-      [showSizeChanger]="true"
-      [showQuickJumper]="true"
-      goButton
-      aria-label="Paginación"
-      previousLabel="Página anterior"
-      nextLabel="Página siguiente"
-      pageLabel="Página"
-      jumpPrevLabel="{count} páginas anteriores"
-      jumpNextLabel="{count} páginas siguientes"
-      itemsPerPageLabel="/ página"
-      pageSizeLabel="Elementos por página"
-      jumpToLabel="Ir a"
-      jumpToSuffixLabel="página"
-      jumpToConfirmLabel="Ir"
-    />`,
-  }),
-};
-
-/**
- * `sizeChangerRender` swaps the built-in page-size select for any control. Its
- * `change(size)` applies the size exactly like the built-in one (clamping the page
- * and emitting both events); `size` and `disabled` let it match the pagination.
- */
-export const CustomSizeChanger: Story = {
-  render: () => ({
-    moduleMetadata: { imports: [AndesButton] },
-    template: `
-      <andes-pagination [total]="500" [current]="3" [showSizeChanger]="true" [sizeChangerRender]="sizeTpl" />
-      <ng-template
-        #sizeTpl
-        let-pageSize
-        let-options="options"
-        let-disabled="disabled"
-        let-label="label"
-        let-change="change"
-      >
-        <span role="group" [attr.aria-label]="label" style="display: inline-flex; gap: 0.25rem;">
-          @for (option of options; track option) {
-            <andes-button
-              size="sm"
-              [variant]="option === pageSize ? 'primary' : 'outline'"
-              [disabled]="disabled"
-              [aria-label]="option + ' per page' + (option === pageSize ? ' (current)' : '')"
-              (click)="change(option)"
-              >{{ option }}</andes-button
-            >
-          }
-        </span>
-      </ng-template>`,
-  }),
-};
-
-/**
- * Fully wired to local state through `[(current)]` / `[(pageSize)]`, so every control
- * (pages, jumpers, size changer, quick jumper) actually moves the state - useful for
- * exercising keyboard/focus behavior and the a11y panel against every reachable state.
- */
-@Component({
-  selector: 'andes-pagination-demo',
-  imports: [AndesPagination, JsonPipe],
-  template: `<div style="display: grid; gap: 1rem;">
-    <andes-pagination
-      [(current)]="page"
-      [(pageSize)]="pageSize"
-      [total]="500"
-      [showSizeChanger]="true"
-      [showQuickJumper]="true"
-      [showTotal]="totalTpl"
-      (pageChange)="lastChange.set($event)"
-    />
-    <ng-template #totalTpl let-total let-range="range"
-      >{{ range[0] }}-{{ range[1] }} of {{ total }}</ng-template
-    >
-    <output
-      style="font-family: monospace; font-size: 0.875rem; color: var(--andes-color-foreground);"
-    >
-      current={{ page() }} pageSize={{ pageSize() }} lastChange={{
-        lastChange() | json
-      }}
-    </output>
-  </div>`,
-})
-class AndesPaginationDemo {
-  readonly page = signal(1);
-  readonly pageSize = signal(10);
-  readonly lastChange = signal<AndesPaginationChange | null>(null);
-}
-
-export const Interactive: Story = {
-  render: () => ({
-    moduleMetadata: { imports: [AndesPaginationDemo] },
-    template: `<andes-pagination-demo />`,
   }),
 };

@@ -28,7 +28,7 @@ const LOGO = `data:image/svg+xml;utf8,${encodeURIComponent(
 )}`;
 
 const meta: Meta<AndesWatermark> = {
-  title: 'Watermark',
+  title: 'Data Display/Watermark',
   component: AndesWatermark,
   tags: ['autodocs'],
   decorators: [

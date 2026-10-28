@@ -4,7 +4,7 @@ import { AndesButton } from '../button/button';
 import { AndesProgress } from './progress';
 
 const meta: Meta<AndesProgress> = {
-  title: 'Feedback/Progress',
+  title: 'Feedback/Progress/Basics',
   component: AndesProgress,
   tags: ['autodocs'],
   argTypes: {
@@ -44,139 +44,73 @@ export default meta;
 
 type Story = StoryObj<AndesProgress>;
 
-export const Determinate: Story = {
+/** The playground: use the controls to try every input on one bar. */
+export const Default: Story = {
   args: { value: 42 },
 };
 
-export const Indeterminate: Story = {
-  args: { value: null },
-};
-
-export const Complete: Story = {
-  args: { value: 100 },
-};
-
-export const Empty: Story = {
-  args: { value: 0 },
-};
-
-export const Success: Story = {
-  args: { value: 100, variant: 'success' },
-};
-
-export const Warning: Story = {
-  args: { value: 65, variant: 'warning' },
-};
-
-export const Danger: Story = {
-  args: { value: 20, variant: 'danger' },
-};
-
-export const Small: Story = {
-  args: { size: 'sm' },
-};
-
-export const Large: Story = {
-  args: { size: 'lg' },
-};
-
-export const CustomRange: Story = {
-  args: { value: 140, min: 50, max: 200 },
-};
-
-export const WithValueText: Story = {
-  render: (args) => ({
-    props: args,
-    template: `<div style="width: 320px;"><andes-progress [value]="value" aria-label="Upload progress" aria-valuetext="56 of 100 files uploaded" /></div>`,
-  }),
-};
-
-export const AllSizes: Story = {
-  render: (args) => ({
-    props: args,
+/**
+ * What the bar reads for a given `value`: partway, empty (0), complete (100), indeterminate
+ * (`value` null, a looping animation), and a custom range with `min` / `max`. `aria-valuetext`
+ * replaces the announced text with something friendlier than a percentage.
+ */
+export const Values: Story = {
+  render: () => ({
     template: `
       <div style="display: flex; flex-direction: column; gap: 1rem; width: 320px;">
-        <andes-progress size="sm" [value]="value" aria-label="Small progress" />
-        <andes-progress size="md" [value]="value" aria-label="Medium progress" />
-        <andes-progress size="lg" [value]="value" aria-label="Large progress" />
+        <andes-progress [value]="42" [showInfo]="true" aria-label="Determinate" />
+        <andes-progress [value]="0" aria-label="Empty" />
+        <andes-progress [value]="100" aria-label="Complete" />
+        <andes-progress [value]="null" aria-label="Indeterminate" />
+        <andes-progress [value]="140" [min]="50" [max]="200" aria-label="Custom range 50 to 200" />
+        <andes-progress [value]="56" aria-label="Upload progress" aria-valuetext="56 of 100 files uploaded" />
       </div>
     `,
   }),
 };
 
-export const AllVariants: Story = {
-  render: (args) => ({
-    props: args,
+/**
+ * `variant` is `primary` (the default), `success`, `warning` or `danger`, so the colour can
+ * follow the value it reports.
+ */
+export const Variants: Story = {
+  render: () => ({
     template: `
       <div style="display: flex; flex-direction: column; gap: 1rem; width: 320px;">
-        <andes-progress variant="primary" [value]="value" aria-label="Primary progress" />
-        <andes-progress variant="success" [value]="value" aria-label="Success progress" />
-        <andes-progress variant="warning" [value]="value" aria-label="Warning progress" />
-        <andes-progress variant="danger" [value]="value" aria-label="Danger progress" />
+        <andes-progress variant="primary" [value]="42" aria-label="Primary progress" />
+        <andes-progress variant="success" [value]="100" aria-label="Success progress" />
+        <andes-progress variant="warning" [value]="65" aria-label="Warning progress" />
+        <andes-progress variant="danger" [value]="20" aria-label="Danger progress" />
       </div>
     `,
   }),
 };
 
-// --- Extended options -------------------------------------------------------
-
-export const WithInfo: Story = {
-  args: { value: 42, showInfo: true },
-};
-
-export const Circle: Story = {
+/**
+ * Bar thickness: the `sm`, `md` and `lg` presets, then the flexible `size` forms - the `small` /
+ * `default` aliases, a `[width, height]` tuple and a `{ width, height }` object (any CSS length).
+ */
+export const Sizes: Story = {
   render: () => ({
     template: `
-      <div style="display: flex; gap: 1.5rem; align-items: center;">
-        <andes-progress type="circle" [percent]="75" aria-label="Circle 75%" />
-        <andes-progress type="circle" [percent]="70" status="exception" aria-label="Circle failed" />
-        <andes-progress type="circle" [percent]="100" status="success" aria-label="Circle done" />
-        <andes-progress type="circle" aria-label="Circle loading" />
+      <div style="display: flex; flex-direction: column; gap: 1rem; width: 360px;">
+        <andes-progress size="sm" [value]="42" aria-label="Small progress" />
+        <andes-progress size="md" [value]="42" aria-label="Medium progress" />
+        <andes-progress size="lg" [value]="42" aria-label="Large progress" />
+        <andes-progress [percent]="50" size="small" [showInfo]="true" aria-label="Small alias" />
+        <andes-progress [percent]="50" size="default" [showInfo]="true" aria-label="Default alias" />
+        <andes-progress [percent]="50" [size]="[240, 20]" [showInfo]="true" aria-label="240 by 20" />
+        <andes-progress [percent]="50" [size]="{ width: '60%', height: 4 }" [showInfo]="true" aria-label="60 percent wide" />
       </div>
     `,
   }),
 };
 
-export const CircleSizes: Story = {
-  render: () => ({
-    template: `
-      <div style="display: flex; gap: 1.5rem; align-items: center;">
-        <andes-progress type="circle" size="small" [percent]="30" aria-label="Small circle" />
-        <andes-progress type="circle" [size]="80" [percent]="50" aria-label="80px circle" />
-        <andes-progress type="circle" [percent]="70" aria-label="Default circle" />
-        <andes-progress type="circle" size="lg" [percent]="90" aria-label="Large circle" />
-        <span>Inline <andes-progress type="circle" [size]="14" [percent]="60" aria-label="Tiny circle" /> ring</span>
-      </div>
-    `,
-  }),
-};
-
-export const Dashboard: Story = {
-  render: () => ({
-    template: `
-      <div style="display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap;">
-        <andes-progress type="dashboard" [percent]="75" aria-label="Dashboard" />
-        <andes-progress type="dashboard" [percent]="75" [gapDegree]="30" aria-label="Dashboard 30deg gap" />
-        <andes-progress type="dashboard" [percent]="75" [gapDegree]="180" aria-label="Dashboard half" />
-        <andes-progress type="dashboard" aria-label="Dashboard loading" />
-      </div>
-    `,
-  }),
-};
-
-export const DashboardGapPlacement: Story = {
-  render: () => ({
-    template: `
-      <div style="display: flex; gap: 1.5rem; align-items: center;">
-        <andes-progress type="dashboard" size="small" [percent]="60" gapPlacement="top" aria-label="Gap top" />
-        <andes-progress type="dashboard" size="small" [percent]="60" gapPlacement="bottom" aria-label="Gap bottom" />
-        <andes-progress type="dashboard" size="small" [percent]="60" gapPlacement="start" aria-label="Gap start" />
-        <andes-progress type="dashboard" size="small" [percent]="60" gapPlacement="end" aria-label="Gap end" />
-      </div>
-    `,
-  }),
-};
-
+/**
+ * `status` sets the outcome: normal, `active` (an animated sheen), `exception` and `success`.
+ * With `showInfo` the status picks the trailing text or icon; `aria-valuetext` can carry the
+ * outcome for assistive technology.
+ */
 export const Statuses: Story = {
   render: () => ({
     template: `
@@ -185,143 +119,6 @@ export const Statuses: Story = {
         <andes-progress [percent]="50" status="active" [showInfo]="true" aria-label="Active" />
         <andes-progress [percent]="70" status="exception" [showInfo]="true" aria-label="Exception" aria-valuetext="70%, failed" />
         <andes-progress [percent]="100" status="success" [showInfo]="true" aria-label="Success" aria-valuetext="100%, complete" />
-      </div>
-    `,
-  }),
-};
-
-export const SuccessSegment: Story = {
-  render: () => ({
-    template: `
-      <div style="display: flex; gap: 1.5rem; align-items: center;">
-        <div style="width: 320px;">
-          <andes-progress [percent]="60" [success]="{ percent: 30 }" [showInfo]="true" aria-label="Line with success segment" />
-        </div>
-        <andes-progress type="circle" [percent]="60" [success]="{ percent: 30 }" aria-label="Circle with success segment" />
-        <andes-progress type="dashboard" [percent]="60" [success]="{ percent: 30 }" aria-label="Dashboard with success segment" />
-      </div>
-    `,
-  }),
-};
-
-export const CustomFormat: Story = {
-  render: () => ({
-    props: {
-      days: (percent: number) => `${Math.round(percent / 10)} of 10 days`,
-      withSuccess: (percent: number, success: number | undefined) =>
-        `${percent}% (${success ?? 0}% verified)`,
-    },
-    template: `
-      <ng-template #doneTpl let-percent>
-        <strong>{{ percent === 100 ? 'Done' : percent + '%' }}</strong>
-      </ng-template>
-      <div style="display: flex; gap: 1.5rem; align-items: center;">
-        <andes-progress type="circle" [percent]="75" [format]="days" aria-label="Days elapsed" />
-        <andes-progress type="circle" [percent]="100" [format]="doneTpl" aria-label="Task" aria-valuetext="Done" />
-        <div style="width: 320px;">
-          <andes-progress [percent]="60" [success]="{ percent: 30 }" [showInfo]="true" [format]="withSuccess" aria-label="Verification" />
-        </div>
-      </div>
-    `,
-  }),
-};
-
-export const GradientStroke: Story = {
-  render: () => ({
-    props: {
-      fromTo: { from: '#108ee9', to: '#87d068' },
-      stops: { '0%': '#108ee9', '100%': '#87d068' },
-    },
-    template: `
-      <div style="display: flex; gap: 1.5rem; align-items: center;">
-        <div style="display: flex; flex-direction: column; gap: 1rem; width: 320px;">
-          <andes-progress [percent]="99.9" [strokeColor]="fromTo" [showInfo]="true" aria-label="Gradient line" />
-          <andes-progress [percent]="50" status="active" [strokeColor]="stops" [showInfo]="true" aria-label="Gradient active line" />
-        </div>
-        <andes-progress type="circle" [percent]="90" [strokeColor]="stops" aria-label="Gradient circle" />
-        <andes-progress type="dashboard" [percent]="90" [strokeColor]="stops" aria-label="Gradient dashboard" />
-      </div>
-    `,
-  }),
-};
-
-export const StrokeAndRail: Story = {
-  render: () => ({
-    template: `
-      <div style="display: flex; gap: 1.5rem; align-items: center;">
-        <div style="display: flex; flex-direction: column; gap: 1rem; width: 320px;">
-          <andes-progress [percent]="60" strokeColor="#7c3aed" railColor="#ede9fe" [showInfo]="true" aria-label="Custom colors" />
-          <andes-progress [percent]="60" strokeLinecap="butt" [strokeWidth]="12" [showInfo]="true" aria-label="Butt linecap" />
-        </div>
-        <andes-progress type="circle" [percent]="75" strokeLinecap="butt" aria-label="Butt ring" />
-        <andes-progress type="circle" [percent]="75" [strokeWidth]="12" aria-label="Thick ring" />
-      </div>
-    `,
-  }),
-};
-
-export const Steps: Story = {
-  render: () => ({
-    props: {
-      colors: ['#16a34a', '#16a34a', '#dc2626'],
-    },
-    template: `
-      <div style="display: flex; gap: 1.5rem; align-items: center;">
-        <div style="display: flex; flex-direction: column; gap: 1rem;">
-          <andes-progress [percent]="50" [steps]="3" [showInfo]="true" aria-label="3 steps" />
-          <andes-progress [percent]="30" [steps]="5" [showInfo]="true" aria-label="5 steps" />
-          <andes-progress [percent]="100" [steps]="5" size="small" strokeColor="#16a34a" [showInfo]="true" aria-label="Small steps" />
-          <andes-progress [percent]="100" [steps]="3" [strokeColor]="colors" [showInfo]="true" aria-label="Colored steps" />
-        </div>
-        <andes-progress type="circle" [percent]="60" [steps]="{ count: 5, gap: 4 }" aria-label="Circle steps" />
-        <andes-progress type="dashboard" [percent]="50" [steps]="8" aria-label="Dashboard steps" />
-      </div>
-    `,
-  }),
-};
-
-export const FlexibleSizes: Story = {
-  render: () => ({
-    template: `
-      <div style="display: flex; flex-direction: column; gap: 1rem; width: 360px;">
-        <andes-progress [percent]="50" size="small" [showInfo]="true" aria-label="Small" />
-        <andes-progress [percent]="50" size="default" [showInfo]="true" aria-label="Default" />
-        <andes-progress [percent]="50" [size]="[240, 20]" [showInfo]="true" aria-label="240 by 20" />
-        <andes-progress [percent]="50" [size]="{ width: '60%', height: 4 }" [showInfo]="true" aria-label="60 percent wide" />
-      </div>
-    `,
-  }),
-};
-
-export const PercentPosition: Story = {
-  render: () => ({
-    template: `
-      <div style="display: flex; flex-direction: column; gap: 1rem; width: 360px;">
-        <andes-progress [percent]="60" [showInfo]="true" [percentPosition]="{ align: 'start', type: 'outer' }" aria-label="Outer start" />
-        <andes-progress [percent]="60" [showInfo]="true" [percentPosition]="{ align: 'center', type: 'outer' }" aria-label="Outer center" />
-        <andes-progress [percent]="60" [showInfo]="true" [percentPosition]="{ align: 'start', type: 'inner' }" [size]="[360, 20]" aria-label="Inner start" />
-        <andes-progress [percent]="60" [showInfo]="true" [percentPosition]="{ align: 'center', type: 'inner' }" [size]="[360, 20]" variant="success" aria-label="Inner center" />
-        <andes-progress [percent]="60" [showInfo]="true" [percentPosition]="{ align: 'end', type: 'inner' }" [size]="[360, 20]" variant="warning" aria-label="Inner end" />
-        <andes-progress [percent]="60" [showInfo]="true" [percentPosition]="{ type: 'inner' }" [size]="[360, 20]" variant="danger" aria-label="Inner danger" />
-      </div>
-    `,
-  }),
-};
-
-/** Rings at or below 20px have no room for text, so their value shows as a hover tooltip. */
-export const TinyCircles: Story = {
-  render: () => ({
-    template: `
-      <div style="display: flex; flex-direction: column; gap: 0.75rem; font-family: var(--andes-font-family), sans-serif; font-size: 0.875rem; color: var(--andes-color-foreground);">
-        <span style="display: inline-flex; align-items: center; gap: 0.5rem;">
-          <andes-progress type="circle" [size]="14" [percent]="60" aria-label="Upload" /> Uploading 60%
-        </span>
-        <span style="display: inline-flex; align-items: center; gap: 0.5rem;">
-          <andes-progress type="circle" [size]="16" [percent]="100" status="success" aria-label="Sync" /> Synced
-        </span>
-        <span style="display: inline-flex; align-items: center; gap: 0.5rem;">
-          <andes-progress type="circle" [size]="20" [percent]="35" status="exception" aria-label="Import" /> Import failed at 35%
-        </span>
       </div>
     `,
   }),

@@ -15,7 +15,7 @@ const BOX =
   'display:flex;align-items:center;justify-content:center;background:var(--andes-color-muted);color:var(--andes-color-muted-foreground);border:1px solid var(--andes-color-border);border-radius:var(--andes-radius-md);font:14px/22px var(--andes-font-family),sans-serif;';
 
 const meta: Meta<AndesAspectRatio> = {
-  title: 'Aspect Ratio',
+  title: 'Layout/Aspect Ratio',
   component: AndesAspectRatio,
   tags: ['autodocs'],
   parameters: { layout: 'padded' },

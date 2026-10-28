@@ -53,57 +53,15 @@ export default meta;
 
 type Story = StoryObj<AndesAlert>;
 
-export const Success: Story = {
-  args: { severity: 'success' },
-};
-
-export const Info: Story = {
-  args: { severity: 'info' },
-};
-
-export const Warning: Story = {
-  args: { severity: 'warning' },
-};
-
-export const Danger: Story = {
-  args: { severity: 'danger' },
-};
-
-export const Closable: Story = {
-  args: { closable: true },
-};
-
-export const WithoutIcon: Story = {
-  args: { showIcon: false },
-};
-
-export const WithoutTitle: Story = {
-  render: (args) => ({
-    props: args,
-    template: `<andes-alert [severity]="severity" [closable]="closable" [showIcon]="showIcon">
-      A description-only alert, with no title slot content projected.
-    </andes-alert>`,
-  }),
-};
-
-export const WithAction: Story = {
-  args: { severity: 'warning' },
-  render: (args) => ({
-    props: args,
-    template: `<andes-alert [severity]="severity" [closable]="closable" [showIcon]="showIcon">
-      <span slot="title">Your plan expires soon</span>
-      Renew before the end of the month to avoid any interruption.
-      <button slot="action" type="button" style="all: unset; cursor: pointer; font-weight: 500; text-decoration: underline;">Renew now</button>
-    </andes-alert>`,
-  }),
-};
+/** The playground: use the controls to try every input on one alert. */
+export const Default: Story = {};
 
 /**
- * Every severity in every variant. `tinted` (the default) fills the card with a wash of the
+ * Every severity (`success`, `info`, `warning`, `danger`) in every variant. `tinted` (the default) fills the card with a wash of the
  * severity color; `filled` keeps the wash and drops the border; `outlined` keeps the neutral
  * card and shows the severity only in the icon and border.
  */
-export const AllVariants: Story = {
+export const Variants: Story = {
   render: () => ({
     props: {
       variants: ['tinted', 'filled', 'outlined'],
@@ -129,173 +87,106 @@ export const AllVariants: Story = {
   }),
 };
 
-/**
- * `actionPlacement="end"` puts the action beside the text, centred on the first line, so a
- * one-line notice with a short action stays one line tall. With a title and description the
- * action still lines up with the title.
- */
-export const ActionAtEnd: Story = {
-  args: { actionPlacement: 'end', closable: true },
-  render: (args) => ({
-    props: args,
-    template: `<div style="display: flex; flex-direction: column; gap: 1rem; max-width: 36rem;">
-      <andes-alert severity="success" [actionPlacement]="actionPlacement" [variant]="variant" [closable]="closable">
-        Invoice F001-000123 was voided.
-        <button slot="action" type="button" style="all: unset; cursor: pointer; font-weight: 500; text-decoration: underline;">Undo</button>
-      </andes-alert>
-      <andes-alert severity="danger" [actionPlacement]="actionPlacement" [variant]="variant" [closable]="closable" title="Sync failed" description="The tax authority service did not answer. Your documents are queued and will be sent again automatically.">
-        <button slot="action" type="button" style="all: unset; cursor: pointer; font-weight: 500; text-decoration: underline;">Retry now</button>
-      </andes-alert>
-      <andes-alert severity="info" [actionPlacement]="actionPlacement" [variant]="variant" [showIcon]="false">
-        3 rows selected.
-        <button slot="action" type="button" style="all: unset; cursor: pointer; font-weight: 500; text-decoration: underline;">Clear selection</button>
-      </andes-alert>
-    </div>`,
-  }),
-};
+const actionStyle =
+  'all: unset; cursor: pointer; font-weight: 500; text-decoration: underline;';
 
 /**
- * `closeText` swaps the (x) glyph for a word. The text becomes the button's accessible name, so
- * `closeLabel` is not used; a `closeIcon` template would still win over it.
+ * Content shapes. Without a title the alert keeps its compact one-line metrics; with a title and
+ * a description the icon and title step up a size so the heading leads the message. `showIcon`
+ * turns the icon off. `title` / `description` accept plain text or a template (which receives the
+ * resolved severity as its implicit context), and each wins over its projection slot.
  */
-export const CloseText: Story = {
-  args: { closable: true, closeText: 'Got it', severity: 'info' },
-  render: (args) => ({
-    props: args,
-    template: `<div style="display: flex; flex-direction: column; gap: 1rem; max-width: 36rem;">
-      <andes-alert [severity]="severity" [variant]="variant" [closable]="closable" [closeText]="closeText" (closing)="closing($event)" (afterClose)="afterClose()">
-        Prices now include tax by default. You can change this in Settings.
-      </andes-alert>
-      <andes-alert severity="warning" [variant]="variant" [closable]="closable" closeText="Dismiss" title="Period closing on Friday" description="Entries dated in October can't be edited after the period is closed." />
-    </div>`,
-  }),
-};
-
-/**
- * `closeDisabled` keeps the close button in place but inert - here, while the export the alert
- * reports on is still running. Toggle the control to lift it.
- */
-export const CloseDisabled: Story = {
-  args: { closable: true, closeDisabled: true, severity: 'info' },
-  render: (args) => ({
-    props: args,
-    template: `<andes-alert [severity]="severity" [variant]="variant" [closable]="closable" [closeDisabled]="closeDisabled" [closeLabel]="closeLabel" (closing)="closing($event)" (afterClose)="afterClose()">
-      <span slot="title">Exporting ledger</span>
-      This notice can be dismissed once the export has finished.
-    </andes-alert>`,
-  }),
-};
-
-/**
- * Without a title the alert keeps its compact one-line metrics; with a title and a description
- * the icon and title step up a size so the heading leads the message.
- */
-export const Compact: Story = {
+export const Content: Story = {
   render: () => ({
-    template: `
+    props: { actionStyle },
+    template: `<ng-template #richTitle let-severity>Payment failed <span style="font-weight: 400;">({{ severity }})</span></ng-template>
+      <ng-template #richDescription>Your card was declined. <strong>No charge was made.</strong></ng-template>
+      <ng-template #retry><button type="button" [style]="actionStyle">Try another card</button></ng-template>
       <div style="display: flex; flex-direction: column; gap: 0.75rem; max-width: 32rem;">
-        <andes-alert severity="success">Your changes have been saved.</andes-alert>
-        <andes-alert severity="info">A new version of the app is available.</andes-alert>
-        <andes-alert severity="warning" closable>Your session will expire in 5 minutes.</andes-alert>
-        <andes-alert severity="danger">Something went wrong while saving your changes.</andes-alert>
-      </div>
-    `,
-  }),
-};
-
-/**
- * Full-width strip for the top of a page or panel: no radius, no side borders (and no borders
- * at all when tinted). An unset severity resolves to `warning` in banner mode.
- */
-export const Banner: Story = {
-  parameters: { layout: 'fullscreen' },
-  args: { banner: true, severity: undefined, closable: true },
-  render: (args) => ({
-    props: args,
-    template: `<div style="display: flex; flex-direction: column; gap: 1.5rem;">
-      <andes-alert [banner]="banner" [severity]="severity" [variant]="variant" [closable]="closable" [showIcon]="showIcon" [closeLabel]="closeLabel" (closing)="closing($event)" (afterClose)="afterClose()">
-        Scheduled maintenance tonight from 22:00 to 23:00. Saving may be unavailable.
-      </andes-alert>
-      <andes-alert banner severity="info" [variant]="variant" title="Read-only mode" description="You are viewing an archived project." />
-    </div>`,
-  }),
-};
-
-/**
- * `marquee` scrolls the description in a loop - for a one-line notice longer than the strip it
- * sits in. Hover (or focus inside) pauses it; `marqueeSpeed` sets the pace in px/s so short
- * and long messages move alike. Under prefers-reduced-motion the text simply wraps.
- */
-export const LoopBanner: Story = {
-  parameters: { layout: 'fullscreen' },
-  args: {
-    banner: true,
-    marquee: true,
-    marqueeSpeed: 40,
-    severity: undefined,
-    closable: true,
-  },
-  render: (args) => ({
-    props: args,
-    template: `<div style="display: flex; flex-direction: column; gap: 1.5rem;">
-      <andes-alert [banner]="banner" [marquee]="marquee" [marqueeSpeed]="marqueeSpeed" [severity]="severity" [variant]="variant" [closable]="closable" [closeLabel]="closeLabel" (closing)="closing($event)" (afterClose)="afterClose()">
-        Scheduled maintenance tonight from 22:00 to 23:00 (UTC-5). Saving, exports and report generation will be unavailable during the window - please finish pending work before then.
-      </andes-alert>
-      <andes-alert banner marquee severity="info" [variant]="variant">
-        New: monthly reports can now be exported to PDF from the Reports page.
-        <a href="#" style="color: inherit; font-weight: 500;">See what changed</a>
-      </andes-alert>
-    </div>`,
+        <andes-alert severity="success">Your changes have been saved (description only, compact).</andes-alert>
+        <andes-alert severity="info" closable>
+          <span slot="title">Heads up</span>
+          A title projected through the title slot, with the description underneath.
+        </andes-alert>
+        <andes-alert severity="warning" [showIcon]="false">
+          <span slot="title">No icon</span>
+          showIcon is false, so the text takes the whole row.
+        </andes-alert>
+        <andes-alert severity="info" title="Plain-text title" description="Plain-text description, passed as inputs instead of projected content." />
+        <andes-alert severity="danger" [title]="richTitle" [description]="richDescription" [action]="retry" />
+      </div>`,
   }),
 };
 
 /** `icon` takes a template; it still sits in the severity-tinted 1rem slot. */
 export const CustomIcon: Story = {
-  args: { severity: 'success' },
-  render: (args) => ({
-    props: args,
+  render: () => ({
     template: `<ng-template #bell>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
           <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
         </svg>
       </ng-template>
-      <andes-alert [severity]="severity" [icon]="bell" [closable]="closable">
+      <andes-alert severity="success" [icon]="bell">
         <span slot="title">Reminder set</span>
         We'll notify you when the report is ready.
       </andes-alert>`,
   }),
 };
 
-/** `closeIcon` swaps the glyph; the button keeps `closeLabel` as its accessible name. */
-export const CustomCloseIcon: Story = {
-  args: { closable: true, closeLabel: 'Dismiss notice' },
-  render: (args) => ({
-    props: args,
-    template: `<ng-template #minus>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14" /></svg>
-      </ng-template>
-      <andes-alert [severity]="severity" closable [closeIcon]="minus" [closeLabel]="closeLabel" (closing)="closing($event)" (afterClose)="afterClose()">
-        <span slot="title">Heads up</span>
-        This alert uses a custom close glyph.
-      </andes-alert>`,
+/**
+ * Actions. The `action` slot (or the `action` template input) sits under the text by default;
+ * `actionPlacement="end"` puts it beside the text, centred on the first line, so a one-line
+ * notice with a short action stays one line tall. With a title and description the action still
+ * lines up with the title.
+ */
+export const Actions: Story = {
+  render: () => ({
+    props: { actionStyle },
+    template: `<div style="display: flex; flex-direction: column; gap: 1rem; max-width: 36rem;">
+      <andes-alert severity="warning">
+        <span slot="title">Your plan expires soon</span>
+        Renew before the end of the month to avoid any interruption.
+        <button slot="action" type="button" [style]="actionStyle">Renew now</button>
+      </andes-alert>
+      <andes-alert severity="success" actionPlacement="end" closable>
+        Invoice F001-000123 was voided.
+        <button slot="action" type="button" [style]="actionStyle">Undo</button>
+      </andes-alert>
+      <andes-alert severity="danger" actionPlacement="end" closable title="Sync failed" description="The tax authority service did not answer. Your documents are queued and will be sent again automatically.">
+        <button slot="action" type="button" [style]="actionStyle">Retry now</button>
+      </andes-alert>
+      <andes-alert severity="info" actionPlacement="end" [showIcon]="false">
+        3 rows selected.
+        <button slot="action" type="button" [style]="actionStyle">Clear selection</button>
+      </andes-alert>
+    </div>`,
   }),
 };
 
 /**
- * `title` / `description` accept plain text or a template (which receives the resolved severity
- * as its implicit context); `action` accepts a template. Each wins over its projection slot.
+ * The close button. `closable` adds it; `closeLabel` is its accessible name; `closeText` swaps
+ * the (x) glyph for a word (which becomes the accessible name instead); `closeIcon` swaps the
+ * glyph for a template (the button keeps `closeLabel`); `closeDisabled` keeps the button in
+ * place but inert, here while the export the alert reports on is still running.
  */
-export const ContentInputs: Story = {
-  args: { severity: 'danger' },
-  render: (args) => ({
-    props: args,
-    template: `<ng-template #richTitle let-severity>Payment failed <span style="font-weight: 400;">({{ severity }})</span></ng-template>
-      <ng-template #richDescription>Your card was declined. <strong>No charge was made.</strong></ng-template>
-      <ng-template #retry><button type="button" style="all: unset; cursor: pointer; font-weight: 500; text-decoration: underline;">Try another card</button></ng-template>
-      <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 32rem;">
-        <andes-alert severity="info" title="Plain-text title" description="Plain-text description, passed as inputs instead of projected content." />
-        <andes-alert [severity]="severity" [title]="richTitle" [description]="richDescription" [action]="retry" />
+export const CloseButton: Story = {
+  render: () => ({
+    template: `<ng-template #minus>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14" /></svg>
+      </ng-template>
+      <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 36rem;">
+        <andes-alert severity="info" closable closeLabel="Close">Default (x) close button.</andes-alert>
+        <andes-alert severity="info" closable closeText="Got it">Prices now include tax by default. You can change this in Settings.</andes-alert>
+        <andes-alert severity="warning" closable closeText="Dismiss" title="Period closing on Friday" description="Entries dated in October can't be edited after the period is closed." />
+        <andes-alert severity="info" closable [closeIcon]="minus" closeLabel="Dismiss notice">
+          <span slot="title">Heads up</span>
+          This alert uses a custom close glyph.
+        </andes-alert>
+        <andes-alert severity="info" closable closeDisabled>
+          <span slot="title">Exporting ledger</span>
+          This notice can be dismissed once the export has finished.
+        </andes-alert>
       </div>`,
   }),
 };
@@ -348,6 +239,52 @@ export const CloseLifecycle: Story = {
       <ol aria-label="Close event log" style="margin: 0; padding-inline-start: 1.25rem; font-family: var(--andes-font-family), sans-serif; font-size: 0.75rem; line-height: 1.25rem; color: var(--andes-color-muted-foreground);">
         @for (entry of log; track $index) { <li>{{ entry }}</li> }
       </ol>
+    </div>`,
+  }),
+};
+
+/**
+ * Full-width strip for the top of a page or panel: no radius, no side borders (and no borders
+ * at all when tinted). An unset severity resolves to `warning` in banner mode.
+ */
+export const Banner: Story = {
+  parameters: { layout: 'fullscreen' },
+  args: { banner: true, severity: undefined, closable: true },
+  render: (args) => ({
+    props: args,
+    template: `<div style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <andes-alert [banner]="banner" [severity]="severity" [variant]="variant" [closable]="closable" [showIcon]="showIcon" [closeLabel]="closeLabel" (closing)="closing($event)" (afterClose)="afterClose()">
+        Scheduled maintenance tonight from 22:00 to 23:00. Saving may be unavailable.
+      </andes-alert>
+      <andes-alert banner severity="info" [variant]="variant" title="Read-only mode" description="You are viewing an archived project." />
+    </div>`,
+  }),
+};
+
+/**
+ * `marquee` scrolls the description in a loop - for a one-line notice longer than the strip it
+ * sits in. Hover (or focus inside) pauses it; `marqueeSpeed` sets the pace in px/s so short
+ * and long messages move alike. Under prefers-reduced-motion the text simply wraps.
+ */
+export const LoopBanner: Story = {
+  parameters: { layout: 'fullscreen' },
+  args: {
+    banner: true,
+    marquee: true,
+    marqueeSpeed: 40,
+    severity: undefined,
+    closable: true,
+  },
+  render: (args) => ({
+    props: args,
+    template: `<div style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <andes-alert [banner]="banner" [marquee]="marquee" [marqueeSpeed]="marqueeSpeed" [severity]="severity" [variant]="variant" [closable]="closable" [closeLabel]="closeLabel" (closing)="closing($event)" (afterClose)="afterClose()">
+        Scheduled maintenance tonight from 22:00 to 23:00 (UTC-5). Saving, exports and report generation will be unavailable during the window - please finish pending work before then.
+      </andes-alert>
+      <andes-alert banner marquee severity="info" [variant]="variant">
+        New: monthly reports can now be exported to PDF from the Reports page.
+        <a href="#" style="color: inherit; font-weight: 500;">See what changed</a>
+      </andes-alert>
     </div>`,
   }),
 };

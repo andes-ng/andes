@@ -1,25 +1,10 @@
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import type { Meta, StoryObj } from '@storybook/angular';
 
-import {
-  AndesTextarea,
-  AndesTextareaCountInfo,
-  AndesTextareaExceedFormatter,
-  AndesTextareaResizeEvent,
-} from './textarea';
-
-// Counts grapheme clusters, so a family emoji or a skin-toned thumbs-up counts as one.
-const countGraphemes = (value: string) =>
-  [...new Intl.Segmenter().segment(value)].length;
-
-const keepGraphemes: AndesTextareaExceedFormatter = (value, { max }) =>
-  [...new Intl.Segmenter().segment(value)]
-    .slice(0, max)
-    .map(({ segment }) => segment)
-    .join('');
+import { AndesTextarea } from './textarea';
 
 const meta: Meta<AndesTextarea> = {
-  title: 'Data Entry/Textarea',
+  title: 'Data Entry/Textarea/Basics/Field',
   component: AndesTextarea,
   tags: ['autodocs'],
   argTypes: {
@@ -90,6 +75,7 @@ type Story = StoryObj<AndesTextarea>;
 
 export const Overview: Story = {};
 
+/** The three sizes; the typed text follows the size. */
 export const Sizes: Story = {
   render: () => ({
     template: `<div style="display: flex; flex-direction: column; gap: 1rem; width: 320px;">
@@ -111,6 +97,11 @@ export const Variants: Story = {
   }),
 };
 
+/**
+ * `status` colors the field (and sets `aria-invalid` for `error`) on every variant. The last
+ * field shows the manual route: set `aria-invalid` and point `aria-describedby` at your own
+ * message.
+ */
 export const Status: Story = {
   render: () => ({
     template: `<div style="display: flex; flex-direction: column; gap: 1rem; width: 320px;">
@@ -118,191 +109,50 @@ export const Status: Story = {
       <andes-textarea status="warning" [rows]="2" aria-label="Warning" value="status=warning" />
       <andes-textarea variant="filled" status="error" [rows]="2" aria-label="Filled error" value="filled + error" />
       <andes-textarea variant="underlined" status="warning" [rows]="2" aria-label="Underlined warning" value="underlined + warning" />
-    </div>`,
-  }),
-};
-
-export const Disabled: Story = {
-  args: { disabled: true, placeholder: 'Can’t type here' },
-};
-
-export const ReadOnly: Story = {
-  args: {
-    readonly: true,
-    rows: 2,
-    value: "This value can't be edited.",
-  },
-};
-
-export const Required: Story = {
-  render: (args) => ({
-    props: args,
-    template: `<div style="width: 320px;">
-      <label for="required-textarea" style="display: block; font-family: var(--andes-font-family), sans-serif; font-size: 0.875rem; color: var(--andes-color-foreground); margin-bottom: 0.25rem;">Message <span aria-hidden="true">*</span></label>
-      <andes-textarea id="required-textarea" [size]="size" required placeholder="Required field" />
-    </div>`,
-  }),
-};
-
-export const Invalid: Story = {
-  render: (args) => ({
-    props: args,
-    template: `<div style="width: 320px;">
-      <andes-textarea [size]="size" aria-label="Message" aria-invalid="true" aria-describedby="textarea-error" />
-      <p id="textarea-error" style="font-family: var(--andes-font-family), sans-serif; color: var(--andes-color-danger-text, var(--andes-color-danger)); font-size: 0.75rem; line-height: 1.25rem; margin: 0.25rem 0 0;">This field is required.</p>
-    </div>`,
-  }),
-};
-
-export const WithCharacterCount: Story = {
-  args: {
-    showCount: true,
-    maxLength: 120,
-    placeholder: 'Up to 120 characters',
-  },
-};
-
-export const CountFormatter: Story = {
-  render: () => ({
-    props: {
-      formatter: ({ count, maxLength }: AndesTextareaCountInfo) =>
-        `${(maxLength ?? 0) - count} characters left`,
-      overLimit: 'This value was set programmatically past the limit.',
-    },
-    template: `<div style="display: flex; flex-direction: column; gap: 1rem; width: 320px;">
-      <andes-textarea showCount [maxLength]="80" [countFormatter]="formatter" aria-label="Formatted count" placeholder="Custom count text" />
-      <andes-textarea showCount [maxLength]="20" [value]="overLimit" aria-label="Over the limit" />
-    </div>`,
-  }),
-};
-
-export const SoftCountLimit: Story = {
-  render: () => ({
-    props: {
-      text: 'A soft limit lets you keep typing past it, but flags the overflow.',
-    },
-    template: `<div style="width: 320px;">
-      <andes-textarea showCount [countMax]="50" [(value)]="text" aria-label="Soft limit" />
-    </div>`,
-  }),
-};
-
-export const CustomCountStrategy: Story = {
-  render: () => ({
-    props: {
-      countGraphemes,
-      keepGraphemes,
-      text: '👨‍👩‍👧 👍🏽',
-    },
-    template: `<div style="display: flex; flex-direction: column; gap: 0.5rem; width: 320px;">
-      <andes-textarea
-        showCount
-        [countMax]="10"
-        [countStrategy]="countGraphemes"
-        [countExceedFormatter]="keepGraphemes"
-        [(value)]="text"
-        aria-label="Emoji-aware count"
-      />
-      <p style="font-size: 0.75rem; line-height: 1.25rem; margin: 0;">Each emoji counts as one; input past 10 is trimmed.</p>
-    </div>`,
-  }),
-};
-
-export const CountTemplate: Story = {
-  render: () => ({
-    props: { text: 'Rendered with a template' },
-    template: `<div style="width: 320px;">
-      <andes-textarea showCount [countMax]="60" [countTemplate]="countTpl" [(value)]="text" aria-label="Templated count" />
-      <ng-template #countTpl let-info>
-        <strong>{{ info.count }}</strong> of {{ info.maxLength }} used
-      </ng-template>
-    </div>`,
-  }),
-};
-
-export const Clearable: Story = {
-  render: () => ({
-    moduleMetadata: { imports: [ReactiveFormsModule] },
-    props: {
-      control: new FormControl('Clear me with the × button'),
-      clearedCount: 0,
-    },
-    template: `<div style="width: 320px;">
-      <andes-textarea clearable [formControl]="control" aria-label="Message" (cleared)="clearedCount = clearedCount + 1" />
-      <p style="font-family: var(--andes-font-family), sans-serif; font-size: 0.75rem; line-height: 1.25rem; color: var(--andes-color-muted-foreground); margin: 0.5rem 0 0;">Form value: "{{ control.value }}" - cleared {{ clearedCount }}×</p>
-    </div>`,
-  }),
-};
-
-/**
- * The clear button is the same at every size and on every field: a small muted disc on the
- * first line's inline end, shown while the field is hovered or focused (always on touch
- * screens). It is a Tab stop of its own, named by `clearLabel`.
- */
-export const ClearButtonSizes: Story = {
-  render: () => ({
-    props: {
-      small: 'Small',
-      medium: 'Medium',
-      large: 'Large',
-      localized: 'Texto',
-    },
-    template: `<div style="display: flex; flex-direction: column; gap: 1rem; width: 320px;">
-      <andes-textarea size="sm" clearable [rows]="1" [(value)]="small" aria-label="Small" />
-      <andes-textarea clearable [rows]="1" [(value)]="medium" aria-label="Medium" />
-      <andes-textarea size="lg" clearable [rows]="1" [(value)]="large" aria-label="Large" />
-      <andes-textarea clearable clearLabel="Borrar" [(value)]="localized" aria-label="Localized" />
-    </div>`,
-  }),
-};
-
-export const CustomClearIcon: Story = {
-  render: () => ({
-    props: { text: 'Cleared with a custom icon' },
-    template: `<div style="width: 320px;">
-      <andes-textarea clearable [clearIcon]="clearIcon" [(value)]="text" aria-label="Message" />
-      <ng-template #clearIcon>
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm3.7 12.3-1.4 1.4L12 13.4l-2.3 2.3-1.4-1.4 2.3-2.3-2.3-2.3 1.4-1.4 2.3 2.3 2.3-2.3 1.4 1.4-2.3 2.3 2.3 2.3Z" />
-        </svg>
-      </ng-template>
-    </div>`,
-  }),
-};
-
-export const PressEnter: Story = {
-  render: () => ({
-    props: { log: [] as string[] },
-    template: `<div style="width: 320px;">
-      <andes-textarea #ta aria-label="Message" placeholder="Press Enter…" (pressEnter)="log = [ta.value(), ...log].slice(0, 3)" />
-      <p style="font-family: var(--andes-font-family), sans-serif; font-size: 0.75rem; line-height: 1.25rem; color: var(--andes-color-muted-foreground); margin: 0.5rem 0 0;">pressEnter fired with: {{ log.length ? log.join(' | ') : '—' }}</p>
-    </div>`,
-  }),
-};
-
-export const FocusMethods: Story = {
-  render: () => ({
-    template: `<div style="width: 320px;">
-      <andes-textarea #ta aria-label="Message" value="Focus me from the buttons below" />
-      <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
-        <button type="button" (click)="ta.focus({ cursor: 'start' })">Start</button>
-        <button type="button" (click)="ta.focus({ cursor: 'end' })">End</button>
-        <button type="button" (click)="ta.focus({ cursor: 'all' })">Select all</button>
-        <button type="button" (click)="ta.blur()">Blur</button>
+      <div>
+        <andes-textarea [rows]="2" aria-label="Message" aria-invalid="true" aria-describedby="textarea-error" />
+        <p id="textarea-error" style="font-family: var(--andes-font-family), sans-serif; color: var(--andes-color-danger-text, var(--andes-color-danger)); font-size: 0.75rem; line-height: 1.25rem; margin: 0.25rem 0 0;">This field is required.</p>
       </div>
     </div>`,
   }),
 };
 
-/** `(focused)` / `(blurred)` re-emit the textarea's native FocusEvent. */
-export const FocusEvents: Story = {
+/** Disabled, read-only and required, side by side. */
+export const States: Story = {
   render: () => ({
-    props: { focusLog: [] as string[] },
-    template: `<div style="width: 320px;">
-      <andes-textarea aria-label="Message" placeholder="Focus me, then tab away"
-        (focused)="focusLog = [...focusLog, 'focused']"
-        (blurred)="focusLog = [...focusLog, 'blurred']" />
-      <p style="font-size: 0.75rem; line-height: 1.25rem; margin-top: 0.5rem;">{{ focusLog.length ? focusLog.join(' → ') : 'No events yet' }}</p>
+    template: `<div style="display: flex; flex-direction: column; gap: 1rem; width: 320px;">
+      <andes-textarea disabled [rows]="2" aria-label="Disabled" placeholder="Can’t type here" />
+      <andes-textarea readonly [rows]="2" aria-label="Read only" value="This value can't be edited." />
+      <div>
+        <label for="required-textarea" style="display: block; font-family: var(--andes-font-family), sans-serif; font-size: 0.875rem; color: var(--andes-color-foreground); margin-bottom: 0.25rem;">Message <span aria-hidden="true">*</span></label>
+        <andes-textarea id="required-textarea" required [rows]="2" placeholder="Required field" />
+      </div>
+    </div>`,
+  }),
+};
+
+/** The three ways to bind the value: `[(ngModel)]`, a `FormControl` and the `[(value)]` model. */
+export const Binding: Story = {
+  render: () => ({
+    moduleMetadata: { imports: [FormsModule, ReactiveFormsModule] },
+    props: {
+      modelText: 'Bound with [(ngModel)]',
+      control: new FormControl('Bound with a FormControl'),
+      twoWayText: 'Bound with [(value)]',
+    },
+    template: `<div style="display: flex; flex-direction: column; gap: 1rem; width: 320px;">
+      <div>
+        <andes-textarea [(ngModel)]="modelText" [rows]="2" aria-label="ngModel" />
+        <p style="font-family: var(--andes-font-family), sans-serif; font-size: 0.75rem; line-height: 1.25rem; color: var(--andes-color-muted-foreground); margin: 0.5rem 0 0;">ngModel: {{ modelText }}</p>
+      </div>
+      <div>
+        <andes-textarea [formControl]="control" [rows]="2" aria-label="Reactive form" />
+        <p style="font-family: var(--andes-font-family), sans-serif; font-size: 0.75rem; line-height: 1.25rem; color: var(--andes-color-muted-foreground); margin: 0.5rem 0 0;">Form control: {{ control.value }}</p>
+      </div>
+      <div>
+        <andes-textarea [(value)]="twoWayText" [rows]="2" aria-label="Two-way value" />
+        <p style="font-family: var(--andes-font-family), sans-serif; font-size: 0.75rem; line-height: 1.25rem; color: var(--andes-color-muted-foreground); margin: 0.5rem 0 0;">value: {{ twoWayText }}</p>
+      </div>
     </div>`,
   }),
 };
@@ -332,53 +182,15 @@ export const ResizeModes: Story = {
   }),
 };
 
+/**
+ * `autoSize` grows the field with its content: without a bound it grows forever, with
+ * `{ minRows, maxRows }` it starts at the minimum and scrolls past the maximum.
+ */
 export const AutoSize: Story = {
-  args: {
-    autoSize: true,
-    rows: 1,
-    placeholder: 'Grows with every line, without limit…',
-  },
-};
-
-export const AutoSizeWithBounds: Story = {
-  args: {
-    autoSize: { minRows: 2, maxRows: 6 },
-    placeholder: 'Starts at 2 rows, scrolls past 6…',
-  },
-};
-
-export const WithNgModel: Story = {
-  render: (args) => ({
-    moduleMetadata: { imports: [FormsModule] },
-    props: { ...args, value: 'Bound with [(ngModel)]' },
-    template: `<div style="width: 320px;">
-      <andes-textarea [(ngModel)]="value" aria-label="Message" />
-      <p style="font-family: var(--andes-font-family), sans-serif; font-size: 0.75rem; line-height: 1.25rem; color: var(--andes-color-muted-foreground); margin: 0.5rem 0 0;">Value: {{ value }}</p>
-    </div>`,
-  }),
-};
-
-export const TwoWayValue: Story = {
   render: () => ({
-    props: { text: 'Bound with [(value)]' },
-    template: `<div style="width: 320px;">
-      <andes-textarea [(value)]="text" aria-label="Message" />
-      <p style="font-family: var(--andes-font-family), sans-serif; font-size: 0.75rem; line-height: 1.25rem; color: var(--andes-color-muted-foreground); margin: 0.5rem 0 0;">Value: {{ text }}</p>
-    </div>`,
-  }),
-};
-
-export const ResizeEvents: Story = {
-  render: () => ({
-    props: { last: undefined as AndesTextareaResizeEvent | undefined },
-    template: `<div style="width: 320px;">
-      <andes-textarea
-        [autoSize]="{ minRows: 2, maxRows: 5 }"
-        aria-label="Message"
-        placeholder="Type a few lines - the height change is reported below"
-        (resized)="last = $event"
-      />
-      <p style="font-family: var(--andes-font-family), sans-serif; font-size: 0.75rem; line-height: 1.25rem; color: var(--andes-color-muted-foreground); margin: 0.5rem 0 0;">resized: {{ last ? last.width + ' × ' + last.height + 'px' : '—' }}</p>
+    template: `<div style="display: flex; flex-direction: column; gap: 1rem; width: 320px;">
+      <andes-textarea autoSize [rows]="1" aria-label="Unbounded" placeholder="Grows with every line, without limit…" />
+      <andes-textarea [autoSize]="{ minRows: 2, maxRows: 6 }" aria-label="Bounded" placeholder="Starts at 2 rows, scrolls past 6…" />
     </div>`,
   }),
 };

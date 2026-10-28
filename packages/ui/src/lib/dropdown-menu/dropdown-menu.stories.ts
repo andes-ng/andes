@@ -65,7 +65,7 @@ const FIELD_STYLES = `
 `;
 
 const meta: Meta<AndesDropdownMenu> = {
-  title: 'Dropdown Menu',
+  title: 'Navigation/Dropdown Menu',
   component: AndesDropdownMenu,
   tags: ['autodocs'],
 };

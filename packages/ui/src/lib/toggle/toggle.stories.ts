@@ -12,7 +12,7 @@ const center = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strok
 const right = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2 3.5h12M6 6.5h8M2 9.5h12M6 12.5h8"/></svg>`;
 
 const meta: Meta<AndesToggle> = {
-  title: 'Toggle',
+  title: 'Data Entry/Toggle',
   component: AndesToggle,
   tags: ['autodocs'],
   argTypes: {

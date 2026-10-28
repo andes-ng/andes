@@ -7,7 +7,7 @@ import { AndesButton } from '../button/button';
 import { AndesPagination, AndesPaginationChange } from './pagination';
 
 const meta: Meta<AndesPagination> = {
-  title: 'Pagination',
+  title: 'Navigation/Pagination',
   component: AndesPagination,
   tags: ['autodocs'],
   decorators: [moduleMetadata({ imports: [NgTemplateOutlet] })],

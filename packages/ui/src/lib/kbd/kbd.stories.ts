@@ -4,7 +4,7 @@ import { AndesKbd } from './kbd';
 import { AndesKbdGroup } from './kbd-group';
 
 const meta: Meta<AndesKbd> = {
-  title: 'Kbd',
+  title: 'General/Kbd',
   component: AndesKbd,
   tags: ['autodocs'],
   argTypes: {

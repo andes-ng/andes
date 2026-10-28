@@ -43,6 +43,7 @@ export default meta;
 
 type Story = StoryObj<AndesSegmented>;
 
+/** Playground: every input is a control. */
 export const Default: Story = {};
 
 export const Sizes: Story = {
@@ -57,25 +58,28 @@ export const Sizes: Story = {
   }),
 };
 
-export const Round: Story = {
-  args: { shape: 'round' },
-};
-
-/** `block` stretches the control to its container and shares the width equally. */
-export const Block: Story = {
-  args: { block: true },
+/**
+ * Shape and layout: `shape="round"`, `block` (stretches the control to its container and
+ * shares the width equally) and `vertical`.
+ */
+export const ShapesAndLayouts: Story = {
   parameters: { layout: 'padded' },
+  render: () => ({
+    template: `
+      <div style="display: flex; flex-direction: column; gap: 1.5rem; align-items: flex-start;">
+        <andes-segmented aria-label="Round" shape="round" [options]="['Daily', 'Weekly', 'Monthly', 'Yearly']" value="Weekly" />
+        <andes-segmented aria-label="Block" block style="align-self: stretch;" [options]="['Daily', 'Weekly', 'Monthly', 'Yearly']" value="Weekly" />
+        <andes-segmented aria-label="Vertical" vertical [options]="['Overview', 'Invoices', 'Payments', 'Settings']" value="Invoices" />
+      </div>
+    `,
+  }),
 };
 
-export const Vertical: Story = {
-  args: {
-    vertical: true,
-    options: ['Overview', 'Invoices', 'Payments', 'Settings'],
-    value: 'Invoices',
-  },
-};
-
-export const NumbersAndObjects: Story = {
+/**
+ * Generated options: plain numbers, and objects with a `tooltip` or `disabled` flag
+ * (here also with a round shape and a disabled option in the middle).
+ */
+export const Options: Story = {
   render: () => ({
     props: {
       years: [2023, 2024, 2025, 2026],
@@ -85,56 +89,57 @@ export const NumbersAndObjects: Story = {
         { label: 'Overdue', value: 'overdue', tooltip: 'Past the due date' },
         { label: 'Void', value: 'void', disabled: true },
       ],
+      drafts: [
+        { label: 'Draft', value: 'draft' },
+        { label: 'Review', value: 'review' },
+        { label: 'Approved', value: 'approved', disabled: true },
+      ],
     },
     template: `
       <div style="display: flex; flex-direction: column; gap: 1rem; align-items: flex-start;">
         <andes-segmented aria-label="Year" [options]="years" [value]="2025" />
         <andes-segmented aria-label="Status" [options]="statuses" value="paid" />
+        <andes-segmented aria-label="Document" [options]="drafts" value="draft" />
       </div>
     `,
   }),
 };
 
-/** Icons go in a `[slot=icon]` child of each projected option. */
-export const WithIcons: Story = {
+/**
+ * Icons go in a `[slot=icon]` child of each projected option. An option without text needs an
+ * accessible name; `tooltip` adds a hover hint.
+ */
+export const Icons: Story = {
   render: () => ({
     moduleMetadata: { imports: [AndesSegmentedOption] },
     template: `
-      <andes-segmented aria-label="Layout" value="list">
-        <andes-segmented-option value="list">${list} List</andes-segmented-option>
-        <andes-segmented-option value="grid">${grid} Grid</andes-segmented-option>
-        <andes-segmented-option value="map">${map} Map</andes-segmented-option>
-      </andes-segmented>
+      <div style="display: flex; flex-direction: column; gap: 1rem; align-items: flex-start;">
+        <andes-segmented aria-label="Layout (with text)" value="list">
+          <andes-segmented-option value="list">${list} List</andes-segmented-option>
+          <andes-segmented-option value="grid">${grid} Grid</andes-segmented-option>
+          <andes-segmented-option value="map">${map} Map</andes-segmented-option>
+        </andes-segmented>
+        <andes-segmented aria-label="Layout (icon only)" value="grid">
+          <andes-segmented-option value="list" aria-label="List" tooltip="List">${list}</andes-segmented-option>
+          <andes-segmented-option value="grid" aria-label="Grid" tooltip="Grid">${grid}</andes-segmented-option>
+          <andes-segmented-option value="map" aria-label="Map" tooltip="Map">${map}</andes-segmented-option>
+        </andes-segmented>
+      </div>
     `,
   }),
 };
 
-/** An option without text needs an accessible name; `tooltip` adds a hover hint. */
-export const IconOnly: Story = {
+/** A fully disabled group, and a disabled option in a round group. */
+export const States: Story = {
   render: () => ({
-    moduleMetadata: { imports: [AndesSegmentedOption] },
     template: `
-      <andes-segmented aria-label="Layout" value="grid">
-        <andes-segmented-option value="list" aria-label="List" tooltip="List">${list}</andes-segmented-option>
-        <andes-segmented-option value="grid" aria-label="Grid" tooltip="Grid">${grid}</andes-segmented-option>
-        <andes-segmented-option value="map" aria-label="Map" tooltip="Map">${map}</andes-segmented-option>
-      </andes-segmented>
+      <div style="display: flex; flex-direction: column; gap: 1rem; align-items: flex-start;">
+        <andes-segmented aria-label="Disabled group" disabled [options]="['One', 'Two', 'Three']" value="Two" />
+        <andes-segmented aria-label="Round disabled option" shape="round" [options]="[{label: 'One', value: 1}, {label: 'Two', value: 2, disabled: true}, {label: 'Three', value: 3}]" [value]="1" />
+      </div>
     `,
   }),
 };
-
-export const DisabledOption: Story = {
-  args: {
-    options: [
-      { label: 'Draft', value: 'draft' },
-      { label: 'Review', value: 'review' },
-      { label: 'Approved', value: 'approved', disabled: true },
-    ],
-    value: 'draft',
-  },
-};
-
-export const Disabled: Story = { args: { disabled: true } };
 
 /** `optionLabel` customises every generated option; `let-checked` reports the selection. */
 export const CustomLabel: Story = {
@@ -158,27 +163,19 @@ export const CustomLabel: Story = {
   }),
 };
 
-export const ReactiveForm: Story = {
+/** A `FormControl` (with enable/disable and dirty state) and `[(ngModel)]`. */
+export const Binding: Story = {
   render: () => ({
-    moduleMetadata: { imports: [ReactiveFormsModule] },
-    props: { control: new FormControl('b') },
+    moduleMetadata: { imports: [FormsModule, ReactiveFormsModule] },
+    props: { control: new FormControl('b'), plan: 'monthly' },
     template: `
       <div style="display: flex; flex-direction: column; gap: 0.75rem; align-items: flex-start;">
         <andes-segmented aria-label="Choice" [formControl]="control" [options]="[{label: 'Alpha', value: 'a'}, {label: 'Beta', value: 'b'}, {label: 'Gamma', value: 'c'}]" name="choice" />
         <span style="font-size: 0.75rem; line-height: 1.25rem;">Control value: {{ control.value }} - {{ control.dirty ? 'dirty' : 'pristine' }}</span>
         <button type="button" (click)="control.disabled ? control.enable() : control.disable()" style="font: inherit; font-size: 0.875rem;">Toggle disabled</button>
+        <andes-segmented aria-label="Billing" [(ngModel)]="plan" [options]="[{label: 'Monthly', value: 'monthly'}, {label: 'Annual', value: 'annual'}]" />
+        <span style="font-size: 0.875rem; line-height: 1.375rem;">Billing: {{ plan }}</span>
       </div>
-    `,
-  }),
-};
-
-export const NgModel: Story = {
-  render: () => ({
-    moduleMetadata: { imports: [FormsModule] },
-    props: { plan: 'monthly' },
-    template: `
-      <andes-segmented aria-label="Billing" [(ngModel)]="plan" [options]="[{label: 'Monthly', value: 'monthly'}, {label: 'Annual', value: 'annual'}]" />
-      <p style="font-size: 0.875rem; line-height: 1.375rem;">Billing: {{ plan }}</p>
     `,
   }),
 };
@@ -190,18 +187,6 @@ export const RightToLeft: Story = {
     template: `
       <div dir="rtl">
         <andes-segmented aria-label="Period" [options]="['يومي', 'أسبوعي', 'شهري']" value="أسبوعي" />
-      </div>
-    `,
-  }),
-};
-
-export const AllDisabledStates: Story = {
-  render: () => ({
-    moduleMetadata: { imports: [AndesSegmentedOption] },
-    template: `
-      <div style="display: flex; flex-direction: column; gap: 1rem; align-items: flex-start;">
-        <andes-segmented aria-label="Disabled group" disabled [options]="['One', 'Two', 'Three']" value="Two" />
-        <andes-segmented aria-label="Round disabled option" shape="round" [options]="[{label: 'One', value: 1}, {label: 'Two', value: 2, disabled: true}, {label: 'Three', value: 3}]" [value]="1" />
       </div>
     `,
   }),

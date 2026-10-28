@@ -21,6 +21,15 @@ interface ParsedDecimal {
 
 const DECIMAL_PATTERN = /^([+-]?)(\d*)(?:\.(\d*))?(?:e([+-]?\d+))?$/i;
 
+/** Drops the zeros at the end of `digits`; a scan from the end, so a long run of zeros stays linear. */
+function stripTrailingZeros(digits: string): string {
+  let end = digits.length;
+  while (end > 0 && digits.charCodeAt(end - 1) === 48) {
+    end--;
+  }
+  return digits.slice(0, end);
+}
+
 function stripLeadingZeros(digits: string): string {
   const stripped = digits.replace(/^0+/, '');
   return stripped === '' ? '0' : stripped;
@@ -186,7 +195,7 @@ export function normalizeDecimal(input: DecimalInput): string {
 export function trimDecimal(input: DecimalInput): string {
   const parsed = must(input, 'trimDecimal');
   return stringify(
-    make(parsed.negative, parsed.int, parsed.frac.replace(/0+$/, '')),
+    make(parsed.negative, parsed.int, stripTrailingZeros(parsed.frac)),
   );
 }
 

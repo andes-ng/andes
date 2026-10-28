@@ -20,7 +20,7 @@ const styles = [
 ];
 
 const meta: Meta<AndesFloatButton> = {
-  title: 'FloatButton',
+  title: 'General/FloatButton',
   component: AndesFloatButton,
   tags: ['autodocs'],
   argTypes: {

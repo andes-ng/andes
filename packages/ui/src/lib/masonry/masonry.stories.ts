@@ -74,6 +74,7 @@ const meta: Meta<AndesMasonry> = {
 export default meta;
 type Story = StoryObj<AndesMasonry>;
 
+/** The playground: `columns`, `gutter` and `fresh` are controls; items are rendered through `itemTemplate`. */
 export const Default: Story = {};
 
 export const ResponsiveColumns: Story = {
@@ -89,11 +90,13 @@ export const ResponsiveColumns: Story = {
   },
 };
 
+/** A pair sets the horizontal and the vertical gutter separately. */
 export const GutterPerAxis: Story = {
   name: 'Horizontal and vertical gutter',
   args: { gutter: [24, 8] },
 };
 
+/** Appending or resizing cards keeps each card in its column; `fresh` re-packs on every change. */
 export const FreshPlacement: Story = {
   name: 'Stable and fresh placement',
   args: { columns: 3 },
@@ -125,6 +128,7 @@ export const FreshPlacement: Story = {
   }),
 };
 
+/** Projected `andes-masonry-item` children, some pinned to a column with `column`. */
 export const ProjectedItems: Story = {
   name: 'Projected items with pinned columns',
   render: () => ({
@@ -140,6 +144,7 @@ export const ProjectedItems: Story = {
   }),
 };
 
+/** Items whose own content changes height: the layout follows. */
 export const ContentThatGrows: Story = {
   name: 'Content that changes height',
   render: () => ({

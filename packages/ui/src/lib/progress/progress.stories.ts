@@ -4,7 +4,7 @@ import { AndesButton } from '../button/button';
 import { AndesProgress } from './progress';
 
 const meta: Meta<AndesProgress> = {
-  title: 'Progress',
+  title: 'Feedback/Progress',
   component: AndesProgress,
   tags: ['autodocs'],
   argTypes: {

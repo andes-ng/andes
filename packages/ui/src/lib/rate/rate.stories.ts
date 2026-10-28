@@ -7,7 +7,7 @@ import { AndesRate } from './rate';
 import { AndesRateCharacter } from './rate-character';
 
 const meta: Meta<AndesRate> = {
-  title: 'Rate',
+  title: 'Data Entry/Rate',
   component: AndesRate,
   tags: ['autodocs'],
   decorators: [

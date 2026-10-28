@@ -64,13 +64,19 @@ export const Toggle: Story = {
   }),
 };
 
-export const Variants: Story = {
+/**
+ * The indicator, shown over the same content: `variant` is `ring`, `dots` or `bars`; `percent`
+ * turns the ring into a determinate fill (a number, or `auto` for a simulated one).
+ */
+export const Indicators: Story = {
   render: () => ({
     template: `
       <div style="display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));">
         <andes-spin variant="ring" tip="Ring">${card}</andes-spin>
         <andes-spin variant="dots" tip="Dots">${card}</andes-spin>
         <andes-spin variant="bars" tip="Bars">${card}</andes-spin>
+        <andes-spin size="lg" [percent]="64" tip="Uploading">${card}</andes-spin>
+        <andes-spin size="lg" percent="auto" tip="Preparing">${card}</andes-spin>
       </div>`,
   }),
 };
@@ -102,16 +108,6 @@ export const Delay: Story = {
           <button type="button" style="${btn}" (click)="run(1500)">Slow (1.5 s)</button>
         </div>
         <andes-spin [spinning]="spinning()" [delay]="500" tip="Loading...">${card}</andes-spin>
-      </div>`,
-  }),
-};
-
-export const Percent: Story = {
-  render: () => ({
-    template: `
-      <div style="display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));">
-        <andes-spin size="lg" [percent]="64" tip="Uploading">${card}</andes-spin>
-        <andes-spin size="lg" percent="auto" tip="Preparing">${card}</andes-spin>
       </div>`,
   }),
 };

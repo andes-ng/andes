@@ -69,25 +69,30 @@ export const Sizes: Story = {
   }),
 };
 
-export const WithTip: Story = {
+/**
+ * Text beside the indicator. `tip` is visible text under it (it also names the spinner), while
+ * `label` is the accessible name when there is no visible text - as for the small inline
+ * spinner next to a sentence.
+ */
+export const Labelling: Story = {
   render: () => ({
     template: `
       <div style="${row}">
         <andes-spinner tip="Loading invoices..." />
         <andes-spinner variant="dots" size="lg" tip="Syncing" />
-      </div>`,
+      </div>
+      <p style="margin: 1rem 0 0; font: 14px/22px var(--andes-font-family, system-ui), sans-serif; color: var(--andes-color-foreground);">
+        Saving changes <andes-spinner size="sm" label="Saving changes" />
+      </p>`,
   }),
 };
 
-export const Determinate: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "A `percent` turns the ring into a fill that starts at 12 o'clock. The host becomes a progress bar (`aria-valuenow`).",
-      },
-    },
-  },
+/**
+ * A `percent` turns the ring into a fill that starts at 12 o'clock, and the host becomes a
+ * progress bar (`aria-valuenow`). `percent="auto"` advances on its own, slowing down towards the
+ * end, and never reaches 100 by itself.
+ */
+export const Percent: Story = {
   render: () => ({
     template: `
       <div style="${row}">
@@ -95,21 +100,8 @@ export const Determinate: Story = {
         <andes-spinner size="lg" [percent]="35" tip="Uploading" />
         <andes-spinner size="lg" [percent]="72" />
         <andes-spinner size="lg" [percent]="100" />
+        <andes-spinner size="lg" percent="auto" tip="Preparing report" />
       </div>`,
-  }),
-};
-
-export const SimulatedProgress: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          '`percent="auto"` advances on its own, slowing down towards the end, and never reaches 100 by itself.',
-      },
-    },
-  },
-  render: () => ({
-    template: `<andes-spinner size="lg" percent="auto" tip="Preparing report" />`,
   }),
 };
 
@@ -129,14 +121,5 @@ export const CustomColor: Story = {
         <andes-spinner size="lg" variant="dots" style="--andes-spinner-color: var(--andes-color-danger);" />
         <andes-spinner size="lg" variant="bars" style="--andes-spinner-color: var(--andes-color-muted-foreground);" />
       </div>`,
-  }),
-};
-
-export const InlineWithText: Story = {
-  render: () => ({
-    template: `
-      <p style="margin: 0; font: 14px/22px var(--andes-font-family, system-ui), sans-serif; color: var(--andes-color-foreground);">
-        Saving changes <andes-spinner size="sm" label="Saving changes" />
-      </p>`,
   }),
 };

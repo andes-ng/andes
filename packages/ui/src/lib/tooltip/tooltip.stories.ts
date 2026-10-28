@@ -1,4 +1,3 @@
-import { Component, DestroyRef, inject, signal } from '@angular/core';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
@@ -7,51 +6,8 @@ import { AndesTooltipContent } from './tooltip-content';
 import { ANDES_TOOLTIP_PLACEMENTS } from './tooltip-placement';
 import { AndesTooltipTrigger } from './tooltip-trigger';
 
-/** Shows when it was created - makes `destroyOnHidden` visible. */
-@Component({
-  selector: 'andes-story-render-stamp',
-  template: `Rendered at {{ renderedAt }}`,
-})
-class StoryRenderStamp {
-  readonly renderedAt = new Date().toLocaleTimeString();
-}
-
-/** A trigger that keeps resizing, to show an open tooltip re-aligning. */
-@Component({
-  selector: 'andes-story-growing-trigger',
-  imports: [AndesTooltip, AndesTooltipTrigger],
-  template: `
-    <div style="padding: 6rem; width: 32rem;">
-      <andes-tooltip
-        content="I stay centered on the box"
-        placement="bottom"
-        [open]="true"
-      >
-        <span
-          andesTooltipTrigger
-          style="display: inline-block; padding: 0.5rem; border: 1px dashed var(--andes-color-border); transition: width 300ms;"
-          [style.width.px]="width()"
-        >
-          Growing trigger
-        </span>
-      </andes-tooltip>
-    </div>
-  `,
-})
-class StoryGrowingTrigger {
-  protected readonly width = signal(140);
-
-  constructor() {
-    const timer = setInterval(
-      () => this.width.update((width) => (width >= 380 ? 140 : width + 80)),
-      1200,
-    );
-    inject(DestroyRef).onDestroy(() => clearInterval(timer));
-  }
-}
-
 const meta: Meta<AndesTooltip> = {
-  title: 'Data Display/Tooltip',
+  title: 'Data Display/Tooltip/Basics/Tooltip',
   component: AndesTooltip,
   tags: ['autodocs'],
   argTypes: {
@@ -147,35 +103,28 @@ type Story = StoryObj<AndesTooltip>;
 
 export const Default: Story = {};
 
-export const Sides: Story = {
-  render: (args) => ({
+/**
+ * The four `side` values in a row, then the 12 named `placement` values laid out around a grid of
+ * triggers.
+ */
+export const Placements: Story = {
+  render: () => ({
     moduleMetadata: { imports: [AndesTooltipTrigger] },
-    props: args,
     template: `
-      <div style="display: flex; gap: 4rem; padding: 6rem;">
-        <andes-tooltip content="Top" side="top">
-          <button type="button" andesTooltipTrigger>Top</button>
+      <div style="display: flex; gap: 4rem; padding: 5rem 8rem 0;">
+        <andes-tooltip content="Top" side="top" [openDelay]="0">
+          <button type="button" andesTooltipTrigger>side=top</button>
         </andes-tooltip>
-        <andes-tooltip content="Right" side="right">
-          <button type="button" andesTooltipTrigger>Right</button>
+        <andes-tooltip content="Right" side="right" [openDelay]="0">
+          <button type="button" andesTooltipTrigger>side=right</button>
         </andes-tooltip>
-        <andes-tooltip content="Bottom" side="bottom">
-          <button type="button" andesTooltipTrigger>Bottom</button>
+        <andes-tooltip content="Bottom" side="bottom" [openDelay]="0">
+          <button type="button" andesTooltipTrigger>side=bottom</button>
         </andes-tooltip>
-        <andes-tooltip content="Left" side="left">
-          <button type="button" andesTooltipTrigger>Left</button>
+        <andes-tooltip content="Left" side="left" [openDelay]="0">
+          <button type="button" andesTooltipTrigger>side=left</button>
         </andes-tooltip>
       </div>
-    `,
-  }),
-};
-
-/** The 12 named placements, laid out around a 3x3 grid of triggers. */
-export const Placements: Story = {
-  render: (args) => ({
-    moduleMetadata: { imports: [AndesTooltipTrigger] },
-    props: args,
-    template: `
       <div
         style="display: grid; grid-template-columns: repeat(5, 5.5rem); grid-template-rows: repeat(5, 2.5rem); gap: 0.5rem; padding: 5rem 8rem; place-items: stretch;"
       >
@@ -225,9 +174,9 @@ export const Placements: Story = {
  * edge-aligned tooltip so the arrow lands on the trigger's center.
  */
 export const Arrow: Story = {
-  render: (args) => ({
+  render: () => ({
     moduleMetadata: { imports: [AndesTooltipTrigger] },
-    props: { ...args, pointAtCenter: { pointAtCenter: true } },
+    props: { pointAtCenter: { pointAtCenter: true } },
     template: `
       <div style="display: flex; gap: 2rem; padding: 5rem 2rem;">
         <andes-tooltip content="Default arrow" placement="topLeft" [open]="true">
@@ -244,63 +193,11 @@ export const Arrow: Story = {
   }),
 };
 
-/**
- * `autoAdjustOverflow` (on by default): a tooltip that would leave the
- * viewport flips to the opposite side (top edge), falls back to a
- * perpendicular side when that does not fit either (left edge), and is shifted
- * back on screen as a last resort - the arrow follows it in every case. The
- * top-right trigger has it turned off and is clipped instead.
- */
-export const AutoAdjustOverflow: Story = {
-  parameters: { layout: 'fullscreen' },
-  render: (args) => ({
-    moduleMetadata: { imports: [AndesTooltipTrigger] },
-    props: args,
-    template: `
-      <div style="position: relative; height: 18rem;">
-        <andes-tooltip
-          style="position: absolute; top: 0.5rem; left: 50%; transform: translateX(-50%);"
-          content="Asked for top - flipped below"
-          placement="top"
-          [open]="true"
-        >
-          <button type="button" andesTooltipTrigger>Top edge</button>
-        </andes-tooltip>
-        <andes-tooltip
-          style="position: absolute; top: 0.5rem; right: 0.5rem;"
-          content="autoAdjustOverflow=false - clipped"
-          placement="top"
-          [autoAdjustOverflow]="false"
-          [open]="true"
-        >
-          <button type="button" andesTooltipTrigger>No adjust</button>
-        </andes-tooltip>
-        <andes-tooltip
-          style="position: absolute; top: 8rem; left: 0.5rem;"
-          content="Asked for left - flipped right"
-          placement="left"
-          [open]="true"
-        >
-          <button type="button" andesTooltipTrigger>Left edge</button>
-        </andes-tooltip>
-        <andes-tooltip
-          style="position: absolute; bottom: 0.5rem; right: 0.5rem;"
-          content="Asked for bottomLeft - no room below, so it moved to the first side with room"
-          placement="bottomLeft"
-          [open]="true"
-        >
-          <button type="button" andesTooltipTrigger>Corner</button>
-        </andes-tooltip>
-      </div>
-    `,
-  }),
-};
-
 /** `trigger`: hover, focus, click, contextMenu - alone or combined. */
 export const Triggers: Story = {
-  render: (args) => ({
+  render: () => ({
     moduleMetadata: { imports: [AndesTooltipTrigger] },
-    props: { ...args, hoverClick: ['hover', 'click'] },
+    props: { hoverClick: ['hover', 'click'] },
     template: `
       <div style="display: flex; flex-wrap: wrap; gap: 1rem; padding: 6rem 2rem;">
         <andes-tooltip content="Opened by hover" trigger="hover" [openDelay]="0">
@@ -326,36 +223,16 @@ export const Triggers: Story = {
   }),
 };
 
-/** `[(open)]`: controlled from outside; `openChange` reports user-driven changes. */
-export const Controlled: Story = {
-  render: (args) => ({
-    moduleMetadata: { imports: [AndesTooltipTrigger] },
-    props: { ...args, isOpen: true, log: [] as string[] },
-    template: `
-      <div style="display: flex; flex-direction: column; align-items: center; gap: 1.5rem; padding: 5rem 2rem; font-family: var(--andes-font-family), sans-serif; color: var(--andes-color-foreground);">
-        <andes-tooltip
-          content="Controlled tooltip"
-          [(open)]="isOpen"
-          (openChange)="log = [...log, 'openChange: ' + $event]"
-        >
-          <button type="button" andesTooltipTrigger>Trigger</button>
-        </andes-tooltip>
-        <button type="button" (click)="isOpen = !isOpen">
-          {{ isOpen ? 'Close' : 'Open' }} programmatically
-        </button>
-        <code>open = {{ isOpen }}</code>
-        <code>{{ log.join(', ') || 'no openChange yet' }}</code>
-      </div>
-    `,
-  }),
-};
-
-/** `color`: semantic presets or any CSS color; text color and arrow follow. */
+/**
+ * `color`: semantic presets or any CSS color; text color and arrow follow. The last row is
+ * `variant="inverse"`: a dark surface with light text in either theme (switch the toolbar theme
+ * to compare); on a dark page the fill lifts a few steps so the hint still reads as a layer above
+ * the page.
+ */
 export const Colors: Story = {
-  render: (args) => ({
-    moduleMetadata: { imports: [AndesTooltipTrigger] },
+  render: () => ({
+    moduleMetadata: { imports: [AndesTooltipTrigger, AndesButton] },
     props: {
-      ...args,
       presets: ANDES_TOOLTIP_PRESET_COLORS,
       customs: ['#7c3aed', 'hsl(45 100% 70%)', 'teal'],
     },
@@ -371,25 +248,6 @@ export const Colors: Story = {
             <button type="button" andesTooltipTrigger>{{ custom }}</button>
           </andes-tooltip>
         }
-      </div>
-    `,
-  }),
-};
-
-/**
- * `variant="inverse"`: a dark surface with light text in either theme - switch the
- * toolbar theme to compare. On a dark page the fill lifts a few steps so the hint
- * still reads as a layer above the page.
- */
-export const Inverse: Story = {
-  render: (args) => ({
-    moduleMetadata: { imports: [AndesTooltipTrigger, AndesButton] },
-    props: args,
-    template: `
-      <div style="display: flex; gap: 1.5rem; padding: 5rem 2rem;">
-        <andes-tooltip content="Default: follows the theme's surface" [open]="true">
-          <andes-button andesTooltipTrigger variant="outline">Default</andes-button>
-        </andes-tooltip>
         <andes-tooltip content="Inverse: dark surface, light text" variant="inverse" [open]="true">
           <andes-button andesTooltipTrigger variant="outline">Inverse</andes-button>
         </andes-tooltip>
@@ -402,23 +260,53 @@ export const Inverse: Story = {
 };
 
 /**
- * Keyboard access for a hint on a disabled control. A disabled control cannot take
- * focus, so keyboard and screen-reader users never reach a tooltip attached to it
- * directly - only the pointer case is covered by the automatic wrapper above.
- *
- * - **Wrapper pattern** (left): make a focusable wrapper the trigger -
- *   `<span tabindex="0" andesTooltipTrigger>` around the disabled control. Focus
- *   lands on the wrapper, the tooltip opens and the wrapper is described by it.
- * - **Keep it focusable** (right): where the control may stay in the tab order,
- *   mark it `aria-disabled="true"` instead of `disabled` and ignore its activation;
- *   it then works as a normal trigger and announces itself as unavailable.
- *
- * Tab through the row to try both.
+ * What goes in the tooltip. `content` takes a string, or a `TemplateRef` for rich markup; the
+ * `andesTooltipContent` template projected inside the tooltip works the same way. A tooltip also
+ * works on an `<andes-button>`: it anchors to, and describes, the real `<button>` inside it.
  */
-export const DisabledKeyboardAccess: Story = {
-  render: (args) => ({
+export const Content: Story = {
+  render: () => ({
+    moduleMetadata: {
+      imports: [AndesTooltipTrigger, AndesTooltipContent, AndesButton],
+    },
+    template: `
+      <div style="display: flex; gap: 8rem; padding: 6rem;">
+        <andes-tooltip [content]="hint" [open]="true">
+          <button type="button" andesTooltipTrigger>Shortcut</button>
+        </andes-tooltip>
+        <ng-template #hint>Press <kbd>Ctrl</kbd> + <kbd>K</kbd></ng-template>
+        <andes-tooltip>
+          <button type="button" andesTooltipTrigger>Sync status</button>
+          <ng-template andesTooltipContent>
+            Last synced <strong>2 minutes ago</strong>
+          </ng-template>
+        </andes-tooltip>
+        <andes-tooltip content="Saves a draft" [openDelay]="0">
+          <andes-button andesTooltipTrigger variant="outline">Save</andes-button>
+        </andes-tooltip>
+      </div>
+    `,
+  }),
+};
+
+/**
+ * Disabled tooltips and disabled triggers. `disabled` on the tooltip never shows it. A disabled
+ * trigger still shows its tooltip to the pointer: the `<andes-tooltip>` host becomes an
+ * inline-block wrapper that catches the hover the disabled control cannot. That does not cover
+ * keyboard users, because a disabled control cannot take focus, so there are two patterns:
+ *
+ * - **Wrapper pattern**: make a focusable wrapper the trigger - `<span tabindex="0"
+ *   andesTooltipTrigger>` around the disabled control. Focus lands on the wrapper, the tooltip
+ *   opens and the wrapper is described by it.
+ * - **Keep it focusable**: where the control may stay in the tab order, mark it
+ *   `aria-disabled="true"` instead of `disabled` and ignore its activation; it then works as a
+ *   normal trigger and announces itself as unavailable.
+ *
+ * Tab through the keyboard row to try both.
+ */
+export const Disabled: Story = {
+  render: () => ({
     moduleMetadata: { imports: [AndesTooltipTrigger, AndesButton] },
-    props: args,
     template: `
       <style>
         .sb-tooltip-wrapper { display: inline-block; border-radius: var(--andes-radius-md); }
@@ -431,7 +319,18 @@ export const DisabledKeyboardAccess: Story = {
         }
         .sb-aria-disabled:focus-visible { outline: 2px solid var(--andes-color-focus-ring); outline-offset: 2px; }
       </style>
-      <div style="display: flex; gap: 1.5rem; padding: 6rem 2rem; font-family: var(--andes-font-family), sans-serif;">
+      <div style="display: flex; gap: 1.5rem; padding: 6rem 2rem 0;">
+        <andes-tooltip content="Never shown" [disabled]="true" [openDelay]="0">
+          <button type="button" andesTooltipTrigger>Tooltip disabled</button>
+        </andes-tooltip>
+        <andes-tooltip content="You need edit rights to save" [openDelay]="0">
+          <button type="button" disabled andesTooltipTrigger>Native disabled</button>
+        </andes-tooltip>
+        <andes-tooltip content="Nothing to publish yet" [openDelay]="0">
+          <andes-button disabled andesTooltipTrigger>andes-button disabled</andes-button>
+        </andes-tooltip>
+      </div>
+      <div style="display: flex; gap: 1.5rem; padding: 2rem 2rem 4rem; font-family: var(--andes-font-family), sans-serif;">
         <andes-tooltip content="You need edit rights to save" [openDelay]="0">
           <span class="sb-tooltip-wrapper" tabindex="0" andesTooltipTrigger>
             <andes-button disabled>Save (wrapper)</andes-button>
@@ -445,209 +344,4 @@ export const DisabledKeyboardAccess: Story = {
       </div>
     `,
   }),
-};
-
-/**
- * A disabled trigger still shows its tooltip: the `<andes-tooltip>` host
- * becomes an inline-block wrapper that catches the hover the disabled control
- * cannot. That covers the pointer only - for keyboard access see
- * `DisabledKeyboardAccess`.
- */
-export const DisabledTrigger: Story = {
-  render: (args) => ({
-    moduleMetadata: { imports: [AndesTooltipTrigger, AndesButton] },
-    props: args,
-    template: `
-      <div style="display: flex; gap: 1.5rem; padding: 6rem 2rem;">
-        <andes-tooltip content="You need edit rights to save" [openDelay]="0">
-          <button type="button" disabled andesTooltipTrigger>Native disabled</button>
-        </andes-tooltip>
-        <andes-tooltip content="Nothing to publish yet" [openDelay]="0">
-          <andes-button disabled andesTooltipTrigger>andes-button disabled</andes-button>
-        </andes-tooltip>
-      </div>
-    `,
-  }),
-};
-
-/**
- * `<andes-button>` as the trigger: the tooltip anchors to, and describes, the
- * real `<button>` inside it.
- */
-export const OnAndesButton: Story = {
-  render: (args) => ({
-    moduleMetadata: { imports: [AndesTooltipTrigger, AndesButton] },
-    props: args,
-    template: `
-      <div style="padding: 6rem;">
-        <andes-tooltip content="Saves a draft" [openDelay]="0">
-          <andes-button andesTooltipTrigger variant="outline">Save</andes-button>
-        </andes-tooltip>
-      </div>
-    `,
-  }),
-};
-
-export const RichContent: Story = {
-  render: (args) => ({
-    moduleMetadata: { imports: [AndesTooltipTrigger, AndesTooltipContent] },
-    props: args,
-    template: `
-      <div style="padding: 6rem;">
-        <andes-tooltip>
-          <button type="button" andesTooltipTrigger>Sync status</button>
-          <ng-template andesTooltipContent>
-            Last synced <strong>2 minutes ago</strong>
-          </ng-template>
-        </andes-tooltip>
-      </div>
-    `,
-  }),
-};
-
-/** `content` also takes a `TemplateRef` for rich content. */
-export const TemplateContent: Story = {
-  render: (args) => ({
-    moduleMetadata: { imports: [AndesTooltipTrigger] },
-    props: args,
-    template: `
-      <div style="padding: 6rem;">
-        <andes-tooltip [content]="hint" [open]="true">
-          <button type="button" andesTooltipTrigger>Shortcut</button>
-        </andes-tooltip>
-        <ng-template #hint>Press <kbd>Ctrl</kbd> + <kbd>K</kbd></ng-template>
-      </div>
-    `,
-  }),
-};
-
-/**
- * `maxWidth`, `tooltipClass` and the `--andes-tooltip-*` custom properties
- * style the tooltip panel.
- */
-export const Sizing: Story = {
-  render: (args) => ({
-    moduleMetadata: { imports: [AndesTooltipTrigger] },
-    props: args,
-    // The tooltip is portalled out of the story, so the rule has to be global.
-    styles: [
-      `::ng-deep .story-tooltip-inverse {
-        --andes-tooltip-background: var(--andes-color-foreground);
-        --andes-tooltip-foreground: var(--andes-color-background);
-        --andes-tooltip-border-color: var(--andes-color-foreground);
-        --andes-tooltip-max-width: 12rem;
-      }`,
-    ],
-    template: `
-      <div style="display: flex; gap: 14rem; padding: 7rem 2rem;">
-        <andes-tooltip
-          content="maxWidth=140: a long hint wraps onto several lines instead of stretching across the page."
-          [maxWidth]="140"
-          [open]="true"
-        >
-          <button type="button" andesTooltipTrigger>maxWidth</button>
-        </andes-tooltip>
-        <andes-tooltip
-          content="Styled through tooltipClass and the --andes-tooltip-* custom properties."
-          tooltipClass="story-tooltip-inverse"
-          [open]="true"
-        >
-          <button type="button" andesTooltipTrigger>tooltipClass</button>
-        </andes-tooltip>
-      </div>
-    `,
-  }),
-};
-
-/**
- * `zIndex` overrides the `--andes-z-index-tooltip` layer. Both tooltips are
- * open and overlap; the second one is sent below the first.
- */
-export const Stacking: Story = {
-  render: (args) => ({
-    moduleMetadata: { imports: [AndesTooltipTrigger] },
-    props: args,
-    template: `
-      <div style="display: flex; gap: 0.5rem; padding: 6rem 2rem 8rem;">
-        <andes-tooltip content="Default layer: on top" placement="bottomLeft" [open]="true">
-          <button type="button" andesTooltipTrigger>Default</button>
-        </andes-tooltip>
-        <andes-tooltip content="zIndex=1: drawn underneath the other tooltip" placement="bottom" [zIndex]="1" [open]="true" color="info">
-          <button type="button" andesTooltipTrigger>zIndex=1</button>
-        </andes-tooltip>
-      </div>
-    `,
-  }),
-};
-
-/**
- * Content lifecycle: by default the content is rendered once and kept across
- * openings (the timestamp stays put); with `destroyOnHidden` it is recreated
- * every time. `fresh` additionally keeps kept-alive content updating while
- * hidden.
- */
-export const ContentLifecycle: Story = {
-  render: (args) => ({
-    moduleMetadata: {
-      imports: [AndesTooltipTrigger, AndesTooltipContent, StoryRenderStamp],
-    },
-    props: args,
-    template: `
-      <div style="display: flex; gap: 2rem; padding: 6rem;">
-        <andes-tooltip [openDelay]="0">
-          <button type="button" andesTooltipTrigger>Kept (default)</button>
-          <ng-template andesTooltipContent><andes-story-render-stamp /></ng-template>
-        </andes-tooltip>
-        <andes-tooltip [openDelay]="0" destroyOnHidden>
-          <button type="button" andesTooltipTrigger>destroyOnHidden</button>
-          <ng-template andesTooltipContent><andes-story-render-stamp /></ng-template>
-        </andes-tooltip>
-      </div>
-    `,
-  }),
-};
-
-export const InstantReopenGroup: Story = {
-  name: 'Instant reopen (toolbar)',
-  render: (args) => ({
-    moduleMetadata: { imports: [AndesTooltipTrigger] },
-    props: args,
-    template: `
-      <div style="display: flex; gap: 0.5rem; padding: 6rem;">
-        <andes-tooltip content="Cut">
-          <button type="button" andesTooltipTrigger aria-label="Cut">✂️</button>
-        </andes-tooltip>
-        <andes-tooltip content="Copy">
-          <button type="button" andesTooltipTrigger aria-label="Copy">📋</button>
-        </andes-tooltip>
-        <andes-tooltip content="Paste">
-          <button type="button" andesTooltipTrigger aria-label="Paste">📌</button>
-        </andes-tooltip>
-      </div>
-      <p style="max-width: 32rem; color: var(--andes-color-accent-foreground, #475569);">
-        Hover the first icon and wait for its tooltip, then move to the next
-        one - it opens instantly instead of paying the open delay again.
-      </p>
-    `,
-  }),
-};
-
-/**
- * An open tooltip stays aligned when its trigger changes size: the box below
- * grows and shrinks on a timer and the tooltip follows it.
- */
-export const FollowsLayoutChanges: Story = {
-  name: 'Follows layout changes',
-  render: () => ({
-    moduleMetadata: { imports: [StoryGrowingTrigger] },
-    template: `<andes-story-growing-trigger />`,
-  }),
-};
-
-export const Disabled: Story = {
-  args: { disabled: true, content: 'You will not see me' },
-};
-
-export const CustomTiming: Story = {
-  args: { openDelay: 0, closeDelay: 300 },
 };

@@ -69,7 +69,7 @@ const EXISTING: AndesUploadFile[] = [
 ];
 
 const meta: Meta<AndesUpload> = {
-  title: 'Upload',
+  title: 'Data Entry/Upload',
   component: AndesUpload,
   tags: ['autodocs'],
   decorators: [

@@ -66,7 +66,6 @@ const meta: Meta<AndesScrollArea> = {
 export default meta;
 
 type Story = StoryObj<AndesScrollArea>;
-
 export const Default: Story = {};
 
 /** `type` decides when the bars show: auto, always, scroll or hover. */
@@ -89,27 +88,23 @@ export const Types: Story = {
   }),
 };
 
-export const Horizontal: Story = {
+/** Horizontal scrolling for a strip of cards, and both axes with a corner so the bars never overlap. */
+export const Orientation: Story = {
   render: () => ({
-    props: { cards: Array.from({ length: 12 }, (_, i) => i + 1) },
+    props: {
+      cards: Array.from({ length: 12 }, (_, i) => i + 1),
+      cells: Array.from({ length: 12 * 14 }, (_, i) => i + 1),
+    },
     styles,
     template: `
-      <andes-scroll-area class="box" style="height: auto;" orientation="horizontal" aria-label="Gallery">
-        <div class="wide">@for (card of cards; track card) { <div class="card">Card {{ card }}</div> }</div>
-      </andes-scroll-area>
-    `,
-  }),
-};
-
-/** Both axes, with a corner so the bars never overlap. */
-export const Both: Story = {
-  render: () => ({
-    props: { cells: Array.from({ length: 12 * 14 }, (_, i) => i + 1) },
-    styles,
-    template: `
-      <andes-scroll-area class="box" orientation="both" type="always" aria-label="Spreadsheet">
-        <div class="grid">@for (cell of cells; track cell) { <div>{{ cell }}</div> }</div>
-      </andes-scroll-area>
+      <div class="gallery">
+        <andes-scroll-area class="box" style="height: auto;" orientation="horizontal" aria-label="Gallery">
+          <div class="wide">@for (card of cards; track card) { <div class="card">Card {{ card }}</div> }</div>
+        </andes-scroll-area>
+        <andes-scroll-area class="box" orientation="both" type="always" aria-label="Spreadsheet">
+          <div class="grid">@for (cell of cells; track cell) { <div>{{ cell }}</div> }</div>
+        </andes-scroll-area>
+      </div>
     `,
   }),
 };

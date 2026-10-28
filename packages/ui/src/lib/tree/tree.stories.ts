@@ -177,7 +177,7 @@ function large(groups: number, perGroup: number): AndesTreeNode[] {
 }
 
 const meta: Meta<AndesTree> = {
-  title: 'Tree',
+  title: 'Data Display/Tree',
   component: AndesTree,
   tags: ['autodocs'],
   argTypes: {

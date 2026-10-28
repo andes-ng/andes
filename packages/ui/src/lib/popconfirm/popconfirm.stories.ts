@@ -79,30 +79,51 @@ type Story = StoryObj<AndesPopconfirm>;
 
 export const Default: Story = {};
 
-/** A destructive confirmation: danger OK button with its own label. */
-export const Danger: Story = {
-  args: { okType: 'danger', okText: 'Delete', cancelText: 'Keep it' },
+/**
+ * Wording and look. A destructive confirmation sets `okType="danger"` with its own button labels;
+ * omitting `description` leaves a title-only question; `[showCancel]="false"` turns it into an
+ * acknowledgement; `color` applies to the confirmation panel too.
+ */
+export const Variants: Story = {
+  render: () => ({
+    moduleMetadata: { imports },
+    template: `
+      <div style="padding: 10rem 4rem 4rem; display: flex; flex-wrap: wrap; gap: 2rem;">
+        <andes-popconfirm title="Delete the task" description="Are you sure to delete this task?" okType="danger" okText="Delete" cancelText="Keep it">
+          <andes-button variant="danger" andesPopconfirmTrigger>Danger</andes-button>
+        </andes-popconfirm>
+        <andes-popconfirm title="Archive this project?">
+          <andes-button variant="outline" andesPopconfirmTrigger>Title only</andes-button>
+        </andes-popconfirm>
+        <andes-popconfirm title="Got it?" description="This action only needs an acknowledgement." [showCancel]="false">
+          <andes-button variant="outline" andesPopconfirmTrigger>Without cancel</andes-button>
+        </andes-popconfirm>
+        <andes-popconfirm title="Heads up" description="The panel takes the colour too." color="info" okType="secondary">
+          <andes-button variant="outline" andesPopconfirmTrigger>Colored</andes-button>
+        </andes-popconfirm>
+      </div>
+    `,
+  }),
 };
 
-export const TitleOnly: Story = {
-  args: { description: undefined, title: 'Archive this project?' },
-};
-
-export const WithoutCancel: Story = {
-  args: {
-    showCancel: false,
-    title: 'Got it?',
-    description: 'This action only needs an acknowledgement.',
-  },
-};
-
-export const OkDisabled: Story = {
-  args: { okDisabled: true, description: 'You do not have permission.' },
-};
-
-/** `disabled` never opens the popconfirm. */
-export const Disabled: Story = {
-  args: { disabled: true },
+/**
+ * Inert states. `okDisabled` keeps the confirmation reachable but the OK button unusable (here,
+ * for someone without permission); `disabled` never opens the popconfirm at all.
+ */
+export const States: Story = {
+  render: () => ({
+    moduleMetadata: { imports },
+    template: `
+      <div style="padding: 10rem 4rem 4rem; display: flex; gap: 2rem;">
+        <andes-popconfirm title="Delete the task" description="You do not have permission." [okDisabled]="true">
+          <andes-button variant="outline" andesPopconfirmTrigger>OK disabled</andes-button>
+        </andes-popconfirm>
+        <andes-popconfirm title="Delete the task" [disabled]="true">
+          <andes-button variant="outline" andesPopconfirmTrigger>Disabled</andes-button>
+        </andes-popconfirm>
+      </div>
+    `,
+  }),
 };
 
 /** `icon` takes a template; `null` removes it. */
@@ -222,9 +243,4 @@ export const ConditionalConfirm: Story = {
       </div>
     `,
   }),
-};
-
-/** `color` applies to the confirmation panel too. */
-export const Colored: Story = {
-  args: { color: 'info', okType: 'secondary' },
 };

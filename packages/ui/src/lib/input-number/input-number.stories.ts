@@ -98,7 +98,11 @@ export const Variants: Story = {
   }),
 };
 
-export const Status: Story = {
+/**
+ * Validation `status` (`error`, `warning`) on the outlined, filled and underlined variants,
+ * then the `disabled` and `readOnly` states.
+ */
+export const States: Story = {
   render: () => ({
     template: `
       <div style="${column}">
@@ -106,15 +110,6 @@ export const Status: Story = {
         <andes-input-number status="warning" aria-label="Warning" [value]="0" />
         <andes-input-number status="error" variant="filled" aria-label="Error, filled" [value]="0" />
         <andes-input-number status="warning" variant="underlined" aria-label="Warning, underlined" [value]="0" />
-      </div>
-    `,
-  }),
-};
-
-export const DisabledAndReadOnly: Story = {
-  render: () => ({
-    template: `
-      <div style="${column}">
         <andes-input-number disabled aria-label="Disabled" [value]="42" />
         <andes-input-number readOnly aria-label="Read-only" [value]="42" />
       </div>
@@ -126,7 +121,7 @@ export const DisabledAndReadOnly: Story = {
  * Hover or focus the field to reveal the stepper on its inline-end edge. Press and hold a
  * button to repeat; the repeat accelerates. The stepper stops at `min` and `max`.
  */
-export const MinMaxStep: Story = {
+export const Steps: Story = {
   render: () => ({
     props: { quantity: signal<number | null>(5) },
     template: `
@@ -139,25 +134,21 @@ export const MinMaxStep: Story = {
   }),
 };
 
-export const DecimalSteps: Story = {
+/**
+ * Exact decimals. With a `0.1` step, `0.1 + 0.2` is `0.3`; `precision` fixes the decimals
+ * shown. `stringMode` keeps the value a string so a high-precision decimal loses no digit to
+ * a double.
+ */
+export const Precision: Story = {
   render: () => ({
+    props: { exact: signal<number | string | null>('9007199254740993.12') },
     template: `
       <div style="${column}">
         <label style="${label}" for="rate">Rate (step 0.1, exact: 0.1 + 0.2 is 0.3)</label>
         <andes-input-number id="rate" [value]="0.1" [step]="0.1" />
         <label style="${label}" for="price">Price (two decimals)</label>
         <andes-input-number id="price" [value]="19.9" [step]="0.01" [precision]="2" [min]="0" />
-      </div>
-    `,
-  }),
-};
-
-export const StringMode: Story = {
-  render: () => ({
-    props: { exact: signal<number | string | null>('9007199254740993.12') },
-    template: `
-      <div style="${column}">
-        <label style="${label}" for="exact">High-precision decimal</label>
+        <label style="${label}" for="exact">High-precision decimal (string mode)</label>
         <andes-input-number id="exact" stringMode [(value)]="exact" step="0.01" />
         <span style="${caption}">Emits the string {{ exact() }}: no digit is lost to a double.</span>
       </div>
@@ -165,9 +156,18 @@ export const StringMode: Story = {
   }),
 };
 
+/**
+ * Built-in formats (`decimal`, `currency`, `percent`, with a `locale`) and, last, a custom
+ * `formatter` / `parser` pair that shows a unit.
+ */
 export const Formatting: Story = {
   render: () => ({
     props: {
+      withUnit: (value: number | string) => `${value} kg`,
+      fromUnit: (text: string) => {
+        const parsed = Number.parseFloat(text.replace(/[^\d.-]/g, ''));
+        return Number.isNaN(parsed) ? undefined : parsed;
+      },
       amount: signal<number | null>(1234567.891),
       rate: signal<number | null>(0.185),
       units: signal<number | null>(1500),
@@ -182,25 +182,9 @@ export const Formatting: Story = {
         <andes-input-number id="fmt-eur" format="currency" currency="EUR" locale="de-DE" [(value)]="amount" [precision]="2" [step]="10" />
         <label style="${label}" for="fmt-percent">Percent (stored as a fraction)</label>
         <andes-input-number id="fmt-percent" format="percent" [(value)]="rate" [step]="0.005" [precision]="3" [min]="0" [max]="1" />
-        <span style="${caption}">Stored values: {{ units() }}, {{ amount() }}, {{ rate() }}</span>
-      </div>
-    `,
-  }),
-};
-
-export const CustomFormatterAndParser: Story = {
-  render: () => ({
-    props: {
-      withUnit: (value: number | string) => `${value} kg`,
-      fromUnit: (text: string) => {
-        const parsed = Number.parseFloat(text.replace(/[^\d.-]/g, ''));
-        return Number.isNaN(parsed) ? undefined : parsed;
-      },
-    },
-    template: `
-      <div style="${column}">
-        <label style="${label}" for="weight">Weight</label>
+        <label style="${label}" for="weight">Custom formatter and parser</label>
         <andes-input-number id="weight" [value]="12" [formatter]="withUnit" [parser]="fromUnit" [min]="0" [step]="0.5" />
+        <span style="${caption}">Stored values: {{ units() }}, {{ amount() }}, {{ rate() }}</span>
       </div>
     `,
   }),
@@ -239,35 +223,23 @@ export const Spinner: Story = {
   }),
 };
 
-export const ControlsAndKeyboard: Story = {
+/**
+ * Ways to change the value. `controls` off hides the stepper and `keyboard` off disables the
+ * arrow keys; `changeOnWheel` steps with the mouse wheel while the field is focused;
+ * `changeOnBlur` commits only when the field loses focus or Enter is pressed, pulling
+ * out-of-range text into the bounds.
+ */
+export const Interaction: Story = {
   render: () => ({
+    props: { committed: signal<number | null>(5) },
     template: `
       <div style="${column}">
         <label style="${label}" for="no-controls">No stepper (arrow keys only)</label>
         <andes-input-number id="no-controls" [controls]="false" [value]="5" />
         <label style="${label}" for="no-keyboard">Stepper only (keyboard off)</label>
         <andes-input-number id="no-keyboard" [keyboard]="false" [value]="5" />
-      </div>
-    `,
-  }),
-};
-
-export const MouseWheel: Story = {
-  render: () => ({
-    template: `
-      <div style="${column}">
         <label style="${label}" for="wheel">Focus the field, then scroll over it</label>
         <andes-input-number id="wheel" changeOnWheel [value]="50" [min]="0" [max]="100" [step]="5" />
-      </div>
-    `,
-  }),
-};
-
-export const ChangeOnBlur: Story = {
-  render: () => ({
-    props: { committed: signal<number | null>(5) },
-    template: `
-      <div style="${column}">
         <label style="${label}" for="blur">Commits when you leave the field or press Enter</label>
         <andes-input-number id="blur" changeOnBlur [(value)]="committed" [min]="0" [max]="100" />
         <span style="${caption}">Value: {{ committed() }}. Out-of-range text is pulled into 0 to 100.</span>

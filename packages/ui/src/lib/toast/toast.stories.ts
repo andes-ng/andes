@@ -715,6 +715,11 @@ export default meta;
 
 type Story = StoryObj<ToastStoryHost>;
 
+/**
+ * Trigger buttons for every toast kind. The `position` control moves the viewport to any of the
+ * six placements (top/bottom crossed with left/center/right); `Notifications` shows per-toast
+ * placement in one viewport.
+ */
 export const Playground: Story = {};
 
 /** The everyday set side by side, with switches for rich colors and the expanded list. */
@@ -723,18 +728,6 @@ export const Gallery: Story = {
     moduleMetadata: { imports: [GalleryStoryHost] },
     template: `<andes-toast-gallery-story />`,
   }),
-};
-
-export const TopLeft: Story = {
-  args: { position: 'top-left' },
-};
-
-export const TopCenter: Story = {
-  args: { position: 'top-center' },
-};
-
-export const BottomCenter: Story = {
-  args: { position: 'bottom-center' },
 };
 
 /** `AndesMessageService` - compact single-line status messages. */

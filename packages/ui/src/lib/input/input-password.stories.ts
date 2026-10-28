@@ -4,7 +4,7 @@ import { AndesInputPassword } from './input-password';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 const meta: Meta<AndesInputPassword> = {
-  title: 'Input/Password',
+  title: 'Input/Specialized/Password',
   component: AndesInputPassword,
 };
 

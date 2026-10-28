@@ -4,7 +4,7 @@ import { AndesInputOtp } from './input-otp';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 const meta: Meta<AndesInputOtp> = {
-  title: 'Input/OTP',
+  title: 'Input/Specialized/OTP',
   component: AndesInputOtp,
 };
 

@@ -4,7 +4,7 @@ import { AndesInputSearch } from './input-search';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 const meta: Meta<AndesInputSearch> = {
-  title: 'Input/Search',
+  title: 'Input/Specialized/Search',
   component: AndesInputSearch,
 };
 
@@ -32,6 +32,7 @@ export const Search: Story = {
         <andes-input-search aria-label="Search, labelled" placeholder="enterButton = 'Search'" enterButton="Search" addonBefore="https://"
           (searched)="searches.set(searches().concat($event.source + ': ' + $event.value))" />
         <andes-input-search aria-label="Search, loading" placeholder="loading" enterButton loading />
+        <andes-input-search aria-label="Search, loading icon" placeholder="loading, plain icon button" loading />
         <andes-input-search aria-label="Search, small" placeholder="Small" size="sm" enterButton />
         <andes-input-search aria-label="Search, large" placeholder="Large" size="lg" />
         @for (entry of searches(); track $index) {

@@ -16,6 +16,14 @@ export type AndesUploadListType =
 
 export type AndesUploadSize = 'sm' | 'md' | 'lg';
 
+/**
+ * How the control is drawn:
+ * - `default`: the projected trigger (or the default button) with the file list under it;
+ * - `field`: one row the height of a text field - a "choose" segment, the chosen file's name
+ *   (or a placeholder) and a clear button - with no list under it.
+ */
+export type AndesUploadVariant = 'default' | 'field';
+
 /** How a batch of files reached the control. */
 export type AndesUploadSource = 'select' | 'drop' | 'paste' | 'api';
 
@@ -181,6 +189,12 @@ export interface AndesUploadMessages {
   remove: string;
   retry: string;
   dropTitle: string;
+  /** Field variant: the text shown while no file is chosen. */
+  noFileChosen: string;
+  /** Field variant: the text shown for several files (`{count}`). */
+  filesChosen: string;
+  /** Field variant: announced when files join the list (`{name}`). */
+  announceAdded: string;
 }
 
 export interface AndesUploadItemContext {

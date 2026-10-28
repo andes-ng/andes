@@ -9,6 +9,13 @@ import { AndesUploadIcon } from './upload-icon';
  * Click-to-select upload. Project the trigger (a button, an icon...) as content; the real,
  * visually hidden file input stays focusable behind it and is the control's single tab stop.
  * Works with Forms (the value is the file list) and inside `andes-form-field`.
+ *
+ * `variant="field"` draws it instead as one row the height of `andes-input` (sizes sm/md/lg):
+ * a "choose" segment, the chosen file name, `{count} files` or a "No file chosen" placeholder,
+ * a progress line while sending, the danger colours for a failed file or `aria-invalid`, and
+ * a clear button that removes the files through `removeFile()`. Files can be dropped on and
+ * pasted into the row. There is no list under it, so `listType`, `showUploadList`,
+ * `itemRender` and projected content are ignored.
  */
 @Component({
   selector: 'andes-upload',

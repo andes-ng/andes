@@ -267,7 +267,7 @@ class StoryData {
 }
 
 const meta: Meta<AndesMenu> = {
-  title: 'Menu',
+  title: 'Navigation/Menu',
   component: AndesMenu,
   tags: ['autodocs'],
   decorators: [

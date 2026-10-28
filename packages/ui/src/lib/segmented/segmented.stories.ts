@@ -10,7 +10,7 @@ const grid = `<svg slot="icon" viewBox="0 0 16 16" fill="none" stroke="currentCo
 const map = `<svg slot="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M2 4l4-1.5 4 1.5 4-1.5v9.5L10 13.5 6 12l-4 1.5z"/><path d="M6 2.5V12M10 4v9.5"/></svg>`;
 
 const meta: Meta<AndesSegmented> = {
-  title: 'Segmented',
+  title: 'Data Entry/Segmented',
   component: AndesSegmented,
   tags: ['autodocs'],
   argTypes: {

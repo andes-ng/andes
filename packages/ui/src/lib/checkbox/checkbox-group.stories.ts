@@ -38,97 +38,193 @@ type Story = StoryObj<AndesCheckboxGroup>;
 
 export const Default: Story = {};
 
-export const Horizontal: Story = {
-  args: { orientation: 'horizontal' },
-};
-
-export const Preselected: Story = {
+/**
+ * Layout: horizontal orientation, and a fully custom one - items can sit at any depth inside
+ * the group, so the group's own flex layout can be replaced by any wrapper (here a three-column
+ * grid).
+ */
+export const Layouts: Story = {
   render: () => ({
     moduleMetadata: { imports: [AndesCheckbox] },
-    props: { value: ['banana'] },
+    props: { letters: ['a', 'c'] as readonly string[] },
     template: `
-      <andes-checkbox-group aria-label="Fruits" [(value)]="value">
-        <andes-checkbox value="apple">Apple</andes-checkbox>
-        <andes-checkbox value="banana">Banana</andes-checkbox>
-        <andes-checkbox value="cherry">Cherry</andes-checkbox>
-      </andes-checkbox-group>
+      <div style="display: flex; flex-direction: column; gap: 2rem;">
+        <andes-checkbox-group aria-label="Fruits (horizontal)" orientation="horizontal">
+          <andes-checkbox value="apple">Apple</andes-checkbox>
+          <andes-checkbox value="banana">Banana</andes-checkbox>
+          <andes-checkbox value="cherry">Cherry</andes-checkbox>
+        </andes-checkbox-group>
+        <andes-checkbox-group aria-label="Letters (grid)" [(value)]="letters">
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 8rem)); gap: var(--andes-space-3);">
+            <andes-checkbox value="a">A</andes-checkbox>
+            <andes-checkbox value="b">B</andes-checkbox>
+            <andes-checkbox value="c">C</andes-checkbox>
+            <andes-checkbox value="d">D</andes-checkbox>
+            <andes-checkbox value="e">E</andes-checkbox>
+          </div>
+        </andes-checkbox-group>
+      </div>
     `,
   }),
 };
 
-export const SelectAll: Story = {
+/** A disabled group, and one disabled item inside an enabled group (select all skips it). */
+export const States: Story = {
   render: () => ({
     moduleMetadata: { imports: [AndesCheckbox, AndesCheckboxSelectAll] },
-    props: { value: [] as readonly string[] },
+    props: { picked: [] as readonly string[] },
     template: `
-      <andes-checkbox-group aria-label="Fruits" [(value)]="value">
-        <andes-checkbox andesSelectAll>Select all</andes-checkbox>
-        <andes-checkbox value="apple">Apple</andes-checkbox>
-        <andes-checkbox value="banana">Banana</andes-checkbox>
-        <andes-checkbox value="cherry">Cherry</andes-checkbox>
-      </andes-checkbox-group>
-      <p style="font-family: var(--andes-font-family), sans-serif; font-size: 0.875rem; line-height: 1.375rem; margin-top: 1rem;">
-        Selected: {{ value.length ? value.join(', ') : 'none' }}
-      </p>
+      <div style="display: flex; flex-direction: column; gap: 2rem;">
+        <andes-checkbox-group aria-label="Fruits (disabled)" disabled>
+          <andes-checkbox value="apple">Apple</andes-checkbox>
+          <andes-checkbox value="banana">Banana</andes-checkbox>
+          <andes-checkbox value="cherry">Cherry</andes-checkbox>
+        </andes-checkbox-group>
+        <andes-checkbox-group aria-label="Fruits (one disabled)" [(value)]="picked">
+          <andes-checkbox andesSelectAll>Select all</andes-checkbox>
+          <andes-checkbox value="apple">Apple</andes-checkbox>
+          <andes-checkbox value="banana" disabled>Banana (unavailable)</andes-checkbox>
+          <andes-checkbox value="cherry">Cherry</andes-checkbox>
+        </andes-checkbox-group>
+      </div>
     `,
   }),
 };
 
-export const SelectAllPartiallySelected: Story = {
-  name: 'Select all (indeterminate)',
-  render: () => ({
-    moduleMetadata: { imports: [AndesCheckbox, AndesCheckboxSelectAll] },
-    props: { value: ['apple'] as readonly string[] },
-    template: `
-      <andes-checkbox-group aria-label="Fruits" [(value)]="value">
-        <andes-checkbox andesSelectAll>Select all</andes-checkbox>
-        <andes-checkbox value="apple">Apple</andes-checkbox>
-        <andes-checkbox value="banana">Banana</andes-checkbox>
-        <andes-checkbox value="cherry">Cherry</andes-checkbox>
-      </andes-checkbox-group>
-    `,
-  }),
-};
-
-export const WithDisabledItem: Story = {
-  render: () => ({
-    moduleMetadata: { imports: [AndesCheckbox, AndesCheckboxSelectAll] },
-    props: { value: [] as readonly string[] },
-    template: `
-      <andes-checkbox-group aria-label="Fruits" [(value)]="value">
-        <andes-checkbox andesSelectAll>Select all</andes-checkbox>
-        <andes-checkbox value="apple">Apple</andes-checkbox>
-        <andes-checkbox value="banana" disabled>Banana (unavailable)</andes-checkbox>
-        <andes-checkbox value="cherry">Cherry</andes-checkbox>
-      </andes-checkbox-group>
-    `,
-  }),
-};
-
-export const Disabled: Story = {
-  args: { disabled: true },
-};
-
-export const ReactiveForm: Story = {
+/** A preselected `[(value)]` model, and a `FormControl` with the selection echoed. */
+export const Binding: Story = {
   render: () => ({
     moduleMetadata: {
       imports: [AndesCheckbox, AndesCheckboxSelectAll, ReactiveFormsModule],
     },
     props: {
+      picked: ['banana'] as readonly string[],
       control: new FormControl<readonly string[]>(['apple'], {
         nonNullable: true,
       }),
     },
     template: `
-      <andes-checkbox-group aria-label="Fruits" [formControl]="control">
-        <andes-checkbox andesSelectAll>Select all</andes-checkbox>
-        <andes-checkbox value="apple">Apple</andes-checkbox>
-        <andes-checkbox value="banana">Banana</andes-checkbox>
-        <andes-checkbox value="cherry">Cherry</andes-checkbox>
-      </andes-checkbox-group>
-      <p style="font-family: var(--andes-font-family), sans-serif; font-size: 0.875rem; line-height: 1.375rem; margin-top: 1rem;">
-        Control value: {{ control.value.join(', ') || 'none' }}
-      </p>
+      <div style="display: flex; flex-direction: column; gap: 2rem;">
+        <andes-checkbox-group aria-label="Fruits (value)" [(value)]="picked">
+          <andes-checkbox value="apple">Apple</andes-checkbox>
+          <andes-checkbox value="banana">Banana</andes-checkbox>
+          <andes-checkbox value="cherry">Cherry</andes-checkbox>
+        </andes-checkbox-group>
+        <div>
+          <andes-checkbox-group aria-label="Fruits (reactive)" [formControl]="control">
+            <andes-checkbox andesSelectAll>Select all</andes-checkbox>
+            <andes-checkbox value="apple">Apple</andes-checkbox>
+            <andes-checkbox value="banana">Banana</andes-checkbox>
+            <andes-checkbox value="cherry">Cherry</andes-checkbox>
+          </andes-checkbox-group>
+          <p style="font-family: var(--andes-font-family), sans-serif; font-size: 0.875rem; line-height: 1.375rem; margin-top: 1rem;">
+            Control value: {{ control.value.join(', ') || 'none' }}
+          </p>
+        </div>
+      </div>
+    `,
+  }),
+};
+
+/**
+ * `andesSelectAll` on a checkbox makes it check every enabled item: nothing selected, some
+ * selected (it turns indeterminate), and combined with generated `options`, where the projected
+ * content renders before the options so select-all sits on top.
+ */
+export const SelectAll: Story = {
+  render: () => ({
+    moduleMetadata: { imports: [AndesCheckbox, AndesCheckboxSelectAll] },
+    props: {
+      none: [] as readonly string[],
+      some: ['apple'] as readonly string[],
+      generated: ['apple'] as readonly string[],
+      fruitOptions: [
+        { label: 'Apple', value: 'apple' },
+        { label: 'Banana', value: 'banana', disabled: true },
+        { label: 'Cherry', value: 'cherry' },
+      ],
+    },
+    template: `
+      <div style="display: flex; gap: 3rem; flex-wrap: wrap; align-items: flex-start;">
+        <div>
+          <andes-checkbox-group aria-label="Fruits (none selected)" [(value)]="none">
+            <andes-checkbox andesSelectAll>Select all</andes-checkbox>
+            <andes-checkbox value="apple">Apple</andes-checkbox>
+            <andes-checkbox value="banana">Banana</andes-checkbox>
+            <andes-checkbox value="cherry">Cherry</andes-checkbox>
+          </andes-checkbox-group>
+          <p style="font-family: var(--andes-font-family), sans-serif; font-size: 0.875rem; line-height: 1.375rem; margin-top: 1rem;">
+            Selected: {{ none.length ? none.join(', ') : 'none' }}
+          </p>
+        </div>
+        <andes-checkbox-group aria-label="Fruits (partially selected)" [(value)]="some">
+          <andes-checkbox andesSelectAll>Select all (indeterminate)</andes-checkbox>
+          <andes-checkbox value="apple">Apple</andes-checkbox>
+          <andes-checkbox value="banana">Banana</andes-checkbox>
+          <andes-checkbox value="cherry">Cherry</andes-checkbox>
+        </andes-checkbox-group>
+        <div>
+          <andes-checkbox-group aria-label="Fruits (options)" [options]="fruitOptions" [(value)]="generated">
+            <andes-checkbox andesSelectAll>Select all</andes-checkbox>
+          </andes-checkbox-group>
+          <p style="font-family: var(--andes-font-family), sans-serif; font-size: 0.875rem; line-height: 1.375rem; margin-top: 1rem;">
+            Selected: {{ generated.length ? generated.join(', ') : 'none' }}
+          </p>
+        </div>
+      </div>
+    `,
+  }),
+};
+
+/**
+ * Generate the items from data: bare strings, `{ label, value, disabled, title }` objects,
+ * numbers (which stay numbers: the selection reads `[2, 4]`, not `['2', '4']`) and per-option
+ * `className` and `style`.
+ */
+export const Options: Story = {
+  render: () => ({
+    moduleMetadata: { imports: [JsonPipe] },
+    props: {
+      fruits: ['Apple', 'Banana', 'Cherry'],
+      fruitValue: ['Banana'] as readonly string[],
+      objects: [
+        { label: 'Apple', value: 'apple' },
+        { label: 'Banana', value: 'banana', disabled: true, title: 'Sold out' },
+        { label: 'Cherry', value: 'cherry' },
+      ],
+      objectValue: [] as readonly string[],
+      floors: [1, 2, 3, 4],
+      floorValue: [2, 4] as readonly number[],
+      extras: [
+        { label: 'Standard', value: 'standard' },
+        {
+          label: 'Express (+$5)',
+          value: 'express',
+          style: { 'font-weight': 600 },
+        },
+        {
+          label: 'Gift wrap',
+          value: 'gift',
+          className: 'gift-option',
+          style: {
+            padding: '0.25rem 0.5rem',
+            'border-radius': 'var(--andes-radius-sm)',
+            background: 'var(--andes-color-muted)',
+          },
+        },
+      ],
+      extraValue: [] as readonly string[],
+    },
+    template: `
+      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <andes-checkbox-group aria-label="Fruits (strings)" [options]="fruits" [(value)]="fruitValue" />
+        <andes-checkbox-group aria-label="Fruits (objects)" orientation="horizontal" [options]="objects" [(value)]="objectValue" />
+        <andes-checkbox-group aria-label="Floors (numbers)" orientation="horizontal" [options]="floors" [(value)]="floorValue" />
+        <andes-checkbox-group aria-label="Delivery extras" [options]="extras" [(value)]="extraValue" />
+        <p style="font-family: var(--andes-font-family), sans-serif; font-size: 0.875rem; line-height: 1.375rem; color: var(--andes-color-foreground); margin: 0;">
+          Strings: {{ fruitValue.join(', ') || 'none' }} - objects: {{ objectValue.join(', ') || 'none' }} - floors: {{ floorValue | json }} - extras: {{ extraValue.join(', ') || 'none' }}
+        </p>
+      </div>
     `,
   }),
 };
@@ -138,60 +234,6 @@ const selectedText = `
     Selected: {{ value.length ? value.join(', ') : 'none' }}
   </p>
 `;
-
-export const Options: Story = {
-  name: 'Options (strings)',
-  render: () => ({
-    props: {
-      options: ['Apple', 'Banana', 'Cherry'],
-      value: ['Banana'] as readonly string[],
-    },
-    template: `
-      <andes-checkbox-group aria-label="Fruits" [options]="options" [(value)]="value" />
-      ${selectedText}
-    `,
-  }),
-};
-
-export const OptionObjects: Story = {
-  name: 'Options (objects, disabled + title)',
-  render: () => ({
-    props: {
-      options: [
-        { label: 'Apple', value: 'apple' },
-        { label: 'Banana', value: 'banana', disabled: true, title: 'Sold out' },
-        { label: 'Cherry', value: 'cherry' },
-      ],
-      value: [] as readonly string[],
-    },
-    template: `
-      <andes-checkbox-group aria-label="Fruits" orientation="horizontal" [options]="options" [(value)]="value" />
-      ${selectedText}
-    `,
-  }),
-};
-
-export const OptionsWithSelectAll: Story = {
-  name: 'Options + select all',
-  render: () => ({
-    moduleMetadata: { imports: [AndesCheckbox, AndesCheckboxSelectAll] },
-    props: {
-      options: [
-        { label: 'Apple', value: 'apple' },
-        { label: 'Banana', value: 'banana', disabled: true },
-        { label: 'Cherry', value: 'cherry' },
-      ],
-      value: ['apple'] as readonly string[],
-    },
-    // Projected content renders before the options, so select-all sits on top.
-    template: `
-      <andes-checkbox-group aria-label="Fruits" [options]="options" [(value)]="value">
-        <andes-checkbox andesSelectAll>Select all</andes-checkbox>
-      </andes-checkbox-group>
-      ${selectedText}
-    `,
-  }),
-};
 
 export const OptionLabelTemplate: Story = {
   name: 'Options with a label template',
@@ -257,77 +299,6 @@ export const SkipGroup: Story = {
       <p style="font-family: var(--andes-font-family), sans-serif; font-size: 0.875rem; line-height: 1.375rem; color: var(--andes-color-foreground); margin-top: 1rem;">
         Selected: {{ value.length ? value.join(', ') : 'none' }} - notify: {{ notify }}
       </p>
-    `,
-  }),
-};
-
-export const NumericOptions: Story = {
-  name: 'Options (numbers)',
-  render: () => ({
-    moduleMetadata: { imports: [JsonPipe] },
-    props: {
-      options: [1, 2, 3, 4],
-      value: [2, 4] as readonly number[],
-    },
-    // Number values stay numbers: the selection reads `[2, 4]`, not `['2', '4']`.
-    template: `
-      <andes-checkbox-group aria-label="Floors" orientation="horizontal" [options]="options" [(value)]="value" />
-      <p style="font-family: var(--andes-font-family), sans-serif; font-size: 0.875rem; line-height: 1.375rem; color: var(--andes-color-foreground); margin-top: 1rem;">
-        Selected: {{ value | json }}
-      </p>
-    `,
-  }),
-};
-
-export const OptionClassAndStyle: Story = {
-  name: 'Options (per-option class + style)',
-  render: () => ({
-    props: {
-      options: [
-        { label: 'Standard', value: 'standard' },
-        {
-          label: 'Express (+$5)',
-          value: 'express',
-          style: { 'font-weight': 600 },
-        },
-        {
-          label: 'Gift wrap',
-          value: 'gift',
-          className: 'gift-option',
-          style: {
-            padding: '0.25rem 0.5rem',
-            'border-radius': 'var(--andes-radius-sm)',
-            background: 'var(--andes-color-muted)',
-          },
-        },
-      ],
-      value: [] as readonly string[],
-    },
-    template: `
-      <andes-checkbox-group aria-label="Delivery extras" [options]="options" [(value)]="value" />
-      ${selectedText}
-    `,
-  }),
-};
-
-export const CustomLayout: Story = {
-  name: 'Custom layout (grid)',
-  render: () => ({
-    moduleMetadata: { imports: [AndesCheckbox] },
-    props: { value: ['a', 'c'] as readonly string[] },
-    // Items can sit at any depth inside the group, so the group's own flex layout can be
-    // replaced by any wrapper - here a three-column grid.
-    template: `
-      <andes-checkbox-group aria-label="Letters" [(value)]="value">
-        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 8rem)); gap: var(--andes-space-3);">
-          <andes-checkbox value="a">A</andes-checkbox>
-          <andes-checkbox value="b">B</andes-checkbox>
-          <andes-checkbox value="c">C</andes-checkbox>
-          <andes-checkbox value="d">D</andes-checkbox>
-          <andes-checkbox value="e">E</andes-checkbox>
-        </div>
-      </andes-checkbox-group>
-      ${selectedText}
     `,
   }),
 };

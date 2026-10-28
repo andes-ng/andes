@@ -43,6 +43,7 @@ const SEARCH = ICON('<circle cx="7" cy="7" r="4"/><path d="m10 10 3.5 3.5"/>');
 
 const STYLES = `
   .stage { height: 30rem; border: 1px solid var(--andes-color-border); border-radius: var(--andes-radius-lg); overflow: hidden; }
+  .stage--short { height: 20rem; }
   .brand { display: flex; align-items: center; gap: 0.5rem; height: 2rem; padding: 0 0.5rem; overflow: hidden; white-space: nowrap; font: 600 14px/22px var(--andes-font-family), sans-serif; }
   .brand__mark { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem; border-radius: var(--andes-radius-md); background: var(--andes-color-primary); color: var(--andes-color-primary-foreground); font-size: 12px; }
   .bar { display: flex; align-items: center; gap: 0.5rem; height: 3rem; padding: 0 0.75rem; border-bottom: 1px solid var(--andes-color-border); flex: none; }
@@ -173,22 +174,50 @@ const meta: Meta<AndesSidebar> = {
 export default meta;
 
 type Story = StoryObj<AndesSidebar>;
+/** The playground: `side`, `variant` and `collapsible` are controls. */
+export const Default: Story = {};
 
-/** Collapses to an icon rail; hover or focus an icon to see its tooltip. */
-export const IconCollapsible: Story = {};
+/** The look of the panel: attached to the edge (`sidebar`), `floating`, `inset` (the page becomes a rounded card on the sidebar's background) and on the end side. */
+export const Variants: Story = {
+  render: () => ({
+    styles: [STYLES],
+    template: `
+      <div style="display:grid;gap:1rem">
+        @for (v of ['sidebar', 'floating', 'inset']; track v) {
+          <div class="stage stage--short">
+            <andes-sidebar-provider contained>
+              <andes-sidebar [variant]="v">${MENU}</andes-sidebar>
+              <andes-sidebar-inset>${PAGE}</andes-sidebar-inset>
+            </andes-sidebar-provider>
+          </div>
+        }
+        <div class="stage stage--short">
+          <andes-sidebar-provider contained>
+            <andes-sidebar side="end">${MENU}</andes-sidebar>
+            <andes-sidebar-inset>${PAGE}</andes-sidebar-inset>
+          </andes-sidebar-provider>
+        </div>
+      </div>`,
+  }),
+};
 
-/** Slides fully out of view; the page takes the freed space with no jump. */
-export const Offcanvas: Story = { args: { collapsible: 'offcanvas' } };
-
-export const Floating: Story = { args: { variant: 'floating' } };
-
-/** The page becomes a rounded card on the sidebar's background. */
-export const Inset: Story = { args: { variant: 'inset' } };
-
-export const EndSide: Story = { args: { side: 'end' } };
-
-/** Always expanded: no trigger needed. */
-export const NotCollapsible: Story = { args: { collapsible: 'none' } };
+/** `collapsible="icon"` collapses to an icon rail (hover or focus an icon for its tooltip), `offcanvas` slides fully out of view and the page takes the freed space with no jump, `none` is always expanded and needs no trigger. */
+export const CollapsibleModes: Story = {
+  render: () => ({
+    styles: [STYLES],
+    template: `
+      <div style="display:grid;gap:1rem">
+        @for (c of ['icon', 'offcanvas', 'none']; track c) {
+          <div class="stage stage--short">
+            <andes-sidebar-provider contained>
+              <andes-sidebar [collapsible]="c">${MENU}</andes-sidebar>
+              <andes-sidebar-inset>${PAGE}</andes-sidebar-inset>
+            </andes-sidebar-provider>
+          </div>
+        }
+      </div>`,
+  }),
+};
 
 /** `storageKey` remembers the state: collapse it, reload the story and it stays collapsed. */
 export const Persisted: Story = {

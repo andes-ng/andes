@@ -84,7 +84,6 @@ const meta: Meta<AndesLayout> = {
 export default meta;
 
 type Story = StoryObj<AndesLayout>;
-
 /** Header, content and footer in a column. */
 export const Basic: Story = {};
 
@@ -107,13 +106,18 @@ export const WithSider: Story = {
   }),
 };
 
-/** The built-in toggle collapses the sider to a 64px rail; the width animates for 200ms. */
+/**
+ * The built-in toggle collapses the sider to a 64px rail (the width animates for 200ms) and `collapsed` is two-way.
+ * With a collapsed width of 0 the sider disappears and a tab at its edge brings it back. The toggle can be any
+ * content passed as `trigger` - use non-interactive content, it sits inside the toggle button.
+ */
 export const Collapsible: Story = {
   render: () => {
     const collapsed = signal(false);
+    const hidden = signal(true);
     return {
       styles: [STYLES],
-      props: { collapsed },
+      props: { collapsed, hidden },
       template: `
         <p style="margin:0 0 0.5rem;font:14px/22px var(--andes-font-family),sans-serif">collapsed = {{ collapsed() }}</p>
         <div class="frame">
@@ -124,33 +128,31 @@ export const Collapsible: Story = {
               <andes-layout-content class="pad">Content</andes-layout-content>
             </andes-layout>
           </andes-layout>
-        </div>`,
-    };
-  },
-};
-
-/** With a collapsed width of 0 the sider disappears and a tab at its edge brings it back. */
-export const ZeroWidthTrigger: Story = {
-  render: () => {
-    const collapsed = signal(true);
-    return {
-      styles: [STYLES],
-      props: { collapsed },
-      template: `
+        </div>
+        <p style="margin:1rem 0 0.5rem;font:14px/22px var(--andes-font-family),sans-serif">Zero-width trigger</p>
         <div class="frame">
           <andes-layout>
-            <andes-layout-sider collapsible [collapsedWidth]="0" [(collapsed)]="collapsed">${NAV}</andes-layout-sider>
+            <andes-layout-sider collapsible [collapsedWidth]="0" [(collapsed)]="hidden">${NAV}</andes-layout-sider>
             <andes-layout>
               <andes-layout-header><span class="title">Dashboard</span></andes-layout-header>
               <andes-layout-content class="pad">Content</andes-layout-content>
             </andes-layout>
+          </andes-layout>
+        </div>
+        <p style="margin:1rem 0 0.5rem;font:14px/22px var(--andes-font-family),sans-serif">Custom trigger</p>
+        <ng-template #trigger><span style="font:500 12px/20px var(--andes-font-family),sans-serif">Toggle menu</span></ng-template>
+        <div class="frame">
+          <andes-layout>
+            <andes-layout-sider collapsible [trigger]="trigger">${NAV}</andes-layout-sider>
+            <andes-layout><andes-layout-content class="pad">Content</andes-layout-content></andes-layout>
           </andes-layout>
         </div>`,
     };
   },
 };
 
-export const DarkSider: Story = {
+/** A dark sider (`theme="dark"`), and a sider on the end side: `side="end"` moves its border, `reverseArrow` flips the arrow. */
+export const SiderVariants: Story = {
   render: () => ({
     styles: [STYLES],
     template: `
@@ -158,9 +160,18 @@ export const DarkSider: Story = {
         <andes-layout>
           <andes-layout-sider theme="dark" collapsible>${NAV}</andes-layout-sider>
           <andes-layout>
-            <andes-layout-header><span class="title">Dashboard</span></andes-layout-header>
+            <andes-layout-header><span class="title">Dark sider</span></andes-layout-header>
             <andes-layout-content class="pad">Content</andes-layout-content>
           </andes-layout>
+        </andes-layout>
+      </div>
+      <div class="frame" style="margin-top:1rem">
+        <andes-layout>
+          <andes-layout>
+            <andes-layout-header><span class="title">End side</span></andes-layout-header>
+            <andes-layout-content class="pad">Content</andes-layout-content>
+          </andes-layout>
+          <andes-layout-sider side="end" collapsible reverseArrow>${NAV}</andes-layout-sider>
         </andes-layout>
       </div>`,
   }),
@@ -189,38 +200,6 @@ export const BreakpointCollapse: Story = {
         </div>`,
     };
   },
-};
-
-/** The toggle can be any content; pass it as a template. Use non-interactive content - it sits inside the toggle button. */
-export const CustomTrigger: Story = {
-  render: () => ({
-    styles: [STYLES],
-    template: `
-      <ng-template #trigger><span style="font:500 12px/20px var(--andes-font-family),sans-serif">Toggle menu</span></ng-template>
-      <div class="frame">
-        <andes-layout>
-          <andes-layout-sider collapsible [trigger]="trigger">${NAV}</andes-layout-sider>
-          <andes-layout><andes-layout-content class="pad">Content</andes-layout-content></andes-layout>
-        </andes-layout>
-      </div>`,
-  }),
-};
-
-/** A sider on the end side: `side="end"` moves its border, `reverseArrow` flips the arrow. */
-export const EndSide: Story = {
-  render: () => ({
-    styles: [STYLES],
-    template: `
-      <div class="frame">
-        <andes-layout>
-          <andes-layout>
-            <andes-layout-header><span class="title">Dashboard</span></andes-layout-header>
-            <andes-layout-content class="pad">Content</andes-layout-content>
-          </andes-layout>
-          <andes-layout-sider side="end" collapsible reverseArrow>${NAV}</andes-layout-sider>
-        </andes-layout>
-      </div>`,
-  }),
 };
 
 /** The header stays at the top while the content scrolls. */

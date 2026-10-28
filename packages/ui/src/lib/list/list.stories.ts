@@ -1,4 +1,3 @@
-import { signal } from '@angular/core';
 import type { Meta, StoryObj } from '@storybook/angular';
 import { moduleMetadata } from '@storybook/angular';
 
@@ -33,13 +32,6 @@ const PEOPLE: Person[] = NAMES.map(([name, role], index) => ({
   email: `${name.split(' ')[0].toLowerCase()}@example.com`,
 }));
 
-const MANY: Person[] = Array.from({ length: 5000 }, (_, index) => ({
-  id: index + 1,
-  name: `${NAMES[index % NAMES.length][0]} #${index + 1}`,
-  role: NAMES[index % NAMES.length][1],
-  email: `user${index + 1}@example.com`,
-}));
-
 /** A round initials badge, so the stories need no avatar component. */
 const AVATAR =
   'display: inline-flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; border-radius: 9999px; background: var(--andes-color-muted); color: var(--andes-color-muted-foreground); font-size: 0.875rem; font-weight: 500;';
@@ -47,7 +39,7 @@ const LINK =
   'all: unset; cursor: pointer; color: var(--andes-color-primary-text, var(--andes-color-primary)); font-size: 0.875rem;';
 
 const meta: Meta<AndesList> = {
-  title: 'Data Display/List',
+  title: 'Data Display/List/Basics',
   component: AndesList,
   tags: ['autodocs'],
   decorators: [
@@ -116,7 +108,33 @@ type Story = StoryObj<AndesList>;
 
 export const Playground: Story = {};
 
-export const Bordered: Story = { args: { bordered: true } };
+/**
+ * The frame around the rows: the plain list (no frame, dividers between rows), `bordered`, and
+ * `[split]="false"` to remove the dividers. The playground above exposes the same switches as
+ * controls.
+ */
+export const Appearance: Story = {
+  render: () => ({
+    props: { people: PEOPLE.slice(0, 3) },
+    template: `<div style="display: flex; flex-direction: column; gap: 1.5rem; max-width: 36rem;">
+      <andes-list label="Plain">
+        @for (person of people; track person.id) {
+          <andes-list-item><andes-list-item-meta [title]="person.name" [description]="person.role" /></andes-list-item>
+        }
+      </andes-list>
+      <andes-list bordered label="Bordered">
+        @for (person of people; track person.id) {
+          <andes-list-item><andes-list-item-meta [title]="person.name" [description]="person.role" /></andes-list-item>
+        }
+      </andes-list>
+      <andes-list bordered [split]="false" label="Bordered, without dividers">
+        @for (person of people; track person.id) {
+          <andes-list-item><andes-list-item-meta [title]="person.name" [description]="person.role" /></andes-list-item>
+        }
+      </andes-list>
+    </div>`,
+  }),
+};
 
 export const Sizes: Story = {
   render: () => ({
@@ -146,8 +164,6 @@ export const HeaderAndFooter: Story = {
     </andes-list>`,
   }),
 };
-
-export const WithoutDividers: Story = { args: { split: false } };
 
 export const Actions: Story = {
   render: () => ({
@@ -189,175 +205,30 @@ export const VerticalWithExtra: Story = {
   }),
 };
 
-/** Rows from an array: the item template receives the entry and its index. */
-export const DataSource: Story = {
-  render: () => ({
-    props: {
-      people: PEOPLE,
-      trackById: (_: number, person: Person) => person.id,
-    },
-    template: `<ng-template #row let-person let-index="index">
-        <andes-list-item>
-          <andes-list-item-meta [title]="person.name" [description]="person.role" />
-          <span style="color: var(--andes-color-muted-foreground);">#{{ index + 1 }}</span>
-        </andes-list-item>
-      </ng-template>
-      <andes-list bordered label="Team" [dataSource]="people" [itemTemplate]="row" [trackBy]="trackById" style="display: block; max-width: 36rem;" />`,
-  }),
-};
-
-export const Loading: Story = { args: { loading: true, bordered: true } };
-
-export const Empty: Story = {
-  render: () => ({
-    template: `<div style="display: flex; flex-direction: column; gap: 1.5rem; max-width: 36rem;">
-      <andes-list bordered label="Empty" [dataSource]="[]" />
-      <andes-list bordered label="Empty with custom text" [dataSource]="[]" notFoundContent="Nobody matches your search" />
-    </div>`,
-  }),
-};
-
-export const EmptyTemplate: Story = {
-  render: () => ({
-    template: `<ng-template #nothing>
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
-          <strong>No invoices yet</strong>
-          <span style="color: var(--andes-color-muted-foreground);">Create the first one to see it here.</span>
-          <andes-button size="sm">New invoice</andes-button>
-        </div>
-      </ng-template>
-      <andes-list bordered label="Invoices" [dataSource]="[]" [notFoundContent]="nothing" style="display: block; max-width: 36rem;" />`,
-  }),
-};
-
-/** `columns` turns the list into a grid; a map sets the count per breakpoint of the list's own width. */
+/**
+ * `columns` turns the list into a grid. A map sets the count per breakpoint of the list's own
+ * width (first list); a number fixes it, and `gutter` takes one gap or a `[horizontal, vertical]`
+ * pair (second list).
+ */
 export const Grid: Story = {
   render: () => ({
     props: { people: PEOPLE },
-    template: `<andes-list label="Team" [columns]="{ xs: 1, sm: 2, lg: 4 }" [gutter]="16">
-      @for (person of people; track person.id) {
-        <andes-list-item>
-          <andes-list-item-meta [title]="person.name" [description]="person.role" />
-        </andes-list-item>
-      }
-    </andes-list>`,
+    template: `<div style="display: flex; flex-direction: column; gap: 2rem;">
+      <andes-list label="Team, responsive columns" [columns]="{ xs: 1, sm: 2, lg: 4 }" [gutter]="16">
+        @for (person of people; track person.id) {
+          <andes-list-item>
+            <andes-list-item-meta [title]="person.name" [description]="person.role" />
+          </andes-list-item>
+        }
+      </andes-list>
+      <andes-list label="Team, three fixed columns" [columns]="3" [gutter]="[24, 12]">
+        @for (person of people.slice(0, 6); track person.id) {
+          <andes-list-item>
+            <andes-list-item-meta [title]="person.name" [description]="person.email" />
+          </andes-list-item>
+        }
+      </andes-list>
+    </div>`,
   }),
   parameters: { layout: 'padded' },
-};
-
-export const GridFixedColumns: Story = {
-  render: () => ({
-    props: { people: PEOPLE.slice(0, 6) },
-    template: `<andes-list label="Team" [columns]="3" [gutter]="[24, 12]">
-      @for (person of people; track person.id) {
-        <andes-list-item>
-          <andes-list-item-meta [title]="person.name" [description]="person.email" />
-        </andes-list-item>
-      }
-    </andes-list>`,
-  }),
-};
-
-/** Whole rows act as buttons: hover feedback, one tab stop, arrows to move, Enter or Space to open. */
-export const Clickable: Story = {
-  render: () => ({
-    props: { people: PEOPLE.slice(0, 5), last: signal('nothing yet') },
-    template: `<div style="max-width: 36rem;">
-      <andes-list bordered clickable label="Team" (itemActivated)="last.set($event.value + '')">
-        @for (person of people; track person.id) {
-          <andes-list-item [value]="person.name"><andes-list-item-meta [title]="person.name" [description]="person.role" /></andes-list-item>
-        }
-      </andes-list>
-      <p style="font-size: 0.875rem; color: var(--andes-color-muted-foreground);">Opened: {{ last() }}</p>
-    </div>`,
-  }),
-};
-
-export const SelectableSingle: Story = {
-  render: () => ({
-    props: { people: PEOPLE.slice(0, 5), picked: signal<unknown[]>([2]) },
-    template: `<div style="max-width: 36rem;">
-      <andes-list bordered selectable="single" label="Assignee" [(selected)]="picked">
-        @for (person of people; track person.id) {
-          <andes-list-item [value]="person.id" [disabled]="person.id === 4"><andes-list-item-meta [title]="person.name" [description]="person.role" /></andes-list-item>
-        }
-      </andes-list>
-      <p style="font-size: 0.875rem; color: var(--andes-color-muted-foreground);">Selected id: {{ picked() }}</p>
-    </div>`,
-  }),
-};
-
-export const SelectableMultiple: Story = {
-  render: () => ({
-    props: { people: PEOPLE.slice(0, 6), picked: signal<unknown[]>([1, 3]) },
-    template: `<div style="max-width: 36rem;">
-      <andes-list bordered selectable="multiple" label="Recipients" [(selected)]="picked">
-        @for (person of people; track person.id) {
-          <andes-list-item [value]="person.id"><andes-list-item-meta [title]="person.name" [description]="person.email" /></andes-list-item>
-        }
-      </andes-list>
-      <p style="font-size: 0.875rem; color: var(--andes-color-muted-foreground);">{{ picked().length }} selected</p>
-    </div>`,
-  }),
-};
-
-/** The load-more slot takes any control; here a button appends rows and shows its own busy state. */
-export const LoadMore: Story = {
-  render: () => ({
-    props: (() => {
-      const shown = signal(3);
-      const busy = signal(false);
-      return {
-        shown,
-        busy,
-        people: PEOPLE,
-        more: () => {
-          busy.set(true);
-          setTimeout(() => {
-            shown.update((value) => Math.min(value + 3, PEOPLE.length));
-            busy.set(false);
-          }, 600);
-        },
-      };
-    })(),
-    template: `<andes-list bordered label="Team" [loading]="busy() && shown() === 0" style="display: block; max-width: 36rem;">
-      @for (person of people.slice(0, shown()); track person.id) {
-        <andes-list-item><andes-list-item-meta [title]="person.name" [description]="person.role" /></andes-list-item>
-      }
-      @if (shown() < people.length) {
-        <andes-button slot="load-more" size="sm" variant="outline" [loading]="busy()" (click)="more()">Load more</andes-button>
-      }
-    </andes-list>`,
-  }),
-};
-
-/** `page`, `pageSize` and `total` slice the data; the pagination slot hosts whatever controls you like. */
-export const PaginationSlot: Story = {
-  render: () => ({
-    props: { people: MANY.slice(0, 40), page: signal(1) },
-    template: `<ng-template #row let-person>
-        <andes-list-item><andes-list-item-meta [title]="person.name" [description]="person.role" /></andes-list-item>
-      </ng-template>
-      <andes-list bordered label="Team" [dataSource]="people" [itemTemplate]="row" [pageSize]="5" [(page)]="page" style="display: block; max-width: 36rem;">
-        <div slot="pagination" style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem;">
-          <andes-button size="sm" variant="outline" [disabled]="page() === 1" (click)="page.set(page() - 1)">Previous</andes-button>
-          <span>Page {{ page() }} of 8</span>
-          <andes-button size="sm" variant="outline" [disabled]="page() === 8" (click)="page.set(page() + 1)">Next</andes-button>
-        </div>
-      </andes-list>`,
-  }),
-};
-
-/** Only the rows in view exist in the DOM; each states its position in the whole set for assistive tech. */
-export const VirtualScroll: Story = {
-  render: () => ({
-    props: { people: MANY },
-    template: `<ng-template #row let-person let-index="index">
-        <andes-list-item>
-          <andes-list-item-meta [title]="person.name" [description]="person.role" />
-          <span style="color: var(--andes-color-muted-foreground);">{{ index + 1 }}</span>
-        </andes-list-item>
-      </ng-template>
-      <andes-list bordered label="All users, 5000 rows" [dataSource]="people" [itemTemplate]="row" virtualScroll [itemSize]="56" [viewportHeight]="360" style="display: block; max-width: 36rem;" />`,
-  }),
 };

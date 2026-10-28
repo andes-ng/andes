@@ -6,7 +6,7 @@ import { AndesCalendar } from './calendar';
 const FEBRUARY_2024 = new Date(2024, 1, 1);
 
 const meta: Meta<AndesCalendar> = {
-  title: 'Calendar',
+  title: 'Data Display/Calendar',
   component: AndesCalendar,
   tags: ['autodocs'],
   argTypes: {

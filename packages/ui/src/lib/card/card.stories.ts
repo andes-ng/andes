@@ -51,7 +51,7 @@ const ACTION_BUTTONS = `
 `;
 
 const meta: Meta<AndesCard> = {
-  title: 'Card',
+  title: 'Data Display/Card',
   component: AndesCard,
   tags: ['autodocs'],
   decorators: [

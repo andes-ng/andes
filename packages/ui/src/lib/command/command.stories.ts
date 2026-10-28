@@ -232,7 +232,7 @@ class StoryControlledCommand {
 }
 
 const meta: Meta<AndesCommand> = {
-  title: 'Command',
+  title: 'Navigation/Command',
   component: AndesCommand,
   tags: ['autodocs'],
   parameters: {

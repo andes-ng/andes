@@ -239,18 +239,29 @@ export const ActiveLink: Story = {
   }),
 };
 
-/** Center the panel under its trigger instead of aligning its start. */
-export const CenteredPanel: Story = {
-  args: { align: 'center' },
-};
-
-export const WithoutIndicator: Story = {
-  args: { indicator: false },
-};
-
-/** A slower hover intent: 400ms to open, 300ms of grace before it closes. */
-export const SlowIntent: Story = {
-  args: { delayDuration: 400, closeDelay: 300 },
+/**
+ * The panel and timing options, one bar each: `align="center"` centers the panel under its
+ * trigger instead of aligning its start, `[indicator]="false"` hides the arrow, and a slower
+ * hover intent (`delayDuration` 400ms to open, `closeDelay` 300ms of grace before it closes).
+ */
+export const PanelOptions: Story = {
+  render: () => ({
+    template: `
+      <div style="display: flex; flex-direction: column; gap: 2rem;">
+        <div>
+          <p style="margin: 0 0 0.5rem; font-size: 0.75rem; color: var(--andes-color-muted-foreground);">align="center"</p>
+          <andes-story-nav align="center" />
+        </div>
+        <div>
+          <p style="margin: 0 0 0.5rem; font-size: 0.75rem; color: var(--andes-color-muted-foreground);">No indicator</p>
+          <andes-story-nav [indicator]="false" />
+        </div>
+        <div>
+          <p style="margin: 0 0 0.5rem; font-size: 0.75rem; color: var(--andes-color-muted-foreground);">Slow intent: 400ms to open, 300ms to close</p>
+          <andes-story-nav [delayDuration]="400" [closeDelay]="300" />
+        </div>
+      </div>`,
+  }),
 };
 
 /**

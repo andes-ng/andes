@@ -8,7 +8,7 @@ const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
 
 const meta: Meta<AndesCountdown> = {
-  title: 'Countdown',
+  title: 'Data Display/Countdown',
   component: AndesCountdown,
   tags: ['autodocs'],
   decorators: [moduleMetadata({ imports: [AndesCountdown, AndesButton] })],

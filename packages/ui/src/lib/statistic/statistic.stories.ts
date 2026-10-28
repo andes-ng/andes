@@ -4,7 +4,7 @@ import { AndesButton } from '../button/button';
 import { AndesStatistic } from './statistic';
 
 const meta: Meta<AndesStatistic> = {
-  title: 'Statistic',
+  title: 'Data Display/Statistic',
   component: AndesStatistic,
   tags: ['autodocs'],
   decorators: [moduleMetadata({ imports: [AndesStatistic, AndesButton] })],

@@ -47,7 +47,7 @@ const LINK =
   'all: unset; cursor: pointer; color: var(--andes-color-primary-text, var(--andes-color-primary)); font-size: 0.875rem;';
 
 const meta: Meta<AndesList> = {
-  title: 'List',
+  title: 'Data Display/List',
   component: AndesList,
   tags: ['autodocs'],
   decorators: [

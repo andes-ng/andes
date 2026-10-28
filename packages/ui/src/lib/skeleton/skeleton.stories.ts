@@ -16,7 +16,7 @@ import { AndesSkeletonNode } from './skeleton-node';
 import type { AndesSkeletonSize } from './skeleton-utils';
 
 const meta: Meta<AndesSkeleton> = {
-  title: 'Skeleton',
+  title: 'Feedback/Skeleton',
   component: AndesSkeleton,
   tags: ['autodocs'],
   decorators: [

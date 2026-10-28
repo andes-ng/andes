@@ -6,7 +6,7 @@ import { AndesButton } from '../button/button';
 import { AndesSwitch } from './switch';
 
 const meta: Meta<AndesSwitch> = {
-  title: 'Switch',
+  title: 'Data Entry/Switch',
   component: AndesSwitch,
   tags: ['autodocs'],
   argTypes: {

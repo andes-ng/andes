@@ -4,7 +4,7 @@ import { fn } from 'storybook/test';
 import { AndesAlert } from './alert';
 
 const meta: Meta<AndesAlert> = {
-  title: 'Alert',
+  title: 'Feedback/Alert',
   component: AndesAlert,
   tags: ['autodocs'],
   argTypes: {

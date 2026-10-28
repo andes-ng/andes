@@ -5,7 +5,7 @@ import { AndesButton } from '../button/button';
 import { AndesResult } from './result';
 
 const meta: Meta<AndesResult> = {
-  title: 'Result',
+  title: 'Feedback/Result',
   component: AndesResult,
   tags: ['autodocs'],
   decorators: [moduleMetadata({ imports: [AndesButton] })],

@@ -2490,7 +2490,7 @@ const STATIC_TABLE = `
 `;
 
 const meta: Meta<AndesTable> = {
-  title: 'Table',
+  title: 'Data Display/Table',
   component: AndesTable,
   tags: ['autodocs'],
   decorators: [

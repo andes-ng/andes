@@ -327,7 +327,7 @@ class AndesListTableDemo {
 }
 
 const meta: Meta = {
-  title: 'Table/Data table',
+  title: 'Data Display/Table/Data table',
   decorators: [
     moduleMetadata({ imports: [AndesDataTableDemo, AndesListTableDemo] }),
   ],

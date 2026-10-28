@@ -360,7 +360,7 @@ class ReorderDemo {
 }
 
 const meta: Meta = {
-  title: 'Table/Columns',
+  title: 'Data Display/Table/Columns',
   decorators: [
     moduleMetadata({
       imports: [ResizeDemo, ResizeFixedDemo, ReorderDemo],

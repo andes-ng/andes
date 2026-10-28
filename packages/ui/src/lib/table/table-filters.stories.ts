@@ -665,7 +665,7 @@ class FilterControlledDemo {
 }
 
 const meta: Meta = {
-  title: 'Table/Advanced filters',
+  title: 'Data Display/Table/Advanced filters',
   decorators: [
     moduleMetadata({
       imports: [

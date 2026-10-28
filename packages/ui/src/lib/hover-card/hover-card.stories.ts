@@ -138,7 +138,7 @@ class StoryControlled {
 }
 
 const meta: Meta<AndesHoverCard> = {
-  title: 'Hover card',
+  title: 'Data Display/Hover card',
   component: AndesHoverCard,
   tags: ['autodocs'],
   parameters: {

@@ -12,7 +12,7 @@ const column =
   'display: flex; flex-direction: column; gap: 1rem; width: 20rem;';
 
 const meta: Meta<AndesInputNumber> = {
-  title: 'Input Number',
+  title: 'Input/Number',
   component: AndesInputNumber,
   tags: ['autodocs'],
   argTypes: {

@@ -131,30 +131,104 @@ export default meta;
 
 type Story = StoryObj<AndesDrawer>;
 
+/** The playground: use the controls to try every drawer input on one drawer. */
 export const Default: Story = {};
 
-export const NoOutsideDismiss: Story = {
-  args: { closeOnOutsideClick: false, closeOnEscape: false },
+/**
+ * Builds a labelled trigger plus a drawer carrying `attrs`, so a story can show several
+ * configurations of the same drawer side by side.
+ */
+const drawerDemo = (attrs: string, label: string, text: string): string => `
+  <andes-drawer ${attrs}>
+    <andes-button variant="outline" andesDrawerTrigger>${label}</andes-button>
+    <andes-drawer-header>
+      <andes-drawer-title>${label}</andes-drawer-title>
+      <andes-drawer-description>${text}</andes-drawer-description>
+    </andes-drawer-header>
+    ${goalBody}
+    <andes-drawer-footer>
+      <andes-button variant="primary" fullWidth andesDrawerClose>Submit</andes-button>
+      <andes-button variant="outline" fullWidth andesDrawerClose>Cancel</andes-button>
+    </andes-drawer-footer>
+  </andes-drawer>
+`;
+
+const row = (...drawers: string[]): string =>
+  `<div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">${drawers.join('')}</div>`;
+
+/**
+ * Three ways to size the drawer: the default preset, `size="large"` (the 736px preset, capped at
+ * the viewport height) and `height`, which takes a number (px) or any CSS length and wins over
+ * `size`.
+ */
+export const Sizing: Story = {
+  render: () => ({
+    moduleMetadata: { imports },
+    template: row(
+      drawerDemo('', 'Default size', 'The default preset.'),
+      drawerDemo('size="large"', 'Large size', 'The 736px preset.'),
+      drawerDemo(
+        'height="60vh"',
+        'Custom height',
+        'height="60vh" wins over size.',
+      ),
+    ),
+  }),
 };
 
-/** `size="large"` is the 736px preset, capped at the viewport height. */
-export const Large: Story = {
-  args: { size: 'large' },
+/**
+ * The backdrop. `maskBlur` blurs the page behind it; `[mask]="false"` drops it and makes the
+ * drawer non-modal, so the page stays usable.
+ */
+export const Mask: Story = {
+  render: () => ({
+    moduleMetadata: { imports },
+    template: row(
+      drawerDemo(
+        'maskBlur',
+        'Blurred mask',
+        'The page behind the backdrop is blurred.',
+      ),
+      drawerDemo(
+        '[mask]="false" [closeOnOutsideClick]="false"',
+        'No mask',
+        'Non-modal: the page behind stays usable.',
+      ),
+    ),
+  }),
 };
 
-/** `height` takes a number (px) or any CSS length and wins over `size`. */
-export const CustomHeight: Story = {
-  args: { height: '60vh' },
+/**
+ * Closing. `closePlacement="start"` moves the close button to the header's leading corner;
+ * `closeOnOutsideClick` and `closeOnEscape` set to false leave only the drawer's own actions;
+ * `closeDisabled` keeps the close button visible but inert (Escape and the backdrop still close).
+ */
+export const Dismissal: Story = {
+  render: () => ({
+    moduleMetadata: { imports },
+    template: row(
+      drawerDemo(
+        'closePlacement="start"',
+        'Close at start',
+        'The close button sits in the leading corner.',
+      ),
+      drawerDemo(
+        '[closeOnOutsideClick]="false" [closeOnEscape]="false"',
+        'Not dismissible',
+        'Neither Escape nor a backdrop click closes this one.',
+      ),
+      drawerDemo(
+        'closeDisabled',
+        'Close disabled',
+        'The close button is visible but inert.',
+      ),
+    ),
+  }),
 };
 
 /** `loading` swaps the body for a skeleton; header, footer and close stay usable. */
 export const Loading: Story = {
   args: { loading: true },
-};
-
-/** `mask=false` drops the backdrop and makes the drawer non-modal. */
-export const NoMask: Story = {
-  args: { mask: false, closeOnOutsideClick: false },
 };
 
 /**
@@ -217,16 +291,6 @@ export const NestedPush: Story = {
       </p>
     `,
   }),
-};
-
-/** `closePlacement="start"` moves the close button to the header's leading corner. */
-export const ClosePlacementStart: Story = {
-  args: { closePlacement: 'start' },
-};
-
-/** `maskBlur` blurs the page behind the backdrop. */
-export const MaskBlur: Story = {
-  args: { maskBlur: true },
 };
 
 /**

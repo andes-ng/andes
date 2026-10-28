@@ -145,39 +145,107 @@ export default meta;
 
 type Story = StoryObj<AndesSheet>;
 
-export const Right: Story = {
-  args: { side: 'right' },
+/** The playground: use the controls to try every sheet input on one sheet. */
+export const Default: Story = {};
+
+/**
+ * Builds a labelled trigger plus a sheet carrying `attrs`, so a story can show several
+ * configurations of the same sheet side by side.
+ */
+const sheetDemo = (attrs: string, label: string, text: string): string => `
+  <andes-sheet ${attrs}>
+    <andes-button variant="outline" andesSheetTrigger>${label}</andes-button>
+    <andes-sheet-header>
+      <andes-sheet-title>${label}</andes-sheet-title>
+      <andes-sheet-description>${text}</andes-sheet-description>
+    </andes-sheet-header>
+    ${profileForm}
+    <andes-sheet-footer>
+      <andes-button variant="outline" andesSheetClose>Cancel</andes-button>
+      <andes-button variant="primary" andesSheetClose>Save changes</andes-button>
+    </andes-sheet-footer>
+  </andes-sheet>
+`;
+
+const row = (...sheets: string[]): string =>
+  `${FIELD_STYLES}<div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">${sheets.join('')}</div>`;
+
+/** `side` anchors the sheet to the right (the default), left, top or bottom edge. */
+export const Sides: Story = {
+  render: () => ({
+    moduleMetadata: { imports },
+    template: row(
+      sheetDemo('side="right"', 'Right', 'Slides in from the right edge.'),
+      sheetDemo('side="left"', 'Left', 'Slides in from the left edge.'),
+      sheetDemo('side="top"', 'Top', 'Slides down from the top edge.'),
+      sheetDemo('side="bottom"', 'Bottom', 'Slides up from the bottom edge.'),
+    ),
+  }),
 };
 
-export const Left: Story = {
-  args: { side: 'left' },
+/**
+ * Sizing: the default preset, `size="large"` (the 736px preset, capped at the viewport) and
+ * `width` / `height`, which take a number (px) or any CSS length and win over `size`.
+ */
+export const Sizing: Story = {
+  render: () => ({
+    moduleMetadata: { imports },
+    template: row(
+      sheetDemo('', 'Default size', 'The default preset.'),
+      sheetDemo('size="large"', 'Large size', 'The 736px preset.'),
+      sheetDemo('width="50vw"', 'Custom width', 'width="50vw" wins over size.'),
+    ),
+  }),
 };
 
-export const Top: Story = {
-  args: { side: 'top' },
+/**
+ * The backdrop. `maskBlur` blurs the page behind it; `[mask]="false"` drops it and makes the
+ * sheet non-modal: the page stays usable.
+ */
+export const Mask: Story = {
+  render: () => ({
+    moduleMetadata: { imports },
+    template: row(
+      sheetDemo(
+        'maskBlur',
+        'Blurred mask',
+        'The page behind the backdrop is blurred.',
+      ),
+      sheetDemo(
+        '[mask]="false" [closeOnOutsideClick]="false"',
+        'No mask',
+        'Non-modal: the page behind stays usable.',
+      ),
+    ),
+  }),
 };
 
-export const Bottom: Story = {
-  args: { side: 'bottom' },
-};
-
-export const NoOutsideDismiss: Story = {
-  args: { closeOnOutsideClick: false, closeOnEscape: false },
-};
-
-/** `size="large"` is the 736px preset (capped at the viewport). */
-export const Large: Story = {
-  args: { size: 'large' },
-};
-
-/** `width`/`height` take a number (px) or any CSS length and win over `size`. */
-export const CustomWidth: Story = {
-  args: { width: '50vw' },
-};
-
-/** `mask=false` drops the backdrop and makes the sheet non-modal: the page stays usable. */
-export const NoMask: Story = {
-  args: { mask: false, closeOnOutsideClick: false },
+/**
+ * Closing. `closePlacement="start"` moves the close button to the header's leading corner;
+ * `closeOnOutsideClick` and `closeOnEscape` set to false leave only the sheet's own actions;
+ * `closeDisabled` keeps the close button visible but inert (Escape and the backdrop still close).
+ */
+export const Dismissal: Story = {
+  render: () => ({
+    moduleMetadata: { imports },
+    template: row(
+      sheetDemo(
+        'closePlacement="start"',
+        'Close at start',
+        'The close button sits in the leading corner.',
+      ),
+      sheetDemo(
+        '[closeOnOutsideClick]="false" [closeOnEscape]="false"',
+        'Not dismissible',
+        'Neither Escape nor a backdrop click closes this one.',
+      ),
+      sheetDemo(
+        'closeDisabled',
+        'Close disabled',
+        'The close button is visible but inert.',
+      ),
+    ),
+  }),
 };
 
 /** `loading` swaps the body for a skeleton; header, footer and close stay usable. */
@@ -301,21 +369,6 @@ export const NestedPush: Story = {
       </p>
     `,
   }),
-};
-
-/** `closePlacement="start"` moves the close button to the header's leading corner. */
-export const ClosePlacementStart: Story = {
-  args: { closePlacement: 'start' },
-};
-
-/** `closeDisabled` keeps the close button visible but inert; Escape and the backdrop still close. */
-export const CloseDisabled: Story = {
-  args: { closeDisabled: true },
-};
-
-/** `maskBlur` blurs the page behind the backdrop. */
-export const MaskBlur: Story = {
-  args: { maskBlur: true },
 };
 
 /**

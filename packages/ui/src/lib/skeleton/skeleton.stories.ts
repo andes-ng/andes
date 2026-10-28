@@ -2,21 +2,14 @@ import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
 import { AndesSkeleton } from './skeleton';
-import {
-  AndesSkeletonAvatar,
-  type AndesSkeletonAvatarShape,
-} from './skeleton-avatar';
-import {
-  AndesSkeletonButton,
-  type AndesSkeletonButtonShape,
-} from './skeleton-button';
+import { AndesSkeletonAvatar } from './skeleton-avatar';
+import { AndesSkeletonButton } from './skeleton-button';
 import { AndesSkeletonImage } from './skeleton-image';
 import { AndesSkeletonInput } from './skeleton-input';
 import { AndesSkeletonNode } from './skeleton-node';
-import type { AndesSkeletonSize } from './skeleton-utils';
 
 const meta: Meta<AndesSkeleton> = {
-  title: 'Feedback/Skeleton',
+  title: 'Feedback/Skeleton/Basics',
   component: AndesSkeleton,
   tags: ['autodocs'],
   decorators: [
@@ -77,31 +70,45 @@ export default meta;
 
 type Story = StoryObj<AndesSkeleton>;
 
-// --- Composite -----------------------------------------------------------------------------------
+/** The playground: use the controls to try the composite placeholder's inputs. */
+export const Default: Story = {};
 
-export const Basic: Story = {};
+const caption =
+  'font-family: var(--andes-font-family), sans-serif; font-size: 0.75rem; line-height: 1.25rem; color: var(--andes-color-muted-foreground);';
 
-export const WithAvatar: Story = {
-  args: { avatar: true, paragraph: { rows: 4 } },
-};
-
-export const Active: Story = {
-  args: { active: true, avatar: true },
-};
-
-export const Round: Story = {
-  args: { round: true, avatar: { shape: 'square', size: 'lg' } },
-};
-
-export const ParagraphWidths: Story = {
-  args: {
-    title: { width: 160 },
-    paragraph: { rows: 4, width: ['90%', '75%', '85%', 120] },
-  },
-};
-
-export const TitleOnly: Story = {
-  args: { avatar: true, paragraph: false },
+/**
+ * Layouts of the composite placeholder, each from one input: `avatar` (with a taller `paragraph`
+ * of 4 rows), `active` for the shimmer, `round` corners with a square large avatar, custom
+ * `title` and `paragraph` widths, and a title with no `paragraph`.
+ */
+export const Layouts: Story = {
+  render: () => ({
+    props: { caption },
+    template: `
+      <div style="display: flex; flex-direction: column; gap: 1.5rem; width: 420px;">
+        <div>
+          <span [style]="caption">avatar + 4 rows</span>
+          <andes-skeleton avatar [paragraph]="{ rows: 4 }" />
+        </div>
+        <div>
+          <span [style]="caption">active (shimmer)</span>
+          <andes-skeleton [active]="true" avatar />
+        </div>
+        <div>
+          <span [style]="caption">round + square large avatar</span>
+          <andes-skeleton round [avatar]="{ shape: 'square', size: 'lg' }" />
+        </div>
+        <div>
+          <span [style]="caption">title and paragraph widths</span>
+          <andes-skeleton [title]="{ width: 160 }" [paragraph]="{ rows: 4, width: ['90%', '75%', '85%', 120] }" />
+        </div>
+        <div>
+          <span [style]="caption">avatar + title only</span>
+          <andes-skeleton avatar [paragraph]="false" />
+        </div>
+      </div>
+    `,
+  }),
 };
 
 /** `loading` swaps the placeholder for the projected content - toggle it with the button. */
@@ -139,212 +146,6 @@ export const List: Story = {
         @for (item of [1, 2, 3]; track item) {
           <andes-skeleton [active]="active" avatar [paragraph]="{ rows: 1 }" />
         }
-      </div>
-    `,
-  }),
-};
-
-// --- Elements ------------------------------------------------------------------------------------
-
-export const Elements: Story = {
-  args: { active: true },
-  render: (args) => ({
-    props: args,
-    template: `
-      <div style="display: flex; flex-direction: column; gap: 1rem; width: 480px;">
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <andes-skeleton-avatar [active]="active" size="sm" />
-          <andes-skeleton-avatar [active]="active" />
-          <andes-skeleton-avatar [active]="active" size="lg" />
-          <andes-skeleton-avatar [active]="active" shape="square" size="lg" />
-          <andes-skeleton-avatar [active]="active" [size]="56" />
-        </div>
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <andes-skeleton-button [active]="active" size="sm" />
-          <andes-skeleton-button [active]="active" />
-          <andes-skeleton-button [active]="active" size="lg" />
-          <andes-skeleton-button [active]="active" shape="round" />
-          <andes-skeleton-button [active]="active" shape="circle" />
-          <andes-skeleton-button [active]="active" shape="square" />
-        </div>
-        <andes-skeleton-button [active]="active" block />
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <andes-skeleton-input [active]="active" size="sm" />
-          <andes-skeleton-input [active]="active" size="lg" />
-        </div>
-        <andes-skeleton-input [active]="active" block />
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <andes-skeleton-image [active]="active" />
-          <andes-skeleton-node [active]="active">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 3v18h18" /><path d="M18 17V9" /><path d="M13 17V5" /><path d="M8 17v-3" />
-            </svg>
-          </andes-skeleton-node>
-          <andes-skeleton-node [active]="active" [width]="160" height="6rem">Loading chart…</andes-skeleton-node>
-        </div>
-      </div>
-    `,
-  }),
-};
-
-/**
- * Standalone elements are decorative - give the region its own single status text. Not aria-busy:
- * screen readers may hold back the status announcement from inside a busy region.
- */
-export const ElementsWithStatus: Story = {
-  args: { active: true },
-  render: (args) => ({
-    props: args,
-    template: `
-      <div style="display: flex; align-items: center; gap: 0.75rem;">
-        <span role="status" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0);">Loading form…</span>
-        <andes-skeleton-input [active]="active" />
-        <andes-skeleton-button [active]="active" />
-      </div>
-    `,
-  }),
-};
-
-interface ElementPlaygroundArgs {
-  active: boolean;
-  block: boolean;
-  size: AndesSkeletonSize;
-  buttonShape: AndesSkeletonButtonShape;
-  avatarShape: AndesSkeletonAvatarShape;
-}
-
-/**
- * Every element placeholder driven by the same controls: `active`, `size`, the button and avatar
- * shapes, and `block` for the full-width button and input.
- */
-export const ElementsPlayground: StoryObj<ElementPlaygroundArgs> = {
-  argTypes: {
-    active: { control: 'boolean' },
-    block: { control: 'boolean' },
-    size: { control: 'inline-radio', options: ['sm', 'md', 'lg'] },
-    buttonShape: {
-      control: 'inline-radio',
-      options: ['default', 'square', 'round', 'circle'],
-    },
-    avatarShape: { control: 'inline-radio', options: ['circle', 'square'] },
-  },
-  args: {
-    active: true,
-    block: false,
-    size: 'md',
-    buttonShape: 'default',
-    avatarShape: 'circle',
-  },
-  render: (args) => ({
-    props: args,
-    template: `
-      <div style="display: flex; flex-direction: column; gap: 1rem; width: 480px;">
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <andes-skeleton-button [active]="active" [size]="size" [shape]="buttonShape" />
-          <andes-skeleton-avatar [active]="active" [size]="size" [shape]="avatarShape" />
-          <andes-skeleton-input [active]="active" [size]="size" />
-        </div>
-        <andes-skeleton-button [active]="active" [size]="size" [shape]="buttonShape" [block]="block" />
-        <andes-skeleton-input [active]="active" [size]="size" [block]="block" />
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <andes-skeleton-image [active]="active" />
-          <andes-skeleton-node [active]="active" [width]="160" />
-        </div>
-      </div>
-    `,
-  }),
-};
-
-/** `width` sizes a button or input placeholder to the control it stands in for. */
-export const ElementCustomWidth: Story = {
-  args: { active: true },
-  render: (args) => ({
-    props: args,
-    template: `
-      <div style="display: flex; flex-direction: column; gap: 0.75rem; width: 480px;">
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <andes-skeleton-input [active]="active" [width]="280" />
-          <andes-skeleton-button [active]="active" [width]="96" />
-        </div>
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <andes-skeleton-input [active]="active" size="sm" width="10rem" />
-          <andes-skeleton-button [active]="active" size="sm" [width]="120" shape="round" />
-        </div>
-      </div>
-    `,
-  }),
-};
-
-// --- Block mode (original single-bar API, `shape` set) -------------------------------------------
-
-const blockRender: Story['render'] = (args) => ({
-  props: args,
-  template: `<andes-skeleton [shape]="shape" [width]="width" [height]="height" [animated]="animated" />`,
-});
-
-export const Text: Story = {
-  args: { shape: 'text', animated: true },
-  render: (args) => ({
-    props: args,
-    template: `
-      <div style="display: flex; flex-direction: column; gap: 0.5rem; width: 250px;">
-        <andes-skeleton [shape]="shape" [animated]="animated" />
-        <andes-skeleton [shape]="shape" [animated]="animated" width="80%" />
-        <andes-skeleton [shape]="shape" [animated]="animated" width="60%" />
-      </div>
-    `,
-  }),
-};
-
-export const Circular: Story = {
-  args: { shape: 'circular', animated: true },
-  render: blockRender,
-};
-
-export const Rectangular: Story = {
-  args: { shape: 'rectangular', animated: true },
-  render: (args) => ({
-    props: args,
-    template: `<div style="width: 300px;"><andes-skeleton [shape]="shape" [animated]="animated" /></div>`,
-  }),
-};
-
-export const CustomSize: Story = {
-  args: { shape: 'circular', width: 80, height: 80, animated: true },
-  render: blockRender,
-};
-
-export const Static: Story = {
-  args: { shape: 'text', animated: false },
-  render: (args) => ({
-    props: args,
-    template: `<div style="width: 250px;"><andes-skeleton [shape]="shape" [animated]="animated" /></div>`,
-  }),
-};
-
-export const CardPlaceholder: Story = {
-  args: { animated: true },
-  render: (args) => ({
-    props: args,
-    template: `
-      <div style="display: flex; align-items: center; gap: 1rem; width: 300px;">
-        <andes-skeleton shape="circular" [width]="48" [height]="48" [animated]="animated" />
-        <div style="flex: 1; display: flex; flex-direction: column; gap: 0.5rem;">
-          <andes-skeleton shape="text" width="60%" [animated]="animated" />
-          <andes-skeleton shape="text" width="90%" [animated]="animated" />
-        </div>
-      </div>
-    `,
-  }),
-};
-
-export const AllShapes: Story = {
-  render: () => ({
-    template: `
-      <div style="display: flex; align-items: center; gap: 1.5rem;">
-        <andes-skeleton shape="text" [width]="120" />
-        <andes-skeleton shape="circular" />
-        <andes-skeleton shape="rectangular" [width]="120" [height]="80" />
       </div>
     `,
   }),

@@ -115,7 +115,7 @@ class StoryReactiveMentions {
 }
 
 const meta: Meta<AndesMentions> = {
-  title: 'Mentions',
+  title: 'Data Entry/Mentions',
   component: AndesMentions,
   tags: ['autodocs'],
   parameters: {

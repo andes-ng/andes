@@ -49,7 +49,7 @@ const CELLS = `
 `;
 
 const meta: Meta<AndesRow> = {
-  title: 'Grid',
+  title: 'Layout/Grid',
   component: AndesRow,
   subcomponents: { AndesCol },
   tags: ['autodocs'],

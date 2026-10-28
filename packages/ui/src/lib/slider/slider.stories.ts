@@ -14,7 +14,7 @@ import {
 } from './slider-templates';
 
 const meta: Meta<AndesSlider> = {
-  title: 'Slider',
+  title: 'Data Entry/Slider',
   component: AndesSlider,
   tags: ['autodocs'],
   decorators: [

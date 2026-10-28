@@ -5,7 +5,7 @@ import { AndesButton } from '../button/button';
 import { AndesEmpty } from './empty';
 
 const meta: Meta<AndesEmpty> = {
-  title: 'Empty',
+  title: 'Data Display/Empty',
   component: AndesEmpty,
   tags: ['autodocs'],
   decorators: [moduleMetadata({ imports: [AndesButton] })],

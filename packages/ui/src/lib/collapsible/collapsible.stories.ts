@@ -70,12 +70,35 @@ type Story = StoryObj<AndesCollapsible>;
 /** A native `<button>` is the simplest trigger: Space and Enter come for free. */
 export const Default: Story = {};
 
-export const OpenByDefault: Story = { args: { open: true } };
-
-export const Disabled: Story = { args: { disabled: true, open: false } };
-
-export const DisabledWhileOpen: Story = {
-  args: { disabled: true, open: true },
+/**
+ * The four combinations of `open` and `disabled`. A disabled collapsible keeps its current state
+ * (open or closed) and ignores its triggers, whichever state it is frozen in.
+ */
+export const States: Story = {
+  render: () => ({
+    moduleMetadata: { imports },
+    styles,
+    template: `
+      <div class="panel">
+        <andes-collapsible class="item">
+          <button andesCollapsibleTrigger class="trigger-row">Closed (default) ${chevron}</button>
+          <andes-collapsible-content><div class="body">Closed until the trigger is used.</div></andes-collapsible-content>
+        </andes-collapsible>
+        <andes-collapsible class="item" [open]="true">
+          <button andesCollapsibleTrigger class="trigger-row">Open by default ${chevron}</button>
+          <andes-collapsible-content><div class="body">Starts expanded.</div></andes-collapsible-content>
+        </andes-collapsible>
+        <andes-collapsible class="item" [disabled]="true">
+          <button andesCollapsibleTrigger class="trigger-row">Disabled, closed ${chevron}</button>
+          <andes-collapsible-content><div class="body">Never shown.</div></andes-collapsible-content>
+        </andes-collapsible>
+        <andes-collapsible class="item" [open]="true" [disabled]="true">
+          <button andesCollapsibleTrigger class="trigger-row">Disabled, open ${chevron}</button>
+          <andes-collapsible-content><div class="body">Stays visible and cannot be collapsed.</div></andes-collapsible-content>
+        </andes-collapsible>
+      </div>
+    `,
+  }),
 };
 
 /** The trigger can be any element: it gets `role="button"`, a tab stop and Enter/Space handling. */
@@ -141,62 +164,43 @@ export const MultipleTriggers: Story = {
   }),
 };
 
-/** A lazy template is created on first open, so heavy content is not built until needed. */
+/**
+ * Lazy content, three ways. By default the `andesCollapsibleLazy` template is created on first
+ * open, so heavy content is not built until needed. `unmountOnClose` destroys it after each
+ * collapse animation (the textarea resets). `forceMount` builds it up front, e.g. so form fields
+ * exist before opening.
+ */
 export const LazyContent: Story = {
   render: () => ({
     moduleMetadata: { imports },
     styles,
-    props: {
-      renders: 0,
-      count() {
-        return ++this['renders'];
-      },
-    },
     template: `
-      <andes-collapsible class="panel">
-        <button andesCollapsibleTrigger class="trigger-row">Activity (loads on first open) ${chevron}</button>
-        <andes-collapsible-content>
-          <ng-template andesCollapsibleLazy>
-            <div class="body"><p>Rendered when first opened.</p><p>Invoice 1042 paid by Acme Corp.</p><p>Invoice 1043 sent to Globex.</p></div>
-          </ng-template>
-        </andes-collapsible-content>
-      </andes-collapsible>
-    `,
-  }),
-};
-
-/** `unmountOnClose` destroys the lazy template after each collapse animation. */
-export const UnmountOnClose: Story = {
-  render: () => ({
-    moduleMetadata: { imports },
-    styles,
-    template: `
-      <andes-collapsible class="panel">
-        <button andesCollapsibleTrigger class="trigger-row">Draft notes ${chevron}</button>
-        <andes-collapsible-content unmountOnClose>
-          <ng-template andesCollapsibleLazy>
-            <div class="body"><textarea rows="3" style="width:100%; font: inherit;" aria-label="Notes"></textarea></div>
-          </ng-template>
-        </andes-collapsible-content>
-      </andes-collapsible>
-    `,
-  }),
-};
-
-/** `forceMount` builds the lazy template up front, e.g. so form fields exist before opening. */
-export const ForceMount: Story = {
-  render: () => ({
-    moduleMetadata: { imports },
-    styles,
-    template: `
-      <andes-collapsible class="panel">
-        <button andesCollapsibleTrigger class="trigger-row">Advanced options ${chevron}</button>
-        <andes-collapsible-content forceMount>
-          <ng-template andesCollapsibleLazy>
-            <div class="body"><label>Reference <input style="font: inherit;" /></label></div>
-          </ng-template>
-        </andes-collapsible-content>
-      </andes-collapsible>
+      <div class="panel">
+        <andes-collapsible class="item">
+          <button andesCollapsibleTrigger class="trigger-row">Activity (loads on first open) ${chevron}</button>
+          <andes-collapsible-content>
+            <ng-template andesCollapsibleLazy>
+              <div class="body"><p>Rendered when first opened.</p><p>Invoice 1042 paid by Acme Corp.</p><p>Invoice 1043 sent to Globex.</p></div>
+            </ng-template>
+          </andes-collapsible-content>
+        </andes-collapsible>
+        <andes-collapsible class="item">
+          <button andesCollapsibleTrigger class="trigger-row">Draft notes (unmountOnClose) ${chevron}</button>
+          <andes-collapsible-content unmountOnClose>
+            <ng-template andesCollapsibleLazy>
+              <div class="body"><textarea rows="3" style="width:100%; font: inherit;" aria-label="Notes"></textarea></div>
+            </ng-template>
+          </andes-collapsible-content>
+        </andes-collapsible>
+        <andes-collapsible class="item">
+          <button andesCollapsibleTrigger class="trigger-row">Advanced options (forceMount) ${chevron}</button>
+          <andes-collapsible-content forceMount>
+            <ng-template andesCollapsibleLazy>
+              <div class="body"><label>Reference <input style="font: inherit;" /></label></div>
+            </ng-template>
+          </andes-collapsible-content>
+        </andes-collapsible>
+      </div>
     `,
   }),
 };

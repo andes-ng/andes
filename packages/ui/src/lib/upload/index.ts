@@ -40,4 +40,5 @@ export type {
   AndesUploadSize,
   AndesUploadSource,
   AndesUploadStatus,
+  AndesUploadVariant,
 } from './upload-types';

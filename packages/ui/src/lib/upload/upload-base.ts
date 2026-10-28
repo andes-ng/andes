@@ -1,4 +1,5 @@
 import {
+  afterNextRender,
   booleanAttribute,
   computed,
   DestroyRef,
@@ -6,6 +7,7 @@ import {
   effect,
   ElementRef,
   inject,
+  Injector,
   input,
   model,
   numberAttribute,
@@ -47,6 +49,7 @@ import {
   type AndesUploadSize,
   type AndesUploadSource,
   type AndesUploadStatus,
+  type AndesUploadVariant,
 } from './upload-types';
 
 export const DEFAULT_UPLOAD_MESSAGES: AndesUploadMessages = {
@@ -68,7 +71,29 @@ export const DEFAULT_UPLOAD_MESSAGES: AndesUploadMessages = {
   remove: 'Remove {name}',
   retry: 'Retry uploading {name}',
   dropTitle: 'Click or drag files to this area to upload',
+  noFileChosen: 'No file chosen',
+  filesChosen: '{count} files',
+  announceAdded: '{name} added',
 };
+
+/** Makes the id of the field variant's file name text unique per instance. */
+let fieldTextCounter = 0;
+
+/** What the field variant shows for the whole list. */
+export interface AndesUploadFieldView {
+  /** The name, `{count} files`, or the placeholder. */
+  readonly text: string;
+  readonly empty: boolean;
+  /** `error` if any file failed, then `uploading`, `ready`, `done`; `null` when empty. */
+  readonly status: AndesUploadStatus | null;
+  /** The average percent of the files being sent. */
+  readonly percent: number;
+  /** The failure text of the first failed file. */
+  readonly errorText: string | undefined;
+  readonly uploadingLabel: string;
+  readonly clearLabel: string;
+  readonly canClear: boolean;
+}
 
 /** Natively keyboard-focusable elements, plus anything opted in with a tabindex. */
 const FOCUSABLE_SELECTOR = [
@@ -145,7 +170,8 @@ function hasFiles(event: DragEvent): boolean {
 @Directive({
   host: {
     '[attr.data-slot]': '"upload"',
-    '[attr.data-list-type]': 'listType()',
+    '[attr.data-list-type]': 'isField() ? null : listType()',
+    '[attr.data-variant]': 'variant()',
     '[attr.data-disabled]': 'isDisabled() ? "" : null',
     // These belong on the real file input inside the template.
     '[attr.id]': 'null',
@@ -159,6 +185,7 @@ function hasFiles(event: DragEvent): boolean {
 })
 export abstract class AndesUploadBase implements ControlValueAccessor {
   private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
   private readonly fileInput =
     viewChild<ElementRef<HTMLInputElement>>('fileInput');
   private readonly projected = viewChild<ElementRef<HTMLElement>>('projected');
@@ -214,6 +241,12 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
   /** Return `false` (or reject) to keep a file the user asked to remove. */
   readonly beforeRemove = input<AndesUploadBeforeRemove | undefined>(undefined);
 
+  /**
+   * `field` draws the control as one text-field-sized row (choose segment, file name, clear
+   * button) that lines up with `andes-input`; it shows no list, so `listType`,
+   * `showUploadList`, `itemRender` and projected content are ignored there.
+   */
+  readonly variant = input<AndesUploadVariant>('default');
   readonly listType = input<AndesUploadListType>('text');
   readonly size = input<AndesUploadSize>('md');
   /** `false` hides the list; an object picks which actions show. */
@@ -290,6 +323,8 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
   private readonly handles = new Map<string, AndesUploadRequestHandle>();
   private dragDepth = 0;
   private announceFlip = false;
+  /** The field variant's file name text, referenced by the file input's `aria-describedby`. */
+  protected readonly fieldTextId = `andes-upload-field-text-${++fieldTextCounter}`;
   private destroyed = false;
   private onChange: (value: AndesUploadFile[]) => void = noop;
   private onTouched: () => void = noop;
@@ -298,11 +333,18 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
     () => this.disabled() || this.disabledByForm(),
   );
 
+  /** The field row (never for the drag-and-drop variant, whose trigger is the drop area). */
+  protected readonly isField = computed(
+    () => !this.dragMode && this.variant() === 'field',
+  );
+
   protected readonly rootClass = computed(() =>
     clsx(
       'andes-upload',
       `andes-upload--${this.size()}`,
+      this.isField() && 'andes-upload--field',
       !this.dragMode &&
+        !this.isField() &&
         this.listType() === 'picture' &&
         'andes-upload--picture',
       this.isCardList() && 'andes-upload--card',
@@ -321,6 +363,7 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
   protected readonly isCardList = computed(
     () =>
       !this.dragMode &&
+      !this.isField() &&
       (this.listType() === 'picture-card' ||
         this.listType() === 'picture-circle'),
   );
@@ -362,8 +405,71 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
     return list.map((file) => this.toView(file, list));
   });
 
+  /** The field row's text, state and labels. */
+  protected readonly fieldView = computed<AndesUploadFieldView>(() => {
+    const list = this.fileList();
+    const messages = this.msg();
+    const statuses = list.map((file) => file.status ?? 'done');
+    const status: AndesUploadStatus | null =
+      list.length === 0
+        ? null
+        : ((['error', 'uploading', 'ready'] as const).find((s) =>
+            statuses.includes(s),
+          ) ?? 'done');
+    const sending = list.filter(
+      (file) => (file.status ?? 'done') === 'uploading',
+    );
+    const percent =
+      sending.length === 0
+        ? 0
+        : Math.round(
+            sending.reduce((sum, file) => sum + (file.percent ?? 0), 0) /
+              sending.length,
+          );
+    const failed = list.find((file) => file.status === 'error');
+    const text =
+      list.length === 0
+        ? messages.noFileChosen
+        : list.length === 1
+          ? list[0].name
+          : formatMessage(messages.filesChosen, { count: list.length });
+    return {
+      text,
+      empty: list.length === 0,
+      status,
+      percent,
+      errorText: failed
+        ? (failed.errorMessage ??
+          (failed.error instanceof Error && failed.error.message
+            ? failed.error.message
+            : messages.uploadFailed))
+        : undefined,
+      uploadingLabel: formatMessage(messages.uploading, { name: text }),
+      clearLabel: formatMessage(messages.remove, { name: text }),
+      canClear: list.length > 0 && !this.isDisabled(),
+    };
+  });
+
+  /** The file input's description: the consumer's ids, then (field variant) the file name. */
+  protected readonly inputDescribedby = computed(() => {
+    const ids = [this.ariaDescribedby(), this.isField() ? this.fieldTextId : '']
+      .filter(Boolean)
+      .join(' ');
+    return ids || null;
+  });
+
+  /** Drops are taken by the drag area and by the field row. */
+  private readonly acceptsDrop = computed(
+    () => this.dragMode || this.isField(),
+  );
+
   constructor() {
-    effect(() => this.syncThumbs(this.fileList(), this.listType()));
+    effect(() =>
+      this.syncThumbs(
+        this.fileList(),
+        this.isField() ? 'text' : this.listType(),
+      ),
+    );
 
     // Keeps the projected trigger out of the tab order (the file input is the one stop) and
     // notices an empty slot so a default button can stand in.
@@ -542,8 +648,21 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
       }
     }
 
+    // The field variant shows no list, so additions are announced; rejections follow.
+    const notices: string[] = [];
+    if (this.isField() && approved.length > 0) {
+      notices.push(
+        ...approved.map(({ file }) =>
+          formatMessage(this.msg().announceAdded, { name: file.name }),
+        ),
+      );
+    }
     if (rejections.length > 0) {
-      this.reportRejections(rejections);
+      this.rejected.emit(rejections);
+      notices.push(this.describeRejections(rejections));
+    }
+    if (notices.length > 0) {
+      this.announce(notices.join('. '));
     }
     if (source === 'select' || approved.length > 0) {
       this.onTouched();
@@ -587,22 +706,35 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
    * Resolves `true` when the file was removed.
    */
   async removeFile(target: AndesUploadFile | string): Promise<boolean> {
+    const removed = await this.removeEntry(target);
+    if (removed) {
+      this.announce(
+        formatMessage(this.msg().announceRemoved, { name: removed.name }),
+      );
+    }
+    return removed !== undefined;
+  }
+
+  /** Removes one file (vetoable, cancelling its request) without announcing it. */
+  private async removeEntry(
+    target: AndesUploadFile | string,
+  ): Promise<AndesUploadFile | undefined> {
     const file = this.find(target);
     if (!file || this.isDisabled()) {
-      return false;
+      return undefined;
     }
     const hook = this.beforeRemove();
     if (hook) {
       try {
         if ((await hook(file)) === false) {
-          return false;
+          return undefined;
         }
       } catch {
-        return false;
+        return undefined;
       }
     }
     if (this.destroyed || !this.find(file.uid)) {
-      return false;
+      return undefined;
     }
     this.cancelAttempt(file.uid);
     const gone = { ...file, status: 'removed' as const };
@@ -611,11 +743,8 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
     this.onChange(next);
     this.changed.emit({ file: gone, fileList: next });
     this.remove.emit(gone);
-    this.announce(
-      formatMessage(this.msg().announceRemoved, { name: file.name }),
-    );
     this.onTouched();
-    return true;
+    return file;
   }
 
   /** Stops a running upload; the file stays in the list as failed. */
@@ -654,7 +783,7 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
   }
 
   protected onDragEnter(event: DragEvent): void {
-    if (!this.dragMode || this.triggerBlocked() || !hasFiles(event)) {
+    if (!this.acceptsDrop() || this.triggerBlocked() || !hasFiles(event)) {
       return;
     }
     event.preventDefault();
@@ -663,7 +792,7 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
   }
 
   protected onDragOver(event: DragEvent): void {
-    if (!this.dragMode || !hasFiles(event)) {
+    if (!this.acceptsDrop() || !hasFiles(event)) {
       return;
     }
     event.preventDefault();
@@ -680,7 +809,7 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
   }
 
   protected onDrop(event: DragEvent): void {
-    if (!this.dragMode) {
+    if (!this.acceptsDrop()) {
       return;
     }
     event.preventDefault();
@@ -738,6 +867,32 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
     void this.removeFile(file);
   }
 
+  /**
+   * The field row's clear button: removes every file through `removeFile`'s path (each one
+   * vetoable by `beforeRemove`), announces the removals together and returns focus to the
+   * file input, since the button itself goes away.
+   */
+  protected async onClearClick(event: MouseEvent): Promise<void> {
+    // The row forwards clicks to the file dialog; this one must not open it.
+    event.stopPropagation();
+    const names: string[] = [];
+    for (const file of [...this.fileList()]) {
+      const removed = await this.removeEntry(file);
+      if (removed) {
+        names.push(
+          formatMessage(this.msg().announceRemoved, { name: removed.name }),
+        );
+      }
+    }
+    if (names.length > 0) {
+      this.announce(names.join('. '));
+    }
+    if (this.fileList().length === 0 && !this.destroyed) {
+      // After the render that removes the button and re-enables a full input.
+      afterNextRender(() => this.focus(), { injector: this.injector });
+    }
+  }
+
   protected onRetryClick(file: AndesUploadFile): void {
     this.retryFile(file);
   }
@@ -772,8 +927,7 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
     return files.slice(0, room);
   }
 
-  private reportRejections(rejections: AndesUploadRejection[]): void {
-    this.rejected.emit(rejections);
+  private describeRejections(rejections: AndesUploadRejection[]): string {
     const messages = this.msg();
     const reasons: Record<AndesUploadRejection['reason'], string> = {
       accept: messages.rejectAccept,
@@ -785,16 +939,14 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
       }),
       'before-upload': messages.rejectBefore,
     };
-    this.announce(
-      rejections
-        .map(({ file, reason }) =>
-          formatMessage(messages.announceRejected, {
-            name: file.name,
-            reason: reasons[reason],
-          }),
-        )
-        .join('. '),
-    );
+    return rejections
+      .map(({ file, reason }) =>
+        formatMessage(messages.announceRejected, {
+          name: file.name,
+          reason: reasons[reason],
+        }),
+      )
+      .join('. ');
   }
 
   private announce(message: string): void {

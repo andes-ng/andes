@@ -1,5 +1,7 @@
 <div [class]="rootClass()" data-slot="upload-root" (paste)="onPaste($event)">
-  @if (isCardList()) {
+  @if (isField()) {
+  <ng-container *ngTemplateOutlet="field" />
+  } @else if (isCardList()) {
   <div class="andes-upload__cards" data-slot="upload-cards">
     <ng-container *ngTemplateOutlet="list" />
     <ng-container *ngTemplateOutlet="trigger" />
@@ -36,22 +38,7 @@
     (dragleave)="onDragLeave()"
     (drop)="onDrop($event)"
   >
-    <input
-      #fileInput
-      class="andes-upload__input"
-      type="file"
-      [attr.id]="id()"
-      [attr.name]="name()"
-      [attr.accept]="accept() || null"
-      [multiple]="multiple() || directory()"
-      [disabled]="triggerBlocked()"
-      [attr.webkitdirectory]="directory() ? '' : null"
-      [attr.aria-label]="ariaLabelledby() ? null : (ariaLabel() ?? msg().selectFiles)"
-      [attr.aria-labelledby]="ariaLabelledby()"
-      [attr.aria-describedby]="ariaDescribedby()"
-      [attr.aria-invalid]="ariaInvalid() ? 'true' : null"
-      (change)="onInputChange($event)"
-    />
+    <ng-container *ngTemplateOutlet="fileInputTpl" />
     @if (dragMode) {
     <div class="andes-upload__drag" data-slot="upload-dragger">
       <span class="andes-upload__drag-icon">
@@ -215,4 +202,100 @@
     ></span>
   </div>
   }
+</ng-template>
+
+<ng-template #field>
+  <!-- One text-field-sized row. The file input is the keyboard stop and carries the name; the
+       file name text describes it. A click anywhere but the clear button opens the dialog. -->
+  <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+  <div
+    class="andes-upload__field"
+    data-slot="upload-field"
+    [class.andes-upload__field--invalid]="ariaInvalid()"
+    [attr.data-status]="fieldView().status"
+    [attr.data-empty]="fieldView().empty ? '' : null"
+    [attr.data-dragging]="dragging() ? '' : null"
+    [attr.data-disabled]="isDisabled() ? '' : null"
+    [attr.data-blocked]="triggerBlocked() ? '' : null"
+    (click)="onTriggerClick($event)"
+    (dragenter)="onDragEnter($event)"
+    (dragover)="onDragOver($event)"
+    (dragleave)="onDragLeave()"
+    (drop)="onDrop($event)"
+  >
+    <ng-container *ngTemplateOutlet="fileInputTpl" />
+    <span
+      class="andes-upload__field-button"
+      data-slot="upload-field-button"
+      aria-hidden="true"
+    >
+      <andes-upload-icon name="upload" />
+      <span class="andes-upload__field-label">{{ msg().selectFiles }}</span>
+    </span>
+    <span
+      class="andes-upload__field-text"
+      data-slot="upload-field-text"
+      [id]="fieldTextId"
+      [attr.title]="fieldView().empty ? null : fieldView().text"
+    >
+      @if (fieldView().status === 'error') {
+      <andes-upload-icon class="andes-upload__field-alert" name="alert" />
+      }
+      <span class="andes-upload__field-name" dir="auto"
+        >{{ fieldView().text }}</span
+      >
+      @if (fieldView().status === 'uploading') {
+      <span class="andes-upload__field-percent"
+        >{{ fieldView().percent }}%</span
+      >
+      } @else if (fieldView().errorText) {
+      <span class="andes-upload__sr">{{ fieldView().errorText }}</span>
+      }
+    </span>
+    @if (fieldView().canClear) {
+    <button
+      type="button"
+      class="andes-upload__field-clear"
+      data-slot="upload-field-clear"
+      [attr.aria-label]="fieldView().clearLabel"
+      [attr.title]="fieldView().clearLabel"
+      (click)="onClearClick($event)"
+    >
+      <andes-upload-icon name="x" />
+    </button>
+    } @if (fieldView().status === 'uploading') {
+    <span
+      class="andes-upload__field-progress"
+      role="progressbar"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      [attr.aria-valuenow]="fieldView().percent"
+      [attr.aria-label]="fieldView().uploadingLabel"
+    >
+      <span
+        class="andes-upload__field-progress-bar"
+        [style.inline-size.%]="fieldView().percent"
+      ></span>
+    </span>
+    }
+  </div>
+</ng-template>
+
+<ng-template #fileInputTpl>
+  <input
+    #fileInput
+    class="andes-upload__input"
+    type="file"
+    [attr.id]="id()"
+    [attr.name]="name()"
+    [attr.accept]="accept() || null"
+    [multiple]="multiple() || directory()"
+    [disabled]="triggerBlocked()"
+    [attr.webkitdirectory]="directory() ? '' : null"
+    [attr.aria-label]="ariaLabelledby() ? null : (ariaLabel() ?? msg().selectFiles)"
+    [attr.aria-labelledby]="ariaLabelledby()"
+    [attr.aria-describedby]="inputDescribedby()"
+    [attr.aria-invalid]="ariaInvalid() ? 'true' : null"
+    (change)="onInputChange($event)"
+  />
 </ng-template>

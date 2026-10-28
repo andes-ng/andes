@@ -53,7 +53,7 @@ function pictures(style = ''): string {
 const COMMON_PROPS = { slides: SLIDES, frame: FRAME, picture: PICTURE };
 
 const meta: Meta<AndesCarousel> = {
-  title: 'Carousel',
+  title: 'Data Display/Carousel',
   component: AndesCarousel,
   tags: ['autodocs'],
   decorators: [moduleMetadata({ imports })],

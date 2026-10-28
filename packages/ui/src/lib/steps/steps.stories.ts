@@ -5,7 +5,7 @@ import { AndesStep } from './step';
 import { AndesSteps } from './steps';
 
 const meta: Meta<AndesSteps> = {
-  title: 'Steps',
+  title: 'Navigation/Steps',
   component: AndesSteps,
   tags: ['autodocs'],
   decorators: [

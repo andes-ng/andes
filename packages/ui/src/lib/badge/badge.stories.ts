@@ -1,5 +1,10 @@
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideBell, lucideClock, lucideMinus } from '@ng-icons/lucide';
+import {
+  lucideBell,
+  lucideClock,
+  lucideMinus,
+  lucidePlus,
+} from '@ng-icons/lucide';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { signal } from '@angular/core';
@@ -9,7 +14,7 @@ import { ANDES_PALETTE_COLORS } from '../palette/palette';
 import { AndesBadge } from './badge';
 
 const meta: Meta<AndesBadge> = {
-  title: 'Data Display/Badge',
+  title: 'Data Display/Badge/Basics',
   component: AndesBadge,
   tags: ['autodocs'],
   argTypes: {
@@ -64,149 +69,175 @@ export default meta;
 
 type Story = StoryObj<AndesBadge>;
 
-export const Count: Story = {
-  args: { count: 5 },
-};
+const box = `<div style="width: 2.5rem; height: 2.5rem; border-radius: 0.5rem; background: var(--andes-color-muted);"></div>`;
 
-export const OverflowCount: Story = {
-  args: { count: 150, max: 99 },
-};
+/** One captioned demo cell, so a merged story can label each variant it shows. */
+const cell = (caption: string, content: string) =>
+  `<figure style="margin: 0; display: flex; flex-direction: column; align-items: center; gap: 0.75rem; font: 12px/20px var(--andes-font-family), sans-serif; color: var(--andes-color-foreground);">${content}<figcaption>${caption}</figcaption></figure>`;
 
-export const ZeroHidden: Story = {
-  args: { count: 0 },
-};
+/** The playground: every input is a control. */
+export const Default: Story = {};
 
-export const ZeroShown: Story = {
-  args: { count: 0, showZero: true },
-};
-
-export const Dot: Story = {
-  args: { dot: true, count: undefined },
-};
-
-export const Small: Story = {
-  args: { count: 5, size: 'small' },
-};
-
-export const Processing: Story = {
-  args: { dot: true, count: undefined, processing: true, variant: 'info' },
-};
-
-export const CustomOffset: Story = {
+/**
+ * How the count is shown. `max` (or its alias `overflowCount`, which wins when both are set)
+ * caps the number with a `+`; a zero count hides the badge unless `showZero` is set; `title`
+ * adds a native tooltip; a short string is shown as-is (a numeric string still counts as a
+ * number); and `standalone` renders the bubble inline, e.g. next to a menu label.
+ */
+export const Counts: Story = {
   render: () => ({
     template: `
-      <andes-badge [count]="5" [offset]="[-4, 4]">
-        <div style="width: 2.5rem; height: 2.5rem; border-radius: 0.5rem; background: var(--andes-color-muted);"></div>
-      </andes-badge>
-    `,
-  }),
-};
-
-export const WithTitleTooltip: Story = {
-  args: { count: 12, title: '12 unread notifications' },
-};
-
-export const Variants: Story = {
-  render: () => ({
-    template: `
-      <div style="display: flex; gap: 2rem;">
-        <andes-badge [count]="3" variant="primary"><div style="width: 2.5rem; height: 2.5rem; border-radius: 0.5rem; background: var(--andes-color-muted);"></div></andes-badge>
-        <andes-badge [count]="3" variant="secondary"><div style="width: 2.5rem; height: 2.5rem; border-radius: 0.5rem; background: var(--andes-color-muted);"></div></andes-badge>
-        <andes-badge [count]="3" variant="danger"><div style="width: 2.5rem; height: 2.5rem; border-radius: 0.5rem; background: var(--andes-color-muted);"></div></andes-badge>
-        <andes-badge [count]="3" variant="success"><div style="width: 2.5rem; height: 2.5rem; border-radius: 0.5rem; background: var(--andes-color-muted);"></div></andes-badge>
-        <andes-badge [count]="3" variant="warning"><div style="width: 2.5rem; height: 2.5rem; border-radius: 0.5rem; background: var(--andes-color-muted);"></div></andes-badge>
-        <andes-badge [count]="3" variant="info"><div style="width: 2.5rem; height: 2.5rem; border-radius: 0.5rem; background: var(--andes-color-muted);"></div></andes-badge>
+      <div style="display: flex; flex-direction: column; gap: 2rem;">
+        <div style="display: flex; flex-wrap: wrap; gap: 2.5rem;">
+          ${cell('count 5', `<andes-badge [count]="5">${box}</andes-badge>`)}
+          ${cell('150, max 99', `<andes-badge [count]="150" [max]="99">${box}</andes-badge>`)}
+          ${cell('15, overflowCount 9', `<andes-badge [count]="15" [overflowCount]="9">${box}</andes-badge>`)}
+          ${cell('0, hidden', `<andes-badge [count]="0">${box}</andes-badge>`)}
+          ${cell('0, showZero', `<andes-badge [count]="0" showZero>${box}</andes-badge>`)}
+          ${cell('title tooltip', `<andes-badge [count]="12" title="12 unread notifications">${box}</andes-badge>`)}
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 2.5rem;">
+          ${cell('"new" string', `<andes-badge count="new" color="green">${box}</andes-badge>`)}
+          ${cell('"!" string', `<andes-badge count="!" variant="warning">${box}</andes-badge>`)}
+          ${cell('"250" string', `<andes-badge count="250">${box}</andes-badge>`)}
+        </div>
+        <div style="display: flex; gap: 1rem; align-items: center;">
+          <andes-badge standalone [count]="25" />
+          <andes-badge standalone [count]="4" variant="secondary" />
+          <andes-badge standalone [count]="109" color="indigo" />
+          <andes-badge standalone [count]="0" showZero variant="success" />
+        </div>
       </div>
     `,
   }),
 };
 
 /**
- * Shape progression: one character is a true circle, two or more elongate into a pill.
+ * The dot form (no number) and the small size: a plain dot, a pulsing `processing` dot, a small
+ * count and a small dot. The playground exposes `dot`, `processing` and `size` as controls.
  */
-export const Shapes: Story = {
+export const DotAndSize: Story = {
   render: () => ({
     template: `
-      <div style="display: flex; gap: 2.5rem; align-items: center;">
-        <andes-badge [count]="5"><div style="width: 2.5rem; height: 2.5rem; border-radius: 0.5rem; background: var(--andes-color-muted);"></div></andes-badge>
-        <andes-badge [count]="42"><div style="width: 2.5rem; height: 2.5rem; border-radius: 0.5rem; background: var(--andes-color-muted);"></div></andes-badge>
-        <andes-badge [count]="150" [max]="99"><div style="width: 2.5rem; height: 2.5rem; border-radius: 0.5rem; background: var(--andes-color-muted);"></div></andes-badge>
-        <andes-badge dot><div style="width: 2.5rem; height: 2.5rem; border-radius: 0.5rem; background: var(--andes-color-muted);"></div></andes-badge>
+      <div style="display: flex; flex-wrap: wrap; gap: 2.5rem;">
+        ${cell('dot', `<andes-badge dot>${box}</andes-badge>`)}
+        ${cell('dot, processing', `<andes-badge dot processing variant="info">${box}</andes-badge>`)}
+        ${cell('small count', `<andes-badge [count]="5" size="small">${box}</andes-badge>`)}
+        ${cell('small dot', `<andes-badge dot size="small">${box}</andes-badge>`)}
       </div>
     `,
   }),
 };
 
-export const StandaloneStatus: Story = {
-  render: () => ({
-    template: `
-      <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-        <andes-badge standalone dot variant="success"><span slot="label">Online</span></andes-badge>
-        <andes-badge standalone dot variant="warning"><span slot="label">Pending</span></andes-badge>
-        <andes-badge standalone dot variant="danger"><span slot="label">Offline</span></andes-badge>
-      </div>
-    `,
-  }),
-};
-
-export const OnIconButton: Story = {
+/**
+ * What the badge can wrap. A box with a custom `offset`, an icon button, and a link - which
+ * stays fully clickable under the badge.
+ */
+export const Placement: Story = {
   render: () => ({
     moduleMetadata: {
       imports: [NgIcon],
       providers: [provideIcons({ lucideBell })],
     },
     template: `
-      <andes-badge [count]="8" variant="danger">
-        <button
-          style="display: inline-flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; border-radius: 9999px; border: 1px solid var(--andes-color-border); background: var(--andes-color-background); color: var(--andes-color-foreground); cursor: pointer;"
-          aria-label="Notifications"
-        >
-          <ng-icon name="lucideBell" style="width: 1.125rem; height: 1.125rem;" />
-        </button>
-      </andes-badge>
-    `,
-  }),
-};
-
-/** `overflowCount` - an alias of `max` that wins when both are set. */
-export const OverflowCountAlias: Story = {
-  args: { count: 15, overflowCount: 9 },
-};
-
-/**
- * `status` + `text`: an inline status indicator. Implies `standalone` + `dot`;
- * `processing` pulses.
- */
-export const Status: Story = {
-  render: () => ({
-    template: `
-      <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-        <andes-badge status="success" text="Success" />
-        <andes-badge status="error" text="Error" />
-        <andes-badge status="default" text="Default" />
-        <andes-badge status="processing" text="Processing" />
-        <andes-badge status="warning" text="Warning" />
+      <div style="display: flex; flex-wrap: wrap; gap: 2.5rem; align-items: center;">
+        ${cell('offset [-4, 4]', `<andes-badge [count]="5" [offset]="[-4, 4]">${box}</andes-badge>`)}
+        ${cell(
+          'icon button',
+          `<andes-badge [count]="8" variant="danger">
+            <button
+              style="display: inline-flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; border-radius: 9999px; border: 1px solid var(--andes-color-border); background: var(--andes-color-background); color: var(--andes-color-foreground); cursor: pointer;"
+              aria-label="Notifications"
+            >
+              <ng-icon name="lucideBell" style="width: 1.125rem; height: 1.125rem;" />
+            </button>
+          </andes-badge>`,
+        )}
+        ${cell(
+          'link',
+          `<a href="#inbox" style="display: inline-block; border-radius: 0.5rem;" aria-label="Inbox, 5 unread">
+            <andes-badge [count]="5">${box}</andes-badge>
+          </a>`,
+        )}
       </div>
     `,
   }),
 };
 
-/** `text` also accepts a TemplateRef for rich labels. */
-export const StatusTextTemplate: Story = {
+/**
+ * Every `variant`, then the shape progression: one character is a true circle, two or more
+ * elongate into a pill, and the dot stays round.
+ */
+export const VariantsAndShapes: Story = {
+  render: () => ({
+    template: `
+      <div style="display: flex; flex-direction: column; gap: 2rem;">
+        <div style="display: flex; gap: 2rem;">
+          ${(
+            [
+              'primary',
+              'secondary',
+              'danger',
+              'success',
+              'warning',
+              'info',
+            ] as const
+          )
+            .map(
+              (variant) =>
+                `<andes-badge [count]="3" variant="${variant}">${box}</andes-badge>`,
+            )
+            .join('')}
+        </div>
+        <div style="display: flex; gap: 2.5rem; align-items: center;">
+          <andes-badge [count]="5">${box}</andes-badge>
+          <andes-badge [count]="42">${box}</andes-badge>
+          <andes-badge [count]="150" [max]="99">${box}</andes-badge>
+          <andes-badge dot>${box}</andes-badge>
+        </div>
+      </div>
+    `,
+  }),
+};
+
+/**
+ * `status` + `text`: an inline status indicator. Implies `standalone` + `dot`; `processing`
+ * pulses. First column: the five statuses. Second: a standalone dot with a variant and a slotted
+ * label. The last badge passes `text` as a TemplateRef for a rich label.
+ */
+export const Status: Story = {
   render: () => ({
     template: `
       <ng-template #label><strong>Deploying</strong> &middot; 3 of 5 pods</ng-template>
-      <andes-badge status="processing" [text]="label" />
+      <div style="display: flex; flex-wrap: wrap; gap: 3rem;">
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <andes-badge status="success" text="Success" />
+          <andes-badge status="error" text="Error" />
+          <andes-badge status="default" text="Default" />
+          <andes-badge status="processing" text="Processing" />
+          <andes-badge status="warning" text="Warning" />
+          <andes-badge status="processing" [text]="label" />
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <andes-badge standalone dot variant="success"><span slot="label">Online</span></andes-badge>
+          <andes-badge standalone dot variant="warning"><span slot="label">Pending</span></andes-badge>
+          <andes-badge standalone dot variant="danger"><span slot="label">Offline</span></andes-badge>
+        </div>
+      </div>
     `,
   }),
 };
 
 /**
  * `color`: preset names reuse the themed variants; any other CSS color is applied as-is with
- * black or white text, whichever contrasts more.
+ * black or white text, whichever contrasts more. The last two groups are the named palette
+ * hues, themed for light and dark: standalone with no count a color renders a plain dot beside
+ * its `text`; with a count the bubble takes the hue and picks black or white text from its
+ * lightness.
  */
 export const Colors: Story = {
   render: () => ({
+    props: { palette: ANDES_PALETTE_COLORS },
     template: `
       <div style="display: flex; flex-direction: column; gap: 1.25rem;">
         <div style="display: flex; gap: 2rem; align-items: center;">
@@ -220,6 +251,16 @@ export const Colors: Story = {
           <andes-badge standalone dot color="#eb2f96" text="#eb2f96" />
           <andes-badge standalone dot color="rgb(250 140 22)" text="rgb(250 140 22)" />
           <andes-badge standalone dot color="rebeccapurple" text="rebeccapurple" />
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(4, max-content); gap: 0.5rem 2rem;">
+          @for (color of palette; track color) {
+            <andes-badge standalone [color]="color" [text]="color" />
+          }
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
+          @for (color of palette; track color) {
+            <andes-badge standalone [color]="color" [count]="12" />
+          }
         </div>
       </div>
     `,
@@ -244,8 +285,6 @@ export const CustomCountTemplate: Story = {
   }),
 };
 
-const box = `<div style="width: 2.5rem; height: 2.5rem; border-radius: 0.5rem; background: var(--andes-color-muted);"></div>`;
-
 /**
  * Live updates: a changed count rolls into place, and the badge zooms in when it appears and
  * out when it hides (count back to 0). Nothing animates on first render, and nothing at all
@@ -258,7 +297,7 @@ export const Dynamic: Story = {
     return {
       moduleMetadata: {
         imports: [AndesButton, NgIcon],
-        providers: [provideIcons({ lucideMinus })],
+        providers: [provideIcons({ lucideMinus, lucidePlus })],
       },
       props: {
         count,
@@ -283,66 +322,6 @@ export const Dynamic: Story = {
       `,
     };
   },
-};
-
-/**
- * Named palette hues, themed for light and dark. Standalone with no count, a color renders a
- * plain colored dot beside its `text`; with a count, the bubble takes the hue and picks black
- * or white text from its lightness.
- */
-export const PaletteColors: Story = {
-  render: () => ({
-    props: { palette: ANDES_PALETTE_COLORS },
-    template: `
-      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-        <div style="display: grid; grid-template-columns: repeat(4, max-content); gap: 0.5rem 2rem;">
-          @for (color of palette; track color) {
-            <andes-badge standalone [color]="color" [text]="color" />
-          }
-        </div>
-        <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
-          @for (color of palette; track color) {
-            <andes-badge standalone [color]="color" [count]="12" />
-          }
-        </div>
-      </div>
-    `,
-  }),
-};
-
-/**
- * `count` also takes a short string, shown as-is (a numeric string still counts as a number),
- * and `standalone` renders the bubble inline - e.g. next to a menu label.
- */
-export const StringAndStandaloneCounts: Story = {
-  render: () => ({
-    template: `
-      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-        <div style="display: flex; gap: 2rem; align-items: center;">
-          <andes-badge count="new" color="green">${box}</andes-badge>
-          <andes-badge count="!" variant="warning">${box}</andes-badge>
-          <andes-badge count="250">${box}</andes-badge>
-        </div>
-        <div style="display: flex; gap: 1rem; align-items: center;">
-          <andes-badge standalone [count]="25" />
-          <andes-badge standalone [count]="4" variant="secondary" />
-          <andes-badge standalone [count]="109" color="indigo" />
-          <andes-badge standalone [count]="0" showZero variant="success" />
-        </div>
-      </div>
-    `,
-  }),
-};
-
-/** A badge wraps any element - here a link, which stays fully clickable under the badge. */
-export const OnLink: Story = {
-  render: () => ({
-    template: `
-      <a href="#inbox" style="display: inline-block; border-radius: 0.5rem;" aria-label="Inbox, 5 unread">
-        <andes-badge [count]="5">${box}</andes-badge>
-      </a>
-    `,
-  }),
 };
 
 const severityRow = (

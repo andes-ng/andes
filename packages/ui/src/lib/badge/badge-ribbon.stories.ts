@@ -31,13 +31,34 @@ type Story = StoryObj<AndesBadgeRibbon>;
 
 export const Default: Story = {};
 
-export const PlacementStart: Story = {
-  args: { placement: 'start' },
+/**
+ * `placement` puts the ribbon on the `end` (default) or `start` side, and both follow the text
+ * direction: the second row repeats them in right-to-left.
+ */
+export const Placement: Story = {
+  render: () => ({
+    template: `
+      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <div style="display: flex; gap: 1.5rem;">
+          <andes-badge-ribbon text="end">${card}</andes-badge-ribbon>
+          <andes-badge-ribbon text="start" placement="start" color="info">${card}</andes-badge-ribbon>
+        </div>
+        <div dir="rtl" style="display: flex; gap: 1.5rem;">
+          <andes-badge-ribbon text="end">${card}</andes-badge-ribbon>
+          <andes-badge-ribbon text="start" placement="start" color="info">${card}</andes-badge-ribbon>
+        </div>
+      </div>
+    `,
+  }),
 };
 
-/** Preset colors reuse the themed token pairs; arbitrary CSS colors get auto-contrast text. */
+/**
+ * Preset colors reuse the themed token pairs; arbitrary CSS colors get auto-contrast text. The
+ * last group is the named palette hues, themed for light and dark.
+ */
 export const Colors: Story = {
   render: () => ({
+    props: { palette: ANDES_PALETTE_COLORS },
     template: `
       <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: 1.5rem;">
         <andes-badge-ribbon text="primary">${card}</andes-badge-ribbon>
@@ -46,28 +67,6 @@ export const Colors: Story = {
         <andes-badge-ribbon text="danger" color="danger">${card}</andes-badge-ribbon>
         <andes-badge-ribbon text="#722ed1" color="#722ed1">${card}</andes-badge-ribbon>
         <andes-badge-ribbon text="#fadb14" color="#fadb14">${card}</andes-badge-ribbon>
-      </div>
-    `,
-  }),
-};
-
-export const Rtl: Story = {
-  render: () => ({
-    template: `
-      <div dir="rtl" style="display: flex; gap: 1.5rem;">
-        <andes-badge-ribbon text="end">${card}</andes-badge-ribbon>
-        <andes-badge-ribbon text="start" placement="start" color="info">${card}</andes-badge-ribbon>
-      </div>
-    `,
-  }),
-};
-
-/** Named palette hues - themed for light and dark, with auto-contrast text. */
-export const PaletteColors: Story = {
-  render: () => ({
-    props: { palette: ANDES_PALETTE_COLORS },
-    template: `
-      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: 1.5rem;">
         @for (color of palette; track color) {
           <andes-badge-ribbon [text]="color" [color]="color">${card}</andes-badge-ribbon>
         }

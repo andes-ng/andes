@@ -18,6 +18,8 @@ minimumReleaseAge: 10080
 minimumReleaseAgeExclude:
   - 'nx'
   - '@nx/*'
+  # Security fix published 6 days ago; the rest of the tree keeps the seven-day wait.
+  - 'body-parser'
 trustPolicy: no-downgrade
 # Releases older than a year were published before provenance was common, so a newer release can look like a trust
 # downgrade next to them (chokidar 4.0.3, semver 6.3.1). Recent releases, where a takeover would matter, stay checked.
@@ -46,6 +48,9 @@ overrides:
   'serialize-javascript@>=7.1.1 <7.1.2': '>=7.1.2'
   'follow-redirects@>=1.16.0 <1.16.1': '>=1.16.1'
   'vite@>=8.0.0 <8.1.6': '>=8.1.6'
+  'body-parser@<1.20.9': '1.20.9'
+  'body-parser@>=2.0.0 <2.4.0': '2.4.0'
+  'zod@<4.6.6': '>=4.6.6'
 
 # - braces: no patched release exists (GHSA-vfj7-8cjw-p6xm affects every published version); it is reachable only
 #   through the local-registry tooling of the build, never from the published packages. Remove once a fix ships.

@@ -30,7 +30,7 @@ const SELECT_IMPORTS = [
  * `aria-labelledby` pointing at a visible one) is unnamed for a screen reader.
  */
 const meta: Meta<AndesSelect> = {
-  title: 'Select',
+  title: 'Data Entry/Select',
   component: AndesSelect,
   tags: ['autodocs'],
   argTypes: {

@@ -71,7 +71,7 @@ export * from './lib/button';
 
 export * from './lib/input';
 
-// @slot input-number
+export * from './lib/input-number';
 
 // @slot kbd
 

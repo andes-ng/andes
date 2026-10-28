@@ -4,7 +4,7 @@ import { AndesTimeline } from './timeline';
 import { AndesTimelineItem } from './timeline-item';
 
 const meta: Meta<AndesTimeline> = {
-  title: 'Timeline',
+  title: 'Data Display/Timeline',
   component: AndesTimeline,
   tags: ['autodocs'],
   decorators: [moduleMetadata({ imports: [AndesTimeline, AndesTimelineItem] })],

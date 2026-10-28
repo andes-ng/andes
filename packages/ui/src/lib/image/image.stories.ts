@@ -118,19 +118,6 @@ export const Default: Story = {
   }),
 };
 
-export const LargerPreviewAsset: Story = {
-  name: 'Larger asset in the preview',
-  args: { previewSrc: LARGE[0] },
-  render: (args) => ({
-    props: args,
-    template: `
-      <p style="margin: 0 0 0.75rem; max-width: 28rem; font: 14px/22px system-ui;">
-        The thumbnail loads a small file; the preview loads <code>previewSrc</code>.
-      </p>
-      <andes-image loading="eager" [src]="src" [alt]="alt" [width]="width" [height]="height" [previewSrc]="previewSrc" />`,
-  }),
-};
-
 export const FitModes: Story = {
   render: () => ({
     props: {
@@ -149,23 +136,38 @@ export const FitModes: Story = {
   }),
 };
 
-export const PreviewDisabled: Story = {
-  args: { preview: false },
-  render: (args) => ({
-    props: args,
-    template: `<andes-image loading="eager" [src]="src" [alt]="alt" [width]="width" [height]="height" [preview]="false" />`,
-  }),
-};
-
-export const CustomMask: Story = {
+/**
+ * What clicking a thumbnail does. First: `previewSrc` makes the viewer load a larger file than
+ * the thumbnail. Second: `[preview]="false"` turns the viewer off. Then the hover mask: a
+ * template, a plain string, or `false` for none.
+ */
+export const PreviewAndMask: Story = {
+  args: { previewSrc: LARGE[0] },
   render: (args) => ({
     props: args,
     template: `
       <ng-template #zoom><strong style="font: 600 14px/22px system-ui;">Open full size</strong></ng-template>
-      <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-        <andes-image loading="eager" [src]="src" [alt]="alt" [width]="width" [height]="height" [mask]="zoom" />
-        <andes-image loading="eager" [src]="src" [alt]="alt" [width]="width" [height]="height" mask="View" />
-        <andes-image loading="eager" [src]="src" [alt]="alt" [width]="width" [height]="height" [mask]="false" />
+      <div style="display: flex; gap: 1rem; flex-wrap: wrap; font: 12px/20px system-ui;">
+        <figure style="margin: 0;">
+          <andes-image loading="eager" [src]="src" [alt]="alt" [width]="width" [height]="height" [previewSrc]="previewSrc" />
+          <figcaption>Thumbnail small, preview large</figcaption>
+        </figure>
+        <figure style="margin: 0;">
+          <andes-image loading="eager" [src]="src" [alt]="alt" [width]="width" [height]="height" [preview]="false" />
+          <figcaption>Preview disabled</figcaption>
+        </figure>
+        <figure style="margin: 0;">
+          <andes-image loading="eager" [src]="src" [alt]="alt" [width]="width" [height]="height" [mask]="zoom" />
+          <figcaption>Mask template</figcaption>
+        </figure>
+        <figure style="margin: 0;">
+          <andes-image loading="eager" [src]="src" [alt]="alt" [width]="width" [height]="height" mask="View" />
+          <figcaption>Mask text</figcaption>
+        </figure>
+        <figure style="margin: 0;">
+          <andes-image loading="eager" [src]="src" [alt]="alt" [width]="width" [height]="height" [mask]="false" />
+          <figcaption>No mask</figcaption>
+        </figure>
       </div>`,
   }),
 };
@@ -282,58 +284,54 @@ export const Group: Story = {
     docs: {
       description: {
         story:
-          'Clicking any thumbnail opens one viewer over the whole group. Previous / next buttons, the arrow keys, `PageUp` / `PageDown`, `Home` and `End` move between images.',
+          'Clicking any thumbnail opens one viewer over the whole group. Previous / next buttons, the arrow keys, `PageUp` / `PageDown`, `Home` and `End` move between images. Three groups: the default, one with `loop` so next wraps from the last image to the first, and one where the third picture has `[preview]="false"` so the viewer skips it.',
       },
     },
   },
   render: () => ({
     props: { thumbs: THUMBS, large: LARGE, names: NAMES },
     template: `
-      <andes-image-group>
-        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-          @for (thumb of thumbs; track thumb; let i = $index) {
-            <andes-image [src]="thumb" [alt]="names[i]" [previewSrc]="large[i]" [width]="150" [height]="100" loading="eager" />
-          }
+      <div style="display: flex; flex-direction: column; gap: 1.5rem; font: 12px/20px system-ui;">
+        <div>
+          <andes-image-group>
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+              @for (thumb of thumbs; track thumb; let i = $index) {
+                <andes-image [src]="thumb" [alt]="names[i]" [previewSrc]="large[i]" [width]="150" [height]="100" loading="eager" />
+              }
+            </div>
+          </andes-image-group>
+          <p style="margin: 0.5rem 0 0;">Default group</p>
         </div>
-      </andes-image-group>`,
+        <div>
+          <andes-image-group [preview]="{ loop: true }">
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+              @for (thumb of thumbs; track thumb; let i = $index) {
+                <andes-image [src]="thumb" [alt]="names[i]" [previewSrc]="large[i]" [width]="150" [height]="100" loading="eager" />
+              }
+            </div>
+          </andes-image-group>
+          <p style="margin: 0.5rem 0 0;">Looping group</p>
+        </div>
+        <div>
+          <andes-image-group>
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+              @for (thumb of thumbs; track thumb; let i = $index) {
+                <andes-image [src]="thumb" [alt]="names[i]" [previewSrc]="large[i]" [width]="150" [height]="100" loading="eager" [preview]="i !== 2" />
+              }
+            </div>
+          </andes-image-group>
+          <p style="margin: 0.5rem 0 0;">The third picture has <code>[preview]="false"</code>, so the viewer skips it.</p>
+        </div>
+      </div>`,
   }),
 };
 
-export const GroupLooping: Story = {
-  render: () => ({
-    props: { thumbs: THUMBS, large: LARGE, names: NAMES },
-    template: `
-      <andes-image-group [preview]="{ loop: true }">
-        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-          @for (thumb of thumbs; track thumb; let i = $index) {
-            <andes-image [src]="thumb" [alt]="names[i]" [previewSrc]="large[i]" [width]="150" [height]="100" loading="eager" />
-          }
-        </div>
-      </andes-image-group>`,
-  }),
-};
-
-export const GroupWithExcludedImage: Story = {
-  render: () => ({
-    props: { thumbs: THUMBS, large: LARGE, names: NAMES },
-    template: `
-      <andes-image-group>
-        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-          @for (thumb of thumbs; track thumb; let i = $index) {
-            <andes-image [src]="thumb" [alt]="names[i]" [previewSrc]="large[i]" [width]="150" [height]="100" loading="eager" [preview]="i !== 2" />
-          }
-        </div>
-      </andes-image-group>
-      <p style="margin: 0.75rem 0 0; font: 12px/20px system-ui;">The third picture has <code>[preview]="false"</code>, so the viewer skips it.</p>`,
-  }),
-};
-
-export const ConfiguredPreview: Story = {
+export const PreviewConfig: Story = {
   parameters: {
     docs: {
       description: {
         story:
-          'Zoom limits and step, which toolbar buttons appear, and a blurred scrim - all through the `preview` config object.',
+          'Everything about the viewer goes through the `preview` config object. First image: zoom limits and step, which toolbar buttons appear, and a blurred scrim. Group: an extra toolbar action and a custom "n of total" counter, both templates.',
       },
     },
   },
@@ -347,16 +345,8 @@ export const ConfiguredPreview: Story = {
         actions: ['zoomOut', 'zoomIn', 'rotateRight', 'reset'],
         scrim: { blur: true },
       },
-    },
-    template: `<andes-image loading="eager" [src]="src" alt="Night hills" [previewSrc]="large" [width]="240" [height]="160" [preview]="config" />`,
-  }),
-};
-
-export const ExtraActionsAndCount: Story = {
-  render: () => ({
-    props: {
       thumbs: THUMBS.slice(0, 3),
-      large: LARGE,
+      larges: LARGE,
       names: NAMES,
     },
     template: `
@@ -364,13 +354,16 @@ export const ExtraActionsAndCount: Story = {
         <button type="button" (click)="close()" style="border: 0; background: transparent; color: inherit; font: 500 13px/20px system-ui; padding: 0 0.5rem; cursor: pointer;">Use "{{ item.alt }}"</button>
       </ng-template>
       <ng-template #count let-current let-total="total"><span>Photo {{ current }} of {{ total }}</span></ng-template>
-      <andes-image-group [preview]="{ extraActions: extra, countTemplate: count }">
-        <div style="display: flex; gap: 0.75rem;">
-          @for (thumb of thumbs; track thumb; let i = $index) {
-            <andes-image [src]="thumb" [alt]="names[i]" [previewSrc]="large[i]" [width]="150" [height]="100" loading="eager" />
-          }
-        </div>
-      </andes-image-group>`,
+      <div style="display: flex; gap: 2rem; flex-wrap: wrap; align-items: flex-start;">
+        <andes-image loading="eager" [src]="src" alt="Night hills" [previewSrc]="large" [width]="240" [height]="160" [preview]="config" />
+        <andes-image-group [preview]="{ extraActions: extra, countTemplate: count }">
+          <div style="display: flex; gap: 0.75rem;">
+            @for (thumb of thumbs; track thumb; let i = $index) {
+              <andes-image [src]="thumb" [alt]="names[i]" [previewSrc]="larges[i]" [width]="150" [height]="100" loading="eager" />
+            }
+          </div>
+        </andes-image-group>
+      </div>`,
   }),
 };
 

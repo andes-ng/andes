@@ -51,72 +51,100 @@ type Story = StoryObj<AndesTimeline>;
 
 export const Default: Story = {};
 
-export const ModeEnd: Story = {
-  args: { mode: 'end' },
+/**
+ * Layout options on the same three events: `mode` (start, end, alternate), `reverse` to list the
+ * newest first, and the compact `density`.
+ */
+export const Layout: Story = {
+  render: () => ({
+    template: `
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 2rem;">
+        <section>
+          <h4 style="margin: 0 0 .5rem; font-size: .875rem;">Start (default)</h4>
+          <andes-timeline aria-label="Start (default)" mode="start">
+          <andes-timeline-item color="success">Order created by Lucia Paredes</andes-timeline-item>
+          <andes-timeline-item>Sent to supplier Andes Metals</andes-timeline-item>
+          <andes-timeline-item color="warning">Delivery date moved to 12 Nov</andes-timeline-item>
+          </andes-timeline>
+        </section>
+        <section>
+          <h4 style="margin: 0 0 .5rem; font-size: .875rem;">End</h4>
+          <andes-timeline aria-label="End" mode="end">
+          <andes-timeline-item color="success">Order created by Lucia Paredes</andes-timeline-item>
+          <andes-timeline-item>Sent to supplier Andes Metals</andes-timeline-item>
+          <andes-timeline-item color="warning">Delivery date moved to 12 Nov</andes-timeline-item>
+          </andes-timeline>
+        </section>
+        <section>
+          <h4 style="margin: 0 0 .5rem; font-size: .875rem;">Alternate</h4>
+          <andes-timeline aria-label="Alternate" mode="alternate">
+          <andes-timeline-item color="success">Order created by Lucia Paredes</andes-timeline-item>
+          <andes-timeline-item>Sent to supplier Andes Metals</andes-timeline-item>
+          <andes-timeline-item color="warning">Delivery date moved to 12 Nov</andes-timeline-item>
+          </andes-timeline>
+        </section>
+        <section>
+          <h4 style="margin: 0 0 .5rem; font-size: .875rem;">Reverse</h4>
+          <andes-timeline aria-label="Reverse" [reverse]="true">
+          <andes-timeline-item color="success">Order created by Lucia Paredes</andes-timeline-item>
+          <andes-timeline-item>Sent to supplier Andes Metals</andes-timeline-item>
+          <andes-timeline-item color="warning">Delivery date moved to 12 Nov</andes-timeline-item>
+          </andes-timeline>
+        </section>
+        <section>
+          <h4 style="margin: 0 0 .5rem; font-size: .875rem;">Compact</h4>
+          <andes-timeline aria-label="Compact" density="compact">
+          <andes-timeline-item color="success">Order created by Lucia Paredes</andes-timeline-item>
+          <andes-timeline-item>Sent to supplier Andes Metals</andes-timeline-item>
+          <andes-timeline-item color="warning">Delivery date moved to 12 Nov</andes-timeline-item>
+          </andes-timeline>
+        </section>
+      </div>`,
+  }),
 };
 
-export const Alternate: Story = {
-  args: { mode: 'alternate' },
-};
-
-export const Filled: Story = {
-  args: { variant: 'filled' },
-};
-
-export const Compact: Story = {
-  args: { density: 'compact' },
-};
-
-export const Reverse: Story = {
-  args: { reverse: true },
-};
-
+/**
+ * Item colours. The outlined dots show the six semantic colours and any CSS colour; the filled
+ * variant uses solid dots, and `dotLabel` gives a status dot an accessible name.
+ */
 export const Colors: Story = {
   render: () => ({
     template: `
-      <andes-timeline aria-label="Colour reference">
-        <andes-timeline-item>Primary (default)</andes-timeline-item>
-        <andes-timeline-item color="success">Success</andes-timeline-item>
-        <andes-timeline-item color="warning">Warning</andes-timeline-item>
-        <andes-timeline-item color="danger">Danger</andes-timeline-item>
-        <andes-timeline-item color="info">Info</andes-timeline-item>
-        <andes-timeline-item color="neutral">Neutral</andes-timeline-item>
-        <andes-timeline-item color="#7c3aed">Any CSS colour: #7c3aed</andes-timeline-item>
-        <andes-timeline-item color="oklch(0.7 0.15 40)">oklch(0.7 0.15 40)</andes-timeline-item>
-      </andes-timeline>`,
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 2rem;">
+        <andes-timeline aria-label="Colour reference">
+          <andes-timeline-item>Primary (default)</andes-timeline-item>
+          <andes-timeline-item color="success">Success</andes-timeline-item>
+          <andes-timeline-item color="warning">Warning</andes-timeline-item>
+          <andes-timeline-item color="danger">Danger</andes-timeline-item>
+          <andes-timeline-item color="info">Info</andes-timeline-item>
+          <andes-timeline-item color="neutral">Neutral</andes-timeline-item>
+          <andes-timeline-item color="#7c3aed">Any CSS colour: #7c3aed</andes-timeline-item>
+          <andes-timeline-item color="oklch(0.7 0.15 40)">oklch(0.7 0.15 40)</andes-timeline-item>
+        </andes-timeline>
+        <andes-timeline aria-label="Filled dots" variant="filled">
+          <andes-timeline-item color="success" dotLabel="Succeeded">Build passed</andes-timeline-item>
+          <andes-timeline-item color="danger" dotLabel="Failed">Integration tests failed</andes-timeline-item>
+          <andes-timeline-item color="warning" dotLabel="Warning">Coverage dropped below 80%</andes-timeline-item>
+          <andes-timeline-item color="neutral">Waiting for review</andes-timeline-item>
+        </andes-timeline>
+      </div>`,
   }),
 };
 
-export const FilledColors: Story = {
-  render: () => ({
-    template: `
-      <andes-timeline aria-label="Filled dots" variant="filled">
-        <andes-timeline-item color="success" dotLabel="Succeeded">Build passed</andes-timeline-item>
-        <andes-timeline-item color="danger" dotLabel="Failed">Integration tests failed</andes-timeline-item>
-        <andes-timeline-item color="warning" dotLabel="Warning">Coverage dropped below 80%</andes-timeline-item>
-        <andes-timeline-item color="neutral">Waiting for review</andes-timeline-item>
-      </andes-timeline>`,
-  }),
-};
-
+/**
+ * Item labels in the default mode and in the alternate mode, where the label sits on the opposite
+ * side of the content.
+ */
 export const WithLabels: Story = {
   render: () => ({
     template: `
-      <div style="max-width: 36rem">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)); gap: 2rem; max-width: 52rem">
         <andes-timeline aria-label="Shipment tracking">
           <andes-timeline-item label="Mon 3 Nov" color="success">Picked up in Callao</andes-timeline-item>
           <andes-timeline-item label="Tue 4 Nov">Customs clearance</andes-timeline-item>
           <andes-timeline-item label="Thu 6 Nov">In transit to Arequipa</andes-timeline-item>
           <andes-timeline-item label="Fri 7 Nov" color="neutral">Out for delivery</andes-timeline-item>
         </andes-timeline>
-      </div>`,
-  }),
-};
-
-export const AlternateWithLabels: Story = {
-  render: () => ({
-    template: `
-      <div style="max-width: 40rem">
         <andes-timeline aria-label="Project milestones" mode="alternate">
           <andes-timeline-item label="Q1" color="success">Discovery finished</andes-timeline-item>
           <andes-timeline-item label="Q2" color="success">Pilot with 3 branches</andes-timeline-item>
@@ -180,24 +208,31 @@ export const CustomDot: Story = {
   }),
 };
 
-export const PendingEllipsis: Story = {
-  args: { pending: true },
-};
-
-export const PendingText: Story = {
-  args: { pending: 'Waiting for the carrier to confirm' },
-};
-
-export const PendingReversed: Story = {
-  args: { pending: 'Syncing with the ledger', reverse: true },
-};
-
-export const PendingCustomDot: Story = {
+/**
+ * The pending item at the end of the line: the default ellipsis (`pending` as `true`), a text
+ * (`pending="..."`), the same on a reversed timeline where it moves to the top, and a custom
+ * `pendingDot`.
+ */
+export const Pending: Story = {
   render: () => ({
     template: `
-      <andes-timeline aria-label="Deploy" pending="Rolling out to region 2" [pendingDot]="clockTpl">
-        <andes-timeline-item color="success">Region 1 healthy</andes-timeline-item>
-      </andes-timeline>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 2rem;">
+        <andes-timeline aria-label="Ellipsis" [pending]="true">
+          <andes-timeline-item color="success">Order created</andes-timeline-item>
+          <andes-timeline-item>Sent to supplier</andes-timeline-item>
+        </andes-timeline>
+        <andes-timeline aria-label="Text" pending="Waiting for the carrier to confirm">
+          <andes-timeline-item color="success">Order created</andes-timeline-item>
+          <andes-timeline-item>Sent to supplier</andes-timeline-item>
+        </andes-timeline>
+        <andes-timeline aria-label="Reversed" pending="Syncing with the ledger" [reverse]="true">
+          <andes-timeline-item color="success">Order created</andes-timeline-item>
+          <andes-timeline-item>Sent to supplier</andes-timeline-item>
+        </andes-timeline>
+        <andes-timeline aria-label="Deploy" pending="Rolling out to region 2" [pendingDot]="clockTpl">
+          <andes-timeline-item color="success">Region 1 healthy</andes-timeline-item>
+        </andes-timeline>
+      </div>
       <ng-template #clockTpl>
         <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.2 1.4"/></svg>
       </ng-template>`,

@@ -68,23 +68,35 @@ type Story = StoryObj<AndesWatermark>;
 
 export const Default: Story = {};
 
-export const MultiLine: Story = {
-  name: 'Multi-line with the user',
-  args: {
-    content: [
-      'Internal use only',
-      'm.quispe@andes.example',
-      '14 Mar 2026 09:41',
-    ],
-  },
-};
-
-export const CustomFont: Story = {
-  args: {
-    content: 'DRAFT',
-    font: { size: 28, weight: 700, color: 'rgba(220, 38, 38, 0.18)' },
-    gap: [60, 60],
-  },
+/**
+ * Text marks, three ways. A multi-line mark (`content` as an array, e.g. the viewer's identity and
+ * the time), a custom `font` (size, weight, colour) with a tighter `gap`, and the `rotate`, `gap`
+ * and `offset` controls (here no rotation, a wide horizontal gap and a shifted origin).
+ */
+export const TextMarks: Story = {
+  name: 'Text marks',
+  render: () => ({
+    props: {
+      lines: [
+        'Internal use only',
+        'm.quispe@andes.example',
+        '14 Mar 2026 09:41',
+      ],
+      draftFont: { size: 28, weight: 700, color: 'rgba(220, 38, 38, 0.18)' },
+    },
+    template: `
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 16px;">
+        <andes-watermark [content]="lines">
+          <div style="${sheet} height: 220px;"><strong>Multi-line with the user</strong><p style="margin: 4px 0 0;">One line per entry of <code>content</code>.</p></div>
+        </andes-watermark>
+        <andes-watermark content="DRAFT" [font]="draftFont" [gap]="[60, 60]">
+          <div style="${sheet} height: 220px;"><strong>Custom font</strong><p style="margin: 4px 0 0;">Size, weight and colour through <code>font</code>.</p></div>
+        </andes-watermark>
+        <andes-watermark content="Copy" [rotate]="0" [gap]="[40, 24]" [offset]="[20, 10]">
+          <div style="${sheet} height: 220px;"><strong>Rotation, gap and offset</strong><p style="margin: 4px 0 0;">Flat text with its own spacing and origin.</p></div>
+        </andes-watermark>
+      </div>`,
+  }),
 };
 
 export const ImageMark: Story = {
@@ -96,11 +108,6 @@ export const ImageMark: Story = {
         <div style="${sheet}">${document_}</div>
       </andes-watermark>`,
   }),
-};
-
-export const RotationAndGap: Story = {
-  name: 'Rotation, gap and offset',
-  args: { content: 'Copy', rotate: 0, gap: [40, 24], offset: [20, 10] },
 };
 
 export const FullPage: Story = {

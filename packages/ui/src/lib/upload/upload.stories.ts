@@ -127,55 +127,45 @@ type Story = StoryObj<AndesUpload>;
 
 export const Default: Story = {};
 
+/**
+ * `andes-upload-dragger` turns the trigger into a drop area with an icon, a title and a hint,
+ * highlighted while files are dragged over it. Click it, tab to it and press Enter, drop
+ * files, or paste them; `dropIcon`, `dropTitle` and `dropHint` customise the content. With
+ * `directory`, the picker chooses a folder and a dropped folder is walked: every file inside
+ * is added, with its relative path on `webkitRelativePath`. A disabled dragger ignores clicks
+ * and drops.
+ */
 export const Dragger: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          '`andes-upload-dragger` turns the trigger into a drop area with an icon, a title and a hint, highlighted while files are dragged over it. Click it, tab to it and press Enter, drop files, or paste them. `dropIcon`, `dropTitle` and `dropHint` customise the content.',
-      },
-    },
-  },
   render: () => ({
     props: { request: simulatedUpload },
-    template: `<div style="max-width: 32rem;">
+    template: `<div style="display: grid; gap: 1rem; max-width: 32rem;">
       <andes-upload-dragger [multiple]="true" [customRequest]="request" dropHint="PDF or images, up to 5 MB each" accept=".pdf,image/*" [maxSize]="5242880" aria-label="Supporting documents" />
-    </div>`,
-  }),
-};
-
-export const DraggerFolders: Story = {
-  name: 'Dragger with folders',
-  parameters: {
-    docs: {
-      description: {
-        story:
-          'With `directory`, the picker chooses a folder and a dropped folder is walked: every file inside is added, with its relative path on `webkitRelativePath`.',
-      },
-    },
-  },
-  render: () => ({
-    props: { request: simulatedUpload },
-    template: `<div style="max-width: 32rem;">
       <andes-upload-dragger [directory]="true" [customRequest]="request" dropTitle="Drop a folder here, or click to choose one" dropHint="Every file in the folder is uploaded" aria-label="Folder" />
+      <andes-upload-dragger [disabled]="true" dropHint="Uploads are closed for this order" aria-label="Documents (closed)" />
     </div>`,
   }),
 };
 
-export const DraggerDisabled: Story = {
+/**
+ * The three sizes next to the default trigger, then the disabled state: a disabled upload
+ * keeps its file list visible but takes no new files and offers no remove action.
+ */
+export const SizesAndStates: Story = {
   render: () => ({
-    template: `<div style="max-width: 32rem;"><andes-upload-dragger [disabled]="true" dropHint="Uploads are closed for this order" aria-label="Documents (closed)" /></div>`,
-  }),
-};
-
-export const Sizes: Story = {
-  render: () => ({
-    props: { request: simulatedUpload },
-    template: `<div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-      <andes-upload size="sm" [customRequest]="request" aria-label="Small"><andes-button size="sm" variant="outline">Small</andes-button></andes-upload>
-      <andes-upload size="md" [customRequest]="request" aria-label="Medium"><andes-button variant="outline">Medium</andes-button></andes-upload>
-      <andes-upload size="lg" [customRequest]="request" aria-label="Large"><andes-button size="lg" variant="outline">Large</andes-button></andes-upload>
-      <andes-upload [customRequest]="request" aria-label="Default trigger"></andes-upload>
+    props: {
+      request: simulatedUpload,
+      files: EXISTING.slice(0, 2).map((f) => ({ ...f })),
+    },
+    template: `<div style="display: grid; gap: 1.5rem; max-width: 28rem;">
+      <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+        <andes-upload size="sm" [customRequest]="request" aria-label="Small"><andes-button size="sm" variant="outline">Small</andes-button></andes-upload>
+        <andes-upload size="md" [customRequest]="request" aria-label="Medium"><andes-button variant="outline">Medium</andes-button></andes-upload>
+        <andes-upload size="lg" [customRequest]="request" aria-label="Large"><andes-button size="lg" variant="outline">Large</andes-button></andes-upload>
+        <andes-upload [customRequest]="request" aria-label="Default trigger"></andes-upload>
+      </div>
+      <andes-upload [disabled]="true" [(fileList)]="files" aria-label="Attachments (locked)">
+        <andes-button variant="outline" [disabled]="true">Select files</andes-button>
+      </andes-upload>
     </div>`,
   }),
 };
@@ -227,27 +217,17 @@ export const Limits: Story = {
     docs: {
       description: {
         story:
-          '`accept`, `maxSize` and `maxCount` are enforced for chosen, dropped and pasted files alike. The same checks are exported as pure functions (`isFileAccepted`, `isFileSizeValid`, `validateUploadFile`, `formatFileSize`) for use in your own forms and tests.',
+          '`accept`, `maxSize` and `maxCount` are enforced for chosen, dropped and pasted files alike. The same checks are exported as pure functions (`isFileAccepted`, `isFileSizeValid`, `validateUploadFile`, `formatFileSize`) for use in your own forms and tests. Below the first control, a `maxCount` of 1 makes a new file replace the current one; the replaced upload is cancelled.',
       },
     },
   },
   decorators: [moduleMetadata({ imports: [LimitsDemo] })],
-  render: () => ({ template: `<andes-story-upload-limits />` }),
-};
-
-export const SingleFile: Story = {
-  name: 'Single file (replaces)',
-  parameters: {
-    docs: {
-      description: {
-        story:
-          'With `maxCount` 1 a new file replaces the current one; the replaced upload is cancelled.',
-      },
-    },
-  },
   render: () => ({
     props: { request: simulatedUpload },
-    template: `<andes-upload [maxCount]="1" [customRequest]="request" aria-label="Signed contract"><andes-button variant="outline">Upload signed contract</andes-button></andes-upload>`,
+    template: `<div style="display: grid; gap: 1.5rem;">
+      <andes-story-upload-limits />
+      <andes-upload [maxCount]="1" [customRequest]="request" aria-label="Signed contract"><andes-button variant="outline">Upload signed contract (replaces)</andes-button></andes-upload>
+    </div>`,
   }),
 };
 
@@ -271,49 +251,30 @@ export const ExistingFiles: Story = {
   }),
 };
 
-export const Picture: Story = {
-  name: 'Picture list',
+/**
+ * The three picture list types: `picture` rows with a thumbnail, `picture-card` tiles and
+ * `picture-circle` for an avatar. Thumbnails are made from the chosen file with object URLs
+ * that are revoked when the file leaves the list or the control is destroyed. Card actions
+ * appear on hover and on keyboard focus.
+ */
+export const ListTypes: Story = {
   render: () => ({
     props: {
-      files: EXISTING.slice(0, 2).map((f) => ({ ...f })),
+      photos: EXISTING.slice(0, 2).map((f) => ({ ...f })),
+      gallery: EXISTING.slice(0, 2).map((f) => ({ ...f })),
       request: simulatedUpload,
     },
-    template: `<div style="max-width: 32rem;">
-      <andes-upload listType="picture" accept="image/*" [multiple]="true" [(fileList)]="files" [customRequest]="request" aria-label="Photos">
+    template: `<div style="display: grid; gap: 1.5rem; max-width: 32rem;">
+      <andes-upload listType="picture" accept="image/*" [multiple]="true" [(fileList)]="photos" [customRequest]="request" aria-label="Photos">
         <andes-button variant="outline">Upload photos</andes-button>
       </andes-upload>
+      <andes-upload listType="picture-card" accept="image/*" [multiple]="true" [maxCount]="6" [(fileList)]="gallery" [customRequest]="request" aria-label="Gallery">
+        <span style="font-size: 0.75rem; line-height: 1.25rem;">+ Upload</span>
+      </andes-upload>
+      <andes-upload listType="picture-circle" accept="image/*" [maxCount]="1" [customRequest]="request" aria-label="Profile photo">
+        <span style="font-size: 0.75rem; line-height: 1.25rem;">+ Photo</span>
+      </andes-upload>
     </div>`,
-  }),
-};
-
-export const PictureCard: Story = {
-  name: 'Picture cards',
-  parameters: {
-    docs: {
-      description: {
-        story:
-          'Thumbnails are made from the chosen file with object URLs that are revoked when the file leaves the list or the control is destroyed. Actions appear on hover and on keyboard focus.',
-      },
-    },
-  },
-  render: () => ({
-    props: {
-      files: EXISTING.slice(0, 2).map((f) => ({ ...f })),
-      request: simulatedUpload,
-    },
-    template: `<andes-upload listType="picture-card" accept="image/*" [multiple]="true" [maxCount]="6" [(fileList)]="files" [customRequest]="request" aria-label="Gallery">
-      <span style="font-size: 0.75rem; line-height: 1.25rem;">+ Upload</span>
-    </andes-upload>`,
-  }),
-};
-
-export const PictureCircle: Story = {
-  name: 'Avatar (circle)',
-  render: () => ({
-    props: { request: simulatedUpload },
-    template: `<andes-upload listType="picture-circle" accept="image/*" [maxCount]="1" [customRequest]="request" aria-label="Profile photo">
-      <span style="font-size: 0.75rem; line-height: 1.25rem;">+ Photo</span>
-    </andes-upload>`,
   }),
 };
 
@@ -436,17 +397,6 @@ export const CustomRows: Story = {
           <andes-button size="sm" variant="ghost" (click)="remove()">Delete</andes-button>
         </div>
       </ng-template>
-    </div>`,
-  }),
-};
-
-export const Disabled: Story = {
-  render: () => ({
-    props: { files: EXISTING.slice(0, 2).map((f) => ({ ...f })) },
-    template: `<div style="max-width: 28rem;">
-      <andes-upload [disabled]="true" [(fileList)]="files" aria-label="Attachments (locked)">
-        <andes-button variant="outline" [disabled]="true">Select files</andes-button>
-      </andes-upload>
     </div>`,
   }),
 };

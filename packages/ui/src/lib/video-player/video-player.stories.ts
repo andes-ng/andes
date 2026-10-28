@@ -183,7 +183,7 @@ const liveDvrAdapter: AndesMediaAdapterFactory = () =>
 const liveAdapter: AndesMediaAdapterFactory = () => new DemoLiveAdapter(false);
 
 const meta: Meta<AndesVideoPlayer> = {
-  title: 'Video Player',
+  title: 'Media/Video Player',
   component: AndesVideoPlayer,
   tags: ['autodocs'],
   decorators: [

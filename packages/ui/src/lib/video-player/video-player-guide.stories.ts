@@ -567,7 +567,7 @@ class VideoPlayerGuide {
 }
 
 const meta: Meta = {
-  title: 'Video Player Guide',
+  title: 'Media/Video Player Guide',
   tags: ['autodocs'],
   parameters: { layout: 'padded' },
 };

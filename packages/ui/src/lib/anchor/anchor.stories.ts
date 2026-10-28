@@ -50,7 +50,7 @@ const NESTED: AndesAnchorItem[] = [
 ];
 
 const meta: Meta<AndesAnchor> = {
-  title: 'Anchor',
+  title: 'Navigation/Anchor',
   component: AndesAnchor,
   tags: ['autodocs'],
   decorators: [moduleMetadata({ imports: [AndesAnchor, AndesAnchorLink] })],

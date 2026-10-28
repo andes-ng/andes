@@ -260,6 +260,17 @@ describe('AndesInput', () => {
       expect(input.hasAttribute('aria-busy')).toBe(false);
     });
 
+    it('keeps the clear button visible while loading, so no gap is left beside the spinner', () => {
+      const sheet = readFileSync(
+        join(dirname(fileURLToPath(import.meta.url)), 'input.css'),
+        'utf-8',
+      );
+
+      expect(sheet).toContain(
+        '.andes-input-wrapper:has(.andes-input__spinner) .andes-input__clear',
+      );
+    });
+
     it('animates the spinner and slows it under reduced motion', () => {
       const sheet = readFileSync(
         join(dirname(fileURLToPath(import.meta.url)), 'input.css'),

@@ -404,6 +404,13 @@
   visibility: visible;
 }
 
+/* While the field loads, the clear button stays visible: otherwise its reserved room would show
+   as an empty gap between the spinner and the edge until the pointer arrives. */
+/* prettier-ignore */
+.andes-input-wrapper:has(.andes-input__spinner) .andes-input__clear {
+  visibility: visible;
+}
+
 @media (hover: none) {
   .andes-input__clear {
     visibility: visible;

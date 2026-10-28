@@ -61,8 +61,24 @@ function safeNumberFormat(
   }
 }
 
-function escapeForClass(chars: string): string {
-  return chars.replace(/[\\\]^-]/g, '\\$&');
+/** Removes every occurrence of each character of `chars` (a set, not a sequence). */
+function removeAnyOf(text: string, chars: string): string {
+  let out = text;
+  for (const char of chars) {
+    out = out.split(char).join('');
+  }
+  return out;
+}
+
+/** Keeps the ASCII digits, the minus sign and the characters of `extra`; drops the rest. */
+function keepDigitsMinusAnd(text: string, extra: string): string {
+  let out = '';
+  for (const char of text) {
+    if ((char >= '0' && char <= '9') || char === '-' || extra.includes(char)) {
+      out += char;
+    }
+  }
+  return out;
 }
 
 function plainCodec(options: AndesNumberFormatOptions): AndesNumberCodec {
@@ -149,11 +165,7 @@ function intlCodec(options: AndesNumberFormatOptions): AndesNumberCodec {
     .map((p) => p.value)
     .join('');
   const allowedCharacters = `${[...digitMap.keys()].join('')}0123456789+-−.,${decimal}${group}${symbols} \u00a0\u202f`;
-  const stripPattern = new RegExp(`[^0-9\\-${escapeForClass(decimal)}]`, 'g');
-  const groupPattern =
-    group.trim() === ''
-      ? /[\s\u00a0\u202f]/g
-      : new RegExp(`[${escapeForClass(group)}]`, 'g');
+  const groupIsBlank = group.trim() === '';
 
   return {
     allowedCharacters,
@@ -181,10 +193,10 @@ function intlCodec(options: AndesNumberFormatOptions): AndesNumberCodec {
         }
       }
       const negative = MINUS_SIGNS.test(working) || /^\(.*\)$/.test(working);
-      working = working
-        .replace(groupPattern, '')
-        .replace(stripPattern, '')
-        .replace(/-/g, '');
+      working = groupIsBlank
+        ? working.replace(/[\s\u00a0\u202f]/g, '')
+        : removeAnyOf(working, group);
+      working = keepDigitsMinusAnd(working, decimal).replace(/-/g, '');
       if (decimal !== '.') {
         working = working.split(decimal).join('.');
       }

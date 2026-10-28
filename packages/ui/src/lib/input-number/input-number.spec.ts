@@ -1233,10 +1233,20 @@ describe('AndesInputNumber', () => {
       );
     const css = () => rawCss().replace(/\/\*[\s\S]*?\*\//g, '');
     const rule = (selector: string) => {
-      const match = new RegExp(
-        `${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*{([^}]*)}`,
-      ).exec(css());
-      return match?.[1] ?? '';
+      const source = css();
+      let at = source.indexOf(selector);
+      while (at >= 0) {
+        const open = source.indexOf('{', at + selector.length);
+        if (open < 0) {
+          return '';
+        }
+        const between = source.slice(at + selector.length, open);
+        if (between.trim() === '') {
+          return source.slice(open + 1, source.indexOf('}', open));
+        }
+        at = source.indexOf(selector, at + 1);
+      }
+      return '';
     };
 
     it('draws the focus indicator once: border plus a 2px ring, no outline', () => {

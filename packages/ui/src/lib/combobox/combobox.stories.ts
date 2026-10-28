@@ -86,7 +86,7 @@ const CAPTION =
 const STACK = 'display: flex; flex-direction: column; gap: 1rem; width: 260px;';
 
 const meta: Meta<AndesCombobox> = {
-  title: 'Combobox',
+  title: 'Data Entry/Combobox',
   component: AndesCombobox,
   tags: ['autodocs'],
   decorators: [

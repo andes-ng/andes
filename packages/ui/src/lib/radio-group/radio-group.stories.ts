@@ -6,7 +6,7 @@ import { AndesRadio } from './radio';
 import { AndesRadioGroup } from './radio-group';
 
 const meta: Meta<AndesRadioGroup> = {
-  title: 'RadioGroup',
+  title: 'Data Entry/RadioGroup',
   component: AndesRadioGroup,
   tags: ['autodocs'],
   argTypes: {

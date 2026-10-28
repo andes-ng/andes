@@ -24,7 +24,7 @@ const rows = Array.from({ length: 30 }, (_, i) => ({
 }));
 
 const meta: Meta<AndesScrollArea> = {
-  title: 'ScrollArea',
+  title: 'Layout/ScrollArea',
   component: AndesScrollArea,
   tags: ['autodocs'],
   argTypes: {

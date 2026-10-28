@@ -53,21 +53,7 @@ const meta: Meta<AndesAspectRatio> = {
 export default meta;
 
 type Story = StoryObj<AndesAspectRatio>;
-
 export const Default: Story = {};
-
-export const Square: Story = {
-  args: { ratio: 1 },
-  render: (args) => ({
-    props: { ...args, src: SQUARE },
-    template: `
-      <div style="max-width: 20rem">
-        <andes-aspect-ratio [ratio]="ratio" [fit]="fit" [fill]="fill" style="border-radius: var(--andes-radius-lg)">
-          <img [src]="src" alt="A mountain range under a clear sky" />
-        </andes-aspect-ratio>
-      </div>`,
-  }),
-};
 
 /** Common ratios side by side; every box is the same width, so only the ratio changes. */
 export const Ratios: Story = {
@@ -84,10 +70,13 @@ export const Ratios: Story = {
   }),
 };
 
-/** A wide picture in a square box: `cover` crops it, `contain` letterboxes it, `fill` stretches it. */
-export const Fit: Story = {
+/**
+ * A wide picture in a square box: `cover` crops it, `contain` letterboxes it, `fill` stretches it, and
+ * `position` picks which part of a cropped picture stays visible.
+ */
+export const FitAndPosition: Story = {
   render: () => ({
-    props: { src: WIDE, box: BOX },
+    props: { src: WIDE, tall: SQUARE },
     template: `
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(9rem,1fr));gap:1rem;max-width:48rem">
         @for (fit of ['cover', 'contain', 'fill', 'none', 'scale-down']; track fit) {
@@ -98,20 +87,12 @@ export const Fit: Story = {
             <figcaption style="font:12px/20px var(--andes-font-family),sans-serif;color:var(--andes-color-muted-foreground);margin-top:0.25rem">{{ fit }}</figcaption>
           </figure>
         }
-      </div>`,
-  }),
-};
-
-/** `position` picks which part of a cropped picture stays visible. */
-export const Position: Story = {
-  render: () => ({
-    props: { src: SQUARE },
-    template: `
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(11rem,1fr));gap:1rem;max-width:48rem">
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(11rem,1fr));gap:1rem;max-width:48rem;margin-top:1.5rem">
         @for (p of ['top', 'center', 'bottom']; track p) {
           <figure style="margin:0">
             <andes-aspect-ratio ratio="21/9" fit="cover" [position]="p" style="border-radius:var(--andes-radius-md)">
-              <img [src]="src" alt="A mountain range under a clear sky" />
+              <img [src]="tall" alt="A mountain range under a clear sky" />
             </andes-aspect-ratio>
             <figcaption style="font:12px/20px var(--andes-font-family),sans-serif;color:var(--andes-color-muted-foreground);margin-top:0.25rem">object-position: {{ p }}</figcaption>
           </figure>
@@ -120,30 +101,24 @@ export const Position: Story = {
   }),
 };
 
-/** Any element fills the box, not only media - useful for embeds, maps, charts and skeletons. */
-export const AnyContent: Story = {
+/**
+ * Any element fills the box, not only media - useful for embeds, maps, charts and skeletons. With `fill`
+ * off, content flows and the ratio only sets the preferred shape: tall content grows the box.
+ */
+export const Content: Story = {
   render: () => ({
     props: { box: BOX },
     template: `
-      <div style="max-width: 32rem">
+      <div style="display:grid;gap:1.5rem;max-width:40rem">
         <andes-aspect-ratio ratio="2/1">
           <div [style]="box">A chart or a map would fill this box</div>
         </andes-aspect-ratio>
-      </div>`,
-  }),
-};
-
-/** With `fill` off, content flows and the ratio only sets the preferred shape: tall content grows the box. */
-export const FlowingContent: Story = {
-  args: { fill: false, ratio: '16/9' },
-  render: (args) => ({
-    props: { ...args, box: BOX },
-    template: `
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(12rem,1fr));gap:1rem;max-width:40rem">
-        <andes-aspect-ratio [ratio]="ratio" [fill]="fill" [style]="box">Short content keeps the shape</andes-aspect-ratio>
-        <andes-aspect-ratio [ratio]="ratio" [fill]="fill" [style]="box + 'display:block;padding:1rem'">
-          Longer content pushes the box taller than its ratio: the minimum height of a box is always the height of what is inside it, so nothing is ever clipped. Add more lines and the box keeps growing while the other one keeps its shape. Add more lines and the box keeps growing while the other one keeps its shape.
-        </andes-aspect-ratio>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(12rem,1fr));gap:1rem">
+          <andes-aspect-ratio ratio="16/9" [fill]="false" [style]="box">Short content keeps the shape</andes-aspect-ratio>
+          <andes-aspect-ratio ratio="16/9" [fill]="false" [style]="box + 'display:block;padding:1rem'">
+            Longer content pushes the box taller than its ratio: the minimum height of a box is always the height of what is inside it, so nothing is ever clipped. Add more lines and the box keeps growing while the other one keeps its shape. Add more lines and the box keeps growing while the other one keeps its shape.
+          </andes-aspect-ratio>
+        </div>
       </div>`,
   }),
 };

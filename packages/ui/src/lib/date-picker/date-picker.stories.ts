@@ -10,7 +10,7 @@ import type { Meta, StoryObj } from '@storybook/angular';
 import { AndesDatePicker } from './date-picker';
 
 const meta: Meta<AndesDatePicker> = {
-  title: 'Date Picker',
+  title: 'Data Entry/Date Picker',
   component: AndesDatePicker,
   tags: ['autodocs'],
   parameters: {

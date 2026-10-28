@@ -190,7 +190,7 @@ class StoryControlled {
 }
 
 const meta: Meta<AndesNavigationMenu> = {
-  title: 'Navigation Menu',
+  title: 'Navigation/Navigation Menu',
   component: AndesNavigationMenu,
   tags: ['autodocs'],
   decorators: [moduleMetadata({ imports: [StoryNav, StoryControlled] })],

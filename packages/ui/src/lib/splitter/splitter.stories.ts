@@ -11,7 +11,7 @@ const pane =
 const muted = 'color: var(--andes-color-muted-foreground, #64748b);';
 
 const meta: Meta<AndesSplitter> = {
-  title: 'Splitter',
+  title: 'Layout/Splitter',
   component: AndesSplitter,
   tags: ['autodocs'],
   decorators: [

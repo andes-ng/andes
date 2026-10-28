@@ -72,7 +72,7 @@ const FIELD_STYLES = `
 `;
 
 const meta: Meta<AndesAccordion> = {
-  title: 'Accordion',
+  title: 'Data Display/Accordion',
   component: AndesAccordion,
   tags: ['autodocs'],
   argTypes: {

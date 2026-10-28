@@ -18,7 +18,7 @@ const USER_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
       </svg>`;
 
 const meta: Meta<AndesAvatar> = {
-  title: 'Avatar',
+  title: 'Data Display/Avatar',
   component: AndesAvatar,
   tags: ['autodocs'],
   // `moduleMetadata(...)`, the helper from `@storybook/angular` - NOT a

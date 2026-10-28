@@ -8,7 +8,7 @@ import { AndesButtonGroup } from './button-group';
 const extraIcons = provideIcons({ lucideChevronDown, lucideSearch });
 
 const meta: Meta<AndesButton> = {
-  title: 'Button',
+  title: 'General/Button',
   component: AndesButton,
   tags: ['autodocs'],
   argTypes: {

@@ -48,7 +48,7 @@ const STYLES = `
 `;
 
 const meta: Meta<AndesLayout> = {
-  title: 'Layout/Classic',
+  title: 'Layout/Layout/Classic',
   component: AndesLayout,
   subcomponents: {
     AndesLayoutHeader,

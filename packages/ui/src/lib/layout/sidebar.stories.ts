@@ -115,7 +115,7 @@ const PAGE = `
   </main>`;
 
 const meta: Meta<AndesSidebar> = {
-  title: 'Layout/Sidebar',
+  title: 'Layout/Layout/Sidebar',
   component: AndesSidebar,
   subcomponents: {
     AndesSidebarProvider,

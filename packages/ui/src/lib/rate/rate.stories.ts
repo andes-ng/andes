@@ -50,34 +50,34 @@ const col = `${surface} display: grid; gap: 1rem; justify-items: start;`;
 const caption =
   'font-size: 12px; line-height: 20px; color: var(--andes-color-muted-foreground);';
 
+/** Playground: every input is a control. */
 export const Playground: Story = {};
 
-export const Basic: Story = {
+export const Values: Story = {
   parameters: {
     docs: {
       description: {
         story:
-          'Click, hover to preview, or use the keyboard: arrows move by one, Home and End jump to 0 and the last character, a digit key sets that number.',
+          'Click, hover to preview, or use the keyboard: arrows move by one, Home and End jump to 0 and the last character, a digit key sets that number. `allowHalf` lets the arrows move by half; `count` changes the number of characters.',
       },
     },
   },
   render: () => ({
-    props: { score: signal(3) },
+    props: { score: signal(3), half: signal(2.5), tenScale: signal(7) },
     template: `
       <div style="${col}">
-        <andes-rate [(value)]="score" aria-label="Rate this order" />
-        <span style="${caption}">Selected: {{ score() }}</span>
-      </div>`,
-  }),
-};
-
-export const HalfStars: Story = {
-  render: () => ({
-    props: { score: signal(2.5) },
-    template: `
-      <div style="${col}">
-        <andes-rate [(value)]="score" allowHalf aria-label="Rate this order" />
-        <span style="${caption}">Selected: {{ score() }} (arrows move by half)</span>
+        <div>
+          <andes-rate [(value)]="score" aria-label="Rate this order" />
+          <span style="${caption}">Selected: {{ score() }}</span>
+        </div>
+        <div>
+          <andes-rate [(value)]="half" allowHalf aria-label="Rate this order, in halves" />
+          <span style="${caption}">Selected: {{ half() }} (arrows move by half)</span>
+        </div>
+        <div>
+          <andes-rate [(value)]="tenScale" [count]="10" aria-label="Likelihood to recommend" />
+          <span style="${caption}">{{ tenScale() }} / 10</span>
+        </div>
       </div>`,
   }),
 };
@@ -101,12 +101,12 @@ export const AllowClear: Story = {
   }),
 };
 
-export const ReadonlyAverage: Story = {
+export const ReadonlyAndDisabled: Story = {
   parameters: {
     docs: {
       description: {
         story:
-          'Read-only shows any value with partial fill: 3.7 fills 70% of the fourth character. It stays focusable and reads "3.7 of 5".',
+          'Read-only shows any value with partial fill: 3.7 fills 70% of the fourth character. It stays focusable and reads "3.7 of 5". A disabled rating is not focusable and cannot be changed.',
       },
     },
   },
@@ -116,13 +116,8 @@ export const ReadonlyAverage: Story = {
         <div style="display: flex; align-items: center; gap: 0.5rem;"><andes-rate [value]="4.5" readonly aria-label="Average rating" /> <span>4.5</span></div>
         <div style="display: flex; align-items: center; gap: 0.5rem;"><andes-rate [value]="3.7" readonly aria-label="Average rating" /> <span>3.7</span></div>
         <div style="display: flex; align-items: center; gap: 0.5rem;"><andes-rate [value]="1.2" readonly aria-label="Average rating" /> <span>1.2</span></div>
+        <andes-rate [value]="3" disabled aria-label="Rating (unavailable)" />
       </div>`,
-  }),
-};
-
-export const Disabled: Story = {
-  render: () => ({
-    template: `<andes-rate [value]="3" disabled aria-label="Rating (unavailable)" />`,
   }),
 };
 
@@ -134,17 +129,6 @@ export const Sizes: Story = {
         <andes-rate [value]="3" size="md" aria-label="Medium" />
         <andes-rate [value]="3" size="lg" aria-label="Large" />
         <andes-rate [value]="3" [size]="40" aria-label="40 pixels" />
-      </div>`,
-  }),
-};
-
-export const CustomCount: Story = {
-  render: () => ({
-    props: { score: signal(7) },
-    template: `
-      <div style="${col}">
-        <andes-rate [(value)]="score" [count]="10" aria-label="Likelihood to recommend" />
-        <span style="${caption}">{{ score() }} / 10</span>
       </div>`,
   }),
 };
@@ -221,6 +205,7 @@ export const CustomCharacter: Story = {
   }),
 };
 
+/** `(hoverChange)` reports the previewed value while the pointer moves over the characters. */
 export const HoverEvents: Story = {
   render: () => ({
     props: { hover: signal<number | undefined>(undefined), score: signal(0) },

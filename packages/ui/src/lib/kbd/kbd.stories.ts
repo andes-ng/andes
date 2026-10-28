@@ -36,17 +36,11 @@ const meta: Meta<AndesKbd> = {
 export default meta;
 
 type Story = StoryObj<AndesKbd>;
-
 /** `shortcut` renders a whole combination; the glyphs follow `platform` (`auto` detects it). */
 export const Shortcut: Story = {};
 
-export const ProjectedText: Story = {
-  render: () => ({
-    template: `<andes-kbd>Esc</andes-kbd>`,
-  }),
-};
-
-export const SingleKey: Story = {
+/** A single `key` (modifiers and arrows map to glyphs) or projected text, for keys that need no mapping. */
+export const Keys: Story = {
   render: () => ({
     template: `
       <div style="display: flex; gap: 0.5rem; align-items: center;">
@@ -60,29 +54,26 @@ export const SingleKey: Story = {
         <andes-kbd key="ArrowDown" />
         <andes-kbd key="ArrowLeft" />
         <andes-kbd key="ArrowRight" />
+        <andes-kbd>Esc</andes-kbd>
       </div>
     `,
   }),
 };
 
-export const Sizes: Story = {
+/** The three sizes, then the default and outline variants. */
+export const Appearance: Story = {
   render: () => ({
     template: `
-      <div style="display: flex; gap: 1.5rem; align-items: center;">
-        <andes-kbd size="sm" shortcut="Mod+K" platform="mac" />
-        <andes-kbd size="md" shortcut="Mod+K" platform="mac" />
-        <andes-kbd size="lg" shortcut="Mod+K" platform="mac" />
-      </div>
-    `,
-  }),
-};
-
-export const Variants: Story = {
-  render: () => ({
-    template: `
-      <div style="display: flex; gap: 1.5rem; align-items: center;">
-        <andes-kbd variant="default" shortcut="Mod+S" platform="windows" />
-        <andes-kbd variant="outline" shortcut="Mod+S" platform="windows" />
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div style="display: flex; gap: 1.5rem; align-items: center;">
+          <andes-kbd size="sm" shortcut="Mod+K" platform="mac" />
+          <andes-kbd size="md" shortcut="Mod+K" platform="mac" />
+          <andes-kbd size="lg" shortcut="Mod+K" platform="mac" />
+        </div>
+        <div style="display: flex; gap: 1.5rem; align-items: center;">
+          <andes-kbd variant="default" shortcut="Mod+S" platform="windows" />
+          <andes-kbd variant="outline" shortcut="Mod+S" platform="windows" />
+        </div>
       </div>
     `,
   }),
@@ -111,7 +102,8 @@ export const Sequence: Story = {
   }),
 };
 
-export const GroupFromKeys: Story = {
+/** `andes-kbd-group` joins keys given as `keys` or projected `andes-kbd` children, with a chosen separator. */
+export const Group: Story = {
   render: () => ({
     moduleMetadata: { imports: [AndesKbdGroup] },
     template: `
@@ -119,16 +111,6 @@ export const GroupFromKeys: Story = {
         <andes-kbd-group aria-label="Open the command palette" [keys]="['Mod', 'K']" platform="windows" />
         <andes-kbd-group aria-label="Open the command palette" [keys]="['Mod', 'Shift', 'P']" platform="mac" separator="none" />
         <andes-kbd-group aria-label="Go to inbox" [keys]="['G', 'I']" separator="then" />
-      </div>
-    `,
-  }),
-};
-
-export const GroupFromProjectedKeys: Story = {
-  render: () => ({
-    moduleMetadata: { imports: [AndesKbdGroup] },
-    template: `
-      <div style="display: flex; flex-direction: column; gap: 0.75rem;">
         <andes-kbd-group>
           <andes-kbd>Ctrl</andes-kbd>
           <andes-kbd>Alt</andes-kbd>

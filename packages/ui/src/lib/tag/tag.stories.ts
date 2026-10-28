@@ -21,7 +21,7 @@ import { ANDES_PALETTE_COLORS } from '../palette/palette';
 import { AndesTag, AndesTagCloseEvent } from './tag';
 
 const meta: Meta<AndesTag> = {
-  title: 'Tag',
+  title: 'Data Display/Tag',
   component: AndesTag,
   tags: ['autodocs'],
   argTypes: {

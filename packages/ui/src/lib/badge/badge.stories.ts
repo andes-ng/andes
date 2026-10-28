@@ -9,7 +9,7 @@ import { ANDES_PALETTE_COLORS } from '../palette/palette';
 import { AndesBadge } from './badge';
 
 const meta: Meta<AndesBadge> = {
-  title: 'Badge',
+  title: 'Data Display/Badge',
   component: AndesBadge,
   tags: ['autodocs'],
   argTypes: {

@@ -9,7 +9,7 @@ const card = `<div style="width: 16rem; padding: 1rem; font-size: 0.875rem; line
 </div>`;
 
 const meta: Meta<AndesBadgeRibbon> = {
-  title: 'Badge/Ribbon',
+  title: 'Data Display/Badge/Ribbon',
   component: AndesBadgeRibbon,
   tags: ['autodocs'],
   argTypes: {

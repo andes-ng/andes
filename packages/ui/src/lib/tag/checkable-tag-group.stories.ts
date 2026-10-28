@@ -10,7 +10,7 @@ import type { Meta, StoryObj } from '@storybook/angular';
 import { AndesCheckableTagGroup } from './checkable-tag-group';
 
 const meta: Meta<AndesCheckableTagGroup> = {
-  title: 'Tag/CheckableTagGroup',
+  title: 'Data Display/Tag/CheckableTagGroup',
   component: AndesCheckableTagGroup,
   tags: ['autodocs'],
   argTypes: {

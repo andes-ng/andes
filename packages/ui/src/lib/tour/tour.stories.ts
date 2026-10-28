@@ -135,6 +135,18 @@ const ANCHOR_PAGE = `<div style="display: grid; place-items: center; height: 30r
   template: `
     <div class="toolbar">
       <button type="button" id="start" (click)="start()">Start the tour</button>
+      @if (variants()) {
+        @for (option of VARIANTS; track option.id) {
+          <button
+            type="button"
+            [attr.aria-pressed]="variant() === option.id"
+            [style.font-weight]="variant() === option.id ? 700 : 400"
+            (click)="variant.set(option.id)"
+          >
+            {{ option.label }}
+          </button>
+        }
+      }
       <span
         style="align-self: center; color: var(--andes-color-muted-foreground);"
         >{{ log() }}</span
@@ -145,15 +157,15 @@ const ANCHOR_PAGE = `<div style="display: grid; place-items: center; height: 30r
       [steps]="steps()"
       [(open)]="open"
       [(current)]="current"
-      [type]="type()"
+      [type]="effectiveType()"
       [mask]="mask()"
       [placement]="placement()"
-      [arrow]="arrow()"
-      [indicators]="indicators()"
+      [arrow]="effectiveArrow()"
+      [indicators]="effectiveIndicators()"
       [indicatorsTemplate]="indicatorsTemplate()"
       [targetClickable]="targetClickable()"
-      [closeOnMaskClick]="closeOnMaskClick()"
-      [showSkip]="showSkip()"
+      [closeOnMaskClick]="effectiveCloseOnMaskClick()"
+      [showSkip]="effectiveShowSkip()"
       [labels]="labels()"
       (stepChange)="log.set('step ' + ($event + 1))"
       (closed)="onClose($event)"
@@ -177,6 +189,35 @@ class TourDemo {
   readonly labels = input<AndesTourLabels | null>(null);
   readonly page = input(PAGE);
   readonly startOpen = input(false);
+  /** Shows a row of buttons that switch the card look (see `VARIANTS`). */
+  readonly variants = input(false);
+  protected readonly VARIANTS = [
+    { id: 'default', label: 'Default' },
+    { id: 'primary', label: 'Primary card' },
+    { id: 'count', label: 'Count indicator' },
+    { id: 'minimal', label: 'No arrow, no skip, no indicator' },
+    { id: 'mask-close', label: 'Closes on mask click' },
+  ];
+  protected readonly variant = signal('default');
+  protected readonly effectiveType = computed<AndesTourType>(() =>
+    this.variants() && this.variant() === 'primary' ? 'primary' : this.type(),
+  );
+  protected readonly effectiveIndicators = computed<AndesTourIndicators>(() => {
+    if (!this.variants()) return this.indicators();
+    if (this.variant() === 'count') return 'count';
+    return this.variant() === 'minimal' ? 'none' : this.indicators();
+  });
+  protected readonly effectiveArrow = computed(() =>
+    this.variants() && this.variant() === 'minimal' ? false : this.arrow(),
+  );
+  protected readonly effectiveShowSkip = computed(() =>
+    this.variants() && this.variant() === 'minimal' ? false : this.showSkip(),
+  );
+  protected readonly effectiveCloseOnMaskClick = computed(() =>
+    this.variants() && this.variant() === 'mask-close'
+      ? true
+      : this.closeOnMaskClick(),
+  );
   private readonly sanitizer = inject(DomSanitizer);
   /** The demo page is trusted markup of our own, so it keeps its inputs and styles. */
   protected readonly html = computed(() =>
@@ -216,128 +257,59 @@ export const Default: Story = {
   render: () => ({ template: `<andes-story-tour />` }),
 };
 
-export const PrimaryCard: Story = {
-  render: () => ({ template: `<andes-story-tour type="primary" />` }),
+/**
+ * The card look, switched with the buttons above the page: the `primary` card type, the `count`
+ * indicator ("2 / 5") instead of dots, a minimal card (`arrow` off, `showSkip` off, `indicators`
+ * none) and `closeOnMaskClick`, where a click on the dimmed page closes the tour. Pick one, then
+ * start the tour.
+ */
+export const Appearance: Story = {
+  render: () => ({ template: `<andes-story-tour [variants]="true" />` }),
 };
 
-export const CountIndicator: Story = {
-  render: () => ({ template: `<andes-story-tour indicators="count" />` }),
-};
-
-export const NoArrowNoSkip: Story = {
-  render: () => ({
-    template: `<andes-story-tour [arrow]="false" [showSkip]="false" indicators="none" />`,
-  }),
-};
-
-export const CustomMask: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          'The first step dims with a custom colour, the second has no mask at all (the target is ringed instead), the rest follow the tour.',
-      },
-    },
-  },
-  render: () => ({
-    props: {
-      steps: [
-        {
-          target: '#search',
-          title: 'Tinted mask',
-          description: 'This step dims with its own colour.',
-          mask: { color: 'rgb(30 64 175 / 55%)' },
-        },
-        {
-          target: '#create',
-          title: 'No mask',
-          description: 'The page stays as it is; the target is outlined.',
-          mask: false,
-        },
-        {
-          target: '#stats',
-          title: 'Tour default',
-          description: 'Back to the default mask.',
-        },
-      ] satisfies AndesTourStep[],
-    },
-    template: `<andes-story-tour [steps]="steps" />`,
-  }),
-};
-
-export const TargetClickable: Story = {
-  render: () => ({
-    props: {
-      steps: [
-        {
-          target: '#create',
-          title: 'Try it',
-          description: 'The button is live: click it while the tour is open.',
-          targetClickable: true,
-        },
-        {
-          target: '#search',
-          title: 'Type here',
-          description: 'The field accepts input too.',
-          targetClickable: true,
-        },
-        {
-          title: 'Done',
-          description: 'The rest of the page stays dimmed and inert to clicks.',
-        },
-      ] satisfies AndesTourStep[],
-    },
-    template: `<andes-story-tour [steps]="steps" />`,
-  }),
-};
-
-export const ClosesOnMaskClick: Story = {
-  render: () => ({
-    template: `<andes-story-tour [closeOnMaskClick]="true" />`,
-  }),
-};
-
-export const WithCoverImage: Story = {
-  render: () => ({
-    props: {
-      steps: [
-        {
-          target: '#stats',
-          title: 'Your numbers',
-          description: 'A cover image or template sits above the text.',
-          placement: 'bottom',
-          cover:
-            'data:image/svg+xml;utf8,' +
-            encodeURIComponent(
-              '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 120"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#bae6fd"/><stop offset="1" stop-color="#6366f1"/></linearGradient></defs><rect width="320" height="120" fill="url(#g)"/><g fill="#fff" opacity="0.85"><rect x="40" y="62" width="28" height="40" rx="4"/><rect x="84" y="44" width="28" height="58" rx="4"/><rect x="128" y="30" width="28" height="72" rx="4"/><rect x="172" y="52" width="28" height="50" rx="4"/><rect x="216" y="22" width="28" height="80" rx="4"/></g></svg>',
-            ),
-        },
-        {
-          target: '#orders',
-          title: 'Orders',
-          description: 'Without a cover the card is just text.',
-          placement: 'top',
-        },
-      ] satisfies AndesTourStep[],
-    },
-    template: `<andes-story-tour [steps]="steps" />`,
-  }),
-};
-
-export const CustomButtons: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          'Per-step button labels, and a click handler that keeps the user on the step by returning `false` (here: the first click on the first step is refused).',
-      },
-    },
-  },
+/**
+ * Per-step options in one tour, in order: a custom mask colour, no mask at all (the target is
+ * ringed instead), a live target (`targetClickable`: type in the field while the tour is open), a
+ * cover image above the text, and per-step button labels with a click handler that keeps the user
+ * on the step by returning `false` (the first click on "Got it, next" is refused, the second goes
+ * through).
+ */
+export const StepOptions: Story = {
   render: () => {
     let refused = false;
     return {
       props: {
         steps: [
+          {
+            target: '#search',
+            title: 'Tinted mask',
+            description: 'This step dims with its own colour.',
+            mask: { color: 'rgb(30 64 175 / 55%)' },
+          },
+          {
+            target: '#create',
+            title: 'No mask',
+            description: 'The page stays as it is; the target is outlined.',
+            mask: false,
+          },
+          {
+            target: '#search',
+            title: 'Try it',
+            description:
+              'The field is live: type in it while the tour is open. The rest of the page stays inert.',
+            targetClickable: true,
+          },
+          {
+            target: '#stats',
+            title: 'Your numbers',
+            description: 'A cover image or template sits above the text.',
+            placement: 'bottom',
+            cover:
+              'data:image/svg+xml;utf8,' +
+              encodeURIComponent(
+                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 120"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#bae6fd"/><stop offset="1" stop-color="#6366f1"/></linearGradient></defs><rect width="320" height="120" fill="url(#g)"/><g fill="#fff" opacity="0.85"><rect x="40" y="62" width="28" height="40" rx="4"/><rect x="84" y="44" width="28" height="58" rx="4"/><rect x="128" y="30" width="28" height="72" rx="4"/><rect x="172" y="52" width="28" height="50" rx="4"/><rect x="216" y="22" width="28" height="80" rx="4"/></g></svg>',
+              ),
+          },
           {
             target: '#create',
             title: 'Create an order',
@@ -353,16 +325,10 @@ export const CustomButtons: Story = {
             },
           },
           {
-            target: '#stats',
-            title: 'Numbers',
-            description: 'This step renames both buttons.',
-            prevButton: { label: 'Back' },
-            nextButton: { label: 'Show me orders' },
-          },
-          {
             target: '#orders',
             title: 'Last one',
-            description: 'The final button says what it does.',
+            description: 'This step renames both buttons.',
+            prevButton: { label: 'Back' },
             nextButton: { label: 'Start working' },
             placement: 'top',
           },
@@ -378,7 +344,7 @@ export const Placements: Story = {
     docs: {
       description: {
         story:
-          'Every placement around one target, then `center` and `auto`. Placements that do not fit flip to the opposite side.',
+          'Every placement around one target, then `center` and `auto`. Placements that do not fit flip to the opposite side. A step with no target (`center`) is centred and dims the whole page, which suits introductions and sign-offs.',
       },
     },
   },
@@ -419,25 +385,6 @@ export const ScrollsToTarget: Story = {
       ] satisfies AndesTourStep[],
     },
     template: `<andes-story-tour [page]="tallPage" [steps]="steps" />`,
-  }),
-};
-
-export const CentredSteps: Story = {
-  render: () => ({
-    props: {
-      steps: [
-        {
-          title: 'Welcome',
-          description:
-            'No target: the card is centred and the whole page is dimmed.',
-        },
-        {
-          title: 'Nothing to point at',
-          description: 'Useful for introductions and sign-offs.',
-        },
-      ] satisfies AndesTourStep[],
-    },
-    template: `<andes-story-tour [steps]="steps" />`,
   }),
 };
 

@@ -137,7 +137,7 @@ export * from './lib/input-number';
 
 // @slot tag
 
-// @slot textarea
+export * from './lib/textarea';
 
 // @slot timeline
 

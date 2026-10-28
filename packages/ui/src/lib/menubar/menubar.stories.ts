@@ -110,7 +110,12 @@ export const Basic: Story = {
   }),
 };
 
-export const WithIcons: Story = {
+/**
+ * Two bars on the item kinds: the first with a leading icon and a trailing shortcut on each
+ * row, the second with a disabled row, a destructive row and a whole disabled menu (its
+ * trigger is skipped by the arrow keys).
+ */
+export const Items: Story = {
   render: () => ({
     moduleMetadata: {
       imports: [NgIcon, ...PARTS],
@@ -124,32 +129,51 @@ export const WithIcons: Story = {
       ],
     },
     template: `
-      <andes-menubar aria-label="Document">
-        <andes-menubar-menu value="file">
-          <andes-menubar-trigger>File</andes-menubar-trigger>
-          <andes-dropdown-menu-item key="new">
-            <ng-icon slot="icon-start" name="lucideFilePlus" /> New
-            <andes-dropdown-menu-shortcut>⌘N</andes-dropdown-menu-shortcut>
-          </andes-dropdown-menu-item>
-          <andes-dropdown-menu-item key="open">
-            <ng-icon slot="icon-start" name="lucideFolderOpen" /> Open
-            <andes-dropdown-menu-shortcut>⌘O</andes-dropdown-menu-shortcut>
-          </andes-dropdown-menu-item>
-          <andes-dropdown-menu-item key="save">
-            <ng-icon slot="icon-start" name="lucideSave" /> Save
-            <andes-dropdown-menu-shortcut>⌘S</andes-dropdown-menu-shortcut>
-          </andes-dropdown-menu-item>
-          <andes-dropdown-menu-separator />
-          <andes-dropdown-menu-item key="print">
-            <ng-icon slot="icon-start" name="lucidePrinter" /> Print
-          </andes-dropdown-menu-item>
-        </andes-menubar-menu>
-        <andes-menubar-menu value="edit">
-          <andes-menubar-trigger>Edit</andes-menubar-trigger>
-          <andes-dropdown-menu-item key="undo">Undo</andes-dropdown-menu-item>
-          <andes-dropdown-menu-item key="redo">Redo</andes-dropdown-menu-item>
-        </andes-menubar-menu>
-      </andes-menubar>
+      <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 1rem;">
+        <andes-menubar aria-label="Document">
+          <andes-menubar-menu value="file">
+            <andes-menubar-trigger>File</andes-menubar-trigger>
+            <andes-dropdown-menu-item key="new">
+              <ng-icon slot="icon-start" name="lucideFilePlus" /> New
+              <andes-dropdown-menu-shortcut>⌘N</andes-dropdown-menu-shortcut>
+            </andes-dropdown-menu-item>
+            <andes-dropdown-menu-item key="open">
+              <ng-icon slot="icon-start" name="lucideFolderOpen" /> Open
+              <andes-dropdown-menu-shortcut>⌘O</andes-dropdown-menu-shortcut>
+            </andes-dropdown-menu-item>
+            <andes-dropdown-menu-item key="save">
+              <ng-icon slot="icon-start" name="lucideSave" /> Save
+              <andes-dropdown-menu-shortcut>⌘S</andes-dropdown-menu-shortcut>
+            </andes-dropdown-menu-item>
+            <andes-dropdown-menu-separator />
+            <andes-dropdown-menu-item key="print">
+              <ng-icon slot="icon-start" name="lucidePrinter" /> Print
+            </andes-dropdown-menu-item>
+          </andes-menubar-menu>
+          <andes-menubar-menu value="edit">
+            <andes-menubar-trigger>Edit</andes-menubar-trigger>
+            <andes-dropdown-menu-item key="undo">Undo</andes-dropdown-menu-item>
+            <andes-dropdown-menu-item key="redo">Redo</andes-dropdown-menu-item>
+          </andes-menubar-menu>
+        </andes-menubar>
+        <andes-menubar aria-label="Records">
+          <andes-menubar-menu value="record">
+            <andes-menubar-trigger>Record</andes-menubar-trigger>
+            <andes-dropdown-menu-item key="edit">Edit</andes-dropdown-menu-item>
+            <andes-dropdown-menu-item key="duplicate" [disabled]="true">Duplicate (disabled)</andes-dropdown-menu-item>
+            <andes-dropdown-menu-separator />
+            <andes-dropdown-menu-item key="delete" variant="destructive">Delete</andes-dropdown-menu-item>
+          </andes-menubar-menu>
+          <andes-menubar-menu value="reports" [disabled]="true">
+            <andes-menubar-trigger>Reports</andes-menubar-trigger>
+            <andes-dropdown-menu-item key="monthly">Monthly</andes-dropdown-menu-item>
+          </andes-menubar-menu>
+          <andes-menubar-menu value="tools">
+            <andes-menubar-trigger>Tools</andes-menubar-trigger>
+            <andes-dropdown-menu-item key="import">Import…</andes-dropdown-menu-item>
+          </andes-menubar-menu>
+        </andes-menubar>
+      </div>
     `,
   }),
 };
@@ -237,79 +261,51 @@ export const Submenus: Story = {
   }),
 };
 
-export const DisabledAndDanger: Story = {
-  render: () => ({
-    moduleMetadata: { imports: PARTS },
-    template: `
-      <andes-menubar aria-label="Records">
-        <andes-menubar-menu value="record">
-          <andes-menubar-trigger>Record</andes-menubar-trigger>
-          <andes-dropdown-menu-item key="edit">Edit</andes-dropdown-menu-item>
-          <andes-dropdown-menu-item key="duplicate" [disabled]="true">Duplicate (disabled)</andes-dropdown-menu-item>
-          <andes-dropdown-menu-separator />
-          <andes-dropdown-menu-item key="delete" variant="destructive">Delete</andes-dropdown-menu-item>
-        </andes-menubar-menu>
-        <andes-menubar-menu value="reports" [disabled]="true">
-          <andes-menubar-trigger>Reports</andes-menubar-trigger>
-          <andes-dropdown-menu-item key="monthly">Monthly</andes-dropdown-menu-item>
-        </andes-menubar-menu>
-        <andes-menubar-menu value="tools">
-          <andes-menubar-trigger>Tools</andes-menubar-trigger>
-          <andes-dropdown-menu-item key="import">Import…</andes-dropdown-menu-item>
-        </andes-menubar-menu>
-      </andes-menubar>
-    `,
-  }),
-};
-
-export const Sizes: Story = {
+/**
+ * The bar's looks together: the three `size`s, and `variant="plain"`, which drops the frame
+ * for a bar that sits in an app header.
+ */
+export const Appearance: Story = {
   render: () => ({
     moduleMetadata: { imports: PARTS },
     props: { sizes: ['sm', 'md', 'lg'] },
     template: `
-      <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 1rem;">
-        @for (size of sizes; track size) {
-          <andes-menubar [size]="size" [attr.aria-label]="'Application, ' + size">
+      <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 1.5rem;">
+        <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 1rem;">
+          @for (size of sizes; track size) {
+            <andes-menubar [size]="size" [attr.aria-label]="'Application, ' + size">
+              <andes-menubar-menu value="file">
+                <andes-menubar-trigger>File</andes-menubar-trigger>
+                <andes-dropdown-menu-item key="new">New</andes-dropdown-menu-item>
+                <andes-dropdown-menu-item key="open">Open</andes-dropdown-menu-item>
+              </andes-menubar-menu>
+              <andes-menubar-menu value="edit">
+                <andes-menubar-trigger>Edit</andes-menubar-trigger>
+                <andes-dropdown-menu-item key="undo">Undo</andes-dropdown-menu-item>
+              </andes-menubar-menu>
+              <andes-menubar-menu value="view">
+                <andes-menubar-trigger>View</andes-menubar-trigger>
+                <andes-dropdown-menu-item key="zoom">Zoom</andes-dropdown-menu-item>
+              </andes-menubar-menu>
+            </andes-menubar>
+          }
+        </div>
+        <header style="align-self: stretch; display: flex; align-items: center; gap: 1rem; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--andes-color-border); font: 600 0.875rem/1.375rem var(--andes-font-family), sans-serif; color: var(--andes-color-foreground);">
+          <span>Ledger</span>
+          <andes-menubar variant="plain" aria-label="Application, plain">
             <andes-menubar-menu value="file">
               <andes-menubar-trigger>File</andes-menubar-trigger>
-              <andes-dropdown-menu-item key="new">New</andes-dropdown-menu-item>
-              <andes-dropdown-menu-item key="open">Open</andes-dropdown-menu-item>
+              <andes-dropdown-menu-item key="new">New entry</andes-dropdown-menu-item>
+              <andes-dropdown-menu-item key="import">Import…</andes-dropdown-menu-item>
             </andes-menubar-menu>
-            <andes-menubar-menu value="edit">
-              <andes-menubar-trigger>Edit</andes-menubar-trigger>
-              <andes-dropdown-menu-item key="undo">Undo</andes-dropdown-menu-item>
-            </andes-menubar-menu>
-            <andes-menubar-menu value="view">
-              <andes-menubar-trigger>View</andes-menubar-trigger>
-              <andes-dropdown-menu-item key="zoom">Zoom</andes-dropdown-menu-item>
+            <andes-menubar-menu value="reports">
+              <andes-menubar-trigger>Reports</andes-menubar-trigger>
+              <andes-dropdown-menu-item key="trial">Trial balance</andes-dropdown-menu-item>
+              <andes-dropdown-menu-item key="aging">Aging</andes-dropdown-menu-item>
             </andes-menubar-menu>
           </andes-menubar>
-        }
+        </header>
       </div>
-    `,
-  }),
-};
-
-/** `plain` drops the frame, for a bar that sits in an app header. */
-export const Plain: Story = {
-  render: () => ({
-    moduleMetadata: { imports: PARTS },
-    template: `
-      <header style="display: flex; align-items: center; gap: 1rem; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--andes-color-border); font: 600 0.875rem/1.375rem var(--andes-font-family), sans-serif; color: var(--andes-color-foreground);">
-        <span>Ledger</span>
-        <andes-menubar variant="plain" aria-label="Application">
-          <andes-menubar-menu value="file">
-            <andes-menubar-trigger>File</andes-menubar-trigger>
-            <andes-dropdown-menu-item key="new">New entry</andes-dropdown-menu-item>
-            <andes-dropdown-menu-item key="import">Import…</andes-dropdown-menu-item>
-          </andes-menubar-menu>
-          <andes-menubar-menu value="reports">
-            <andes-menubar-trigger>Reports</andes-menubar-trigger>
-            <andes-dropdown-menu-item key="trial">Trial balance</andes-dropdown-menu-item>
-            <andes-dropdown-menu-item key="aging">Aging</andes-dropdown-menu-item>
-          </andes-menubar-menu>
-        </andes-menubar>
-      </header>
     `,
   }),
 };

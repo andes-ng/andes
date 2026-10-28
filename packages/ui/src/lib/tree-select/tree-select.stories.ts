@@ -65,7 +65,7 @@ function regions(): AndesTreeNode[] {
 }
 
 const meta: Meta<AndesTreeSelect> = {
-  title: 'Tree Select',
+  title: 'Data Entry/Tree Select',
   component: AndesTreeSelect,
   tags: ['autodocs'],
   argTypes: {

@@ -751,6 +751,64 @@ describe('AndesOverlayPrimitive', () => {
     });
   });
 
+  describe('following a scrolling ancestor of the anchor', () => {
+    function scroll(target: EventTarget) {
+      target.dispatchEvent(new Event('scroll'));
+    }
+
+    it('re-positions when an element containing the anchor scrolls', () => {
+      const { host, overlay, fixture } = createHost(
+        andesOverlayPreset('popover'),
+      );
+      host.open();
+      const update = vi.spyOn(overlay, 'updatePosition');
+
+      // Scroll events do not bubble: only a capture listener hears this one.
+      scroll(fixture.nativeElement as HTMLElement);
+
+      expect(update).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores scrolls of elements that do not contain the anchor', () => {
+      const { host, overlay, outside } = createHost(
+        andesOverlayPreset('popover'),
+      );
+      host.open();
+      const update = vi.spyOn(overlay, 'updatePosition');
+
+      scroll(outside());
+      scroll(document);
+
+      expect(update).not.toHaveBeenCalled();
+    });
+
+    it('stops listening once closed', () => {
+      const { host, overlay, fixture } = createHost(
+        andesOverlayPreset('popover'),
+      );
+      host.open();
+      overlay.close();
+      const update = vi.spyOn(overlay, 'updatePosition');
+
+      scroll(fixture.nativeElement as HTMLElement);
+
+      expect(update).not.toHaveBeenCalled();
+    });
+
+    it('does nothing for an overlay that does not re-position on scroll', () => {
+      const { host, overlay, fixture } = createHost({
+        ...andesOverlayPreset('popover'),
+        repositionOnScroll: false,
+      });
+      host.open();
+      const update = vi.spyOn(overlay, 'updatePosition');
+
+      scroll(fixture.nativeElement as HTMLElement);
+
+      expect(update).not.toHaveBeenCalled();
+    });
+  });
+
   describe('close affordance inside the content', () => {
     it('closes via andesOverlayClose with a "close-button" reason', () => {
       const { fixture, host, overlay, element } = createHost(

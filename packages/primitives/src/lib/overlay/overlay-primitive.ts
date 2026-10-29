@@ -393,6 +393,7 @@ export class AndesOverlayPrimitive {
 
     this.applyInertBackground(ref, config);
     this.wireDismissal(ref);
+    this.followScrollingAncestors(config);
     this.installFocusManagement(ref, config);
 
     this._opened.next();
@@ -564,6 +565,7 @@ export class AndesOverlayPrimitive {
 
     this.applyInertBackground(ref, config);
     this.wireDismissal(ref);
+    this.followScrollingAncestors(config);
     this.installFocusManagement(ref, config, !focusInside);
   }
 
@@ -738,6 +740,41 @@ export class AndesOverlayPrimitive {
     // `isOpen` does not lie.
     this.openSubscriptions.add(
       ref.detachments().subscribe(() => this.beginClose('destroyed', false)),
+    );
+  }
+
+  /**
+   * Keeps an anchored overlay attached to its anchor while any element containing the
+   * anchor scrolls: an `overflow: auto` panel, a dialog body, a sidebar. The CDK's
+   * reposition strategy only hears the document's own scroll (scroll events do not
+   * bubble), so without this the overlay stayed put while its anchor scrolled away
+   * underneath it. A capture-phase listener on the document hears every scroll; only
+   * those of an ancestor of the anchor move the overlay.
+   */
+  private followScrollingAncestors(config: AndesOverlayConfig): void {
+    const anchor = this._anchor();
+    if (
+      !config.repositionOnScroll ||
+      config.positioning.kind !== 'anchored' ||
+      !anchor
+    ) {
+      return;
+    }
+    const onScroll = (event: Event) => {
+      const target = event.target;
+      // The document's own scroll is the CDK strategy's job already.
+      if (
+        target instanceof Element &&
+        target !== this.document.documentElement &&
+        target.contains(anchor)
+      ) {
+        this.updatePosition();
+      }
+    };
+    const options: AddEventListenerOptions = { capture: true, passive: true };
+    this.document.addEventListener('scroll', onScroll, options);
+    this.openSubscriptions.add(() =>
+      this.document.removeEventListener('scroll', onScroll, options),
     );
   }
 

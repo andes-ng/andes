@@ -2,6 +2,7 @@ import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 
+import { expectLength } from '../../testing/computed-style';
 import { AndesRadio } from './radio';
 import {
   AndesRadioButtonStyle,
@@ -220,7 +221,7 @@ describe('AndesRadioGroup / AndesRadio', () => {
 
     // With the default content-box the 1rem circle rendered 18px outside.
     expect(getComputedStyle(control).boxSizing).toBe('border-box');
-    expect(getComputedStyle(control).width).toBe('1rem');
+    expectLength(getComputedStyle(control).width, '1rem');
   });
 
   it('starts the dot at half size and transparent, so selecting settles in softly', () => {

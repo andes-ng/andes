@@ -4,6 +4,11 @@ import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
 import {
+  declaredValue,
+  expectLength,
+  isZeroLength,
+} from '../../testing/computed-style';
+import {
   AndesAccordion,
   type AndesAccordionCollapsible,
   type AndesAccordionExpandIconPosition,
@@ -347,12 +352,12 @@ describe('AndesAccordion / AndesAccordionItem / AndesAccordionTrigger / AndesAcc
         'paddingBottom',
         'paddingLeft',
       ] as const) {
-        const value = innerStyle[side];
-        expect(value === '' || value === '0px').toBe(true);
+        expectLength(innerStyle[side], 0);
       }
 
-      // ...while the breathing room is still applied, one level in.
-      expect(getComputedStyle(body).paddingBottom).not.toBe('');
+      // ...while the breathing room is still applied, one level in. (An undeclared padding
+      // computes to `0`, so "not empty" alone would pass with the rule gone.)
+      expect(isZeroLength(getComputedStyle(body).paddingBottom)).toBe(false);
     });
   });
 
@@ -636,13 +641,22 @@ describe('AndesAccordion - extended features', () => {
   });
 
   describe('bordered / ghost / size', () => {
+    // The divider is `border-bottom: 1px solid var(--andes-color-border)`. jsdom does not expand
+    // a shorthand holding `var()`, so its longhands read as their initial `none` whether or not
+    // the rule matched; the divider is therefore asserted as declared, per selector.
+    const itemCss = () =>
+      readFileSync('packages/ui/src/lib/accordion/accordion-item.css', 'utf8');
+
     it('is divider-only by default', () => {
       const { root, items } = createFeatureHost();
 
       expect(root.getAttribute('data-variant')).toBe('default');
       expect(getComputedStyle(root).overflow).not.toBe('hidden');
       expect(items()[0].getAttribute('data-variant')).toBe('default');
-      expect(getComputedStyle(items()[0]).borderBottomStyle).not.toBe('none');
+      expect(items()[0].matches(':last-child')).toBe(false);
+      expect(declaredValue(itemCss(), ':host', 'border-bottom')).toBe(
+        '1px solid var(--andes-color-border)',
+      );
     });
 
     it('renders an outlined, rounded block with tinted headers when bordered', () => {
@@ -677,8 +691,15 @@ describe('AndesAccordion - extended features', () => {
       expect(root.getAttribute('data-variant')).toBe('ghost');
       expect(getComputedStyle(root).overflow).not.toBe('hidden');
       for (const item of items()) {
-        expect(getComputedStyle(item).borderBottomStyle).toBe('none');
+        expect(item.getAttribute('data-variant')).toBe('ghost');
       }
+      expect(
+        declaredValue(
+          itemCss(),
+          ":host([data-variant='ghost'])",
+          'border-bottom',
+        ),
+      ).toBe('none');
     });
 
     it.each([
@@ -692,8 +713,8 @@ describe('AndesAccordion - extended features', () => {
         const style = getComputedStyle(headers()[0]);
 
         expect(headers()[0].getAttribute('data-size')).toBe(size);
-        expect(style.getPropertyValue('min-block-size')).toBe(minHeight);
-        expect(style.fontSize).toBe(fontSize);
+        expectLength(style.getPropertyValue('min-block-size'), minHeight);
+        expectLength(style.fontSize, fontSize);
       },
     );
   });

@@ -7,6 +7,12 @@ import { TestBed } from '@angular/core/testing';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 import {
+  declaredValue,
+  expectInherited,
+  expectLength,
+  px,
+} from '../../testing/computed-style';
+import {
   AndesInput,
   AndesInputCountInfo,
   AndesInputSize,
@@ -15,6 +21,12 @@ import {
   AndesInputVariant,
 } from './input';
 import { AndesInputSearch } from './input-search';
+
+const inputCss = () =>
+  readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), 'input.css'),
+    'utf-8',
+  );
 
 @Component({
   imports: [AndesInput],
@@ -91,8 +103,8 @@ describe('AndesInput', () => {
     fixture.detectChanges();
 
     const style = getComputedStyle(wrapper);
-    expect(style.height).toBe(height);
-    expect(style.fontSize).toBe(fontSize);
+    expectLength(style.height, height);
+    expectLength(style.fontSize, fontSize);
   });
 
   it.each(['email', 'password', 'number', 'search', 'tel', 'url'] as const)(
@@ -327,16 +339,22 @@ describe('AndesInput', () => {
       input.dispatchEvent(new Event('input'));
       fixture.detectChanges();
 
-      const style = getComputedStyle(
-        fixture.nativeElement.querySelector('.andes-input__clear'),
-      );
-      // jsdom reports the declared keyword rather than resolving it - a native button
-      // left alone reports the UA's own size instead.
+      const clear = fixture.nativeElement.querySelector(
+        '.andes-input__clear',
+      ) as HTMLElement;
+      const style = getComputedStyle(clear);
+      // A native button doesn't inherit font metrics in a browser, so the rule must say
+      // `inherit`; jsdom's own button has no font size, so the declaration is asserted too.
+      expect(
+        declaredValue(inputCss(), '.andes-input__clear', 'font-size'),
+      ).toBe('inherit');
+      expectInherited(clear, ['font-size']);
       // The padding is half the gap between the 1em glyph and 24px (5px at 14px text, 4px at
-      // 16px), so the hit area stays 24px at every size; jsdom reports the normalised calc().
-      expect(style.fontSize).toBe('inherit');
-      expect(style.padding).toBe('calc(0.5 * (1.5rem - 1em))');
-      expect(style.margin).toBe('calc(0.5 * (1em - 1.5rem))');
+      // 16px), so the hit area stays 24px at every size, and the margin takes it back out.
+      const glyph = { fontSize: px(style.fontSize) };
+      expectLength(style.padding, 'calc((1.5rem - 1em) / 2)', glyph);
+      expectLength(style.margin, 'calc((1em - 1.5rem) / 2)', glyph);
+      expect(px(style.fontSize) + 2 * px(style.padding)).toBe(24);
     });
 
     it('does not render a clear button while disabled, even with a value', () => {
@@ -361,8 +379,8 @@ describe('AndesInput', () => {
     // focus, so a mouse click showed nothing at all).
     //
     // jsdom resolves dynamic pseudo-classes (`:focus-within`, `:has()`) in `getComputedStyle`
-    // but leaves `var()` unresolved and doesn't expand shorthands, so values are compared as
-    // authored. The stylesheet is read directly where the point is which selector carries a
+    // but leaves `var()` unresolved (and doesn't expand a shorthand holding one), so those
+    // values are compared as authored. The stylesheet is read directly where the point is which selector carries a
     // declaration.
     const css = () =>
       readFileSync(
@@ -415,7 +433,7 @@ describe('AndesInput', () => {
 
       input.focus();
 
-      expect(getComputedStyle(wrapper).boxShadow).toBe('');
+      expect(getComputedStyle(wrapper).boxShadow).toBe('none');
       expect(css()).not.toMatch(
         /\.andes-input-wrapper:(hover|focus-within)\s*{/,
       );
@@ -447,7 +465,8 @@ describe('AndesInput', () => {
       input.focus();
       const style = getComputedStyle(input);
 
-      expect(style.outline).toBe('0');
+      // `outline: 0` computes to a zero width (an undeclared outline reads as '').
+      expectLength(style.outline, 0);
       expect(style.boxShadow).toBe('none');
       expect(style.padding).toBe('0px');
       expect(style.backgroundColor).toBe('rgba(0, 0, 0, 0)');
@@ -629,9 +648,21 @@ describe('AndesInput', () => {
       fixture.detectChanges();
       const wrapper = fixture.nativeElement.querySelector(
         '.andes-input-wrapper',
-      );
+      ) as HTMLElement;
 
-      expect(getComputedStyle(wrapper).borderWidth).toBe('0px 0px 1px');
+      // The wrapper's border is `1px solid var(--_andes-input-border)`: jsdom doesn't expand a
+      // shorthand holding `var()`, so the computed style is `none` and every width reads 0px.
+      // The variant's widths are asserted as declared, on the selector that reaches the wrapper.
+      expect(wrapper.parentElement?.classList).toContain(
+        'andes-input-group--underlined',
+      );
+      expect(
+        declaredValue(
+          inputCss(),
+          '.andes-input-group--underlined > .andes-input-wrapper',
+          'border-width',
+        ),
+      ).toBe('0 0 1px');
     });
   });
 
@@ -676,7 +707,7 @@ describe('AndesInput', () => {
 
       input.focus();
 
-      expect(getComputedStyle(input).outline).toBe('0');
+      expectLength(getComputedStyle(input).outline, 0);
       expect(getComputedStyle(group).outline).toBe('none');
       expect(getComputedStyle(group).boxShadow).toBe(
         '0 0 0 var(--_andes-input-ring-width, 2px) var(--_andes-input-ring)',

@@ -14,6 +14,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   effect,
   ElementRef,
   forwardRef,
@@ -34,9 +35,12 @@ import clsx from 'clsx';
 import { AndesButton } from '../button/button';
 import {
   AndesCalendar,
+  coerceDisabledSides,
+  type AndesCalendarCaptionLayout,
   type AndesCalendarCellContext,
   type AndesCalendarMode,
   type AndesCalendarPanelChange,
+  type AndesCalendarRangeSide,
   type AndesCalendarValue,
   type AndesCalendarView,
   type AndesDateDisabledFn,
@@ -59,20 +63,57 @@ import {
   startOfPeriod,
   timeOf,
   toDateKey,
-  toDateRange,
+  toDateList,
+  toOpenDateRange,
   today,
   withTime,
+  type AndesOpenDateRange,
   type AndesPickerType,
   type AndesTimeOfDay,
   type AndesWeekday,
 } from '../calendar/date-utils';
+import { AndesDatePickerOverflow } from './date-picker-overflow';
 
 /**
- * What a date picker reports to a form. A `Date` in `single` mode, a
- * `[start, end]` tuple in `range` mode, `null` when nothing (or only half a range)
- * is selected. Dates are local midnights unless `showTime` is on.
+ * A range value: both boundaries, or, with `allowEmpty`, an open-ended range with
+ * one side empty.
  */
-export type AndesDatePickerValue = Date | readonly [Date, Date] | null;
+export type AndesDatePickerRangeValue =
+  readonly [Date, Date] | readonly [Date, null] | readonly [null, Date];
+
+/**
+ * What a date picker reports to a form. A `Date` in `single` mode; a
+ * `[start, end]` tuple in `range` mode (`[start, null]` / `[null, end]` only with
+ * `allowEmpty`); a chronological `Date[]` in `multiple` mode (`[]` when empty);
+ * `null` when nothing (or, without `allowEmpty`, only half a range) is selected.
+ * Dates are local midnights unless `showTime` is on.
+ */
+export type AndesDatePickerValue =
+  Date | AndesDatePickerRangeValue | readonly Date[] | null;
+
+/** One date, a span of dates, or any number of separate dates. */
+export type AndesDatePickerMode = AndesCalendarMode;
+
+/**
+ * How many date tags a `multiple` picker shows before the rest collapse into a
+ * `+ N ...` tag: a count, or `responsive` for as many as fit on one row.
+ */
+export type AndesDatePickerMaxTagCount = number | 'responsive';
+
+/** Classes accepted by `panelClass`. */
+export type AndesDatePickerPanelClass = string | readonly string[] | null;
+
+/** Which input of a range is active: `0` the start, `1` the end. */
+export type AndesDatePickerActiveIndex = 0 | 1;
+
+/** A date shown as a tag in a `multiple` picker. */
+export interface AndesDatePickerTag {
+  readonly date: Date;
+  /** `YYYY-MM-DD`, stable for tracking. */
+  readonly key: string;
+  /** The date in the display format. */
+  readonly label: string;
+}
 
 /** Field height (24 / 32 / 40px), matching `AndesButton`'s `sm`/`md`/`lg`. */
 export type AndesDatePickerSize = 'sm' | 'md' | 'lg';
@@ -263,6 +304,9 @@ const PLACEHOLDER_NOUNS: Readonly<Record<AndesDatePickerType, string>> = {
   time: 'time',
 };
 
+/** Room kept free for typing beside responsive tags, when the input has no min-width. */
+const RESPONSIVE_INPUT_RESERVE = 48;
+
 let nextId = 0;
 
 /** `showTime` accepts `true`, a bare attribute, or an options object. */
@@ -290,11 +334,55 @@ function sameInstant(a: Date | null | undefined, b: Date | null | undefined) {
 
 function sameValue(a: AndesDatePickerValue, b: AndesDatePickerValue): boolean {
   if (Array.isArray(a) || Array.isArray(b)) {
-    const left = (a ?? []) as readonly Date[];
-    const right = (b ?? []) as readonly Date[];
-    return sameInstant(left[0], right[0]) && sameInstant(left[1], right[1]);
+    const left = (a ?? []) as readonly (Date | null)[];
+    const right = (b ?? []) as readonly (Date | null)[];
+    return (
+      left.length === right.length &&
+      left.every((date, index) => sameInstant(date, right[index]))
+    );
   }
   return sameInstant(a as Date | null, b as Date | null);
+}
+
+/** `allowEmpty` accepts a boolean (both sides) or a per-side `[start, end]` pair. */
+function coerceEmptySides(value: unknown): readonly [boolean, boolean] {
+  if (Array.isArray(value)) {
+    return [booleanAttribute(value[0]), booleanAttribute(value[1])];
+  }
+  const both = booleanAttribute(value);
+  return [both, both];
+}
+
+/** `maxTagCount`: a count or `responsive`; anything else leaves every tag visible. */
+function coerceMaxTagCount(
+  value: unknown,
+): AndesDatePickerMaxTagCount | undefined {
+  if (value === 'responsive') {
+    return 'responsive';
+  }
+  if (value == null || value === '') {
+    return undefined;
+  }
+  const count = numberAttribute(value, Number.NaN);
+  return Number.isFinite(count) ? Math.max(0, Math.floor(count)) : undefined;
+}
+
+/** A positive whole number, or `undefined` when unset or not a number. */
+function coerceMaxCount(value: unknown): number | undefined {
+  if (value == null || value === '') {
+    return undefined;
+  }
+  const count = numberAttribute(value, Number.NaN);
+  return Number.isFinite(count) ? Math.max(0, Math.floor(count)) : undefined;
+}
+
+/** A whole number, or `undefined` when unset or not a number. */
+function coerceYear(value: unknown): number | undefined {
+  if (value == null || value === '') {
+    return undefined;
+  }
+  const year = numberAttribute(value, Number.NaN);
+  return Number.isFinite(year) ? Math.floor(year) : undefined;
 }
 
 /**
@@ -316,6 +404,15 @@ function sameValue(a: AndesDatePickerValue, b: AndesDatePickerValue): boolean {
  *
  * `range` mode renders two inputs in one field, grouped with `role="group"`; the
  * panel shows two months side by side and previews the range under the pointer.
+ * `activePickerIndex` reports (and sets) which of the two is being edited,
+ * `disabled` can lock one side (`[true, false]`), and `allowEmpty` lets a range be
+ * committed with one side empty (`[start, null]`, `[null, end]`).
+ *
+ * `multiple` mode selects any number of separate dates: each pick in the calendar
+ * toggles a date, the field lists them as removable tags (`maxTagCount` collapses
+ * the rest into a `+ N ...` tag whose popover lists them), and the value is a
+ * `Date[]`. Typing a date and pressing Enter adds it; Backspace in the empty input
+ * removes the last one.
  *
  * Because the accessible name lives on the inner input(s) rather than the host,
  * `id`, `name`, `aria-*` and `required` are forwarded onto the input(s) and
@@ -341,6 +438,7 @@ function sameValue(a: AndesDatePickerValue, b: AndesDatePickerValue): boolean {
   imports: [
     AndesButton,
     AndesCalendar,
+    AndesDatePickerOverflow,
     AndesOverlayContentPrimitive,
     NgTemplateOutlet,
   ],
@@ -380,17 +478,30 @@ export class AndesDatePicker implements ControlValueAccessor {
 
   private readonly panel = viewChild.required<TemplateRef<unknown>>('panel');
   private readonly field = viewChild.required<ElementRef<HTMLElement>>('field');
+  /**
+   * Not `required`: the input renders through a template outlet (beside the tags of
+   * `multiple` mode), and that view is gone first while the picker is destroyed.
+   */
   private readonly startInput =
-    viewChild.required<ElementRef<HTMLInputElement>>('startInput');
+    viewChild<ElementRef<HTMLInputElement>>('startInput');
   private readonly endInput =
     viewChild<ElementRef<HTMLInputElement>>('endInput');
   private readonly calendar = viewChild(AndesCalendar);
+  private readonly overflow = viewChild(AndesDatePickerOverflow);
+  private readonly selectionRow =
+    viewChild<ElementRef<HTMLElement>>('selectionRow');
+  private readonly measureRow = viewChild<ElementRef<HTMLElement>>('measure');
   private readonly injector = inject(Injector);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly idPrefix = `andes-date-picker-${nextId++}`;
 
-  /** One date or a span of dates. */
-  readonly mode = input<AndesCalendarMode>('single');
+  /**
+   * One date (`single`), a span of dates (`range`), or any number of separate
+   * dates (`multiple`, value `Date[]`, shown as tags). `multiple` applies to the
+   * calendar pickers, not to `picker="time"`, and has no time of day.
+   */
+  readonly mode = input<AndesDatePickerMode>('single');
 
   /**
    * Selection granularity: `date`, `week`, `month`, `quarter`, `year`, or
@@ -462,8 +573,138 @@ export class AndesDatePicker implements ControlValueAccessor {
     transform: coerceDate,
   });
 
-  /** Disables the field and the calendar. */
-  readonly disabled = input(false, { transform: booleanAttribute });
+  /**
+   * Disables the field and the calendar (`true`), or, in `range` mode, one side of
+   * the range: `[true, false]` locks the start, `[false, true]` the end. A locked
+   * side keeps its value: its input is read-only, out of the Tab order and marked
+   * `aria-disabled`, the calendar never moves that boundary (and disables the days
+   * that would put the range out of order), and clearing leaves it alone. Pair it
+   * with a value on that side, or with `allowEmpty` for a locked empty side. Outside
+   * `range` mode a pair reads its first entry.
+   *
+   * With a forms directive on the same element (`formControl`, `formControlName`,
+   * `ngModel`), Angular binds `[disabled]` to that directive too, which only takes a
+   * boolean: lock a side through `disabledSides` there, and disable the whole field
+   * through the form control.
+   */
+  readonly disabled = input<boolean | readonly [boolean, boolean], unknown>(
+    false,
+    { transform: coerceDisabledSides },
+  );
+
+  /**
+   * Locks one side of a range, like a `[start, end]` pair on `disabled`, under a
+   * name Angular's form directives do not also read: `[disabledSides]="[true, false]"`
+   * next to `formControl` or `ngModel` keeps the start fixed while the form control
+   * stays enabled. Combined with `disabled`, a side is locked when either locks it.
+   */
+  readonly disabledSides = input<readonly [boolean, boolean] | null, unknown>(
+    null,
+    {
+      transform: (value: unknown) =>
+        value == null || value === false ? null : coerceEmptySides(value),
+    },
+  );
+
+  /**
+   * In `range` mode, which sides may be left empty: `true` for either, or a
+   * `[start, end]` pair. A range with an allowed empty side is committed as soon as
+   * its other side is picked or typed, as `[start, null]` or `[null, end]` (an
+   * open-ended range: "from" or "until" a date), and `needConfirm` confirms it.
+   * Without it (the default) half a range is never a value: the form holds `null`
+   * until both sides are set.
+   */
+  readonly allowEmpty = input<readonly [boolean, boolean], unknown>(
+    [false, false],
+    { transform: coerceEmptySides },
+  );
+
+  /**
+   * In `multiple` mode, how many date tags show before the rest collapse into a
+   * `+ N ...` tag, whose popover (on hover, focus or click) lists the hidden dates
+   * with their remove buttons. `responsive` keeps the tags on one row and shows as
+   * many as fit. Unset, every tag shows and the field wraps onto more rows.
+   */
+  readonly maxTagCount = input<AndesDatePickerMaxTagCount | undefined, unknown>(
+    undefined,
+    { transform: coerceMaxTagCount },
+  );
+
+  /**
+   * In `multiple` mode, the most dates that can be selected. Once reached, the
+   * calendar disables the dates not yet picked and typed dates are not added; a
+   * selected date can still be removed.
+   */
+  readonly maxCount = input<number | undefined, unknown>(undefined, {
+    transform: coerceMaxCount,
+  });
+
+  /**
+   * Accessible name of the `+ N ...` tag and of its popover; `{count}` stands for
+   * the number of hidden dates.
+   */
+  readonly maxTagPopoverLabel = input('{count} more selected');
+
+  /** Accessible name of each tag's remove button; `{label}` stands for the date. */
+  readonly removeTagLabel = input('Remove {label}');
+
+  /**
+   * Opens the panel once, after the first render, as if the user had opened it.
+   * Later changes are ignored; bind `[(open)]` to drive it afterwards.
+   */
+  readonly defaultOpen = input(false, { transform: booleanAttribute });
+
+  /**
+   * Focuses the input (the active one of a range) once the picker has rendered,
+   * like a native `autofocus`. It runs in the browser only, never during
+   * server-side rendering.
+   */
+  readonly autoFocus = input(false, { transform: booleanAttribute });
+
+  /**
+   * Extra classes on the panel element, for styling one picker's panel - which
+   * renders in the overlay container, outside the picker's own DOM - from page CSS.
+   */
+  readonly panelClass = input<AndesDatePickerPanelClass>(null);
+
+  /**
+   * Commit what the field shows when focus leaves the picker, even when the panel
+   * never opened or `needConfirm` (or `showTime`) would otherwise ask for the OK
+   * button: a valid typed date, and pending calendar picks, become the value and
+   * emit `valueChange` without Enter or OK.
+   *
+   * How it combines with `preserveInvalidOnBlur`, for text in the input when focus
+   * leaves:
+   *
+   * | `changeOnBlur` | `preserveInvalidOnBlur` | valid text | invalid text |
+   * | --- | --- | --- | --- |
+   * | `false` | `false` | committed, unless confirmation is required (then discarded) | discarded, value restored |
+   * | `false` | `true` | committed, unless confirmation is required (then discarded) | kept in the input, value unchanged |
+   * | `true` | `false` | committed | discarded, value restored |
+   * | `true` | `true` | committed | kept in the input, value unchanged |
+   *
+   * Without confirmation a valid typed date already commits on blur; this input
+   * extends that to confirmed pickers, where leaving the field would otherwise drop
+   * it. An incomplete range (one side, without `allowEmpty`) is never committed.
+   */
+  readonly changeOnBlur = input(false, { transform: booleanAttribute });
+
+  /**
+   * What the calendar's header shows in place of the plain caption: `label`
+   * (default), or month and/or year selects (`dropdown`, `dropdown-months`,
+   * `dropdown-years`) that jump straight to a month. Passed to the calendar.
+   */
+  readonly captionLayout = input<AndesCalendarCaptionLayout>('label');
+
+  /** First year of the caption's year select. Defaults to `min`'s year, or 100 years back. */
+  readonly startYear = input<number | undefined, unknown>(undefined, {
+    transform: coerceYear,
+  });
+
+  /** Last year of the caption's year select. Defaults to `max`'s year, or 100 years on. */
+  readonly endYear = input<number | undefined, unknown>(undefined, {
+    transform: coerceYear,
+  });
 
   /**
    * Input placeholder(s). A `[start, end]` pair in `range` mode; a single string
@@ -508,7 +749,7 @@ export class AndesDatePicker implements ControlValueAccessor {
   /**
    * Keep text that does not parse in the input when focus leaves, instead of
    * restoring the value, so the user can correct it. The value is unchanged
-   * either way.
+   * either way. See `changeOnBlur` for how the two combine.
    */
   readonly preserveInvalidOnBlur = input(false, {
     transform: booleanAttribute,
@@ -671,6 +912,16 @@ export class AndesDatePicker implements ControlValueAccessor {
    */
   readonly open = model(false);
 
+  /**
+   * In `range` mode, which input is active: `0` the start, `1` the end. It follows
+   * focus and the calendar (after the start is picked it moves to `1`), and
+   * `activePickerIndexChange` reports each move. Setting it makes that side the
+   * one the next pick edits - focusing its input when the picker holds focus - so a
+   * form can send the user to the end date. A side locked through `disabled` is
+   * never made active.
+   */
+  readonly activePickerIndex = model<AndesDatePickerActiveIndex>(0);
+
   /** Emits the committed value: a `Date`, a complete `[start, end]`, or `null`. */
   readonly valueChange = output<AndesDatePickerValue>();
 
@@ -718,16 +969,111 @@ export class AndesDatePicker implements ControlValueAccessor {
   /** Set by `setDisabledState`, i.e. by a disabled reactive-forms control. */
   private readonly disabledByForm = signal(false);
 
-  /** Why the panel is being closed from inside, when that affects focus. */
+  /** How many tags fit on one row, for `maxTagCount="responsive"`; `null` until measured. */
+  private readonly responsiveTagCount = signal<number | null>(null);
+
+  /** Text direction of the field when the panel opened, mirrored onto the portalled panel. */
+  protected readonly panelDirection = signal<'rtl' | null>(null);
+
+  /**
+   * Set when focus leaving the picker closes the panel, and read once the close
+   * completes. The overlay reports the close only after its exit animation, so a
+   * flag held just around the `close()` call would already be gone by then: text kept
+   * by `preserveInvalidOnBlur` was wiped, and focus was pulled back into the input
+   * the user had just left.
+   */
   private closingForBlur = false;
 
-  protected readonly isDisabled = computed(
-    () => this.disabled() || this.disabledByForm(),
-  );
+  /**
+   * Whether the pointer has really moved over the open panel. A panel that opens under
+   * a resting pointer gets hover events without any movement; they must not preview a
+   * day the user never pointed at.
+   */
+  private pointerMoved = false;
+  private lastPointer: { readonly x: number; readonly y: number } | null = null;
+  /**
+   * The day hovered before the pointer moved: browsers fire the hover before the
+   * move that caused it, so the first real move previews it then.
+   */
+  private heldHover: Date | null = null;
 
   protected readonly isRange = computed(() => this.mode() === 'range');
 
   protected readonly isTimeOnly = computed(() => this.picker() === 'time');
+
+  /** `multiple` mode, which the calendar pickers support (not `picker="time"`). */
+  protected readonly isMultiple = computed(
+    () => this.mode() === 'multiple' && !this.isTimeOnly(),
+  );
+
+  /** One date: `single` mode, or `multiple` with `picker="time"`. */
+  protected readonly isSingle = computed(
+    () => !this.isRange() && !this.isMultiple(),
+  );
+
+  /** The mode handed to the calendar. */
+  protected readonly calendarMode = computed<AndesCalendarMode>(() =>
+    this.isMultiple() ? 'multiple' : this.isRange() ? 'range' : 'single',
+  );
+
+  /** `disabled` is `true`, a pair locking both sides of a range, or the form disabled it. */
+  /** The per-side pair from `disabled` and `disabledSides` together, if either has one. */
+  private readonly disabledPair = computed<readonly [boolean, boolean] | null>(
+    () => {
+      const disabled = this.disabled();
+      const fromDisabled = typeof disabled === 'boolean' ? null : disabled;
+      const sides = this.disabledSides();
+      if (!fromDisabled && !sides) {
+        return null;
+      }
+      return [
+        !!fromDisabled?.[0] || !!sides?.[0],
+        !!fromDisabled?.[1] || !!sides?.[1],
+      ];
+    },
+  );
+
+  protected readonly isDisabled = computed(() => {
+    if (this.disabledByForm() || this.disabled() === true) {
+      return true;
+    }
+    const pair = this.disabledPair();
+    if (!pair) {
+      return false;
+    }
+    return this.isRange() ? pair[0] && pair[1] : pair[0];
+  });
+
+  /** Which sides of a range `disabled` (or `disabledSides`) locks. */
+  protected readonly lockedSides = computed<readonly [boolean, boolean]>(() => {
+    const pair = this.disabledPair();
+    return this.isRange() && pair && !this.isDisabled() ? pair : [false, false];
+  });
+
+  /** What the calendar's `disabled` gets: the whole flag, or the per-side pair. */
+  protected readonly calendarDisabled = computed<
+    boolean | readonly [boolean, boolean]
+  >(() => {
+    if (this.isDisabled()) {
+      return true;
+    }
+    const [start, end] = this.lockedSides();
+    return start || end ? [start, end] : false;
+  });
+
+  /**
+   * The boundary the calendar's next pick sets, from the active input: the end once
+   * the start exists (or may stay empty). `null` keeps the calendar's own two-step
+   * flow, so a pick with the start input active starts a new range.
+   */
+  protected readonly calendarEditingSide =
+    computed<AndesCalendarRangeSide | null>(() =>
+      this.isRange() &&
+      this.activeSide() === 'end' &&
+      (!!this.startDate() || this.allowEmpty()[0])
+        ? 'end'
+        : null,
+    );
 
   /** The side the time columns edit. */
   private readonly editedSide = computed<Side>(() =>
@@ -752,6 +1098,9 @@ export class AndesDatePicker implements ControlValueAccessor {
 
   /** `showTime`, when it applies (day pickers, and always for `time`). */
   protected readonly timeOptions = computed<AndesTimeOptions | null>(() => {
+    if (this.isMultiple()) {
+      return null;
+    }
     switch (this.picker()) {
       case 'time':
         return this.showTime() ?? {};
@@ -858,48 +1207,107 @@ export class AndesDatePicker implements ControlValueAccessor {
       return [placeholder, placeholder];
     }
     const noun = PLACEHOLDER_NOUNS[this.picker()];
+    if (this.isMultiple()) {
+      return [`Select ${noun}s`, ''];
+    }
     return this.isRange()
       ? [`Start ${noun}`, `End ${noun}`]
       : [`Select a ${noun}`, ''];
   });
 
-  private readonly startDate = computed(() =>
-    this.isRange()
-      ? (toDateRange(this.selection())?.start ?? null)
-      : coerceDate(this.selection()),
-  );
+  private readonly startDate = computed(() => {
+    if (this.isRange()) {
+      return toOpenDateRange(this.selection())?.start ?? null;
+    }
+    return this.isMultiple() ? null : coerceDate(this.selection());
+  });
 
   private readonly endDate = computed(() =>
-    this.isRange() ? (toDateRange(this.selection())?.end ?? null) : null,
+    this.isRange() ? (toOpenDateRange(this.selection())?.end ?? null) : null,
+  );
+
+  /** The `multiple` selection, in order. */
+  protected readonly selectedDates = computed<readonly Date[]>(() =>
+    this.isMultiple() ? toDateList(this.selection()) : [],
   );
 
   /** The value the current selection would commit, or `null` if incomplete. */
   private readonly currentValue = computed<AndesDatePickerValue>(() => {
+    if (this.isMultiple()) {
+      return this.selectedDates();
+    }
     const start = this.startDate();
     const time = this.timeOptions() !== null;
-    if (!start) {
-      return null;
-    }
-    const first = time ? withTime(start, this.startTime()) : start;
+    const first = start && (time ? withTime(start, this.startTime()) : start);
     if (!this.isRange()) {
       return first;
     }
     const end = this.endDate();
-    if (!end) {
-      return null;
+    const last = end && (time ? withTime(end, this.endTime()) : end);
+    if (first && last) {
+      return this.order() && last.getTime() < first.getTime()
+        ? [last, first]
+        : [first, last];
     }
-    const last = time ? withTime(end, this.endTime()) : end;
-    return this.order() && last.getTime() < first.getTime()
-      ? [last, first]
-      : [first, last];
+    const [startMayBeEmpty, endMayBeEmpty] = this.allowEmpty();
+    if (first && endMayBeEmpty) {
+      return [first, null];
+    }
+    if (last && startMayBeEmpty) {
+      return [null, last];
+    }
+    return null;
   });
 
-  protected readonly startText = computed(
-    () =>
+  /** Every selected date as a tag, in order (`multiple` mode). */
+  protected readonly tags = computed<readonly AndesDatePickerTag[]>(() =>
+    this.selectedDates().map((date) => ({
+      date,
+      key: toDateKey(date),
+      label: this.formatValue(date),
+    })),
+  );
+
+  /** Whether the tags are fitted to one row (`maxTagCount="responsive"`). */
+  protected readonly responsiveTags = computed(
+    () => this.isMultiple() && this.maxTagCount() === 'responsive',
+  );
+
+  /** The tags shown in the field; the rest collapse into the `+ N ...` tag. */
+  protected readonly visibleTags = computed<readonly AndesDatePickerTag[]>(
+    () => {
+      const tags = this.tags();
+      const max = this.maxTagCount();
+      if (max === 'responsive') {
+        const fit = this.responsiveTagCount();
+        return fit === null ? tags : tags.slice(0, fit);
+      }
+      return max === undefined ? tags : tags.slice(0, max);
+    },
+  );
+
+  /** The tags behind the `+ N ...` tag. */
+  protected readonly omittedTags = computed<readonly AndesDatePickerTag[]>(() =>
+    this.tags().slice(this.visibleTags().length),
+  );
+
+  /** Accessible name of the `+ N ...` tag and its popover. */
+  protected readonly overflowLabel = computed(() =>
+    this.maxTagPopoverLabel()
+      .split('{count}')
+      .join(String(this.omittedTags().length)),
+  );
+
+  protected readonly startText = computed(() => {
+    if (this.isMultiple()) {
+      return this.startDraft() ?? '';
+    }
+    return (
       this.hoverText()?.[0] ??
       this.startDraft() ??
-      this.formatSide(this.startDate(), this.startTime()),
-  );
+      this.formatSide(this.startDate(), this.startTime())
+    );
+  });
 
   protected readonly endText = computed(
     () =>
@@ -914,11 +1322,22 @@ export class AndesDatePicker implements ControlValueAccessor {
   );
 
   protected readonly hasValue = computed(
-    () => !!this.startDate() || !!this.endDate(),
+    () =>
+      !!this.startDate() || !!this.endDate() || this.selectedDates().length > 0,
   );
 
+  /** A value on a side the user can edit: what the clear button would remove. */
+  private readonly hasClearableValue = computed(() => {
+    const [startLocked, endLocked] = this.lockedSides();
+    return (
+      (!!this.startDate() && !startLocked) ||
+      (!!this.endDate() && !endLocked) ||
+      this.selectedDates().length > 0
+    );
+  });
+
   protected readonly showClear = computed(
-    () => this.allowClear() && !this.isDisabled() && this.hasValue(),
+    () => this.allowClear() && !this.isDisabled() && this.hasClearableValue(),
   );
 
   /** Whether every side's time passes `timeDisabled`. */
@@ -961,7 +1380,7 @@ export class AndesDatePicker implements ControlValueAccessor {
     () =>
       !!this.extraFooter() ||
       this.confirmRequired() ||
-      (this.showNow() && !this.isRange()),
+      (this.showNow() && this.isSingle()),
   );
 
   protected readonly fieldClasses = computed(() =>
@@ -971,6 +1390,7 @@ export class AndesDatePicker implements ControlValueAccessor {
       `andes-date-picker__field--${this.variant()}`,
       this.status() && `andes-date-picker__field--${this.status()}`,
       this.overlay.isOpen() && 'andes-date-picker__field--open',
+      this.isMultiple() && 'andes-date-picker__field--multiple',
     ),
   );
 
@@ -1186,6 +1606,82 @@ export class AndesDatePicker implements ControlValueAccessor {
           }
         });
     });
+
+    // `autoFocus` / `defaultOpen`: once, in the browser, after the first render.
+    afterNextRender(() => {
+      if (this.autoFocus()) {
+        this.focus();
+      }
+      if (this.defaultOpen() && !this.overlay.isOpen()) {
+        this.openPanel();
+      }
+    });
+
+    // `[activePickerIndex]` set from outside: make that side the active one. A locked
+    // side is refused, and the model is put back on the side that stays active.
+    effect(() => {
+      const index = this.activePickerIndex();
+      untracked(() => {
+        if (!this.isRange()) {
+          return;
+        }
+        const side: Side = index === 1 ? 'end' : 'start';
+        if (this.isSideLocked(side)) {
+          this.afterRender(() => this.setActiveSide(this.otherSide(side)));
+          return;
+        }
+        if (side === this.activeSide()) {
+          return;
+        }
+        this.activeSide.set(side);
+        if (this.holdsFocus()) {
+          this.inputFor(side)?.focus();
+        }
+      });
+    });
+
+    // A side locked while it is the active one hands that role to the other side.
+    effect(() => {
+      const [startLocked, endLocked] = this.lockedSides();
+      untracked(() => {
+        const side = this.activeSide();
+        if (
+          (side === 'start' && startLocked) ||
+          (side === 'end' && endLocked)
+        ) {
+          this.afterRender(() => this.setActiveSide(this.otherSide(side)));
+        }
+      });
+    });
+
+    // `maxTagCount="responsive"`: re-fit once the measuring row has rendered a
+    // changed set of tags.
+    afterRenderEffect(() => {
+      this.tags();
+      if (!this.responsiveTags()) {
+        untracked(() => this.responsiveTagCount.set(null));
+        return;
+      }
+      this.measureRow();
+      untracked(() => this.fitTags());
+    });
+
+    // Tags wrapping onto a new row grow the field; an open panel follows its bottom
+    // edge instead of staying where it was. The same observer re-fits responsive tags
+    // when the field is resized.
+    afterNextRender(() => {
+      if (typeof ResizeObserver === 'undefined') {
+        return;
+      }
+      const observer = new ResizeObserver(() => {
+        if (this.overlay.isOpen()) {
+          this.overlay.updatePosition();
+        }
+        this.fitTags();
+      });
+      observer.observe(this.field().nativeElement);
+      this.destroyRef.onDestroy(() => observer.disconnect());
+    });
   }
 
   /**
@@ -1203,7 +1699,14 @@ export class AndesDatePicker implements ControlValueAccessor {
       return;
     }
     this.focusGridOnOpen.set(focusGrid);
-    this.overlay.registerAnchor(this.field().nativeElement);
+    this.closingForBlur = false;
+    this.pointerMoved = false;
+    this.heldHover = null;
+    const field = this.field().nativeElement;
+    const direction =
+      field.ownerDocument.defaultView?.getComputedStyle(field).direction;
+    this.panelDirection.set(direction === 'rtl' ? 'rtl' : null);
+    this.overlay.registerAnchor(field);
     this.overlay.open(this.panel());
     if (focusGrid && this.isTimeOnly()) {
       // No calendar to take focus through `autoFocus`: the first time column does.
@@ -1213,7 +1716,7 @@ export class AndesDatePicker implements ControlValueAccessor {
 
   /** Focuses the input being edited (the start one, unless the end is active). */
   focus(options?: FocusOptions): void {
-    this.inputFor(this.activeSide())?.focus(options);
+    this.inputFor(this.editableSide(this.activeSide()))?.focus(options);
   }
 
   /**
@@ -1252,7 +1755,7 @@ export class AndesDatePicker implements ControlValueAccessor {
   confirm(): void {
     if (this.confirmMovesToEnd()) {
       this.ensureDay('end');
-      this.activeSide.set('end');
+      this.setActiveSide('end');
       this.endInput()?.nativeElement.focus();
       return;
     }
@@ -1274,21 +1777,54 @@ export class AndesDatePicker implements ControlValueAccessor {
    */
   protected onFieldMousedown(event: MouseEvent): void {
     const target = event.target as HTMLElement;
+    this.lastPointer = { x: event.screenX, y: event.screenY };
     if (
       this.isDisabled() ||
       event.button !== 0 ||
       target.tagName === 'INPUT' ||
-      target.closest('[data-slot="date-picker-clear"]')
+      target.closest(
+        '[data-slot="date-picker-clear"], [data-slot="date-picker-tag-remove"], [data-slot="date-picker-tag-rest"]',
+      )
     ) {
       return;
     }
     event.preventDefault();
-    this.inputFor(this.activeSide())?.focus();
+    this.inputFor(this.editableSide(this.activeSide()))?.focus();
+    this.openPanel();
+  }
+
+  /**
+   * A click on an input makes it the active one even when it already held focus (no
+   * focus event then): after a range is complete, clicking the start input again
+   * starts a new range rather than moving the end.
+   */
+  protected onInputClick(side: Side): void {
+    this.setActiveSide(side);
     this.openPanel();
   }
 
   protected onInputFocus(side: Side): void {
-    this.activeSide.set(side);
+    if (this.responsiveTags()) {
+      // The focused input asks for more room (see the stylesheet): re-fit the tags.
+      this.afterRender(() => this.fitTags());
+    }
+    if (this.isSideLocked(side)) {
+      // Reached programmatically (a locked input is out of the Tab order): the
+      // editable side takes focus instead.
+      this.inputFor(this.otherSide(side))?.focus();
+      return;
+    }
+    this.setActiveSide(side);
+  }
+
+  /** A press on a locked side's input works on the other side instead. */
+  protected onInputMousedown(side: Side, event: MouseEvent): void {
+    if (!this.isSideLocked(side) || event.button !== 0) {
+      return;
+    }
+    event.preventDefault();
+    this.inputFor(this.otherSide(side))?.focus();
+    this.openPanel();
   }
 
   protected onInput(side: Side, event: Event): void {
@@ -1300,6 +1836,31 @@ export class AndesDatePicker implements ControlValueAccessor {
       this.preview(side, parsed);
     }
     this.openPanel();
+  }
+
+  /** Removes one date of a `multiple` selection (a tag's remove button, Backspace). */
+  protected removeDate(date: Date): void {
+    if (this.isDisabled()) {
+      return;
+    }
+    const key = toDateKey(date);
+    this.selection.set(
+      this.selectedDates().filter((selected) => toDateKey(selected) !== key),
+    );
+    if (!(this.confirmRequired() && this.overlay.isOpen())) {
+      this.commit(this.currentValue());
+    }
+  }
+
+  /** A tag's own remove button, in the field: focus stays in (or goes to) the input. */
+  protected onTagRemove(tag: AndesDatePickerTag, event: Event): void {
+    event.stopPropagation();
+    this.removeDate(tag.date);
+    this.startInput()?.nativeElement.focus();
+  }
+
+  protected tagRemoveLabel(tag: AndesDatePickerTag): string {
+    return this.removeTagLabel().split('{label}').join(tag.label);
   }
 
   protected onInputKeydown(side: Side, event: KeyboardEvent): void {
@@ -1330,6 +1891,18 @@ export class AndesDatePicker implements ControlValueAccessor {
           this.applyValue(this.committed());
         }
         return;
+      case 'Backspace': {
+        const dates = this.selectedDates();
+        if (
+          this.isMultiple() &&
+          dates.length &&
+          !(event.target as HTMLInputElement).value
+        ) {
+          event.preventDefault();
+          this.removeDate(dates[dates.length - 1]);
+        }
+        return;
+      }
     }
   }
 
@@ -1338,8 +1911,20 @@ export class AndesDatePicker implements ControlValueAccessor {
       if (!this.resolveDraft(side)) {
         return;
       }
-      if (this.isRange() && side === 'start' && !this.endDate()) {
-        this.activeSide.set('end');
+      if (this.isMultiple()) {
+        // The typed date joins the selection; the panel stays open for more.
+        if (!this.confirmRequired()) {
+          this.commit(this.currentValue());
+        }
+        return;
+      }
+      if (
+        this.isRange() &&
+        side === 'start' &&
+        !this.endDate() &&
+        !this.isSideLocked('end')
+      ) {
+        this.setActiveSide('end');
         this.endInput()?.nativeElement.focus();
         return;
       }
@@ -1352,8 +1937,13 @@ export class AndesDatePicker implements ControlValueAccessor {
     }
     if (!this.overlay.isOpen()) {
       this.openPanel();
-    } else if (this.confirmRequired() && this.canConfirm()) {
-      this.confirm();
+    } else if (this.confirmRequired()) {
+      if (this.canConfirm()) {
+        this.confirm();
+      }
+    } else if (this.isRange() && this.currentValue() !== null) {
+      // An open-ended range (`allowEmpty`) is already committed; Enter finishes it.
+      this.close();
     }
   }
 
@@ -1363,11 +1953,23 @@ export class AndesDatePicker implements ControlValueAccessor {
    * means the user is still working in the picker.
    */
   protected onFocusOut(event: FocusEvent): void {
+    if (this.responsiveTags()) {
+      this.afterRender(() => this.fitTags());
+    }
     const next = event.relatedTarget as Node | null;
     if (
       next &&
       (this.field().nativeElement.contains(next) ||
         this.overlay.panelElement()?.contains(next))
+    ) {
+      return;
+    }
+
+    // The `+ N` popover and the calendar's caption select lists render in overlays
+    // of their own; focus moving into them has not left the picker.
+    if (
+      this.overflow()?.panelContains(next) ||
+      this.calendar()?.containsPanelNode(next)
     ) {
       return;
     }
@@ -1379,9 +1981,15 @@ export class AndesDatePicker implements ControlValueAccessor {
           this.resolveDraft(side, this.preserveInvalidOnBlur()) || changed;
       }
     }
-    if (changed && !this.confirmRequired()) {
+    // Typed text resolves into the value; with `changeOnBlur`, so do pending picks,
+    // even where the OK button would otherwise be needed (see the input's matrix).
+    const blurCommits = this.changeOnBlur() || !this.confirmRequired();
+    if ((changed || this.changeOnBlur()) && blurCommits) {
       const value = this.currentValue();
-      if (!sameValue(value, this.committed())) {
+      const complete =
+        !this.confirmRequired() ||
+        ((value !== null || !this.hasValue()) && this.timesAllowed());
+      if (complete && !sameValue(value, this.committed())) {
         this.commitTyped(value);
       }
     }
@@ -1389,7 +1997,6 @@ export class AndesDatePicker implements ControlValueAccessor {
     if (this.overlay.isOpen()) {
       this.closingForBlur = true;
       this.close();
-      this.closingForBlur = false;
     } else {
       this.onTouched();
     }
@@ -1407,18 +2014,49 @@ export class AndesDatePicker implements ControlValueAccessor {
     }
   }
 
+  /**
+   * Only a real pointer move over the panel turns the hover preview on: one that
+   * opens under a resting pointer must not preview the day that happens to be there.
+   */
+  protected onPanelPointerMove(event: PointerEvent): void {
+    const last = this.lastPointer;
+    if (last && last.x === event.screenX && last.y === event.screenY) {
+      return;
+    }
+    this.lastPointer = { x: event.screenX, y: event.screenY };
+    if (!this.pointerMoved) {
+      this.pointerMoved = true;
+      if (this.heldHover) {
+        this.onCalendarHover(this.heldHover);
+      }
+    }
+  }
+
   protected clearValue(event: MouseEvent): void {
     event.stopPropagation();
-    this.selection.set(null);
-    this.startTime.set(this.defaultTimes()[0]);
-    this.endTime.set(this.defaultTimes()[1]);
+    const [startLocked, endLocked] = this.lockedSides();
+    if (startLocked || endLocked) {
+      // A locked side keeps its date and time; only the editable one is cleared.
+      const range = toOpenDateRange(this.selection());
+      const start = startLocked ? (range?.start ?? null) : null;
+      const end = endLocked ? (range?.end ?? null) : null;
+      this.selection.set(start || end ? { start, end } : null);
+    } else {
+      this.selection.set(this.isMultiple() ? [] : null);
+    }
+    if (!startLocked) {
+      this.startTime.set(this.defaultTimes()[0]);
+    }
+    if (!endLocked) {
+      this.endTime.set(this.defaultTimes()[1]);
+    }
     this.startDraft.set(null);
     this.endDraft.set(null);
-    this.activeSide.set('start');
-    this.commit(null);
+    this.setActiveSide(startLocked ? 'end' : 'start');
+    this.commit(this.currentValue());
     this.clear.emit();
     this.close();
-    this.startInput().nativeElement.focus();
+    this.focus();
   }
 
   // --- Panel --------------------------------------------------------------
@@ -1432,18 +2070,26 @@ export class AndesDatePicker implements ControlValueAccessor {
 
     const keepOpen = this.timeOptions() !== null;
 
+    if (this.isMultiple()) {
+      // Each pick toggles a date; the panel stays open for the next one.
+      if (!this.confirmRequired()) {
+        this.commit(this.currentValue());
+      }
+      return;
+    }
+
     if (this.isRange()) {
-      const range = toDateRange(next);
+      const range = toOpenDateRange(next);
       if (range?.end && !hadEnd) {
         // A new end starts at the default time, not at the last range's end.
         this.endTime.set(this.defaultTimes()[1]);
       }
       this.calendarChange.emit([range?.start ?? null, range?.end ?? null]);
-      this.activeSide.set(range?.end ? 'end' : 'start');
+      this.setActiveSide(this.nextSideAfterPick(range));
       if (this.confirmRequired()) {
         return;
       }
-      if (range?.end) {
+      if (range?.start && range.end) {
         if (!this.timesAllowed()) {
           return;
         }
@@ -1452,9 +2098,10 @@ export class AndesDatePicker implements ControlValueAccessor {
           this.close();
         }
       } else {
-        // Half a range is not a value a form can hold; publish `null` until the
-        // range is complete, so a required validator stays unsatisfied meanwhile.
-        this.commit(null);
+        // Half a range is not a value a form can hold, unless `allowEmpty` makes it
+        // an open-ended one: `currentValue` is `null` until the range is complete,
+        // so a required validator stays unsatisfied meanwhile.
+        this.commit(this.currentValue());
       }
       return;
     }
@@ -1470,26 +2117,38 @@ export class AndesDatePicker implements ControlValueAccessor {
 
   /** The day under the pointer, previewed in the input it would fill. */
   protected onCalendarHover(date: Date | null): void {
-    if (this.previewValue() !== 'hover' || !date) {
+    const resting = !this.pointerMoved && !this.focusInPanel();
+    this.heldHover = resting ? date : null;
+    if (
+      this.previewValue() !== 'hover' ||
+      !date ||
+      this.isMultiple() ||
+      resting
+    ) {
       this.hoverText.set(null);
       return;
     }
     const day = startOfPeriod(date, this.calendarPicker(), this.weekStartsOn());
     const side: Side =
-      this.isRange() && this.startDate() && !this.endDate() ? 'end' : 'start';
+      this.isRange() &&
+      ((this.startDate() && !this.endDate()) ||
+        this.calendarEditingSide() === 'end' ||
+        this.isSideLocked('start'))
+        ? 'end'
+        : 'start';
     const text = this.formatSide(day, this.timeFor(side)());
     this.hoverText.set(side === 'end' ? [null, text] : [text, null]);
   }
 
   protected onPresetHover(preset: AndesDatePickerPreset | null): void {
-    if (this.previewValue() !== 'hover' || !preset) {
+    if (this.previewValue() !== 'hover' || !preset || this.isMultiple()) {
       this.hoverText.set(null);
       return;
     }
     const value =
       typeof preset.value === 'function' ? preset.value() : preset.value;
     if (Array.isArray(value)) {
-      const [start, end] = value as readonly Date[];
+      const [start, end] = value as readonly (Date | null)[];
       this.hoverText.set([
         start ? this.formatValue(start) : '',
         end ? this.formatValue(end) : '',
@@ -1589,7 +2248,30 @@ export class AndesDatePicker implements ControlValueAccessor {
     const value =
       typeof preset.value === 'function' ? preset.value() : preset.value;
     this.hoverText.set(null);
+    const before = toOpenDateRange(this.selection());
+    const times = [this.startTime(), this.endTime()] as const;
     this.applyValue(value);
+    const [startLocked, endLocked] = this.lockedSides();
+    if (startLocked || endLocked) {
+      // A preset fills the editable side only; a locked side keeps its date.
+      const after = toOpenDateRange(this.selection());
+      let start = startLocked
+        ? (before?.start ?? null)
+        : (after?.start ?? null);
+      let end = endLocked ? (before?.end ?? null) : (after?.end ?? null);
+      if (start && end && compareDays(start, end) > 0) {
+        // The preset's side would cross the locked one: leave it empty instead.
+        start = startLocked ? start : null;
+        end = endLocked ? end : null;
+      }
+      this.selection.set(start || end ? { start, end } : null);
+      if (startLocked) {
+        this.startTime.set(times[0]);
+      }
+      if (endLocked) {
+        this.endTime.set(times[1]);
+      }
+    }
     this.commit(this.currentValue());
     this.close();
   }
@@ -1622,12 +2304,14 @@ export class AndesDatePicker implements ControlValueAccessor {
     // Focus was inside the panel, which is gone now: hand it back to the input,
     // unless the user deliberately moved it elsewhere (a click or Tab away).
     const active = document.activeElement;
+    const leftByBlur = this.closingForBlur;
+    this.closingForBlur = false;
     if (
-      !this.closingForBlur &&
+      !leftByBlur &&
       reason !== 'outside-click' &&
       (!active || active === document.body)
     ) {
-      this.inputFor(this.activeSide())?.focus();
+      this.inputFor(this.editableSide(this.activeSide()))?.focus();
     }
   }
 
@@ -1759,10 +2443,12 @@ export class AndesDatePicker implements ControlValueAccessor {
       }
       return;
     }
-    const range = toDateRange(this.selection());
+    const range = toOpenDateRange(this.selection());
     if (!range) {
       const day = today();
       this.selection.set({ start: day, end: side === 'end' ? day : null });
+    } else if (!range.start) {
+      this.selection.set({ start: range.end, end: range.end });
     } else if (side === 'end' && !range.end) {
       this.selection.set({ start: range.start, end: range.start });
     }
@@ -1781,7 +2467,10 @@ export class AndesDatePicker implements ControlValueAccessor {
       ?.focus();
   }
 
-  /** Shows a typed date in the calendar without committing it. */
+  /**
+   * Shows a typed date in the calendar without committing it. In `multiple` mode
+   * it only brings the date into view: it joins the selection on Enter or blur.
+   */
   private preview(side: Side, date: Date): void {
     const day = startOfDay(date);
     if (this.timeOptions()) {
@@ -1789,15 +2478,18 @@ export class AndesDatePicker implements ControlValueAccessor {
     }
     // Show the typed date even when `defaultMonth` pins the calendar's anchor.
     this.calendar()?.goTo(day);
+    if (this.isMultiple()) {
+      return;
+    }
     if (!this.isRange()) {
       this.selection.set(day);
       return;
     }
-    const range = toDateRange(this.selection());
+    const range = toOpenDateRange(this.selection());
     if (side === 'start') {
       this.selection.set({ start: day, end: range?.end ?? null });
-    } else if (range) {
-      this.selection.set({ start: range.start, end: day });
+    } else if (range?.start || this.allowEmpty()[0]) {
+      this.selection.set({ start: range?.start ?? null, end: day });
     } else {
       this.selection.set({ start: day, end: null });
     }
@@ -1813,14 +2505,23 @@ export class AndesDatePicker implements ControlValueAccessor {
     const text = this.draftFor(side)() ?? '';
     this.draftFor(side).set(null);
 
+    if (this.isMultiple()) {
+      return this.resolveMultipleDraft(text, keepInvalid);
+    }
+
     if (!text.trim()) {
       if (!this.allowClear()) {
         this.applyValue(this.committed());
         return false;
       }
+      const range = toOpenDateRange(this.selection());
       if (this.isRange() && side === 'end') {
-        const range = toDateRange(this.selection());
-        this.selection.set(range ? { start: range.start, end: null } : null);
+        this.selection.set(
+          range?.start ? { start: range.start, end: null } : null,
+        );
+      } else if (this.isRange() && range?.end && this.allowEmpty()[0]) {
+        // An open-ended range keeps its end when the start is emptied.
+        this.selection.set({ start: null, end: range.end });
       } else {
         this.selection.set(null);
       }
@@ -1839,8 +2540,48 @@ export class AndesDatePicker implements ControlValueAccessor {
     return true;
   }
 
+  /**
+   * `multiple` mode's typed text: a valid date not yet selected joins the selection
+   * (within `maxCount`); anything else is discarded, or kept with `keepInvalid`.
+   * Returns whether the selection changed.
+   */
+  private resolveMultipleDraft(text: string, keepInvalid: boolean): boolean {
+    if (!text.trim()) {
+      return false;
+    }
+    const parsed = this.parse(text, 'start');
+    if (!parsed) {
+      if (keepInvalid) {
+        this.startDraft.set(text);
+      }
+      return false;
+    }
+    const dates = this.selectedDates();
+    const key = toDateKey(parsed);
+    const max = this.maxCount();
+    if (
+      dates.some((date) => toDateKey(date) === key) ||
+      (max !== undefined && dates.length >= max)
+    ) {
+      return false;
+    }
+    this.selection.set(toDateList([...dates, startOfDay(parsed)]));
+    return true;
+  }
+
   /** Loads a value (from the form, a preset, a revert) into the live state. */
   private applyValue(value: unknown): void {
+    if (this.isMultiple()) {
+      const unit = this.calendarPicker();
+      this.selection.set(
+        toDateList(
+          toDateList(value).map((date) =>
+            startOfPeriod(date, unit, this.weekStartsOn()),
+          ),
+        ),
+      );
+      return;
+    }
     if (this.isRange()) {
       let raw: readonly unknown[] = [value, null];
       if (Array.isArray(value)) {
@@ -1865,9 +2606,16 @@ export class AndesDatePicker implements ControlValueAccessor {
       ) {
         [start, end] = [end, start];
       }
+      if (!start && !this.allowEmpty()[0]) {
+        // Without `allowEmpty`, an end alone is not a range the picker can show.
+        end = null;
+      }
       this.selection.set(
-        start
-          ? { start: startOfDay(start), end: end ? startOfDay(end) : null }
+        start || end
+          ? {
+              start: start ? startOfDay(start) : null,
+              end: end ? startOfDay(end) : null,
+            }
           : null,
       );
       const [startDefault, endDefault] = this.defaultTimes();
@@ -1906,7 +2654,122 @@ export class AndesDatePicker implements ControlValueAccessor {
   private inputFor(side: Side): HTMLInputElement | undefined {
     return side === 'end' && this.isRange()
       ? this.endInput()?.nativeElement
-      : this.startInput().nativeElement;
+      : this.startInput()?.nativeElement;
+  }
+
+  /**
+   * Makes `side` the active input and reports it through `activePickerIndex`. Only
+   * called from user interaction (or after a render), never during change detection,
+   * so a parent bound to the model sees the change in its next check.
+   */
+  private setActiveSide(side: Side): void {
+    const next = this.editableSide(side);
+    this.activeSide.set(next);
+    if (!this.isRange()) {
+      return;
+    }
+    const index: AndesDatePickerActiveIndex = next === 'end' ? 1 : 0;
+    if (untracked(this.activePickerIndex) !== index) {
+      this.activePickerIndex.set(index);
+    }
+  }
+
+  /** Whether `disabled` locks this side of the range. */
+  private isSideLocked(side: Side): boolean {
+    return this.lockedSides()[side === 'end' ? 1 : 0];
+  }
+
+  private otherSide(side: Side): Side {
+    return side === 'end' ? 'start' : 'end';
+  }
+
+  /** `side`, or the other one when `side` is locked. */
+  private editableSide(side: Side): Side {
+    return this.isSideLocked(side) ? this.otherSide(side) : side;
+  }
+
+  /**
+   * After a calendar pick in a range, the input the next pick fills: an empty side
+   * the user can edit, else (a complete range) the end, as before.
+   */
+  private nextSideAfterPick(range: AndesOpenDateRange | null): Side {
+    if (!range?.start && !this.isSideLocked('start')) {
+      return 'start';
+    }
+    if (!range?.end && !this.isSideLocked('end')) {
+      return 'end';
+    }
+    return this.isSideLocked('end') ? 'start' : 'end';
+  }
+
+  /** Whether focus is in the field or the panel. */
+  private holdsFocus(): boolean {
+    const active = this.field().nativeElement.ownerDocument.activeElement;
+    return (
+      !!active &&
+      (this.field().nativeElement.contains(active) || this.focusInPanel())
+    );
+  }
+
+  /** Whether focus is inside the open panel. */
+  private focusInPanel(): boolean {
+    const active = this.field().nativeElement.ownerDocument.activeElement;
+    return !!active && !!this.overlay.panelElement()?.contains(active);
+  }
+
+  /** Runs `callback` once the current render has finished. */
+  private afterRender(callback: () => void): void {
+    afterNextRender(callback, { injector: this.injector });
+  }
+
+  /**
+   * Counts how many tags fit on the field's row beside the `+ N ...` tag and the
+   * input, from the widths in the measuring row. At least one tag stays visible. A
+   * row that has not been laid out (zero width) leaves every tag visible.
+   */
+  private fitTags(): void {
+    const measure = this.measureRow()?.nativeElement;
+    const row = this.selectionRow()?.nativeElement;
+    if (!this.responsiveTags() || !measure || !row || row.clientWidth === 0) {
+      return;
+    }
+    const view = row.ownerDocument.defaultView;
+    const widths = Array.from(
+      measure.querySelectorAll<HTMLElement>('[data-measure="tag"]'),
+      (element) => element.offsetWidth,
+    );
+    const rest =
+      measure.querySelector<HTMLElement>('[data-measure="rest"]')
+        ?.offsetWidth ?? 0;
+    const gap = parseFloat(view?.getComputedStyle(row).columnGap ?? '') || 0;
+    const input = this.startInput()?.nativeElement;
+    const inputMin = parseFloat(
+      (input && view?.getComputedStyle(input).minWidth) || '',
+    );
+    const reserve =
+      (Number.isFinite(inputMin) && inputMin > 0
+        ? inputMin
+        : RESPONSIVE_INPUT_RESERVE) + gap;
+    const available = row.clientWidth - reserve;
+
+    const total = widths.reduce(
+      (sum, width, index) => sum + width + (index > 0 ? gap : 0),
+      0,
+    );
+    if (total <= available) {
+      this.responsiveTagCount.set(widths.length);
+      return;
+    }
+    let used = rest;
+    let count = 0;
+    for (const width of widths) {
+      if (used + gap + width > available) {
+        break;
+      }
+      used += gap + width;
+      count++;
+    }
+    this.responsiveTagCount.set(Math.max(count, Math.min(1, widths.length)));
   }
 
   // --- ControlValueAccessor ------------------------------------------------

@@ -1,10 +1,22 @@
+import { readdirSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { AndesColor } from './color';
 import {
   clamp,
+  compositeOver,
+  contrastRatio,
   formatHex,
   formatHsb,
   formatHsl,
+  formatOklch,
   formatRgb,
+  linearToSrgb,
+  oklchToRgb,
+  relativeLuminance,
+  rgbToOklch,
+  srgbToLinear,
   hsbToHsl,
   hsbToRgb,
   hslToHsb,
@@ -357,5 +369,231 @@ describe('AndesColor', () => {
     const color = AndesColor.parse('#1677ff');
     expect(String(color)).toBe('#1677ff');
     expect(JSON.stringify({ color })).toBe('{"color":"#1677ff"}');
+  });
+});
+
+describe('OKLCH', () => {
+  // Reference readings of the sRGB primaries and white in OKLCH, from the published OKLab
+  // definition (the values CSS Color 4 tools report): oklch(62.796% 0.25768 29.234) for red.
+  it.each([
+    ['#ff0000', 0.627955, 0.257683, 29.2339],
+    ['#00ff00', 0.86644, 0.294827, 142.4953],
+    ['#0000ff', 0.452014, 0.313214, 264.052],
+    ['#ffff00', 0.967983, 0.211006, 109.7692],
+    ['#ff00ff', 0.701674, 0.322491, 328.3634],
+  ])('reads %s as its reference OKLCH', (hex, l, c, h) => {
+    const rgb = parseColor(hex);
+    const oklch = rgbToOklch(rgb?.r ?? 0, rgb?.g ?? 0, rgb?.b ?? 0);
+    expect(oklch.l).toBeCloseTo(l, 4);
+    expect(oklch.c).toBeCloseTo(c, 4);
+    expect(oklch.h).toBeCloseTo(h, 2);
+  });
+
+  it('gives white and black full and no lightness, and greys no chroma', () => {
+    expect(rgbToOklch(255, 255, 255).l).toBeCloseTo(1, 6);
+    expect(rgbToOklch(255, 255, 255).c).toBe(0);
+    expect(rgbToOklch(255, 255, 255).h).toBe(0);
+    expect(rgbToOklch(0, 0, 0)).toEqual({ l: 0, c: 0, h: 0 });
+    expect(rgbToOklch(128, 128, 128).c).toBe(0);
+    // Mid grey: L is the cube root of its linear luminance.
+    expect(rgbToOklch(128, 128, 128).l).toBeCloseTo(0.59987, 4);
+  });
+
+  it('round-trips every 8-bit rgb triple on a coarse grid', () => {
+    const steps = [0, 1, 17, 64, 127, 128, 200, 254, 255];
+    for (const r of steps) {
+      for (const g of steps) {
+        for (const b of steps) {
+          const oklch = rgbToOklch(r, g, b);
+          const back = oklchToRgb(oklch.l, oklch.c, oklch.h);
+          expect(Math.round(back.r)).toBe(r);
+          expect(Math.round(back.g)).toBe(g);
+          expect(Math.round(back.b)).toBe(b);
+          // Not just to the byte: within a thousandth of a channel step (the published
+          // matrices are given to ten digits, so the inverse is not exact beyond that).
+          expect(back.r).toBeCloseTo(r, 3);
+          expect(back.b).toBeCloseTo(b, 3);
+        }
+      }
+    }
+  });
+
+  it('clips colours outside sRGB channel by channel', () => {
+    const rgb = oklchToRgb(0.7, 0.4, 145);
+    for (const channel of [rgb.r, rgb.g, rgb.b]) {
+      expect(channel).toBeGreaterThanOrEqual(0);
+      expect(channel).toBeLessThanOrEqual(255);
+    }
+    const white = oklchToRgb(2, 0, 0);
+    expect(white.r).toBeCloseTo(255, 9);
+    expect(white.g).toBeCloseTo(255, 9);
+    expect(white.b).toBeCloseTo(255, 9);
+  });
+
+  it('pairs the transfer functions', () => {
+    for (const value of [0, 0.002, 0.04, 0.2, 0.5, 1]) {
+      expect(linearToSrgb(srgbToLinear(value))).toBeCloseTo(value, 10);
+    }
+  });
+
+  it('reads oklch() with numbers, percentages, deg and a slash alpha', () => {
+    const red = parseColor('oklch(62.796% 0.25768 29.234)');
+    expect(red && formatHex(red)).toBe('#ff0000');
+    expect(parseColor('oklch(0.62796 0.25768 29.234deg)')).toMatchObject({
+      r: 255,
+      g: 0,
+      b: 0,
+    });
+    // 100% chroma is 0.4, the CSS reference range.
+    expect(parseColor('oklch(45.2% 78.3% 264.05)')).toMatchObject({
+      r: 0,
+      g: 0,
+      b: 255,
+    });
+    expect(parseColor('OKLCH(100% 0 0 / 50%)')).toMatchObject({
+      r: 255,
+      g: 255,
+      b: 255,
+      a: 0.5,
+    });
+    expect(parseColor('oklch(50% 0 0 / 0.25)')?.a).toBe(0.25);
+  });
+
+  it('rejects malformed oklch()', () => {
+    for (const text of [
+      'oklch(50deg 0.1 20)',
+      'oklch(50% 0.1deg 20)',
+      'oklch(50% 0.1 20%)',
+      'oklch(50% 0.1)',
+      'oklch(a b c)',
+    ]) {
+      expect(parseColor(text)).toBeNull();
+    }
+  });
+
+  it('formats oklch() to 2 / 4 / 2 decimals, without hue when achromatic', () => {
+    expect(
+      formatOklch({ l: 0.6279554, c: 0.2576833, h: 29.2338852, a: 1 }),
+    ).toBe('oklch(62.8% 0.2577 29.23)');
+    expect(formatOklch({ l: 1, c: 0, h: 120, a: 0.5 })).toBe(
+      'oklch(100% 0 0 / 0.5)',
+    );
+    expect(formatOklch({ l: 0.5, c: 0.1, h: 359.999, a: 1 })).toBe(
+      'oklch(50% 0.1 0)',
+    );
+  });
+
+  it('round-trips AndesColor through oklch() text', () => {
+    for (const hex of ['#1677ff', '#ff4d4f', '#00b8a9', '#808080', '#fadb14']) {
+      const color = AndesColor.parse(hex) as AndesColor;
+      const text = color.toOklchString();
+      expect(AndesColor.parse(text)?.toHex()).toBe(hex);
+      expect(color.toFormat('oklch')).toBe(text);
+    }
+    expect(AndesColor.parse('#ff0000')?.toOklchString()).toBe(
+      'oklch(62.8% 0.2577 29.23)',
+    );
+    expect(AndesColor.parse('#ff000080')?.toOklchString()).toBe(
+      'oklch(62.8% 0.2577 29.23 / 0.5)',
+    );
+    const fromNumbers = AndesColor.fromOklch(0.627955, 0.257683, 29.2339);
+    expect(fromNumbers.toHex()).toBe('#ff0000');
+  });
+});
+
+describe('HSL format', () => {
+  it('reads the space, slash and comma syntaxes', () => {
+    expect(parseColor('hsl(210 50% 40% / 0.5)')).toMatchObject({
+      r: 51,
+      g: 102,
+      b: 153,
+      a: 0.5,
+    });
+    expect(parseColor('hsl(210, 50%, 40%)')).toMatchObject({
+      r: 51,
+      g: 102,
+      b: 153,
+      a: 1,
+    });
+    expect(parseColor('hsla(210deg, 50%, 40%, 50%)')?.a).toBe(0.5);
+  });
+
+  it('writes hsl() text and edits by HSL channel, keeping the hue of greys', () => {
+    const color = AndesColor.parse('hsl(210 50% 40% / 0.5)') as AndesColor;
+    expect(color.toFormat('hsl')).toBe('hsla(210, 50%, 40%, 0.5)');
+    expect(color.withAlpha(1).toFormat('hsl')).toBe('hsl(210, 50%, 40%)');
+    expect(color.withHsl({ l: 60 }).toHslString()).toBe(
+      'hsla(210, 50%, 60%, 0.5)',
+    );
+    const grey = color.withHsl({ s: 0 });
+    expect(grey.hue).toBeCloseTo(210, 5);
+    expect(grey.withHsl({ s: 50 }).toHslString()).toBe(
+      'hsla(210, 50%, 40%, 0.5)',
+    );
+    expect(color.withHsl({ h: 30 }).toHsl().h).toBe(30);
+  });
+});
+
+describe('contrast', () => {
+  const ratio = (fg: string, bg: string) =>
+    (AndesColor.parse(fg) as AndesColor).contrastRatio(
+      AndesColor.parse(bg) as AndesColor,
+    );
+
+  it('computes WCAG relative luminance', () => {
+    expect(relativeLuminance(255, 255, 255)).toBe(1);
+    expect(relativeLuminance(0, 0, 0)).toBe(0);
+    expect(relativeLuminance(255, 0, 0)).toBeCloseTo(0.2126, 6);
+    expect(relativeLuminance(118, 118, 118)).toBeCloseTo(0.18116, 4);
+  });
+
+  it('matches the known WCAG examples', () => {
+    expect(contrastRatio(1, 0)).toBe(21);
+    expect(ratio('#000000', '#ffffff')).toBe(21);
+    expect(ratio('#ffffff', '#000000')).toBe(21);
+    expect(ratio('#777777', '#777777')).toBe(1);
+    // #767676 is the lightest grey that passes AA on white; #777777 just fails.
+    expect(ratio('#767676', '#ffffff')).toBeCloseTo(4.54, 2);
+    expect(ratio('#767676', '#ffffff')).toBeGreaterThanOrEqual(4.5);
+    expect(ratio('#777777', '#ffffff')).toBeLessThan(4.5);
+    expect(ratio('#777777', '#ffffff')).toBeCloseTo(4.48, 2);
+    expect(ratio('#0000ff', '#ffffff')).toBeCloseTo(8.59, 2);
+    expect(ratio('#ff0000', '#ffffff')).toBeCloseTo(4, 2);
+  });
+
+  it('composites a translucent colour onto the background first', () => {
+    // Half-transparent black on white is seen as #808080 (127.5 grey).
+    const seen = compositeOver(
+      { r: 0, g: 0, b: 0, a: 0.5 },
+      { r: 255, g: 255, b: 255, a: 1 },
+    );
+    expect(seen).toEqual({ r: 127.5, g: 127.5, b: 127.5, a: 1 });
+    const grey = relativeLuminance(127.5, 127.5, 127.5);
+    expect(ratio('rgba(0, 0, 0, 0.5)', '#ffffff')).toBeCloseTo(
+      contrastRatio(1, grey),
+      10,
+    );
+    // Fully transparent shows only the background: no contrast at all.
+    expect(ratio('transparent', '#123456')).toBe(1);
+    // A translucent background sits on white.
+    expect(ratio('#000000', 'rgba(0, 0, 0, 0)')).toBe(21);
+    expect(
+      compositeOver({ r: 9, g: 9, b: 9, a: 0 }, { r: 0, g: 0, b: 0, a: 0 }),
+    ).toEqual({ r: 0, g: 0, b: 0, a: 0 });
+  });
+});
+
+describe('parsing source', () => {
+  it('never builds a regular expression at run time', () => {
+    const folder = dirname(fileURLToPath(import.meta.url));
+    const sources = readdirSync(folder).filter(
+      (file) => file.endsWith('.ts') && !file.endsWith('.spec.ts'),
+    );
+    expect(sources.length).toBeGreaterThan(5);
+    for (const file of sources) {
+      expect(readFileSync(join(folder, file), 'utf-8')).not.toMatch(
+        /new RegExp\(/,
+      );
+    }
   });
 });

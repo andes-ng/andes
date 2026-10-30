@@ -1,6 +1,6 @@
 /**
  * Date helpers for `AndesCalendar`, built on the native `Date` and `Intl` only —
- * no `date-fns`/`dayjs` dependency, matching the rest of the library.
+ * no date library dependency, matching the rest of the library.
  *
  * ## The one invariant everything here relies on
  *
@@ -21,6 +21,15 @@
 /** A day-granularity selection range. `end` is `null` while the range is half-open. */
 export interface AndesDateRange {
   readonly start: Date;
+  readonly end: Date | null;
+}
+
+/**
+ * A range either side of which may be empty: `{ start, end: null }` while half
+ * picked, or an open-ended range (`allowEmpty`) such as `{ start: null, end }`.
+ */
+export interface AndesOpenDateRange {
+  readonly start: Date | null;
   readonly end: Date | null;
 }
 
@@ -394,6 +403,53 @@ export function toDateRange(value: unknown): AndesDateRange | null {
       : null;
   }
   return null;
+}
+
+/**
+ * Like {@link toDateRange}, but keeps a range whose *start* is empty: an open-ended
+ * range such as `[null, end]` ("anything up to the end"). Returns `null` only when
+ * both sides are empty. Both sides set are put in order.
+ */
+export function toOpenDateRange(value: unknown): AndesOpenDateRange | null {
+  let start: unknown = value;
+  let end: unknown = null;
+  if (value == null || value === '') {
+    return null;
+  }
+  if (Array.isArray(value)) {
+    [start, end] = value;
+  } else if (typeof value === 'object' && !(value instanceof Date)) {
+    const candidate = value as { start?: unknown; end?: unknown };
+    start = candidate.start;
+    end = candidate.end;
+  }
+  const first = coerceDate(start);
+  const last = coerceDate(end);
+  if (first) {
+    return normalizeRange({ start: first, end: last });
+  }
+  return last ? { start: null, end: last } : null;
+}
+
+/**
+ * The dates of a `multiple` selection: every entry coerced with {@link coerceDate},
+ * invalid ones dropped, sorted chronologically, one per day. Anything that is not an
+ * array becomes a one-date (or empty) list, so a stray single `Date` still renders.
+ */
+export function toDateList(value: unknown): readonly Date[] {
+  const raw: readonly unknown[] = Array.isArray(value)
+    ? value
+    : value == null
+      ? []
+      : [value];
+  const byDay = new Map<string, Date>();
+  for (const entry of raw) {
+    const date = coerceDate(entry);
+    if (date) {
+      byDay.set(toDateKey(date), date);
+    }
+  }
+  return [...byDay.values()].sort((a, b) => compareDays(a, b));
 }
 
 /** Whether `date` falls strictly between a complete range's boundaries. */

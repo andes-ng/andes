@@ -83,6 +83,31 @@
   outline-offset: 1px;
 }
 
+/*
+  captionLayout dropdowns: the library's select at its small size, borderless, so it reads
+  like the caption text. Fixed widths keep the header from shifting as the month name
+  changes; the option list matches them.
+*/
+
+.andes-calendar__caption-wrap--dropdowns {
+  align-items: center;
+  gap: var(--andes-space-1);
+}
+
+.andes-calendar__select {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-weight: var(--andes-font-weight-medium);
+}
+
+.andes-calendar__select--month {
+  width: 6rem;
+}
+
+.andes-calendar__select--year {
+  width: 6.5rem;
+}
+
 /* Bare icon buttons in the muted color: a bordered box per arrow made the header read
    as a toolbar of controls. */
 .andes-calendar__nav {
@@ -121,6 +146,11 @@
 .andes-calendar__nav-spacer {
   flex-shrink: 0;
   width: 3rem;
+}
+
+/* With a year select the year arrows give way, so a spacer holds one arrow's place. */
+.andes-calendar__nav-spacer--single {
+  width: 1.5rem;
 }
 
 .andes-calendar__nav:hover:not(:disabled) {

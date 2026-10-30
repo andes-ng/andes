@@ -12,7 +12,8 @@
   [attr.aria-label]="ariaLabel() ?? null"
   [attr.aria-labelledby]="ariaLabelledby() ?? null"
   [attr.aria-describedby]="ariaDescribedby() ?? null"
-  [attr.aria-invalid]="ariaInvalid() ? 'true' : null"
+  [attr.aria-invalid]="invalid() ? 'true' : null"
+  [attr.data-required]="required() ? '' : null"
   [attr.aria-readonly]="readonly() ? 'true' : null"
   [attr.aria-disabled]="isDisabled() ? 'true' : null"
   (keydown)="onKeydown($event)"
@@ -55,6 +56,16 @@
   </div>
   }
 </div>
+
+@if (name(); as fieldName) {
+<input
+  type="hidden"
+  data-slot="rate-input"
+  [attr.name]="fieldName"
+  [value]="formValue()"
+  [disabled]="isDisabled()"
+/>
+}
 
 <ng-template #glyph let-index="index" let-filled="filled">
   @if (template(); as custom) {

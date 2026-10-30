@@ -3,9 +3,20 @@ import { join } from 'node:path';
 
 import { Component, signal, TemplateRef, viewChild } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import {
+  FormControl,
+  FormsModule,
+  NgForm,
+  ReactiveFormsModule,
+} from '@angular/forms';
 
-import { AndesRate, AndesRateCharacterInput, AndesRateSize } from './rate';
+import {
+  AndesRate,
+  AndesRateCharacterInput,
+  AndesRateColors,
+  AndesRateSize,
+  AndesRateStatus,
+} from './rate';
 import { AndesRateCharacter } from './rate-character';
 
 @Component({
@@ -25,6 +36,13 @@ import { AndesRateCharacter } from './rate-character';
       [character]="character()"
       [tooltips]="tooltips()"
       [color]="color()"
+      [colors]="colors()"
+      [emptyColor]="emptyColor()"
+      [status]="status()"
+      [name]="name()"
+      [required]="required()"
+      [autoFocus]="autoFocus()"
+      [aria-invalid]="invalid()"
       aria-label="Rating"
       (hoverChange)="hovers.push($event)"
     />
@@ -42,6 +60,13 @@ class HostComponent {
   readonly character = signal<AndesRateCharacterInput | undefined>(undefined);
   readonly tooltips = signal<readonly string[]>([]);
   readonly color = signal<string | undefined>(undefined);
+  readonly colors = signal<AndesRateColors | undefined>(undefined);
+  readonly emptyColor = signal<string | undefined>(undefined);
+  readonly status = signal<AndesRateStatus | undefined>(undefined);
+  readonly name = signal<string | undefined>(undefined);
+  readonly required = signal(false);
+  readonly autoFocus = signal(false);
+  readonly invalid = signal(false);
   readonly hovers: (number | undefined)[] = [];
 }
 
@@ -61,6 +86,30 @@ class DirectiveHostComponent {}
 })
 class FormHostComponent {
   readonly control = new FormControl(3);
+}
+
+@Component({
+  imports: [AndesRate, ReactiveFormsModule],
+  template: `<andes-rate
+    [formControl]="control"
+    [required]="required()"
+    name="score"
+    aria-label="Score"
+  />`,
+})
+class RequiredHostComponent {
+  readonly control = new FormControl<number | null>(0);
+  readonly required = signal(true);
+}
+
+@Component({
+  imports: [AndesRate, FormsModule],
+  template: `<form #f="ngForm">
+    <andes-rate [(ngModel)]="score" name="score" required aria-label="Score" />
+  </form>`,
+})
+class ModelHostComponent {
+  score: number | null = 0;
 }
 
 function stubRect(element: HTMLElement, left: number, width: number): void {
@@ -210,6 +259,7 @@ describe('AndesRate', () => {
     it('clips the filled layer for fractional values', () => {
       const { fixture, stars } = create();
       fixture.componentInstance.value.set(3.7);
+      fixture.componentInstance.readonly.set(true);
       fixture.detectChanges();
 
       expect(fills(stars)).toEqual(['100%', '100%', '100%', '70%', '0%']);
@@ -218,6 +268,7 @@ describe('AndesRate', () => {
 
     it('fills a half character at 50%', () => {
       const { fixture, stars } = create();
+      fixture.componentInstance.allowHalf.set(true);
       fixture.componentInstance.value.set(1.5);
       fixture.detectChanges();
 
@@ -553,6 +604,457 @@ describe('AndesRate', () => {
       slider.dispatchEvent(new FocusEvent('blur'));
 
       expect(fixture.componentInstance.control.touched).toBe(true);
+    });
+  });
+
+  describe('fractional display', () => {
+    const fills = (stars: () => HTMLElement[]) =>
+      stars().map(
+        (star) =>
+          (star.querySelector('.andes-rate__layer--filled') as HTMLElement)
+            .style.inlineSize,
+      );
+
+    it('paints a read-only average proportionally', () => {
+      const { fixture, slider, stars } = create();
+      fixture.componentInstance.value.set(4.3);
+      fixture.componentInstance.readonly.set(true);
+      fixture.detectChanges();
+
+      expect(fills(stars)).toEqual(['100%', '100%', '100%', '100%', '30%']);
+      expect(stars()[4].dataset['state']).toBe('partial');
+      expect(slider.getAttribute('aria-valuenow')).toBe('4.3');
+      expect(slider.getAttribute('aria-valuetext')).toBe('4.3 of 5');
+    });
+
+    it('paints a disabled value proportionally too', () => {
+      const { fixture, stars } = create();
+      fixture.componentInstance.value.set(2.1);
+      fixture.componentInstance.disabled.set(true);
+      fixture.detectChanges();
+
+      expect(fills(stars)).toEqual(['100%', '100%', '10%', '0%', '0%']);
+    });
+
+    it('keeps the real value in aria-valuenow while an interactive rate snaps its stars', () => {
+      const { fixture, slider, stars } = create();
+      fixture.componentInstance.value.set(4.3);
+      fixture.detectChanges();
+
+      expect(fills(stars)).toEqual(['100%', '100%', '100%', '100%', '0%']);
+      expect(stars().map((s) => s.dataset['state'])).not.toContain('partial');
+      expect(slider.getAttribute('aria-valuenow')).toBe('4.3');
+    });
+
+    it('snaps an interactive value to the nearest half with allowHalf', () => {
+      const { fixture, stars } = create();
+      fixture.componentInstance.allowHalf.set(true);
+      fixture.componentInstance.value.set(4.3);
+      fixture.detectChanges();
+      expect(fills(stars)[4]).toBe('50%');
+
+      fixture.componentInstance.value.set(4.1);
+      fixture.detectChanges();
+      expect(fills(stars)[4]).toBe('0%');
+      expect(fills(stars)[3]).toBe('100%');
+    });
+
+    it('goes back to the exact fraction when the rate becomes read-only', () => {
+      const { fixture, stars } = create();
+      fixture.componentInstance.value.set(3.7);
+      fixture.detectChanges();
+      expect(fills(stars)[3]).toBe('100%');
+
+      fixture.componentInstance.readonly.set(true);
+      fixture.detectChanges();
+      expect(fills(stars)[3]).toBe('70%');
+    });
+
+    it('handles the edges: 0, the full count and values outside the range', () => {
+      const { fixture, stars } = create();
+      fixture.componentInstance.readonly.set(true);
+      for (const [value, expected] of [
+        [0, ['0%', '0%', '0%', '0%', '0%']],
+        [5, ['100%', '100%', '100%', '100%', '100%']],
+        [9.5, ['100%', '100%', '100%', '100%', '100%']],
+        [-2, ['0%', '0%', '0%', '0%', '0%']],
+        [0.04, ['4%', '0%', '0%', '0%', '0%']],
+      ] as const) {
+        fixture.componentInstance.value.set(value);
+        fixture.detectChanges();
+        expect(fills(stars)).toEqual(expected);
+      }
+    });
+
+    it('clips a custom character template instead of squeezing it', () => {
+      const { fixture, stars } = create();
+      fixture.componentInstance.character.set(
+        fixture.componentInstance.tpl() as TemplateRef<never>,
+      );
+      fixture.componentInstance.value.set(1.4);
+      fixture.componentInstance.readonly.set(true);
+      fixture.detectChanges();
+
+      const filled = stars()[1].querySelector(
+        '.andes-rate__layer--filled',
+      ) as HTMLElement;
+      expect(filled.style.inlineSize).toBe('40%');
+      expect(filled.querySelector('.andes-rate__glyph-box')).not.toBeNull();
+      expect(filled.querySelector('[data-test="glyph"]')?.textContent).toBe(
+        '1f',
+      );
+    });
+
+    it('clips a text character the same way', () => {
+      const { fixture, stars } = create();
+      fixture.componentInstance.character.set('♥');
+      fixture.componentInstance.value.set(2.6);
+      fixture.componentInstance.readonly.set(true);
+      fixture.detectChanges();
+
+      expect(fills(stars)[2]).toBe('60%');
+    });
+
+    it('keeps the character box full-size in the clipped layer (the glyph is cut, not scaled)', () => {
+      const css = readFileSync(
+        join(process.cwd(), 'packages/ui/src/lib/rate/rate.css'),
+        'utf8',
+      ).replace(/\s+/g, ' ');
+
+      expect(css).toContain(
+        '.andes-rate__glyph-box { inline-size: var(--andes-rate-size, 1.25rem);',
+      );
+      expect(css).toContain('overflow: hidden');
+    });
+  });
+
+  describe('autoFocus', () => {
+    function createFocused(init: (host: HostComponent) => void) {
+      const fixture = TestBed.createComponent(HostComponent);
+      init(fixture.componentInstance);
+      fixture.detectChanges();
+      const slider = fixture.nativeElement.querySelector(
+        '[role="slider"]',
+      ) as HTMLElement;
+      return { fixture, slider };
+    }
+
+    it('focuses the slider once after the first render', () => {
+      const { slider } = createFocused((host) => host.autoFocus.set(true));
+      expect(document.activeElement).toBe(slider);
+    });
+
+    it('does nothing by default', () => {
+      const { slider } = createFocused(() => undefined);
+      expect(document.activeElement).not.toBe(slider);
+    });
+
+    it('is read once: turning it on later never steals focus', () => {
+      const { fixture, slider } = createFocused(() => undefined);
+      fixture.componentInstance.autoFocus.set(true);
+      fixture.detectChanges();
+      expect(document.activeElement).not.toBe(slider);
+    });
+
+    it('does not focus a disabled rate', () => {
+      const { slider } = createFocused((host) => {
+        host.autoFocus.set(true);
+        host.disabled.set(true);
+      });
+      expect(document.activeElement).not.toBe(slider);
+    });
+
+    it('focuses a read-only rate, which stays in the tab order', () => {
+      const { slider } = createFocused((host) => {
+        host.autoFocus.set(true);
+        host.readonly.set(true);
+      });
+      expect(document.activeElement).toBe(slider);
+    });
+
+    it('reports focus and blur through the public methods', () => {
+      const { fixture, slider } = createFocused(() => undefined);
+      const rate = fixture.debugElement.children[0]
+        .componentInstance as AndesRate;
+      rate.focus({ preventScroll: true });
+      expect(document.activeElement).toBe(slider);
+      rate.blur();
+      expect(document.activeElement).not.toBe(slider);
+    });
+  });
+
+  describe('name and required', () => {
+    const hidden = (host: HTMLElement) =>
+      host.querySelector<HTMLInputElement>('input[type="hidden"]');
+
+    it('renders no hidden input without a name', () => {
+      const { host } = create();
+      expect(hidden(host)).toBeNull();
+    });
+
+    it('carries the value in a hidden input for native form posts', () => {
+      const { fixture, host } = create();
+      fixture.componentInstance.name.set('score');
+      fixture.componentInstance.value.set(3.5);
+      fixture.detectChanges();
+
+      expect(hidden(host)?.getAttribute('name')).toBe('score');
+      expect(hidden(host)?.value).toBe('3.5');
+      expect(host.hasAttribute('name')).toBe(false);
+
+      fixture.componentInstance.value.set(0);
+      fixture.detectChanges();
+      expect(hidden(host)?.value).toBe('0');
+    });
+
+    it('posts through a real form, and not while disabled', () => {
+      const { fixture, host } = create();
+      fixture.componentInstance.name.set('score');
+      fixture.componentInstance.value.set(4);
+      fixture.detectChanges();
+
+      const form = document.createElement('form');
+      host.parentElement?.appendChild(form);
+      form.appendChild(host);
+      expect(new FormData(form).get('score')).toBe('4');
+
+      fixture.componentInstance.disabled.set(true);
+      fixture.detectChanges();
+      expect(new FormData(form).has('score')).toBe(false);
+    });
+
+    it('never posts the hover preview', () => {
+      const { fixture, host, stars } = create();
+      fixture.componentInstance.name.set('score');
+      fixture.componentInstance.value.set(2);
+      fixture.detectChanges();
+      stars()[4].dispatchEvent(pointer('pointermove'));
+      fixture.detectChanges();
+
+      expect(hidden(host)?.value).toBe('2');
+    });
+
+    it('marks required with data-required, not aria-required (not allowed on a slider)', () => {
+      const { fixture, host, slider } = create();
+      expect(slider.hasAttribute('data-required')).toBe(false);
+
+      fixture.componentInstance.required.set(true);
+      fixture.detectChanges();
+
+      expect(slider.hasAttribute('data-required')).toBe(true);
+      expect(host.hasAttribute('data-required')).toBe(true);
+      expect(slider.hasAttribute('aria-required')).toBe(false);
+    });
+
+    it('reports { required: true } for a value of 0 under Angular forms', () => {
+      const fixture = TestBed.createComponent(RequiredHostComponent);
+      fixture.detectChanges();
+      const control = fixture.componentInstance.control;
+
+      expect(control.errors).toEqual({ required: true });
+
+      control.setValue(2.5);
+      expect(control.errors).toBeNull();
+
+      control.setValue(null);
+      expect(control.errors).toEqual({ required: true });
+    });
+
+    it('validates again when required changes', () => {
+      const fixture = TestBed.createComponent(RequiredHostComponent);
+      fixture.detectChanges();
+      const control = fixture.componentInstance.control;
+      expect(control.valid).toBe(false);
+
+      fixture.componentInstance.required.set(false);
+      fixture.detectChanges();
+      expect(control.valid).toBe(true);
+
+      fixture.componentInstance.required.set(true);
+      fixture.detectChanges();
+      expect(control.valid).toBe(false);
+    });
+
+    it('works with ngModel', async () => {
+      const fixture = TestBed.createComponent(ModelHostComponent);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const form = fixture.debugElement.children[0].injector.get(
+        NgForm,
+      ) as NgForm;
+      expect(form.valid).toBe(false);
+
+      const slider = fixture.nativeElement.querySelector(
+        '[role="slider"]',
+      ) as HTMLElement;
+      slider.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'End', bubbles: true }),
+      );
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(form.valid).toBe(true);
+    });
+  });
+
+  describe('status', () => {
+    it('sets data-status on the host', () => {
+      const { fixture, host } = create();
+      expect(host.hasAttribute('data-status')).toBe(false);
+
+      fixture.componentInstance.status.set('warning');
+      fixture.detectChanges();
+      expect(host.getAttribute('data-status')).toBe('warning');
+    });
+
+    it('announces only the error status with aria-invalid', () => {
+      const { fixture, slider } = create();
+      fixture.componentInstance.status.set('error');
+      fixture.detectChanges();
+      expect(slider.getAttribute('aria-invalid')).toBe('true');
+
+      fixture.componentInstance.status.set('warning');
+      fixture.detectChanges();
+      expect(slider.hasAttribute('aria-invalid')).toBe(false);
+    });
+
+    it('keeps the aria-invalid input working on its own', () => {
+      const { fixture, slider } = create();
+      fixture.componentInstance.invalid.set(true);
+      fixture.detectChanges();
+
+      expect(slider.getAttribute('aria-invalid')).toBe('true');
+    });
+
+    it('paints from the danger and warning tokens, with an explicit empty colour on top', () => {
+      const css = readFileSync(
+        join(process.cwd(), 'packages/ui/src/lib/rate/rate.css'),
+        'utf8',
+      ).replace(/\s+/g, ' ');
+
+      expect(css).toContain(
+        ":host([data-status='error']) { --_andes-rate-status: var(--andes-color-danger); }",
+      );
+      expect(css).toContain(
+        ":host([data-status='warning']) { --_andes-rate-status: var(--andes-color-warning-hover); }",
+      );
+      expect(css).toMatch(
+        /:host\(\[data-status\]\) \.andes-rate__layer--empty \{ color: var\( --andes-rate-empty-color,/,
+      );
+    });
+  });
+
+  describe('colors', () => {
+    const colorOf = (host: HTMLElement) =>
+      host.style.getPropertyValue('--andes-rate-color');
+
+    it('picks the colour at the highlighted position from an array', () => {
+      const { fixture, host } = create();
+      fixture.componentInstance.colors.set(['red', 'orange', 'gold']);
+      fixture.componentInstance.value.set(2);
+      fixture.detectChanges();
+      expect(colorOf(host)).toBe('orange');
+
+      fixture.componentInstance.value.set(1);
+      fixture.detectChanges();
+      expect(colorOf(host)).toBe('red');
+    });
+
+    it('uses the last colour for positions past the end, and rounds partial values up', () => {
+      const { fixture, host } = create();
+      fixture.componentInstance.colors.set(['red', 'orange', 'gold']);
+      fixture.componentInstance.value.set(5);
+      fixture.detectChanges();
+      expect(colorOf(host)).toBe('gold');
+
+      fixture.componentInstance.readonly.set(true);
+      fixture.componentInstance.value.set(1.2);
+      fixture.detectChanges();
+      expect(colorOf(host)).toBe('orange');
+    });
+
+    it('calls a function with the highlighted value', () => {
+      const { fixture, host } = create();
+      fixture.componentInstance.colors.set((value) =>
+        value >= 4 ? 'green' : 'red',
+      );
+      fixture.componentInstance.value.set(4);
+      fixture.detectChanges();
+      expect(colorOf(host)).toBe('green');
+
+      fixture.componentInstance.value.set(2);
+      fixture.detectChanges();
+      expect(colorOf(host)).toBe('red');
+    });
+
+    it('previews the colour of the hovered value', () => {
+      const { fixture, host, stars } = create();
+      fixture.componentInstance.colors.set([
+        'red',
+        'orange',
+        'gold',
+        'lime',
+        'green',
+      ]);
+      fixture.componentInstance.value.set(1);
+      fixture.detectChanges();
+      expect(colorOf(host)).toBe('red');
+
+      stars()[4].dispatchEvent(pointer('pointermove'));
+      fixture.detectChanges();
+      expect(colorOf(host)).toBe('green');
+
+      host
+        .querySelector('[role="slider"]')
+        ?.dispatchEvent(new MouseEvent('pointerleave'));
+      fixture.detectChanges();
+      expect(colorOf(host)).toBe('red');
+    });
+
+    it('falls back to color when there is nothing to pick', () => {
+      const { fixture, host } = create();
+      fixture.componentInstance.color.set('purple');
+      fixture.componentInstance.colors.set(['red', 'orange']);
+      fixture.componentInstance.value.set(0);
+      fixture.detectChanges();
+      expect(colorOf(host)).toBe('purple');
+
+      fixture.componentInstance.colors.set([]);
+      fixture.componentInstance.value.set(3);
+      fixture.detectChanges();
+      expect(colorOf(host)).toBe('purple');
+
+      fixture.componentInstance.colors.set(() => null);
+      fixture.detectChanges();
+      expect(colorOf(host)).toBe('purple');
+    });
+
+    it('lets colors win over color while it picks one', () => {
+      const { fixture, host } = create();
+      fixture.componentInstance.color.set('purple');
+      fixture.componentInstance.colors.set(['teal']);
+      fixture.componentInstance.value.set(3);
+      fixture.detectChanges();
+      expect(colorOf(host)).toBe('teal');
+    });
+
+    it('sets no colour at all when neither input is used', () => {
+      const { fixture, host } = create();
+      fixture.componentInstance.value.set(3);
+      fixture.detectChanges();
+      expect(colorOf(host)).toBe('');
+    });
+  });
+
+  describe('emptyColor', () => {
+    it('sets the empty colour hook', () => {
+      const { fixture, host } = create();
+      expect(host.style.getPropertyValue('--andes-rate-empty-color')).toBe('');
+
+      fixture.componentInstance.emptyColor.set('#475569');
+      fixture.detectChanges();
+      expect(host.style.getPropertyValue('--andes-rate-empty-color')).toBe(
+        '#475569',
+      );
     });
   });
 

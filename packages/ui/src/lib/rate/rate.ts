@@ -1,10 +1,12 @@
 import { NgTemplateOutlet } from '@angular/common';
 import {
+  afterNextRender,
   booleanAttribute,
   ChangeDetectionStrategy,
   Component,
   computed,
   contentChild,
+  effect,
   ElementRef,
   forwardRef,
   inject,
@@ -16,7 +18,14 @@ import {
   TemplateRef,
   viewChild,
 } from '@angular/core';
-import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import {
+  AbstractControl,
+  ControlValueAccessor,
+  NG_VALIDATORS,
+  NG_VALUE_ACCESSOR,
+  ValidationErrors,
+  Validator,
+} from '@angular/forms';
 
 import {
   AndesRateCharacter,
@@ -29,6 +38,16 @@ export type AndesRateSize = AndesRateSizePreset | number | string;
 /** A character to draw: text (an emoji, a letter), a template, or a function of the position. */
 export type AndesRateCharacterInput =
   string | TemplateRef<AndesRateCharacterContext> | ((index: number) => string);
+
+/** Validation state painted on the empty characters and announced for `error`. */
+export type AndesRateStatus = 'error' | 'warning';
+/**
+ * Colours for the filled characters chosen from the highlighted value: one colour per character
+ * position (the colour at `ceil(value) - 1` wins, the last one covers any position past the
+ * end), or a function of the value.
+ */
+export type AndesRateColors =
+  readonly string[] | ((value: number) => string | null | undefined);
 
 const SIZE_PRESETS: Record<AndesRateSizePreset, number> = {
   sm: 16,
@@ -48,7 +67,9 @@ function normalizeValue(value: unknown, count: number): number {
 
 /**
  * A star rating: click, hover-preview and keyboard, with whole or half steps and partial fill
- * for read-only averages (a value of 3.7 fills 70% of the fourth star).
+ * for read-only averages (a value of 3.7 fills 70% of the fourth star). An interactive rate
+ * draws its value on the nearest step (whole, or half with `allowHalf`) so what is drawn is
+ * always something the user could have picked.
  *
  * The control is one `role="slider"` (0 to `count`), so assistive technology reads "3 of 5" or
  * a tooltip text instead of five unlabeled graphics. Arrow keys move by one (half with
@@ -56,10 +77,13 @@ function normalizeValue(value: unknown, count: number): number {
  * follow the reading direction, so they flip in right-to-left layouts, where the fill also
  * starts from the right.
  *
- * Works with `ngModel` and reactive forms, and inside `andes-form-field`.
+ * Works with `ngModel` and reactive forms, and inside `andes-form-field`. `name` adds a hidden
+ * input carrying the value for native form posts, and `required` makes a value of 0 an Angular
+ * forms error (`{ required: true }`).
  *
  * Styling hooks: `--andes-rate-color` (filled), `--andes-rate-empty-color`,
- * `--andes-rate-size`, `--andes-rate-gap`. `color` sets the filled colour from a binding.
+ * `--andes-rate-size`, `--andes-rate-gap`. `color` / `colors` set the filled colour and
+ * `emptyColor` the empty one from a binding.
  */
 @Component({
   selector: 'andes-rate',
@@ -73,6 +97,11 @@ function normalizeValue(value: unknown, count: number): number {
       useExisting: forwardRef(() => AndesRate),
       multi: true,
     },
+    {
+      provide: NG_VALIDATORS,
+      useExisting: forwardRef(() => AndesRate),
+      multi: true,
+    },
   ],
   host: {
     '[attr.data-slot]': '"rate"',
@@ -80,7 +109,12 @@ function normalizeValue(value: unknown, count: number): number {
     '[attr.data-readonly]': 'readonly() ? "" : null',
     '[attr.data-disabled]': 'isDisabled() ? "" : null',
     '[style.--andes-rate-size]': 'cssSize()',
-    '[style.--andes-rate-color]': 'color() ?? null',
+    '[attr.data-status]': 'status() ?? null',
+    '[attr.data-required]': 'required() ? "" : null',
+    '[style.--andes-rate-color]': 'activeColor() ?? null',
+    '[style.--andes-rate-empty-color]': 'emptyColor() ?? null',
+    // The hidden input carries the name, not this wrapper (a static `name` stays a plain attr).
+    '[attr.name]': 'null',
     // Every ARIA attribute and the id belong to the inner slider, not this wrapper.
     '[attr.id]': 'null',
     '[attr.aria-label]': 'null',
@@ -89,7 +123,7 @@ function normalizeValue(value: unknown, count: number): number {
     '[attr.aria-invalid]': 'null',
   },
 })
-export class AndesRate implements ControlValueAccessor {
+export class AndesRate implements ControlValueAccessor, Validator {
   private readonly hostRef = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly slider =
     viewChild.required<ElementRef<HTMLElement>>('slider');
@@ -118,6 +152,41 @@ export class AndesRate implements ControlValueAccessor {
   readonly tooltips = input<readonly string[]>([]);
   /** The filled colour (any CSS colour); `--andes-rate-color` does the same from CSS. */
   readonly color = input<string | undefined>(undefined);
+  /**
+   * Picks the filled colour from the highlighted value (the hover preview, else the value), so
+   * a low score can read red and a high one green. An array has one colour per character
+   * position; a function receives the value and returns a colour. Falls back to `color` when it
+   * yields nothing (also for a value of 0, where nothing is filled).
+   */
+  readonly colors = input<AndesRateColors | undefined>(undefined);
+  /**
+   * The colour of the unfilled characters (any CSS colour), for surfaces where the default
+   * light grey disappears, such as a dark background. Wins over the `status` tint.
+   */
+  readonly emptyColor = input<string | undefined>(undefined);
+  /**
+   * Validation state, like the Input: `error` tints the empty characters with the danger colour,
+   * rings the row and is announced with `aria-invalid`; `warning` does the same visually with
+   * the warning colour and announces nothing extra.
+   */
+  readonly status = input<AndesRateStatus | undefined>(undefined);
+  /**
+   * Field name for a native `<form>` post: a hidden input carries the value (the real value,
+   * never the hover preview), and is left out while the rate is disabled, as with any control.
+   */
+  readonly name = input<string | undefined>(undefined);
+  /**
+   * Marks a value of 0 as missing: an Angular forms control reports `{ required: true }`.
+   * The slider role does not allow `aria-required`, so it is exposed as `data-required` (for
+   * styling) and the label should say it is required. The hidden `name` input cannot take part
+   * in the browser's own constraint validation, so native form posts are not blocked by it.
+   */
+  readonly required = input(false, { transform: booleanAttribute });
+  /**
+   * Focuses the rate once, right after the first render in the browser (never on the server).
+   * Read once on purpose, like the HTML `autofocus` attribute: toggling it later does nothing.
+   */
+  readonly autoFocus = input(false, { transform: booleanAttribute });
   /** Formats the spoken value (`aria-valuetext`); defaults to the tooltip text or "3 of 5". */
   readonly valueFormatter = input<
     ((value: number, count: number) => string) | undefined
@@ -147,6 +216,25 @@ export class AndesRate implements ControlValueAccessor {
   private readonly focusVisible = signal(false);
   private onChangeFn: (value: number) => void = () => undefined;
   private onTouchedFn: () => void = () => undefined;
+  private onValidatorChangeFn: () => void = () => undefined;
+  private validatorReady = false;
+
+  constructor() {
+    afterNextRender(() => {
+      if (this.autoFocus()) {
+        this.focus();
+      }
+    });
+    // `required` can change after the control was set up: ask the control to validate again,
+    // but not for the initial value, which the control already validates when it connects.
+    effect(() => {
+      this.required();
+      if (this.validatorReady) {
+        this.onValidatorChangeFn();
+      }
+      this.validatorReady = true;
+    });
+  }
 
   protected readonly isDisabled = computed(
     () => this.disabled() || this.cvaDisabled(),
@@ -163,9 +251,43 @@ export class AndesRate implements ControlValueAccessor {
   protected readonly current = computed(() =>
     normalizeValue(this.value(), this.total()),
   );
+  /**
+   * The value as drawn at rest. A read-only or disabled rate shows it as is (an average of 4.3
+   * fills 30% of the fifth star); an interactive one snaps to the nearest step it could have
+   * been picked at, so its stars never show a value the pointer cannot produce.
+   */
+  protected readonly display = computed(() => {
+    const value = this.current();
+    if (!this.interactive()) {
+      return value;
+    }
+    const step = this.step();
+    return Math.round(value / step) * step;
+  });
   /** What is drawn: the hover preview while the pointer is over the stars, else the value. */
   protected readonly shown = computed(
-    () => this.hoverValue() ?? this.current(),
+    () => this.hoverValue() ?? this.display(),
+  );
+
+  /** The filled colour for the highlighted value: from `colors`, else the plain `color`. */
+  protected readonly activeColor = computed(() => {
+    const colors = this.colors();
+    const shown = this.shown();
+    if (colors && shown > 0) {
+      const picked =
+        typeof colors === 'function'
+          ? colors(shown)
+          : colors[Math.min(colors.length, Math.ceil(shown)) - 1];
+      if (picked) {
+        return picked;
+      }
+    }
+    return this.color();
+  });
+
+  protected readonly formValue = computed(() => String(this.current()));
+  protected readonly invalid = computed(
+    () => this.ariaInvalid() || this.status() === 'error',
   );
 
   protected readonly presetSize = computed(() => {
@@ -202,7 +324,7 @@ export class AndesRate implements ControlValueAccessor {
       return hover > 0 ? Math.ceil(hover) - 1 : -1;
     }
     if (this.focusVisible()) {
-      const value = this.current();
+      const value = this.display();
       return value > 0 ? Math.ceil(value) - 1 : -1;
     }
     return -1;
@@ -255,12 +377,14 @@ export class AndesRate implements ControlValueAccessor {
 
   // --- Public API ------------------------------------------------------------------------------
 
+  /** Focuses the slider (a no-op while disabled, which takes it out of the tab order). */
   focus(options?: FocusOptions): void {
     if (!this.isDisabled()) {
       this.slider().nativeElement.focus(options);
     }
   }
 
+  /** Removes focus from the slider. */
   blur(): void {
     this.slider().nativeElement.blur();
   }
@@ -281,6 +405,18 @@ export class AndesRate implements ControlValueAccessor {
 
   setDisabledState(isDisabled: boolean): void {
     this.cvaDisabled.set(isDisabled);
+  }
+
+  // --- Validator -------------------------------------------------------------------------------
+
+  validate(control: AbstractControl): ValidationErrors | null {
+    return this.required() && normalizeValue(control.value, this.total()) === 0
+      ? { required: true }
+      : null;
+  }
+
+  registerOnValidatorChange(fn: () => void): void {
+    this.onValidatorChangeFn = fn;
   }
 
   // --- Pointer ---------------------------------------------------------------------------------

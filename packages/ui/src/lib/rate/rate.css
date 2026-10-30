@@ -5,7 +5,8 @@
      --andes-rate-color         filled colour (default: the warning colour)
      --andes-rate-empty-color   empty colour
      --andes-rate-size          character box (set by `size`)
-     --andes-rate-gap           space between characters (default: 0.35 x size) */
+     --andes-rate-gap           space between characters (default: 0.35 x size)
+   `status` tints the empty characters and rings the row with the danger / warning token. */
 
 :host {
   display: inline-block;
@@ -13,6 +14,14 @@
   font-family: var(--andes-font-family), sans-serif;
   font-size: var(--andes-text-font-size, 0.875rem);
   line-height: 1;
+}
+
+:host([data-status='error']) {
+  --_andes-rate-status: var(--andes-color-danger);
+}
+
+:host([data-status='warning']) {
+  --_andes-rate-status: var(--andes-color-warning-hover);
 }
 
 :host([data-disabled]) {
@@ -36,6 +45,12 @@
 
 :host([data-disabled]) .andes-rate__stars {
   cursor: not-allowed;
+}
+
+/* The row is rung in the status colour (a soft ring, so the keyboard outline stays free). */
+:host([data-status]) .andes-rate__stars {
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--_andes-rate-status) 22%, transparent);
 }
 
 /* A non-bordered control: the keyboard ring, never shown for a mouse click. */
@@ -71,6 +86,18 @@
     color-mix(
       in srgb,
       var(--andes-color-foreground) 14%,
+      var(--andes-color-background)
+    )
+  );
+}
+
+/* Status tints the empty characters; an explicit empty colour still wins. */
+:host([data-status]) .andes-rate__layer--empty {
+  color: var(
+    --andes-rate-empty-color,
+    color-mix(
+      in srgb,
+      var(--_andes-rate-status) 45%,
       var(--andes-color-background)
     )
   );

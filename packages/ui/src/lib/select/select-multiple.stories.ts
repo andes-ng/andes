@@ -153,6 +153,103 @@ export const TagLimits: Story = {
   }),
 };
 
+const CITIES = [
+  'Lima',
+  'Cusco',
+  'Arequipa',
+  'Trujillo',
+  'Piura',
+  'Iquitos',
+  'Puno',
+  'Tacna',
+  'Huaraz',
+  'Chiclayo',
+  'Ayacucho',
+  'Cajamarca',
+].map((label) => ({ value: label.toLowerCase(), label }));
+
+const MANY = Array.from({ length: 55 }, (_, index) => ({
+  value: `item-${index + 1}`,
+  label: `Item ${index + 1}`,
+}));
+
+/**
+ * The `+ N ...` tag opens a popover of the hidden tags: hover it (it opens after 150ms and
+ * stays while the pointer moves into it), Tab to it, or tap it. Each hidden tag keeps its
+ * remove button, so a value can go without opening the list; `Enter` on the tag moves focus
+ * into the popover and `Escape` brings it back. It works with `maxTagCount="responsive"`
+ * (drag the container's corner: the popover follows the hidden set live), a custom
+ * `maxTagPlaceholder` and `maxTagPopoverTemplate`, and a disabled select, where it only
+ * informs. `maxTagPopover="false"` turns it off in favour of a native tooltip.
+ */
+export const OverflowPopover: Story = {
+  render: () => ({
+    moduleMetadata: { imports: SELECT_IMPORTS },
+    props: {
+      cityList: CITIES,
+      manyList: MANY,
+      fixedPicks: CITIES.slice(0, 8).map((city) => city.value),
+      fittedPicks: CITIES.slice(0, 9).map((city) => city.value),
+      customPicks: CITIES.slice(2, 8).map((city) => city.value),
+      lockedPicks: CITIES.slice(0, 6).map((city) => city.value),
+      manyPicks: MANY.map((item) => item.value),
+      plainPicks: CITIES.slice(0, 5).map((city) => city.value),
+    },
+    template: `
+      <div style="width: 320px; max-width: 100%; display: flex; flex-direction: column; gap: 1.25rem;">
+        <div>
+          <andes-select aria-label="Cities" mode="multiple" [maxTagCount]="2"
+            [options]="cityList" [(value)]="fixedPicks" />
+          ${note('maxTagCount=2 - value: {{ fixedPicks | json }}')}
+        </div>
+        <div style="min-width: 140px; max-width: 100%; resize: horizontal; overflow: hidden; padding-bottom: 0.25rem;">
+          <andes-select aria-label="Cities" mode="multiple" maxTagCount="responsive"
+            [options]="cityList" [(value)]="fittedPicks" />
+          ${note('maxTagCount="responsive" - resize the container')}
+        </div>
+        <div>
+          <andes-select aria-label="Cities" mode="multiple" [maxTagCount]="1"
+            [maxTagPlaceholder]="restTag" [maxTagPopoverTemplate]="restPopover"
+            [options]="cityList" [(value)]="customPicks" />
+          ${note('Custom maxTagPlaceholder and maxTagPopoverTemplate')}
+        </div>
+        <div>
+          <andes-select aria-label="Cities" mode="multiple" [maxTagCount]="2" disabled
+            [options]="cityList" [(value)]="lockedPicks" />
+          ${note('Disabled - the popover still lists the hidden cities')}
+        </div>
+        <div>
+          <andes-select aria-label="Items" mode="multiple" [maxTagCount]="3"
+            [options]="manyList" [(value)]="manyPicks" />
+          ${note('52 hidden - the popover scrolls')}
+        </div>
+        <div>
+          <andes-select aria-label="Cities" mode="multiple" [maxTagCount]="2" [maxTagPopover]="false"
+            [options]="cityList" [(value)]="plainPicks" />
+          ${note('maxTagPopover=false - a native tooltip instead')}
+        </div>
+      </div>
+      <ng-template #restTag let-omitted>and {{ omitted.length }} more</ng-template>
+      <ng-template #restPopover let-omitted let-remove="remove">
+        <p style="margin: 0 0 0.5rem; font-size: 0.75rem; color: var(--andes-color-muted-foreground);">
+          {{ omitted.length }} more cities
+        </p>
+        <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.25rem;">
+          @for (city of omitted; track city.value) {
+          <li style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+            {{ city.label }}
+            <button type="button" (click)="remove(city)" [attr.aria-label]="'Remove ' + city.label"
+              style="border: none; background: none; color: var(--andes-color-primary); cursor: pointer; font: inherit; font-size: 0.75rem;">
+              Remove
+            </button>
+          </li>
+          }
+        </ul>
+      </ng-template>
+    `,
+  }),
+};
+
 /**
  * `mode="tags"`: whatever is typed is offered as a new value, and `tokenSeparators` split
  * typed or pasted text into several (try "lime, mango,"). With `defaultActiveFirstOption`

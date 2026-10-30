@@ -22,6 +22,7 @@ import {
   AndesTabsSize,
   AndesTabsType,
 } from './tabs-types';
+import { expectLength } from '../../testing/computed-style';
 
 /**
  * `ListKeyManager` (used internally by `AndesListNavigation`) reads the deprecated-but-
@@ -1370,11 +1371,9 @@ describe('AndesTabs (extended features)', () => {
       ) as HTMLInputElement;
       input.focus();
       const focused = getComputedStyle(input);
-      expect(focused.height).toBe('2rem');
+      expectLength(focused.height, '2rem');
       // One indicator only: the primary border and its 2px soft ring.
-      expect(
-        focused.outlineStyle === '' || focused.outlineStyle === 'none',
-      ).toBe(true);
+      expect(focused.outlineStyle).toBe('none');
       expect(focused.getPropertyValue('outline')).not.toMatch(/2px/);
       expect(document.activeElement).toBe(input);
       expect(focused.boxShadow).toBe(

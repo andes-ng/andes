@@ -30,8 +30,10 @@
       data-slot="slider-thumb"
       role="slider"
       [attr.data-index]="thumb.index"
-      [attr.data-dragging]="dragging() && activeIndex() === thumb.index ? '' : null"
+      [attr.data-dragging]="thumb.dragging ? '' : null"
+      [attr.data-focused]="thumb.focused ? '' : null"
       [attr.data-disabled]="thumb.disabled ? '' : null"
+      [attr.data-custom]="thumbTemplate() ? '' : null"
       [attr.data-removing]="thumb.removing ? '' : null"
       [attr.tabindex]="thumb.disabled ? -1 : 0"
       [attr.aria-orientation]="orientation()"
@@ -43,11 +45,25 @@
       [attr.aria-labelledby]="thumb.ariaLabelledby"
       [attr.aria-describedby]="thumb.ariaDescribedby"
       [attr.aria-disabled]="thumb.disabled ? 'true' : null"
+      [attr.aria-readonly]="readOnly() ? 'true' : null"
+      [attr.aria-invalid]="isInvalid() ? 'true' : null"
       [style.--andes-slider-thumb-offset]="thumb.offset"
       (keydown)="onKeydown($event, thumb.index)"
-      (blur)="onBlur()"
+      (focus)="onThumbFocus($event, thumb.index)"
+      (blur)="onThumbBlur($event, thumb.index)"
     >
-      @if (thumb.label !== null) {
+      @if (thumbTemplate(); as custom) {
+      <span
+        class="andes-slider__thumb-content"
+        data-slot="slider-thumb-content"
+        aria-hidden="true"
+      >
+        <ng-container
+          [ngTemplateOutlet]="custom"
+          [ngTemplateOutletContext]="thumb.context"
+        />
+      </span>
+      } @if (thumb.label !== null) {
       <span
         class="andes-slider__tooltip"
         aria-hidden="true"
@@ -68,7 +84,15 @@
   </div>
 </div>
 
-@if (markViews().length > 0) {
+@if (name(); as fieldName) { @for (thumb of thumbs(); track thumb.index) {
+<input
+  type="hidden"
+  data-slot="slider-input"
+  [name]="fieldName"
+  [value]="thumb.value"
+  [disabled]="thumb.disabled"
+/>
+} } @if (markViews().length > 0) {
 <!-- Mark labels are a pointer shortcut only (click to jump); keyboard users already reach
      every value with the arrow keys, so the row stays aria-hidden. -->
 <div class="andes-slider__marks" data-slot="slider-marks" aria-hidden="true">

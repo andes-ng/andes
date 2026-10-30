@@ -11,6 +11,21 @@ export interface AndesSliderTooltipContext {
   readonly label: string;
 }
 
+/**
+ * Template context for a custom handle: `thumbTemplate` takes a `TemplateRef` of
+ * `<ng-template let-value let-index="index" let-dragging="dragging" let-focused="focused">`.
+ */
+export interface AndesSliderThumbContext {
+  /** The handle's current value. */
+  readonly $implicit: number;
+  /** The handle's position in the value array. */
+  readonly index: number;
+  /** The pointer is dragging this handle. */
+  readonly dragging: boolean;
+  /** This handle holds focus. */
+  readonly focused: boolean;
+}
+
 /** Template context for a custom mark label: `<ng-template andesSliderMark let-mark let-active="active">`. */
 export interface AndesSliderMarkContext {
   readonly $implicit: AndesSliderMark;

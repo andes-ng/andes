@@ -15,6 +15,7 @@ import {
   model,
   numberAttribute,
   signal,
+  TemplateRef,
   viewChild,
   viewChildren,
   output,
@@ -23,12 +24,57 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 import {
   AndesSliderMarkTemplate,
+  AndesSliderThumbContext,
   AndesSliderTooltipTemplate,
 } from './slider-templates';
 
 export type AndesSliderOrientation = 'horizontal' | 'vertical';
 export type AndesSliderTooltip = 'hover' | 'always' | 'never';
 export type AndesSliderTooltipPlacement = 'top' | 'bottom' | 'left' | 'right';
+
+/**
+ * Track thickness and thumb size, on the same sm / md / lg scale as the other form controls.
+ * `md` (the default) is the original look: a 4px rail with a 14px thumb box; `sm` is a 3px rail
+ * with a 12px thumb and `lg` a 6px rail with an 18px thumb.
+ */
+export type AndesSliderSize = 'sm' | 'md' | 'lg';
+
+/**
+ * Validation tier, like the other form controls: `error` paints the slider in the danger color
+ * and sets `aria-invalid` on every handle, `warning` only paints it in the warning color (a
+ * warning is advice, not a failure, so it is not announced as invalid).
+ */
+export type AndesSliderStatus = 'error' | 'warning';
+
+/** Payload of the `focused` and `blurred` outputs. */
+export interface AndesSliderFocusEvent {
+  /** Index of the handle that gained or lost focus (its position in the value array). */
+  readonly index: number;
+  /** The native focus event of that handle. */
+  readonly event: FocusEvent;
+}
+
+/**
+ * `AndesSliderDragEvent.index` when the whole range is being dragged by its track
+ * (`range.draggableTrack`) rather than one handle.
+ */
+export const ANDES_SLIDER_TRACK_DRAG = -1;
+
+/** Payload of the `dragStart` and `dragEnd` outputs. */
+export interface AndesSliderDragEvent {
+  /**
+   * The dragged handle's index, or `ANDES_SLIDER_TRACK_DRAG` (-1) when the whole range is
+   * dragged by its track. On `dragEnd` it is the handle that travelled last (stacked handles
+   * can swap who moves), or the handle that was dropped by an editable range.
+   */
+  readonly index: number;
+  /**
+   * The dragged handle's value, or - for a track drag - the whole range as an array. On
+   * `dragStart` it is the value the press resolved to (before the matching `valueChange`);
+   * on `dragEnd` the value at release.
+   */
+  readonly value: AndesSliderValue;
+}
 
 /**
  * Public value shape: a single number, or one number per handle when `range` is set - two
@@ -69,6 +115,9 @@ export interface AndesSliderRangeConfig {
   /** Most handles an editable range may grow to (default unlimited). */
   readonly maxCount?: number;
 }
+
+/** Tolerance for comparing values that went through float arithmetic. */
+const EPSILON = 1e-9;
 
 /** How far (px) a handle must be dragged off the track before an editable range drops it. */
 const REMOVE_DISTANCE = 130;
@@ -195,6 +244,10 @@ interface AndesSliderThumbView {
   readonly ariaDescribedby: string | null;
   readonly disabled: boolean;
   readonly removing: boolean;
+  readonly dragging: boolean;
+  readonly focused: boolean;
+  /** Context handed to a custom `thumbTemplate`. */
+  readonly context: AndesSliderThumbContext;
 }
 
 type AndesSliderDrag =
@@ -227,6 +280,10 @@ type AndesSliderDrag =
     '[attr.data-orientation]': 'orientation()',
     '[attr.data-tooltip]': 'tooltip()',
     '[attr.data-disabled]': "isDisabled() ? '' : null",
+    '[attr.data-readonly]': "readOnly() ? '' : null",
+    '[attr.data-size]': 'size()',
+    '[attr.data-status]': 'visualStatus()',
+    '[attr.data-no-track-click]': "trackClick() ? null : ''",
     '[attr.data-dragging]': "dragging() ? '' : null",
     '[attr.data-draggable-track]': "draggableTrack() ? '' : null",
     '[attr.data-editable]': "editable() ? '' : null",
@@ -238,6 +295,8 @@ type AndesSliderDrag =
     '[attr.aria-label]': 'isRange() ? (ariaLabel() ?? null) : null',
     '[attr.aria-labelledby]': 'isRange() ? (ariaLabelledby() ?? null) : null',
     '[attr.aria-describedby]': 'isRange() ? (ariaDescribedby() ?? null) : null',
+    // `aria-invalid` is announced on each `role="slider"` thumb, never on the host.
+    '[attr.aria-invalid]': 'null',
   },
 })
 export class AndesSlider implements ControlValueAccessor {
@@ -306,6 +365,100 @@ export class AndesSlider implements ControlValueAccessor {
   /** Focus the first handle once the slider has rendered. */
   readonly autoFocus = input(false, { transform: booleanAttribute });
 
+  /**
+   * Name under which the value is submitted with a native `<form>`. When set, the slider
+   * renders one `<input type="hidden">` per handle (in handle order, after the control), so
+   * `FormData` and a plain submit carry the value without any forms-API glue. A single slider
+   * submits one entry; a range / multi-handle slider repeats the same `name` once per handle -
+   * the native convention for repeated fields (`formData.getAll(name)` returns them in handle
+   * order), so no `name[]` or indexed names are invented. A disabled slider, or a disabled
+   * handle, submits nothing for the affected inputs (like any disabled field), while a
+   * read-only slider still submits. Unset renders no inputs at all.
+   */
+  readonly name = input<string | undefined>(undefined);
+
+  /**
+   * Smallest gap, in value units, that two neighbouring handles keep (default 0: they may
+   * stack). Handles can never come closer, whether moved by dragging, the keyboard, a rail
+   * or mark click, or - in an editable range - when a new handle is added: a handle stops at
+   * the neighbour plus this gap, and a rail click that would land closer is moved out to the
+   * allowed spot (or, with no room between its neighbours at all, falls back to moving the
+   * nearest handle). The gap is aligned to the `step` grid (or to the marks when snapping to
+   * them), so a `minDistance` that is not a multiple of `step` is rounded up to the next
+   * step. An incoming value that is closer than the gap is pushed apart (towards `max`, or
+   * towards `min` at the top end). With `range.draggableTrack` the whole range moves rigidly,
+   * so its spacing - already at least `minDistance` - is untouched. In an editable range it
+   * also bounds `maxCount`: only `floor((max - min) / minDistance) + 1` handles can fit, and a
+   * click that finds no room adds nothing even below `maxCount`. When the handles cannot all
+   * fit (`minDistance * (count - 1) > max - min`) the gap is not enforced. Meaningless for a
+   * single handle.
+   */
+  readonly minDistance = input(0, { transform: numberAttribute });
+
+  /**
+   * Validation tier: `error` paints the slider in the danger color and sets `aria-invalid` on
+   * every handle (the same result as `aria-invalid="true"`); `warning` only paints it in the
+   * warning color. Forced-colors mode keeps the system palette, so only `aria-invalid`
+   * carries an error there.
+   */
+  readonly status = input<AndesSliderStatus | undefined>(undefined);
+
+  /** Marks every handle as failing validation (`aria-invalid`) and paints it like `status="error"`. */
+  readonly ariaInvalid = input(false, {
+    alias: 'aria-invalid',
+    transform: booleanAttribute,
+  });
+
+  /**
+   * The value cannot change by pointer or keyboard, yet nothing is dimmed: the handles stay
+   * focusable and are announced as read-only (`aria-readonly`), and the hover / press
+   * feedback is dropped (the value tooltip, which only reads the value, still shows). Unlike
+   * `disabled`, a read-only slider still submits its `name`; programmatic writes (`value`,
+   * forms) still apply.
+   */
+  readonly readOnly = input(false, { transform: booleanAttribute });
+
+  /** Track thickness and thumb size (`md`, the default, is the original look). */
+  readonly size = input<AndesSliderSize>('md');
+
+  /**
+   * Replaces the inside of every handle (the default ring-and-knob circle) with a template;
+   * the handle element itself keeps its `role="slider"`, position, hit area and focus ring.
+   * The template renders centered on the handle's box, so it can overflow it (size it with
+   * `--andes-slider-thumb-size` on the slider to grow the hit area too); it is decorative
+   * (`aria-hidden`), a screen reader still reads the value from the handle. Context:
+   * `$implicit` (the value), `index`, `dragging` and `focused`.
+   */
+  readonly thumbTemplate = input<
+    TemplateRef<AndesSliderThumbContext> | undefined
+  >(undefined);
+
+  /**
+   * Whether pressing the rail (outside a handle) jumps the nearest handle there. `false` keeps
+   * dragging a handle and the keyboard working but ignores rail presses: a handle only moves
+   * when grabbed. It also stops an editable range from adding a handle on a rail click, while
+   * dragging a `draggableTrack` range by its filled segment and clicking a mark label still
+   * work (a mark is an explicit target, not the rail).
+   */
+  readonly trackClick = input(true, { transform: booleanAttribute });
+
+  /**
+   * While dragging with the pointer, the value snaps to the nearest `marks` value that lies
+   * within `snapThreshold` of it - a magnet over a fine `step`. Pointer only: the keyboard and
+   * mark clicks are unaffected (a magnet would trap the arrow keys on the mark). A mark that is
+   * off the `step` grid is still rounded to the grid afterwards. Has no effect without marks,
+   * and none when the thumbs already only sit on marks (`step` is `null`, or `dots` with marks).
+   */
+  readonly snapToMarks = input(false, { transform: booleanAttribute });
+
+  /**
+   * Reach of the `snapToMarks` magnet in value units on each side of a mark. Unset, it is one
+   * `step`.
+   */
+  readonly snapThreshold = input<number | null, unknown>(null, {
+    transform: nullableNumberAttribute,
+  });
+
   readonly ariaLabel = input<string | undefined>(undefined, {
     alias: 'aria-label',
   });
@@ -330,10 +483,36 @@ export class AndesSlider implements ControlValueAccessor {
   /** Fires once when a drag, mark click or keystroke interaction ends. */
   readonly valueCommit = output<AndesSliderValue>();
 
+  /**
+   * A handle gained focus. Carries the handle's index and the native event (`focus` does not
+   * bubble, so a `(focus)` listener on `<andes-slider>` would never fire). Not named `focus`:
+   * that is the method below.
+   */
+  readonly focused = output<AndesSliderFocusEvent>();
+
+  /** A handle lost focus - the counterpart of `focused`. */
+  readonly blurred = output<AndesSliderFocusEvent>();
+
+  /**
+   * A pointer drag begins (pointer only: keyboard steps are not drags). Fires on the press,
+   * before the `valueChange` it causes, so an app can pause a video or a live graph while the
+   * handle is held. For a `draggableTrack` range `index` is `ANDES_SLIDER_TRACK_DRAG` (-1).
+   * Mark clicks and presses ignored by `readOnly`, `disabled` or `trackClick` do not fire it.
+   */
+  readonly dragStart = output<AndesSliderDragEvent>();
+
+  /**
+   * The pointer drag ended (release or cancel). Fires after the last `valueChange` and before
+   * `valueCommit`, with the final value, so the app can resume what `dragStart` paused.
+   */
+  readonly dragEnd = output<AndesSliderDragEvent>();
+
   protected readonly dragging = signal(false);
   protected readonly activeIndex = signal(0);
   /** Index of a handle dragged far enough off an editable track to be dropped on release. */
   protected readonly removingIndex = signal<number | null>(null);
+  /** Index of the handle that holds focus, or `null`. */
+  protected readonly focusedIndex = signal<number | null>(null);
   private readonly cvaDisabled = signal(false);
   private drag: AndesSliderDrag | null = null;
 
@@ -367,6 +546,22 @@ export class AndesSlider implements ControlValueAccessor {
   protected readonly isDisabled = computed(
     () => this.disabled() === true || this.cvaDisabled(),
   );
+
+  /** `aria-invalid` and `status="error"` are one state: same look, same announcement. */
+  protected readonly isInvalid = computed(
+    () => this.ariaInvalid() || this.status() === 'error',
+  );
+
+  /** The status the stylesheet paints: `error` (also from `aria-invalid`), `warning` or none. */
+  protected readonly visualStatus = computed<AndesSliderStatus | null>(() =>
+    this.isInvalid() ? 'error' : this.status() === 'warning' ? 'warning' : null,
+  );
+
+  /** `minDistance`, never negative or non-finite. */
+  private readonly distance = computed(() => {
+    const distance = this.minDistance();
+    return Number.isFinite(distance) ? Math.max(0, distance) : 0;
+  });
 
   protected readonly tooltipSide = computed(
     () =>
@@ -414,6 +609,7 @@ export class AndesSlider implements ControlValueAccessor {
       readonly step: number | null;
       readonly marksOnly: boolean;
       readonly markValues: readonly number[];
+      readonly distance: number;
     },
     number[]
   >({
@@ -428,6 +624,7 @@ export class AndesSlider implements ControlValueAccessor {
       step: this.step(),
       marksOnly: this.snapsToMarksOnly(),
       markValues: this.markValues(),
+      distance: this.distance(),
     }),
     computation: (source, previous) => {
       const incoming = !previous || previous.source.value !== source.value;
@@ -498,6 +695,9 @@ export class AndesSlider implements ControlValueAccessor {
     const isRange = this.isRange();
     const perThumbLabel = this.thumbAriaLabel();
     const removing = this.removingIndex();
+    const dragging = this.dragging();
+    const activeIndex = this.activeIndex();
+    const focusedIndex = this.focusedIndex();
 
     return values.map((value, index) => {
       const formatted = formatter?.(value, index);
@@ -521,6 +721,9 @@ export class AndesSlider implements ControlValueAccessor {
         ariaLabel = null;
       }
 
+      const thumbDragging = dragging && activeIndex === index;
+      const thumbFocused = focusedIndex === index;
+
       return {
         index,
         value,
@@ -532,6 +735,14 @@ export class AndesSlider implements ControlValueAccessor {
         ariaDescribedby: isRange ? null : (this.ariaDescribedby() ?? null),
         disabled: this.isThumbDisabled(index),
         removing: removing === index,
+        dragging: thumbDragging,
+        focused: thumbFocused,
+        context: {
+          $implicit: value,
+          index,
+          dragging: thumbDragging,
+          focused: thumbFocused,
+        },
       };
     });
   });
@@ -603,8 +814,14 @@ export class AndesSlider implements ControlValueAccessor {
 
   // Public methods -----------------------------------------------------------
 
-  /** Moves focus to a handle (the first one by default). */
+  /**
+   * Moves focus to a handle (the first one by default). Does nothing for a handle that does
+   * not exist or is disabled, like a native disabled control.
+   */
   focus(index = 0): void {
+    if (this.isThumbDisabled(index)) {
+      return;
+    }
     this.thumbRefs()[index]?.nativeElement.focus();
   }
 
@@ -646,7 +863,7 @@ export class AndesSlider implements ControlValueAccessor {
   // Pointer ------------------------------------------------------------------
 
   protected onPointerDown(event: PointerEvent): void {
-    if (this.isDisabled()) {
+    if (this.isDisabled() || this.readOnly()) {
       return;
     }
     // Primary button only; `button` is absent on synthetic events in tests.
@@ -658,7 +875,7 @@ export class AndesSlider implements ControlValueAccessor {
     if (raw === undefined) {
       return;
     }
-    const next = this.snap(raw);
+    const next = this.pointerValue(raw);
     const values = this.values();
     const pressedThumb = this.thumbIndexFromTarget(event.target);
 
@@ -671,7 +888,15 @@ export class AndesSlider implements ControlValueAccessor {
       values.every((_, index) => !this.isThumbDisabled(index))
     ) {
       this.drag = { kind: 'track', startRaw: raw, startValues: values };
-      this.startDrag(event);
+      this.startDrag(event, {
+        index: ANDES_SLIDER_TRACK_DRAG,
+        value: [...values],
+      });
+      return;
+    }
+
+    // `trackClick="false"`: only a grabbed handle (or a draggable segment, above) moves.
+    if (pressedThumb === null && !this.trackClick()) {
       return;
     }
 
@@ -682,15 +907,18 @@ export class AndesSlider implements ControlValueAccessor {
     ) {
       const insertAt = values.findIndex((value) => value > next);
       const index = insertAt < 0 ? values.length : insertAt;
-      const updated = [...values];
-      updated.splice(index, 0, next);
-      this.activeIndex.set(index);
-      this.drag = { kind: 'thumb', tied: null };
-      this.startDrag(event);
-      this.setValues(updated);
-      // The new handle only exists after the next render.
-      afterNextRender(() => this.focus(index), { injector: this.injector });
-      return;
+      const slot = this.slotFor(values, index, next);
+      if (slot !== null) {
+        const updated = [...values];
+        updated.splice(index, 0, slot);
+        this.activeIndex.set(index);
+        this.drag = { kind: 'thumb', tied: null };
+        this.startDrag(event, { index, value: slot });
+        this.setValues(updated);
+        // The new handle only exists after the next render.
+        afterNextRender(() => this.focus(index), { injector: this.injector });
+        return;
+      }
     }
 
     let index: number | null;
@@ -713,14 +941,14 @@ export class AndesSlider implements ControlValueAccessor {
       kind: 'thumb',
       tied: tied.length > 1 && next === values[index] ? tied : null,
     };
-    this.startDrag(event);
+    this.startDrag(event, { index, value: this.valueAt(index, next) });
     this.thumbRefs()[index]?.nativeElement.focus();
     this.setValueAt(index, next);
   }
 
   protected onPointerMove(event: PointerEvent): void {
     const drag = this.drag;
-    if (!this.dragging() || !drag || this.isDisabled()) {
+    if (!this.dragging() || !drag || this.isDisabled() || this.readOnly()) {
       return;
     }
 
@@ -734,7 +962,7 @@ export class AndesSlider implements ControlValueAccessor {
       return;
     }
 
-    const next = this.snap(raw);
+    const next = this.pointerValue(raw);
     let index = this.activeIndex();
     if (drag.tied) {
       const current = this.values()[index];
@@ -773,6 +1001,16 @@ export class AndesSlider implements ControlValueAccessor {
       control.releasePointerCapture(event.pointerId);
     }
 
+    // Read before the drop below: the payload names the handle as it was released.
+    const values = this.values();
+    const ended: AndesSliderDragEvent =
+      this.drag?.kind === 'track'
+        ? { index: ANDES_SLIDER_TRACK_DRAG, value: [...values] }
+        : {
+            index: this.activeIndex(),
+            value: values[this.activeIndex()] ?? values[0],
+          };
+
     this.dragging.set(false);
     this.drag = null;
     const removing = this.removingIndex();
@@ -780,11 +1018,12 @@ export class AndesSlider implements ControlValueAccessor {
       this.removingIndex.set(null);
       this.removeAt(removing);
     }
+    this.dragEnd.emit(ended);
     this.commit();
   }
 
   protected onMarkClick(value: number): void {
-    if (this.isDisabled()) {
+    if (this.isDisabled() || this.readOnly()) {
       return;
     }
     const index = this.nearestIndex(value);
@@ -796,7 +1035,8 @@ export class AndesSlider implements ControlValueAccessor {
     this.commit();
   }
 
-  private startDrag(event: PointerEvent): void {
+  private startDrag(event: PointerEvent, started: AndesSliderDragEvent): void {
+    this.dragStart.emit(started);
     this.dragging.set(true);
     this.removingIndex.set(null);
 
@@ -891,7 +1131,12 @@ export class AndesSlider implements ControlValueAccessor {
   // Keyboard -----------------------------------------------------------------
 
   protected onKeydown(event: KeyboardEvent, index: number): void {
-    if (this.isDisabled() || this.isThumbDisabled(index) || !this.keyboard()) {
+    if (
+      this.isDisabled() ||
+      this.readOnly() ||
+      this.isThumbDisabled(index) ||
+      !this.keyboard()
+    ) {
       return;
     }
 
@@ -960,8 +1205,17 @@ export class AndesSlider implements ControlValueAccessor {
     this.commit();
   }
 
-  protected onBlur(): void {
+  protected onThumbFocus(event: FocusEvent, index: number): void {
+    this.focusedIndex.set(index);
+    this.focused.emit({ index, event });
+  }
+
+  protected onThumbBlur(event: FocusEvent, index: number): void {
+    if (this.focusedIndex() === index) {
+      this.focusedIndex.set(null);
+    }
     this.onTouchedFn();
+    this.blurred.emit({ index, event });
   }
 
   /** One `step` away from `current`, or one mark away when the slider snaps to marks only. */
@@ -1032,7 +1286,147 @@ export class AndesSlider implements ControlValueAccessor {
       }
     }
 
-    return counted.map((value) => this.snap(value)).sort((a, b) => a - b);
+    return this.spread(
+      counted.map((value) => this.snap(value)).sort((a, b) => a - b),
+    );
+  }
+
+  /** `minDistance` for `count` handles, or 0 when it is unset or the handles cannot all fit. */
+  private gapFor(count: number): number {
+    const distance = this.distance();
+    if (distance <= 0 || count < 2) {
+      return 0;
+    }
+    const span = Math.abs(this.max() - this.min());
+    return distance * (count - 1) <= span + EPSILON ? distance : 0;
+  }
+
+  /** Smallest allowed value that is `>= value` (`Infinity` when none is). */
+  private ceilToGrid(value: number): number {
+    const low = Math.min(this.min(), this.max());
+    const high = Math.max(this.min(), this.max());
+    if (this.snapsToMarksOnly()) {
+      const mark = this.markValues()
+        .filter((candidate) => candidate >= value - EPSILON)
+        .reduce((best, candidate) => Math.min(best, candidate), Infinity);
+      return mark <= high ? mark : Number.POSITIVE_INFINITY;
+    }
+    if (value > high + EPSILON) {
+      return Number.POSITIVE_INFINITY;
+    }
+    const step = this.step();
+    if (step === null || step <= 0) {
+      return Math.max(value, low);
+    }
+    const ratio = (value - this.min()) / step;
+    const nearest = Math.round(ratio);
+    const index =
+      Math.abs(ratio - nearest) < EPSILON ? nearest : Math.ceil(ratio);
+    const onGrid = roundTo(this.min() + index * step, this.decimals());
+    // A max that is not on the grid is still the next reachable value up to it.
+    return onGrid > high ? high : Math.max(onGrid, low);
+  }
+
+  /** Largest allowed value that is `<= value` (`-Infinity` when none is). */
+  private floorToGrid(value: number): number {
+    const low = Math.min(this.min(), this.max());
+    const high = Math.max(this.min(), this.max());
+    if (this.snapsToMarksOnly()) {
+      const mark = this.markValues()
+        .filter((candidate) => candidate <= value + EPSILON)
+        .reduce((best, candidate) => Math.max(best, candidate), -Infinity);
+      return mark >= low ? mark : Number.NEGATIVE_INFINITY;
+    }
+    if (value < low - EPSILON) {
+      return Number.NEGATIVE_INFINITY;
+    }
+    if (value >= high) {
+      return high;
+    }
+    const step = this.step();
+    if (step === null || step <= 0) {
+      return value;
+    }
+    const ratio = (value - this.min()) / step;
+    const nearest = Math.round(ratio);
+    const index =
+      Math.abs(ratio - nearest) < EPSILON ? nearest : Math.floor(ratio);
+    return Math.max(roundTo(this.min() + index * step, this.decimals()), low);
+  }
+
+  /**
+   * Pushes an ascending list apart so neighbours are at least `minDistance` away: upwards
+   * first, and - when that runs past `max` - packed back down against it. Returned unchanged
+   * when the grid leaves no valid arrangement.
+   */
+  private spread(values: number[]): number[] {
+    const gap = this.gapFor(values.length);
+    if (gap === 0) {
+      return values;
+    }
+
+    const high = Math.max(this.min(), this.max());
+    const low = Math.min(this.min(), this.max());
+    const out = [...values];
+    for (let i = 1; i < out.length; i++) {
+      out[i] = Math.max(out[i], this.ceilToGrid(out[i - 1] + gap));
+    }
+    if (out.every((value) => value <= high)) {
+      return out;
+    }
+
+    out[out.length - 1] = this.floorToGrid(Math.min(out[out.length - 1], high));
+    for (let i = out.length - 2; i >= 0; i--) {
+      out[i] = Math.min(out[i], this.floorToGrid(out[i + 1] - gap));
+    }
+    return out.every((value) => Number.isFinite(value) && value >= low)
+      ? out
+      : values;
+  }
+
+  /**
+   * Where a handle added at `index` (between `values[index - 1]` and `values[index]`) may sit
+   * for a press at `wanted`, or `null` when `minDistance` leaves no room there.
+   */
+  private slotFor(
+    values: readonly number[],
+    index: number,
+    wanted: number,
+  ): number | null {
+    const distance = this.distance();
+    if (distance <= 0) {
+      return wanted;
+    }
+    const span = Math.abs(this.max() - this.min());
+    if (distance * values.length > span + EPSILON) {
+      return null;
+    }
+    const lo =
+      index > 0 ? this.ceilToGrid(values[index - 1] + distance) : -Infinity;
+    const hi =
+      index < values.length
+        ? this.floorToGrid(values[index] - distance)
+        : Infinity;
+    return lo > hi ? null : clamp(wanted, lo, hi);
+  }
+
+  /** A pointer position as a value: snapped to the grid, then pulled to a `snapToMarks` mark. */
+  private pointerValue(raw: number): number {
+    const value = this.snap(raw);
+    if (!this.snapToMarks() || this.snapsToMarksOnly()) {
+      return value;
+    }
+    const threshold = this.snapThreshold() ?? this.step() ?? 0;
+    let best = value;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    for (const mark of this.markValues()) {
+      const distance = Math.abs(mark - value);
+      if (distance <= threshold + EPSILON && distance < bestDistance) {
+        best = mark;
+        bestDistance = distance;
+      }
+    }
+    return best;
   }
 
   /** Clamps to `[min, max]`, then snaps to the step grid (or to the nearest mark). */
@@ -1061,16 +1455,32 @@ export class AndesSlider implements ControlValueAccessor {
     return roundTo(value, this.decimals());
   }
 
+  /** The value handle `index` takes for `next`: snapped, and held off its neighbours. */
+  private valueAt(index: number, next: number): number {
+    const values = this.values();
+    const gap = this.gapFor(values.length);
+    // Neither handle may cross its neighbours, nor come closer than `minDistance`.
+    let floor = Number.NEGATIVE_INFINITY;
+    let ceiling = Number.POSITIVE_INFINITY;
+    if (gap === 0) {
+      floor = index > 0 ? values[index - 1] : floor;
+      ceiling = index < values.length - 1 ? values[index + 1] : ceiling;
+    } else {
+      floor = index > 0 ? this.ceilToGrid(values[index - 1] + gap) : floor;
+      ceiling =
+        index < values.length - 1
+          ? this.floorToGrid(values[index + 1] - gap)
+          : ceiling;
+    }
+    // No grid position between the neighbours: the handle stays where it is.
+    return floor > ceiling
+      ? values[index]
+      : clamp(this.snap(next), floor, ceiling);
+  }
+
   private setValueAt(index: number, next: number): void {
-    const current = this.values();
-    const updated = [...current];
-    // Neither handle may cross its neighbours.
-    const floor = index > 0 ? updated[index - 1] : Number.NEGATIVE_INFINITY;
-    const ceiling =
-      index < updated.length - 1
-        ? updated[index + 1]
-        : Number.POSITIVE_INFINITY;
-    updated[index] = clamp(this.snap(next), floor, ceiling);
+    const updated = [...this.values()];
+    updated[index] = this.valueAt(index, next);
     this.setValues(updated);
   }
 

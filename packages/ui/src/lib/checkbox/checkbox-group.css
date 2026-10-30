@@ -1,0 +1,58 @@
+/* The `andes-checkbox-group` classes land on this component's OWN host element (it doubles as
+   the ARIA `role="group"` container - see checkbox-group.ts), so these selectors have to use
+   :host()/:host - under emulated encapsulation the host carries an `_nghost-*` attribute, not
+   the `_ngcontent-*` one Angular appends to plain class selectors, so a bare
+   `.andes-checkbox-group { ... }` rule would never match it. */
+:host {
+  display: flex;
+  /* 8px between items. */
+  gap: var(--andes-space-2);
+}
+
+:host(.andes-checkbox-group--vertical) {
+  flex-direction: column;
+}
+
+:host(.andes-checkbox-group--horizontal) {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+/* Individual items keep their own `--disabled` styling through the shared group state; this
+   only stops the group as a whole from receiving pointer events. */
+:host(.andes-checkbox-group--disabled) {
+  cursor: not-allowed;
+}
+
+/* Touch screens: each item's input reaches 44px (see checkbox.css), so the rows move apart
+   enough (22px line + 22px gap) that neighbouring targets never overlap. Cards and buttons
+   are large targets already. */
+@media (pointer: coarse) {
+  :host(:not(.andes-checkbox-group--card):not(.andes-checkbox-group--button)) {
+    gap: calc(2.75rem - 1.375rem);
+  }
+}
+
+/* `columns`: a grid of N equal columns (the count arrives as a custom property bound on the
+   host), each item filling its cell. */
+:host(.andes-checkbox-group--columns) {
+  display: grid;
+  grid-template-columns: repeat(
+    var(--andes-checkbox-group-columns, 1),
+    minmax(0, 1fr)
+  );
+}
+
+/* Cards stand apart a little more than plain rows, so their borders never touch. */
+:host(.andes-checkbox-group--card) {
+  gap: var(--andes-space-3);
+}
+
+/* Button variant: one segmented control - no gap (adjacent buttons overlap their borders, see
+   checkbox.css), no wrapping, only as wide as its buttons. Mirrors AndesRadioGroup's button
+   option type. In `columns` it stays a grid of separate buttons. */
+:host(.andes-checkbox-group--button:not(.andes-checkbox-group--columns)) {
+  display: inline-flex;
+  gap: 0;
+  flex-wrap: nowrap;
+}

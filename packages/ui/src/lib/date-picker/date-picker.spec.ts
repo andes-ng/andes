@@ -1669,6 +1669,7 @@ describe('AndesDatePicker', () => {
       const view = harness(fixture);
       const panelQuery = <T extends HTMLElement>(selector: string) =>
         view.panel()?.querySelector<T>(selector) ?? null;
+      let pointerMoves = 0;
       return {
         ...view,
         host: fixture.componentInstance,
@@ -1701,6 +1702,18 @@ describe('AndesDatePicker', () => {
           fixture.detectChanges();
         },
         hover: (element: Element | null, type = 'mouseenter') => {
+          if (type === 'mouseenter') {
+            // The pointer travels onto the element: the picker only previews hovered
+            // days after a real pointer move over the panel.
+            pointerMoves++;
+            element?.dispatchEvent(
+              new MouseEvent('pointermove', {
+                bubbles: true,
+                screenX: pointerMoves,
+                screenY: pointerMoves,
+              }),
+            );
+          }
           element?.dispatchEvent(new MouseEvent(type));
           fixture.detectChanges();
         },

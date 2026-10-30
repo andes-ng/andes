@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
+import { expectLength } from '../../testing/computed-style';
 import {
   AndesSkeleton,
   AndesSkeletonAvatarConfig,
@@ -377,11 +378,11 @@ describe('AndesSkeleton (composite)', () => {
     const row = getComputedStyle(rows()[0]);
 
     // 16px bar + 4px half-leading either side = one 24px title line.
-    expect(title.height).toBe('1rem');
-    expect(title.marginTop).toBe('0.25rem');
-    expect(title.marginBottom).toBe('0.25rem');
+    expectLength(title.height, '1rem');
+    expectLength(title.marginTop, '0.25rem');
+    expectLength(title.marginBottom, '0.25rem');
     // 14px bars on a 22px pitch, with the first and last line's half-leading as padding.
-    expect(row.height).toBe('0.875rem');
+    expectLength(row.height, '0.875rem');
     expect(paragraph.getPropertyValue('gap')).toBe('var(--andes-space-2)');
     expect(paragraph.getPropertyValue('padding-block')).toBe(
       'var(--andes-space-1)',

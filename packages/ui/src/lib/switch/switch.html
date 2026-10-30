@@ -1,51 +1,92 @@
-<button
-  #control
-  type="button"
-  role="switch"
-  data-slot="switch"
-  [attr.id]="id()"
-  [attr.data-size]="size()"
-  [attr.data-checked]="isChecked() ? '' : null"
-  [attr.data-unchecked]="isChecked() ? null : ''"
-  [attr.data-disabled]="isDisabled() ? '' : null"
-  [attr.data-readonly]="readonly() ? '' : null"
-  [attr.data-required]="required() ? '' : null"
-  [attr.data-loading]="loading() ? '' : null"
-  [attr.aria-checked]="isChecked()"
-  [attr.aria-required]="required() || null"
-  [attr.aria-readonly]="readonly() || null"
-  [attr.aria-busy]="loading() || null"
-  [attr.aria-label]="ariaLabel()"
-  [attr.aria-labelledby]="ariaLabelledby()"
-  [attr.aria-describedby]="ariaDescribedby()"
-  [attr.aria-invalid]="ariaInvalid() || null"
-  [disabled]="isDisabled()"
-  [class]="classes()"
-  (click)="onClick($event)"
-  (blur)="onBlur()"
->
-  <span class="andes-switch__thumb" data-slot="switch-thumb">
-    @if (loading()) {
-    <span class="andes-switch__spinner" aria-hidden="true"></span>
-    }
-  </span>
-  <!-- Both labels are always rendered, stacked in one grid cell, so the track is sized to the
+<!-- The rule only recognizes native form controls and a `for` id; a `<button role="switch">`
+     inside the label is a real labelable control, which is what the rule is after. -->
+<!-- eslint-disable-next-line @angular-eslint/template/label-has-associated-control -->
+<label [class]="fieldClasses()" data-slot="switch-field">
+  <button
+    #control
+    type="button"
+    role="switch"
+    data-slot="switch"
+    [attr.id]="id()"
+    [attr.data-size]="size()"
+    [attr.data-checked]="isChecked() ? '' : null"
+    [attr.data-unchecked]="isChecked() ? null : ''"
+    [attr.data-disabled]="isDisabled() ? '' : null"
+    [attr.data-readonly]="readonly() ? '' : null"
+    [attr.data-required]="required() ? '' : null"
+    [attr.data-loading]="isBusy() ? '' : null"
+    [attr.aria-checked]="isChecked()"
+    [attr.aria-required]="required() || null"
+    [attr.aria-readonly]="readonly() || null"
+    [attr.aria-busy]="isBusy() || null"
+    [attr.aria-label]="ariaLabel()"
+    [attr.aria-labelledby]="effectiveLabelledby()"
+    [attr.aria-describedby]="effectiveDescribedby()"
+    [attr.aria-invalid]="isInvalid() || null"
+    [disabled]="isDisabled()"
+    [class]="classes()"
+    (click)="onClick($event)"
+    (focus)="onFocus($event)"
+    (blur)="onBlur($event)"
+  >
+    <span class="andes-switch__thumb" data-slot="switch-thumb">
+      @if (isBusy()) {
+      <span class="andes-switch__spinner" aria-hidden="true"></span>
+      } @else if (thumbIcon(); as icon) {
+      <span class="andes-switch__thumb-icon" aria-hidden="true">
+        <ng-container [ngTemplateOutlet]="icon" />
+      </span>
+      }
+    </span>
+    <!-- Both labels are always rendered, stacked in one grid cell, so the track is sized to the
        wider of the two and doesn't jump on toggle; the inactive one is only visually hidden.
-       Each select appears exactly once; the string inputs are ng-content fallback content. -->
-  <span class="andes-switch__inner" aria-hidden="true">
-    <span
-      class="andes-switch__content andes-switch__content--checked"
-      [attr.data-active]="isChecked() ? '' : null"
-    >
-      <ng-content select="[slot=checked]">{{ checkedChildren() }}</ng-content>
-    </span>
-    <span
-      class="andes-switch__content andes-switch__content--unchecked"
-      [attr.data-active]="isChecked() ? null : ''"
-    >
-      <ng-content select="[slot=unchecked]"
-        >{{ unCheckedChildren() }}</ng-content
+       Each select appears exactly once; the string and template inputs are ng-content fallback
+       content. -->
+    <span class="andes-switch__inner" aria-hidden="true">
+      <span
+        class="andes-switch__content andes-switch__content--checked"
+        [attr.data-active]="isChecked() ? '' : null"
       >
+        <ng-content select="[slot=checked]"
+          >@if (checkedTemplate(); as template) {<ng-container
+            [ngTemplateOutlet]="template"
+          />} @else { {{ checkedText() }} }</ng-content
+        >
+      </span>
+      <span
+        class="andes-switch__content andes-switch__content--unchecked"
+        [attr.data-active]="isChecked() ? null : ''"
+      >
+        <ng-content select="[slot=unchecked]"
+          >@if (uncheckedTemplate(); as template) {<ng-container
+            [ngTemplateOutlet]="template"
+          />} @else { {{ uncheckedText() }} }</ng-content
+        >
+      </span>
     </span>
+  </button>
+  <!-- The label and description share one box that is hidden while both are empty, so a switch
+       with no text keeps exactly the footprint of the bare track. -->
+  <span class="andes-switch-field__text">
+    <span
+      #labelText
+      class="andes-switch-field__label"
+      [attr.id]="hasDescription() ? labelTextId : null"
+      ><ng-content select="[slot=label]" /><ng-content
+    /></span>
+    <span
+      #description
+      class="andes-switch-field__description"
+      [attr.id]="hasDescription() ? descriptionId : null"
+      ><ng-content select="[slot=description]"
+    /></span>
   </span>
-</button>
+  @if (submitsValue()) {
+  <input
+    type="hidden"
+    [attr.name]="name()"
+    [value]="value()"
+    [disabled]="isDisabled()"
+  />
+  }
+</label>

@@ -332,7 +332,14 @@ describe('AndesSwitch', () => {
     ) as HTMLButtonElement;
 
     expect(label.control).toBe(button);
-    expect(Array.from(button.labels ?? [])).toEqual([label]);
+    // The component's own wrapper <label> is a second label of the same button; it carries no
+    // text here, so the external one still provides the whole name.
+    const labels = Array.from(button.labels ?? []);
+    expect(labels).toHaveLength(2);
+    expect(labels).toContain(label);
+    expect(labels.filter((item) => item !== label)[0].textContent?.trim()).toBe(
+      '',
+    );
 
     label.click();
     fixture.detectChanges();

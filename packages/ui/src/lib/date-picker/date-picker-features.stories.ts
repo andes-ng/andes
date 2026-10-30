@@ -75,3 +75,86 @@ export const Pickers: Story = {
     </div>`,
   }),
 };
+
+/**
+ * Opening and focus on init. `defaultOpen` opens the panel once after the first render
+ * (as if the user had opened it), `autoFocus` focuses the input like a native
+ * `autofocus` (browser only, never during server rendering), and `panelClass` puts
+ * classes on the panel, which renders outside the picker - here a page rule tints its
+ * border.
+ */
+export const OpeningAndFocus: Story = {
+  render: () => ({
+    props: { febMonth: new Date(2024, 1, 1), extraClasses: ['story-panel'] },
+    // The panel renders in the overlay container, outside this story's encapsulation.
+    styles: [
+      '::ng-deep .story-panel { outline: 2px dashed var(--andes-color-primary); outline-offset: 2px; }',
+    ],
+    template: `<div style="min-height: 26rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-start;">
+      <andes-date-picker locale="en-US" aria-label="Opens on load" defaultOpen [panelClass]="extraClasses" [defaultMonth]="febMonth" />
+      <andes-date-picker locale="en-US" aria-label="Focused on load" autoFocus placeholder="Focused on load" />
+    </div>`,
+  }),
+};
+
+/**
+ * What leaving the field does with typed text. Type a date (`2024-02-20`) or a bad one
+ * (`Feb 31, 2024`) and press Tab:
+ *
+ * - The default commits valid text, unless the picker needs confirmation (`needConfirm`
+ *   or `showTime`), where it is dropped; invalid text is dropped either way.
+ * - `changeOnBlur` commits valid text - and pending calendar picks - even then.
+ * - `preserveInvalidOnBlur` keeps invalid text in the input to correct, value unchanged.
+ */
+export const BlurCommit: Story = {
+  render: () => ({
+    moduleMetadata: { imports: [FormsModule, JsonPipe] },
+    props: {
+      plainValue: FEB_15,
+      blurValue: FEB_15,
+      bothValue: FEB_15,
+      caption:
+        'margin: 0 0 0.375rem; font: 0.75rem/1.25rem var(--andes-font-family), sans-serif; color: var(--andes-color-muted-foreground);',
+      log: 'margin: 0.25rem 0 0; font: 0.75rem/1.5 ui-monospace, monospace;',
+    },
+    template: `<div style="display: flex; flex-direction: column; gap: 1rem; width: 20rem; min-height: 26rem;">
+      <div>
+        <p [style]="caption">needConfirm (default blur)</p>
+        <andes-date-picker locale="en-US" aria-label="needConfirm, default blur" needConfirm [(ngModel)]="plainValue" />
+        <pre [style]="log">{{ plainValue | json }}</pre>
+      </div>
+      <div>
+        <p [style]="caption">needConfirm + changeOnBlur</p>
+        <andes-date-picker locale="en-US" aria-label="needConfirm with changeOnBlur" needConfirm changeOnBlur [(ngModel)]="blurValue" />
+        <pre [style]="log">{{ blurValue | json }}</pre>
+      </div>
+      <div>
+        <p [style]="caption">changeOnBlur + preserveInvalidOnBlur</p>
+        <andes-date-picker locale="en-US" aria-label="changeOnBlur with preserveInvalidOnBlur" changeOnBlur preserveInvalidOnBlur [(ngModel)]="bothValue" />
+        <pre [style]="log">{{ bothValue | json }}</pre>
+      </div>
+    </div>`,
+  }),
+};
+
+/**
+ * `captionLayout` swaps the calendar's caption for month and year `AndesSelect`s, to
+ * jump far without paging: `dropdown` (both), `dropdown-years` (a year select beside the
+ * month name). The years come from `min`/`max` (or `startYear`/`endYear`), and months
+ * outside the bounds are disabled; a range's two months each get their own selects.
+ */
+export const CaptionDropdowns: Story = {
+  render: () => ({
+    props: {
+      earliest: new Date(1940, 0, 1),
+      latest: new Date(),
+      bookingStart: new Date(2024, 1, 10),
+      bookingEnd: new Date(2025, 5, 30),
+    },
+    template: `<div style="min-height: 26rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-start;">
+      <andes-date-picker locale="en-US" aria-label="Date of birth" placeholder="Date of birth" captionLayout="dropdown" [min]="earliest" [max]="latest" />
+      <andes-date-picker locale="en-US" aria-label="Year select only" placeholder="Year select only" captionLayout="dropdown-years" [startYear]="2000" [endYear]="2030" />
+      <andes-date-picker mode="range" locale="en-US" aria-label="Booking window" captionLayout="dropdown" [min]="bookingStart" [max]="bookingEnd" />
+    </div>`,
+  }),
+};

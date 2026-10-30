@@ -21,6 +21,14 @@ const meta: Meta<AndesRadioGroup> = {
     size: { control: 'inline-radio', options: ['sm', 'md', 'lg'] },
     block: { control: 'boolean' },
     labelPlacement: { control: 'inline-radio', options: ['end', 'start'] },
+    status: {
+      control: 'inline-radio',
+      options: [undefined, 'error', 'warning'],
+    },
+    variant: { control: 'inline-radio', options: ['default', 'card'] },
+    readOnly: { control: 'boolean' },
+    loop: { control: 'boolean' },
+    columns: { control: 'number' },
     selectionChange: { action: 'selectionChange' },
   },
   args: {
@@ -31,12 +39,15 @@ const meta: Meta<AndesRadioGroup> = {
     size: 'md',
     block: false,
     labelPlacement: 'end',
+    readOnly: false,
+    loop: true,
+    variant: 'default',
   },
   render: (args) => ({
     moduleMetadata: { imports: [AndesRadio] },
     props: args,
     template: `
-      <andes-radio-group aria-label="Plan" [name]="name" [disabled]="disabled" [required]="required" [orientation]="orientation" [optionType]="optionType" [buttonStyle]="buttonStyle" [size]="size" [block]="block" [labelPlacement]="labelPlacement" (selectionChange)="selectionChange($event)">
+      <andes-radio-group aria-label="Plan" [name]="name" [disabled]="disabled" [required]="required" [orientation]="orientation" [optionType]="optionType" [buttonStyle]="buttonStyle" [size]="size" [block]="block" [labelPlacement]="labelPlacement" [status]="status" [variant]="variant" [readOnly]="readOnly" [loop]="loop" [columns]="columns" (selectionChange)="selectionChange($event)">
         <andes-radio value="starter">Starter</andes-radio>
         <andes-radio value="pro">Pro</andes-radio>
         <andes-radio value="enterprise">Enterprise</andes-radio>

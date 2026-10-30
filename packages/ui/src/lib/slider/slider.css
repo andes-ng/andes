@@ -13,8 +13,10 @@
      --andes-slider-handle-background   thumb fill
      --andes-slider-dot-color           tick dot border
      --andes-slider-dot-active-color    tick dot border inside the filled segment
+   Sizes (data-size), status (data-status = error | warning, also set by aria-invalid) and
+   read-only (data-readonly) are host attributes, so they are styled with :host([...]).
    Every part also carries a data-slot attribute (slider-control, -track, -indicator, -dot,
-   -thumb, -tooltip, -marks, -mark) for structural styling. */
+   -thumb, -thumb-content, -tooltip, -marks, -mark, -input) for structural styling. */
 
 :host {
   /* The thumb's box: a 10px knob plus its 2px ring. The knob grows
@@ -23,9 +25,41 @@
   --andes-slider-rail-size: 0.25rem;
   --andes-slider-dot-size: 0.5rem;
   --andes-slider-length: 12rem;
+  /* The accent every filled part is drawn in; `status` swaps it (see below). A consumer's
+     --andes-slider-*-color hook still wins, because it is read first. */
+  --_andes-slider-accent: var(--andes-color-primary);
+  --_andes-slider-accent-hover: var(--andes-color-primary-hover);
 
   display: block;
   font-family: var(--andes-font-family), sans-serif;
+}
+
+/* Sizes - the shared control scale. `md` is the default declared above (a 4px rail, a 14px
+   thumb box = a 10px knob + its 2px ring); the thumb box stays the hit area and the focus
+   ring's box, the marks and tooltip offsets are measured from it. */
+
+:host([data-size='sm']) {
+  --andes-slider-thumb-size: 0.75rem;
+  --andes-slider-rail-size: 0.1875rem;
+  --andes-slider-dot-size: 0.375rem;
+}
+
+:host([data-size='lg']) {
+  --andes-slider-thumb-size: 1.125rem;
+  --andes-slider-rail-size: 0.375rem;
+  --andes-slider-dot-size: 0.625rem;
+}
+
+/* Status. Only the accent changes, so the fill, the thumb ring and the active dots follow. */
+
+:host([data-status='error']) {
+  --_andes-slider-accent: var(--andes-color-danger);
+  --_andes-slider-accent-hover: var(--andes-color-danger-hover);
+}
+
+:host([data-status='warning']) {
+  --_andes-slider-accent: var(--andes-color-warning-hover);
+  --_andes-slider-accent-hover: var(--andes-color-warning-active);
 }
 
 :host([data-orientation='vertical']) {
@@ -108,7 +142,10 @@
 .andes-slider__indicator {
   position: absolute;
   border-radius: inherit;
-  background-color: var(--andes-slider-track-color, var(--andes-color-primary));
+  background-color: var(
+    --andes-slider-track-color,
+    var(--_andes-slider-accent)
+  );
 }
 
 :host([data-orientation='horizontal']) .andes-slider__indicator {
@@ -186,7 +223,7 @@
 .andes-slider__dot--active {
   border-color: var(
     --andes-slider-dot-active-color,
-    var(--andes-color-primary)
+    var(--_andes-slider-accent)
   );
 }
 
@@ -215,7 +252,7 @@
     var(--andes-color-background)
   );
   box-shadow: 0 0 0 2px
-    var(--andes-slider-handle-color, var(--andes-color-primary));
+    var(--andes-slider-handle-color, var(--_andes-slider-accent));
   transition:
     inset var(--andes-motion-duration-mid, 0.2s)
       var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1)),
@@ -223,12 +260,13 @@
       var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1));
 }
 
-.andes-slider__thumb:hover::after,
+/* A read-only slider gives no hover feedback (the knob only grows for keyboard focus). */
+:host(:not([data-readonly])) .andes-slider__thumb:hover::after,
 .andes-slider__thumb:focus-visible::after,
 .andes-slider__thumb[data-dragging]::after {
   inset: 1px;
   box-shadow: 0 0 0 2.5px
-    var(--andes-slider-handle-hover-color, var(--andes-color-primary-hover));
+    var(--andes-slider-handle-hover-color, var(--_andes-slider-accent-hover));
 }
 
 :host([data-orientation='horizontal']) .andes-slider__thumb {
@@ -272,6 +310,53 @@
 .andes-slider__thumb[data-disabled]::after {
   inset: 2px;
   box-shadow: 0 0 0 2px var(--andes-color-muted-foreground);
+}
+
+/* Custom thumb (`thumbTemplate`): the template replaces the ring-and-knob circle, centered on
+   the handle's box and overflowing it freely. The handle element keeps its position, hit
+   area and focus outline, so the content never takes a pointer event itself. */
+
+.andes-slider__thumb[data-custom]::after {
+  display: none;
+}
+
+.andes-slider__thumb-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/* Read-only: nothing to grab or press, so the grab cursors and the draggable-track affordance
+   go, and the control stops claiming touch gestures (the page can scroll over it). The
+   handles keep their focus ring and the value tooltip, which only reads the value. */
+
+:host([data-readonly]) .andes-slider__control,
+:host([data-readonly]) .andes-slider__thumb,
+:host([data-readonly]) .andes-slider__thumb[data-dragging],
+:host([data-readonly]) .andes-slider__indicator,
+:host([data-readonly]) .andes-slider__mark-label {
+  cursor: default;
+}
+
+:host([data-readonly]) .andes-slider__control {
+  touch-action: auto;
+}
+
+/* `trackClick` off: the rail does not respond to a press, so it does not look pressable. */
+
+:host([data-no-track-click]) .andes-slider__control {
+  cursor: default;
+}
+
+:host([data-no-track-click]) .andes-slider__thumb {
+  cursor: grab;
+}
+
+:host([data-no-track-click]) .andes-slider__thumb[data-dragging] {
+  cursor: grabbing;
 }
 
 /* Editable range: a handle dragged off the track fades to preview its removal on release. */
@@ -408,6 +493,59 @@
 
 :host([data-disabled]) .andes-slider__mark-label {
   cursor: not-allowed;
+}
+
+/* Forced colors (Windows high contrast): author colors are replaced, which would erase the
+   rail, the fill and the thumb's box-shadow ring. Map them onto the system palette. A status
+   cannot be told apart by color here, so `aria-invalid` carries it. */
+@media (forced-colors: active) {
+  .andes-slider__track,
+  .andes-slider__indicator,
+  .andes-slider__dot,
+  .andes-slider__thumb::after {
+    forced-color-adjust: none;
+  }
+
+  .andes-slider__track {
+    background-color: GrayText;
+  }
+
+  .andes-slider__indicator {
+    background-color: Highlight;
+  }
+
+  .andes-slider__dot {
+    border-color: GrayText;
+    background-color: Canvas;
+  }
+
+  .andes-slider__dot--active {
+    border-color: Highlight;
+  }
+
+  .andes-slider__thumb::after {
+    background-color: Canvas;
+    box-shadow: 0 0 0 2px Highlight;
+  }
+
+  :host(:not([data-readonly])) .andes-slider__thumb:hover::after,
+  .andes-slider__thumb:focus-visible::after,
+  .andes-slider__thumb[data-dragging]::after {
+    box-shadow: 0 0 0 2.5px Highlight;
+  }
+
+  :host([data-disabled]) .andes-slider__indicator {
+    background-color: GrayText;
+  }
+
+  :host([data-disabled]) .andes-slider__thumb::after,
+  .andes-slider__thumb[data-disabled]::after {
+    box-shadow: 0 0 0 2px GrayText;
+  }
+
+  .andes-slider__tooltip-bubble {
+    border-color: CanvasText;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

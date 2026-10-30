@@ -5,7 +5,6 @@ import type { Meta, StoryObj } from '@storybook/angular';
 import { AndesColor } from './color';
 import { AndesColorPicker } from './color-picker';
 import { AndesColorPickerTrigger } from './color-picker-trigger';
-import type { AndesColorPreset } from './color-picker-types';
 
 const IMPORTS = [
   AndesColorPicker,
@@ -14,35 +13,8 @@ const IMPORTS = [
   ReactiveFormsModule,
 ];
 
-const PRESETS: readonly AndesColorPreset[] = [
-  {
-    label: 'Recommended',
-    colors: [
-      '#f5222d',
-      '#fa8c16',
-      '#fadb14',
-      '#8bbb11',
-      '#52c41a',
-      '#13a8a8',
-      '#1677ff',
-      '#2f54eb',
-      '#722ed1',
-      '#eb2f96',
-    ],
-  },
-  {
-    label: 'Neutrals',
-    colors: ['#000000', '#434343', '#8c8c8c', '#d9d9d9', '#f5f5f5', '#ffffff'],
-  },
-  {
-    label: 'Brand',
-    defaultOpen: false,
-    colors: ['#0b5cff', '#00b8a9', '#f6416c', '#ffde7d'],
-  },
-];
-
 const meta: Meta<AndesColorPicker> = {
-  title: 'Data Entry/Color Picker',
+  title: 'Data Entry/Color Picker/Basics/Field',
   component: AndesColorPicker,
   tags: ['autodocs'],
   // The panel opens below the trigger, so the stories sit at the top of the canvas.
@@ -50,7 +22,12 @@ const meta: Meta<AndesColorPicker> = {
   argTypes: {
     size: { control: 'select', options: ['sm', 'md', 'lg'] },
     status: { control: 'select', options: [undefined, 'error', 'warning'] },
-    defaultFormat: { control: 'select', options: ['hex', 'rgb', 'hsb'] },
+    defaultFormat: {
+      control: 'select',
+      options: ['hex', 'rgb', 'hsb', 'hsl', 'oklch'],
+    },
+    trigger: { control: 'select', options: ['click', 'hover'] },
+    mode: { control: 'select', options: ['single', 'gradient'] },
     placement: {
       control: 'select',
       options: ['bottomLeft', 'bottomRight', 'topLeft', 'topRight'],
@@ -62,6 +39,10 @@ const meta: Meta<AndesColorPicker> = {
     disabledAlpha: { control: 'boolean' },
     disabledFormat: { control: 'boolean' },
     eyeDropper: { control: 'boolean' },
+    arrow: { control: 'boolean' },
+    readOnly: { control: 'boolean' },
+    showCopy: { control: 'boolean' },
+    confirm: { control: 'boolean' },
   },
   args: {
     size: 'md',
@@ -75,14 +56,20 @@ const meta: Meta<AndesColorPicker> = {
     disabledAlpha: false,
     disabledFormat: false,
     eyeDropper: true,
+    trigger: 'click',
+    mode: 'single',
+    arrow: false,
+    readOnly: false,
+    showCopy: true,
+    confirm: false,
   },
   render: (args) => ({
     moduleMetadata: { imports: IMPORTS },
-    props: { ...args, value: '#1677ff' },
+    props: { ...args, brand: '#1677ff' },
     template: `
       <andes-color-picker
         aria-label="Brand color"
-        [(value)]="value"
+        [(value)]="brand"
         [size]="size"
         [status]="status"
         [defaultFormat]="defaultFormat"
@@ -94,6 +81,12 @@ const meta: Meta<AndesColorPicker> = {
         [disabledAlpha]="disabledAlpha"
         [disabledFormat]="disabledFormat"
         [eyeDropper]="eyeDropper"
+        [trigger]="trigger"
+        [mode]="mode"
+        [arrow]="arrow"
+        [readOnly]="readOnly"
+        [showCopy]="showCopy"
+        [confirm]="confirm"
       />
     `,
   }),
@@ -192,16 +185,6 @@ export const Binding: Story = {
   }),
 };
 
-export const Presets: Story = {
-  render: () => ({
-    moduleMetadata: { imports: IMPORTS },
-    props: { presets: PRESETS, picked: '#1677ff' },
-    template: `
-      <andes-color-picker aria-label="Theme color" [(value)]="picked" [presets]="presets" showText />
-    `,
-  }),
-};
-
 export const AllowClear: Story = {
   render: () => ({
     moduleMetadata: { imports: IMPORTS },
@@ -222,54 +205,17 @@ export const AllowClear: Story = {
   }),
 };
 
-export const Formats: Story = {
-  render: () => ({
-    moduleMetadata: { imports: IMPORTS },
-    props: { picked: '#2f54eb', format: 'rgb' },
-    template: `
-      <div style="display: flex; flex-direction: column; gap: 1rem; align-items: flex-start;">
-        <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-          <span style="font-size: 0.75rem;">Starts in HSB, the user can switch</span>
-          <andes-color-picker aria-label="Starts in HSB" defaultFormat="hsb" value="hsb(215, 91%, 100%)" showText />
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-          <span style="font-size: 0.75rem;">Controlled: the format is {{ format }}</span>
-          <andes-color-picker
-            aria-label="Controlled format"
-            [(value)]="picked"
-            [format]="format"
-            (formatChange)="format = $event"
-            showText
-          />
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-          <span style="font-size: 0.75rem;">Format switch hidden</span>
-          <andes-color-picker aria-label="Fixed RGB" format="rgb" disabledFormat value="#13a8a8" showText />
-        </div>
-      </div>
-    `,
-  }),
-};
-
-export const Opacity: Story = {
-  render: () => ({
-    moduleMetadata: { imports: IMPORTS },
-    template: `
-      <div style="display: flex; flex-direction: column; gap: 1rem; align-items: flex-start;">
-        <andes-color-picker aria-label="With opacity" value="#1677ff80" showText />
-        <andes-color-picker aria-label="Opacity controls hidden" value="#1677ff80" [showAlpha]="false" showText />
-        <andes-color-picker aria-label="Opaque only" value="#1677ff80" disabledAlpha showText />
-      </div>
-    `,
-  }),
-};
-
+/**
+ * `disabled` blocks the picker; `readOnly` still opens the panel to show (and copy) the
+ * value, but nothing in it changes the colour, and the trigger is announced as read-only.
+ */
 export const States: Story = {
   render: () => ({
     moduleMetadata: { imports: IMPORTS },
     template: `
       <div style="display: flex; flex-direction: column; gap: 1rem; align-items: flex-start;">
         <andes-color-picker aria-label="Disabled" disabled value="#1677ff" showText />
+        <andes-color-picker aria-label="Read-only" readOnly value="#13a8a8" showText />
         <andes-color-picker aria-label="Error" status="error" value="#f5222d" showText />
         <andes-color-picker aria-label="Warning" status="warning" value="#fa8c16" showText />
       </div>
@@ -292,15 +238,28 @@ export const CustomTrigger: Story = {
   }),
 };
 
-export const Placement: Story = {
+const placements = (attributes: string) => `
+  <div style="display: grid; grid-template-columns: repeat(2, auto); justify-content: space-between; row-gap: 19rem; padding: 1rem 1rem 3rem;">
+    <andes-color-picker aria-label="Below, start" placement="bottomLeft" value="#1677ff" ${attributes} />
+    <andes-color-picker aria-label="Below, end" placement="bottomRight" value="#52c41a" ${attributes} />
+    <andes-color-picker aria-label="Above, start" placement="topLeft" value="#fa8c16" ${attributes} />
+    <andes-color-picker aria-label="Above, end" placement="topRight" value="#eb2f96" ${attributes} />
+  </div>
+`;
+
+/**
+ * The four placements with the `arrow` pointing at the trigger, and `trigger="hover"`: the
+ * panel opens after a short rest on the trigger and closes once the pointer has left both
+ * (it may cross the gap); a click, a tap or Enter / Space / ArrowDown pins it open with focus
+ * inside. The second block is the same, right to left.
+ */
+export const TriggerAndArrow: Story = {
   parameters: { layout: 'fullscreen' },
   render: () => ({
     moduleMetadata: { imports: IMPORTS },
     template: `
-      <div style="display: flex; justify-content: space-between; align-items: flex-end; height: 26rem; padding: 1rem;">
-        <andes-color-picker aria-label="Opens upwards, start" placement="topLeft" value="#1677ff" />
-        <andes-color-picker aria-label="Opens upwards, end" placement="topRight" value="#52c41a" />
-      </div>
+      ${placements('arrow trigger="hover" showText')}
+      <div dir="rtl" style="border-block-start: 1px dashed var(--andes-color-border);">${placements('arrow')}</div>
     `,
   }),
 };

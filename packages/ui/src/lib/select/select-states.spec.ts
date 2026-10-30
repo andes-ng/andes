@@ -113,6 +113,7 @@ const FRUITS = [
     [name]="name()"
     [panelClass]="panelClass()"
     [maxTagCount]="maxTagCount()"
+    [maxTagPopover]="maxTagPopover()"
     [(value)]="value"
   />`,
 })
@@ -124,6 +125,7 @@ class StatesHost {
   readonly name = signal<string | undefined>(undefined);
   readonly panelClass = signal<AndesSelectPanelClass>(null);
   readonly maxTagCount = signal<number | undefined>(undefined);
+  readonly maxTagPopover = signal(true);
   readonly value = signal<unknown>(null);
 }
 
@@ -727,10 +729,11 @@ describe('AndesSelect autoFocus and panelClass', () => {
 });
 
 describe('AndesSelect hidden tags tooltip', () => {
-  it('lists the hidden tags in the + N tag tooltip', () => {
+  it('lists the hidden tags in the + N tag tooltip without the popover', () => {
     const { root } = setup((h) => {
       h.mode.set('multiple');
       h.maxTagCount.set(1);
+      h.maxTagPopover.set(false);
       h.value.set(['apple', 'cherry', 'grape']);
     });
 

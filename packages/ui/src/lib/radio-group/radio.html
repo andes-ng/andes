@@ -1,4 +1,10 @@
-<label class="andes-radio__label" [attr.for]="inputId()">
+<label
+  class="andes-radio__label"
+  data-slot="radio"
+  [attr.for]="inputId()"
+  [attr.data-motion]="motion()"
+  (animationend)="onMotionEnd()"
+>
   <input
     #input
     type="radio"
@@ -10,15 +16,38 @@
     [disabled]="isDisabled()"
     [required]="required()"
     [attr.aria-label]="ariaLabel()"
-    [attr.aria-describedby]="ariaDescribedby()"
+    [attr.aria-labelledby]="effectiveLabelledby()"
+    [attr.aria-describedby]="effectiveDescribedby()"
+    [attr.aria-invalid]="nativeInvalid() || null"
+    (click)="onClick($event)"
     (change)="onChange($event)"
   />
-  @if (!isButton()) {
+  @if (hasControl()) {
   <span class="andes-radio__control" aria-hidden="true">
+    @if (effectiveIndicator(); as customIndicator) {
+    <span class="andes-radio__dot andes-radio__dot--custom">
+      <ng-container [ngTemplateOutlet]="customIndicator" />
+    </span>
+    } @else {
     <span class="andes-radio__dot"></span>
+    }
   </span>
   }
   <!-- In button mode this span is the visible segment face (see radio.css), so it stays a
        sibling after the input and the focus ring can key off input:focus-visible ~ text. -->
-  <span class="andes-radio__text"><ng-content /></span>
+  <span
+    #labelText
+    class="andes-radio__text"
+    [attr.id]="hasDescription() ? labelTextId : null"
+    ><ng-content
+  /></span>
+  <!-- A button segment is a fixed-height face with no room for secondary text. -->
+  @if (!isButton()) {
+  <span
+    #description
+    class="andes-radio__description"
+    [attr.id]="hasDescription() ? descriptionId : null"
+    ><ng-content select="[slot=description]"
+  /></span>
+  }
 </label>

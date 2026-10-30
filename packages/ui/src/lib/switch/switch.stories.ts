@@ -1,12 +1,10 @@
-import { signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import type { Meta, StoryObj } from '@storybook/angular';
 
-import { AndesButton } from '../button/button';
 import { AndesSwitch } from './switch';
 
 const meta: Meta<AndesSwitch> = {
-  title: 'Data Entry/Switch',
+  title: 'Data Entry/Switch/Basics/Field',
   component: AndesSwitch,
   tags: ['autodocs'],
   argTypes: {
@@ -15,7 +13,8 @@ const meta: Meta<AndesSwitch> = {
     required: { control: 'boolean' },
     readonly: { control: 'boolean' },
     loading: { control: 'boolean' },
-    size: { control: 'select', options: ['sm', 'md'] },
+    size: { control: 'select', options: ['sm', 'md', 'lg'] },
+    status: { control: 'select', options: [undefined, 'error', 'warning'] },
     checkedChildren: { control: 'text' },
     unCheckedChildren: { control: 'text' },
   },
@@ -31,7 +30,7 @@ const meta: Meta<AndesSwitch> = {
   },
   render: (args) => ({
     props: args,
-    template: `<andes-switch [checked]="checked" [disabled]="disabled" [required]="required" [readonly]="readonly" [loading]="loading" [size]="size" [checkedChildren]="checkedChildren" [unCheckedChildren]="unCheckedChildren" aria-label="Toggle setting" />`,
+    template: `<andes-switch [checked]="checked" [disabled]="disabled" [required]="required" [readonly]="readonly" [loading]="loading" [size]="size" [status]="status" [checkedChildren]="checkedChildren" [unCheckedChildren]="unCheckedChildren" aria-label="Toggle setting" />`,
   }),
 };
 
@@ -43,20 +42,35 @@ type Story = StoryObj<AndesSwitch>;
 export const Default: Story = {};
 
 /**
- * The two sizes, unchecked and checked. `checked` is a `model()`, which - unlike `size`'s plain
- * `input()` - doesn't support a `transform` (a two-way binding's output must emit exactly the
- * type its input accepts), so a bare, bracket-less attribute isn't coerced through
- * `booleanAttribute`; bind the literal with brackets instead (same fix `AndesCheckbox`'s
- * stories needed).
+ * The three sizes, unchecked and checked, bare and with a label: 16 / 22 / 28px tracks, and the
+ * label follows the same text steps as the Input (14px on a 22px line for sm and md, 16px on
+ * 24px for lg). `checked` is a `model()`, which - unlike `size`'s plain `input()` - doesn't
+ * support a `transform` (a two-way binding's output must emit exactly the type its input
+ * accepts), so a bare, bracket-less attribute isn't coerced through `booleanAttribute`; bind the
+ * literal with brackets instead (same fix `AndesCheckbox`'s stories needed).
  */
 export const Sizes: Story = {
   render: () => ({
     template: `
-      <div style="display: flex; align-items: center; gap: 1rem;">
-        <andes-switch size="sm" aria-label="Small, unchecked" />
-        <andes-switch size="sm" [checked]="true" aria-label="Small, checked" />
-        <andes-switch size="md" aria-label="Medium, unchecked" />
-        <andes-switch size="md" [checked]="true" aria-label="Medium, checked" />
+      <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <andes-switch size="sm" aria-label="Small, unchecked" />
+          <andes-switch size="sm" [checked]="true" aria-label="Small, checked" />
+          <andes-switch size="md" aria-label="Medium, unchecked" />
+          <andes-switch size="md" [checked]="true" aria-label="Medium, checked" />
+          <andes-switch size="lg" aria-label="Large, unchecked" />
+          <andes-switch size="lg" [checked]="true" aria-label="Large, checked" />
+        </div>
+        <div style="display: flex; align-items: center; gap: 1.5rem;">
+          <andes-switch size="sm">Small</andes-switch>
+          <andes-switch size="md">Medium</andes-switch>
+          <andes-switch size="lg">Large</andes-switch>
+        </div>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <andes-switch size="lg" [checked]="true" checkedChildren="On" unCheckedChildren="Off" aria-label="Large with text" />
+          <andes-switch size="lg" loading aria-label="Large, loading" />
+          <andes-switch size="lg" status="error" aria-label="Large, error" />
+        </div>
       </div>
     `,
   }),
@@ -84,45 +98,31 @@ export const States: Story = {
   }),
 };
 
-/** Wrapped in a `<label>`, the whole text toggles the switch. */
-export const WithLabel: Story = {
-  render: () => ({
-    template: `
-      <label style="display: inline-flex; align-items: center; gap: 0.5rem; font-family: var(--andes-font-family), sans-serif; font-size: 0.875rem; line-height: 1.375rem; color: var(--andes-color-foreground);">
-        <andes-switch />
-        Enable notifications
-      </label>
-    `,
-  }),
-};
-
 /**
- * The text inside the track: the `checkedChildren` / `unCheckedChildren` strings (short and
- * long, both sizes), projected `[slot=checked|unchecked]` elements, and the rule that a
- * projected slot wins over the string input for that state.
+ * `status` like the Input and Checkbox: `error` paints the track in the danger color AND sets
+ * `aria-invalid` (the same result as `aria-invalid="true"`), `warning` only paints the warning
+ * color. Unchecked and checked, with the keyboard focus ring (Tab to see it) following the
+ * status color.
  */
-export const TrackContent: Story = {
+export const Status: Story = {
   render: () => ({
     template: `
       <div style="display: flex; flex-direction: column; gap: 1rem;">
         <div style="display: flex; align-items: center; gap: 1rem;">
-          <andes-switch [checked]="true" checkedChildren="On" unCheckedChildren="Off" aria-label="Text, checked" />
-          <andes-switch [checked]="true" checkedChildren="Enabled" unCheckedChildren="Disabled" aria-label="Long text, checked" />
-          <andes-switch [checked]="false" checkedChildren="Enabled" unCheckedChildren="Disabled" aria-label="Long text, unchecked" />
-          <andes-switch size="sm" [checked]="true" checkedChildren="Yes" unCheckedChildren="No" aria-label="Small, checked" />
-          <andes-switch size="sm" [checked]="false" checkedChildren="Yes" unCheckedChildren="No" aria-label="Small, unchecked" />
+          <andes-switch status="error" aria-label="Error, unchecked" />
+          <andes-switch status="error" [checked]="true" aria-label="Error, checked" />
+          <andes-switch status="warning" aria-label="Warning, unchecked" />
+          <andes-switch status="warning" [checked]="true" aria-label="Warning, checked" />
+          <andes-switch aria-invalid="true" aria-label="aria-invalid only" />
         </div>
-        <div style="display: flex; align-items: center; gap: 1rem;">
-          <andes-switch [checked]="true" aria-label="Slots, checked">
-            <span slot="checked">On</span>
-            <span slot="unchecked">Off</span>
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <andes-switch status="error">
+            Accept the terms
+            <span slot="description">Required to continue.</span>
           </andes-switch>
-          <andes-switch aria-label="Slots, unchecked">
-            <span slot="checked">On</span>
-            <span slot="unchecked">Off</span>
-          </andes-switch>
-          <andes-switch [checked]="true" checkedChildren="ignored" unCheckedChildren="Off" aria-label="Slot wins over text">
-            <span slot="checked">&#10003;</span>
+          <andes-switch status="warning">
+            Share usage data
+            <span slot="description">Recommended, but optional.</span>
           </andes-switch>
         </div>
       </div>
@@ -141,144 +141,6 @@ export const Binding: Story = {
         <span>ngModel: {{ modelValue }}</span>
         <andes-switch [(checked)]="twoWay" aria-label="Two-way checked" />
         <span>checked: {{ twoWay }}</span>
-      </div>
-    `,
-  }),
-};
-
-/**
- * `loading` shows a spinner in the thumb and blocks toggling, at both sizes, unchecked and
- * checked.
- */
-export const Loading: Story = {
-  render: () => ({
-    template: `
-      <div style="display: flex; align-items: center; gap: 1rem;">
-        <andes-switch size="sm" loading aria-label="Small, loading" />
-        <andes-switch size="sm" loading [checked]="true" aria-label="Small, loading, checked" />
-        <andes-switch loading aria-label="Medium, loading" />
-        <andes-switch loading [checked]="true" aria-label="Medium, loading, checked" />
-      </div>
-    `,
-  }),
-};
-
-/**
- * The async-save pattern: the switch goes busy while a (fake) request runs, ignoring
- * further clicks, then settles. `[(checked)]` keeps the parent's state and the switch's in step.
- */
-export const AsyncToggle: Story = {
-  render: () => {
-    // Signals, not plain props: the story is zoneless, so a setTimeout write to a plain field
-    // would never be rendered.
-    const busy = signal(false);
-    return {
-      props: {
-        value: false,
-        busy,
-        save: () => {
-          busy.set(true);
-          setTimeout(() => busy.set(false), 1200);
-        },
-      },
-      template: `
-      <label style="display: inline-flex; align-items: center; gap: 0.5rem; font-family: var(--andes-font-family), sans-serif; font-size: 0.875rem; line-height: 1.375rem; color: var(--andes-color-foreground);">
-        <andes-switch [(checked)]="value" [loading]="busy()" (changed)="save()" />
-        Sync to cloud ({{ busy() ? 'saving...' : value ? 'on' : 'off' }})
-      </label>
-    `,
-    };
-  },
-};
-
-/** `(changed)` and `(clicked)` payloads, newest first. */
-export const Events: Story = {
-  render: () => ({
-    props: { value: false, log: [] as string[] },
-    template: `
-      <div style="display: flex; flex-direction: column; gap: 0.5rem; font-family: var(--andes-font-family), sans-serif; font-size: 0.875rem; line-height: 1.375rem; color: var(--andes-color-foreground);">
-        <andes-switch
-          [(checked)]="value"
-          (changed)="log = ['changed: ' + $event.checked + ' (' + $event.event.type + ')'].concat(log)"
-          (clicked)="log = ['clicked: ' + $event.checked].concat(log)"
-          aria-label="Toggle setting"
-        />
-        @for (line of log; track $index) {
-          <code>{{ line }}</code>
-        }
-      </div>
-    `,
-  }),
-};
-
-/** Disabling and re-enabling at runtime, e.g. while a permission check is pending. */
-export const ToggleDisabled: Story = {
-  render: () => ({
-    moduleMetadata: { imports: [AndesButton] },
-    props: { off: true },
-    template: `
-      <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem;">
-        <andes-switch [checked]="true" [disabled]="off" aria-label="Toggle setting" />
-        <andes-button variant="outline" size="sm" (click)="off = !off">Toggle disabled</andes-button>
-      </div>
-    `,
-  }),
-};
-
-/**
- * Restyling through the CSS custom property hooks set on the host: geometry
- * (`--andes-switch-track-height`, `--andes-switch-track-width`, `--andes-switch-thumb-size`,
- * `--andes-switch-track-padding`, `--andes-switch-inner-margin`) and color
- * (`--andes-switch-track-color`, `--andes-switch-track-hover-color`,
- * `--andes-switch-track-checked-color`, `--andes-switch-track-checked-hover-color`,
- * `--andes-switch-thumb-color`, `--andes-switch-thumb-shadow`).
- */
-export const CustomProperties: Story = {
-  render: () => ({
-    template: `
-      <div style="display: flex; align-items: center; gap: 1rem;">
-        <andes-switch
-          [checked]="true"
-          aria-label="Large success switch"
-          style="
-            --andes-switch-track-height: 2rem;
-            --andes-switch-track-width: 3.5rem;
-            --andes-switch-thumb-size: 1.5rem;
-            --andes-switch-track-padding: 0.25rem;
-            --andes-switch-track-checked-color: var(--andes-color-success);
-            --andes-switch-track-checked-hover-color: var(--andes-color-success-hover);
-          "
-        />
-        <andes-switch
-          checkedChildren="ON"
-          unCheckedChildren="OFF"
-          aria-label="Danger switch"
-          style="
-            --andes-switch-track-checked-color: var(--andes-color-danger);
-            --andes-switch-thumb-shadow: none;
-            --andes-switch-inner-margin: 0.5rem;
-          "
-        />
-      </div>
-    `,
-  }),
-};
-
-/**
- * `autoFocus` focuses the switch on mount (first one); `focus()` and `blur()` drive the focus
- * from code.
- */
-export const Focus: Story = {
-  render: () => ({
-    moduleMetadata: { imports: [AndesButton] },
-    template: `
-      <div style="display: flex; flex-direction: column; gap: 1rem;">
-        <andes-switch autoFocus aria-label="Focused on mount" />
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <andes-switch #sw aria-label="Toggle setting" />
-          <andes-button variant="outline" size="sm" (click)="sw.focus()">focus()</andes-button>
-          <andes-button variant="outline" size="sm" (click)="sw.blur()">blur()</andes-button>
-        </div>
       </div>
     `,
   }),

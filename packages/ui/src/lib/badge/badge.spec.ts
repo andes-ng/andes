@@ -12,6 +12,7 @@ import {
   AndesBadgeVariant,
 } from './badge';
 import { ANDES_PALETTE_COLORS } from '../palette/palette';
+import { expectLength, px, toPx } from '../../testing/computed-style';
 
 @Component({
   imports: [AndesBadge],
@@ -209,12 +210,12 @@ describe('AndesBadge', () => {
     const badge = () =>
       fixture.nativeElement.querySelector('.andes-badge') as HTMLElement;
 
-    expect(getComputedStyle(badge()).fontSize).toBe('0.75rem');
+    expectLength(getComputedStyle(badge()).fontSize, '0.75rem');
 
     fixture.componentInstance.size.set('small');
     fixture.detectChanges();
 
-    expect(getComputedStyle(badge()).fontSize).toBe('0.75rem');
+    expectLength(getComputedStyle(badge()).fontSize, '0.75rem');
   });
 
   it('renders a pulsing ping element when processing', () => {
@@ -515,32 +516,25 @@ describe('AndesBadge host aria-label', () => {
  * 16px root font): "5" 20.00x20.00, "42" 28.00x20.00, "99+" 29.63x20.00.
  */
 describe('AndesBadge shape', () => {
-  function px(value: string): number {
-    const match = /^(-?[\d.]+)(rem|px)?$/.exec(value.trim());
-    if (!match) {
-      return Number.NaN;
-    }
-    return match[2] === 'rem' ? Number(match[1]) * 16 : Number(match[1]);
-  }
-
   /**
    * Horizontal padding actually in force. jsdom expands a `padding` shorthand into longhands
-   * but does not cross-expand it against a `padding-inline` declared in another rule, so the
-   * longhand is the authoritative answer whenever it resolved - `padding-inline` is only the
-   * fallback for elements where no rule used the `padding` shorthand at all.
+   * (a declared `padding: 0` reads `0px`) but never cross-expands it against a `padding-inline`
+   * declared in another rule, so the longhand reads the bare initial `0` whenever no rule used
+   * the `padding` shorthand. The longhand is authoritative whenever a rule resolved it;
+   * `padding-inline` (reported as authored, `0.25rem`) is the answer when it did not.
    */
   function horizontalPadding(style: CSSStyleDeclaration): number {
-    return style.paddingLeft !== ''
+    return style.paddingLeft !== '0'
       ? px(style.paddingLeft)
-      : px(style.getPropertyValue('padding-inline') || '0');
+      : toPx(style.getPropertyValue('padding-inline') || '0');
   }
 
   /** Border-box geometry of the indicator, as far as the computed style determines it. */
   function box(badge: HTMLElement) {
     const style = getComputedStyle(badge);
     const inlinePadding = horizontalPadding(style);
-    // '' means the property was never declared, i.e. it resolves to `auto`.
-    const declaredWidth = style.width === '' ? Number.NaN : px(style.width);
+    // `auto` means the property was never declared.
+    const declaredWidth = style.width === 'auto' ? Number.NaN : px(style.width);
     return {
       height: px(style.height),
       inlinePadding,

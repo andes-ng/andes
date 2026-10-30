@@ -10,6 +10,7 @@ import {
   AndesTagColor,
   AndesTagVariant,
 } from './tag';
+import { expectLength } from '../../testing/computed-style';
 
 @Component({
   imports: [AndesTag],
@@ -837,9 +838,9 @@ describe('AndesTag metrics and tints', () => {
   it('sets its label as a 12px caption on a whole-pixel 20px line, landing on 22px', () => {
     const style = render('default', 'outlined');
 
-    expect(style.fontSize).toBe('0.75rem');
-    expect(style.lineHeight).toBe('1.25rem');
-    expect(style.getPropertyValue('padding-block')).toBe('0');
+    expectLength(style.fontSize, '0.75rem');
+    expectLength(style.lineHeight, '1.25rem');
+    expectLength(style.getPropertyValue('padding-block'), 0);
   });
 
   it('eases its hover and checked colours instead of snapping them', () => {

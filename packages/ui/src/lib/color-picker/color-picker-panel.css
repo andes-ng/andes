@@ -1,0 +1,707 @@
+/*
+  The colour panel: the area, the sliders, the fields and the presets in a 16rem column
+  (14rem / 20rem for an inline `sm` / `lg` panel). Inside the picker's popup it is bare and
+  the popup draws the surface; inline it draws its own bordered card.
+*/
+:host {
+  /* The checkerboard behind translucent colours. */
+  --_checker: conic-gradient(
+    color-mix(in srgb, var(--andes-color-foreground, #0f172a) 14%, transparent)
+      25%,
+    transparent 25% 50%,
+    color-mix(in srgb, var(--andes-color-foreground, #0f172a) 14%, transparent)
+      50% 75%,
+    transparent 75% 100%
+  );
+
+  display: flex;
+  box-sizing: content-box;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 16rem;
+  max-width: calc(100vw - 4rem);
+  padding: 0.75rem;
+  font-family: var(--andes-font-family), sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.375rem;
+}
+
+/* Inline: its own surface, sized by `size`. */
+:host(:not([data-embedded])) {
+  max-width: calc(100% - 1.5rem - 2px);
+  border: 1px solid var(--andes-color-border, #e2e8f0);
+  border-radius: var(--andes-control-radius-lg, 0.5rem);
+  background-color: var(--andes-color-card, #fff);
+  color: var(--andes-color-card-foreground, #0f172a);
+}
+
+:host([data-size='sm']) {
+  width: 14rem;
+}
+
+:host([data-size='lg']) {
+  width: 20rem;
+}
+
+/* Inside the popup the panel is the part that scrolls when the window is short: the popup
+   surface keeps overflow visible, so its arrow is never clipped. */
+:host([data-embedded]) {
+  min-height: 0;
+  flex: 0 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  color: inherit;
+}
+
+:host([data-disabled]) {
+  cursor: not-allowed;
+}
+
+/* Hidden while empty: no projected footer and no confirm buttons. */
+.andes-color-picker__footer:empty {
+  display: none;
+}
+
+.andes-color-picker__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ----- Gradient ------------------------------------------------------------------------- */
+
+.andes-color-picker__gradient {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.andes-color-picker__gradient-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.andes-color-picker__spacer {
+  flex: 1 1 auto;
+}
+
+.andes-color-picker__field.andes-color-picker__field--angle {
+  flex: 0 0 4rem;
+}
+
+.andes-color-picker__field--angle .andes-color-picker__affix {
+  margin-inline-start: 0.125rem;
+}
+
+/* ----- Controls ------------------------------------------------------------------------- */
+
+.andes-color-picker__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.andes-color-picker__sliders {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.andes-color-picker__sliders > andes-color-slider {
+  width: 100%;
+}
+
+.andes-color-picker__tool {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--andes-radius-md, 0.375rem);
+  background: transparent;
+  color: var(--andes-color-muted-foreground, #64748b);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.andes-color-picker__tool:hover:not(:disabled) {
+  background-color: var(--andes-color-accent, #f1f5f9);
+  color: var(--andes-color-foreground, #0f172a);
+}
+
+.andes-color-picker__tool:focus-visible,
+.andes-color-picker__clear:focus-visible,
+.andes-color-picker__group-toggle:focus-visible,
+.andes-color-picker__preset:focus-visible {
+  outline: 2px solid var(--andes-color-focus-ring, #2563eb);
+  outline-offset: 2px;
+}
+
+.andes-color-picker__tool:disabled,
+.andes-color-picker__clear:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.andes-color-picker__tool svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.andes-color-picker__preview,
+.andes-color-picker__clear {
+  position: relative;
+  flex: none;
+  box-sizing: border-box;
+  width: 2rem;
+  height: 2rem;
+  overflow: hidden;
+  border-radius: var(--andes-radius-sm, 0.25rem);
+}
+
+.andes-color-picker__preview {
+  background-image: var(--_checker);
+  background-size: 0.5rem 0.5rem;
+}
+
+.andes-color-picker__preview-fill {
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--andes-color-foreground, #0f172a) 14%, transparent);
+}
+
+.andes-color-picker__preview[data-empty]::after,
+.andes-color-picker__clear-glyph {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top right,
+    transparent calc(50% - 1px),
+    var(--andes-color-danger, #dc2626) calc(50% - 1px) calc(50% + 1px),
+    transparent calc(50% + 1px)
+  );
+}
+
+.andes-color-picker__clear {
+  padding: 0;
+  border: 1px solid var(--andes-color-border, #e2e8f0);
+  background-color: var(--andes-color-background, #fff);
+  cursor: pointer;
+  transition: border-color 150ms ease;
+}
+
+.andes-color-picker__clear:hover:not(:disabled) {
+  border-color: color-mix(
+    in srgb,
+    var(--andes-color-primary, #2563eb) 65%,
+    var(--andes-color-border, #e2e8f0)
+  );
+}
+
+.andes-color-picker__clear-glyph {
+  display: block;
+}
+
+/* ----- Fields: the field spec at the small (24px) size ---------------------------------- */
+
+/* One row; where it cannot fit without cutting digits off (a narrow panel, a browser that
+   sizes the format switch to its longest option), the last boxes wrap instead. */
+.andes-color-picker__fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem 0.25rem;
+}
+
+.andes-color-picker__field {
+  position: relative;
+  display: flex;
+  box-sizing: border-box;
+  min-width: 0;
+  flex: 1 1 0;
+  height: var(--andes-control-height-sm, 1.5rem);
+  align-items: center;
+  padding-inline: 0.4375rem;
+  border: 1px solid var(--andes-color-input, #e2e8f0);
+  border-radius: var(--andes-control-radius-sm, 0.25rem);
+  background-color: var(--andes-color-background, #fff);
+  color: var(--andes-color-foreground, #0f172a);
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    background-color 150ms ease;
+}
+
+.andes-color-picker__field:hover:not(:focus-within, :has(:disabled)) {
+  border-color: color-mix(
+    in srgb,
+    var(--andes-color-primary, #2563eb) 65%,
+    var(--andes-color-input, #e2e8f0)
+  );
+}
+
+.andes-color-picker__field:focus-within {
+  border-color: var(--andes-color-primary, #2563eb);
+  box-shadow: 0 0 0 2px
+    color-mix(in srgb, var(--andes-color-primary, #2563eb) 20%, transparent);
+}
+
+.andes-color-picker__field[data-invalid] {
+  border-color: var(--andes-color-danger, #dc2626);
+}
+
+.andes-color-picker__field[data-invalid]:focus-within {
+  box-shadow: 0 0 0 2px
+    color-mix(in srgb, var(--andes-color-danger, #dc2626) 20%, transparent);
+}
+
+.andes-color-picker__field:has(:disabled) {
+  background-color: var(--andes-color-muted, #f1f5f9);
+  color: var(--andes-color-muted-foreground, #64748b);
+  cursor: not-allowed;
+}
+
+.andes-color-picker__field--alpha {
+  flex: 0 0 3.25rem;
+  padding-inline: 0.3125rem;
+}
+
+.andes-color-picker__field--hex {
+  min-width: 4.5rem;
+}
+
+/* The three channel boxes are narrow (about 35px): 3px of inline padding leaves room for
+   three digits, and below 34px they wrap rather than cut a digit off. */
+.andes-color-picker__field[data-channel]:not(
+    .andes-color-picker__field--alpha
+  ) {
+  min-width: 2.125rem;
+  padding-inline: 0.1875rem;
+}
+
+.andes-color-picker__field--hex .andes-color-picker__input {
+  text-transform: uppercase;
+}
+
+.andes-color-picker__input {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+}
+
+.andes-color-picker__input:disabled {
+  cursor: not-allowed;
+}
+
+/* Plain numbers: the stepper arrows would eat the narrow fields. */
+.andes-color-picker__input[type='number'] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.andes-color-picker__input[type='number']::-webkit-inner-spin-button,
+.andes-color-picker__input[type='number']::-webkit-outer-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.andes-color-picker__affix {
+  flex: none;
+  color: var(--andes-color-muted-foreground, #64748b);
+  user-select: none;
+}
+
+.andes-color-picker__field--hex .andes-color-picker__affix {
+  margin-inline-end: 0.125rem;
+}
+
+.andes-color-picker__field--alpha .andes-color-picker__affix {
+  margin-inline-start: 0.125rem;
+}
+
+.andes-color-picker__format {
+  flex: 0 0 auto;
+  padding-inline-end: 0;
+}
+
+.andes-color-picker__format .andes-color-picker__input {
+  width: auto;
+  padding-inline-end: 1.25rem;
+  appearance: none;
+  cursor: pointer;
+  /* As wide as the chosen format, not the longest one (OKLCH), where supported. */
+  field-sizing: content;
+}
+
+.andes-color-picker__chevron {
+  position: absolute;
+  inset-inline-end: 0.375rem;
+  width: 0.875rem;
+  height: 0.875rem;
+  color: var(--andes-color-muted-foreground, #64748b);
+  pointer-events: none;
+}
+
+/* ----- Presets -------------------------------------------------------------------------- */
+
+.andes-color-picker__presets {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-block-start: 0.75rem;
+  border-block-start: 1px solid var(--andes-color-border, #e2e8f0);
+}
+
+.andes-color-picker__group-toggle {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--andes-radius-sm, 0.25rem);
+  background: transparent;
+  color: var(--andes-color-muted-foreground, #64748b);
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+  cursor: pointer;
+}
+
+.andes-color-picker__group-toggle:hover {
+  color: var(--andes-color-foreground, #0f172a);
+}
+
+.andes-color-picker__group-label {
+  color: var(--andes-color-muted-foreground, #64748b);
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+}
+
+.andes-color-picker__group-chevron {
+  width: 0.75rem;
+  height: 0.75rem;
+  transition: transform 150ms ease;
+}
+
+/* One line each: a compound selector wrapped after an attribute is mis-scoped by the
+   style encapsulation. */
+[aria-expanded='true'] > .andes-color-picker__group-chevron {
+  transform: rotate(90deg);
+}
+
+:host-context([dir='rtl']) .andes-color-picker__group-chevron {
+  scale: -1 1;
+}
+
+.andes-color-picker__swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-block: 0.5rem 0.25rem;
+}
+
+.andes-color-picker__preset {
+  --_p: var(--andes-color-picker-preset, transparent);
+
+  box-sizing: border-box;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--andes-radius-sm, 0.25rem);
+  background-image: linear-gradient(var(--_p), var(--_p)), var(--_checker);
+  background-size:
+    auto,
+    0.5rem 0.5rem;
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--andes-color-foreground, #0f172a) 14%, transparent);
+  cursor: pointer;
+  transition: transform 150ms ease;
+}
+
+.andes-color-picker__preset:hover:not(:disabled, [aria-disabled='true']) {
+  transform: scale(1.08);
+}
+
+/* A gradient preset is a wider swatch painted with the gradient itself. */
+.andes-color-picker__preset--gradient {
+  width: 3rem;
+  background-image:
+    var(--andes-color-picker-preset-gradient, none), var(--_checker);
+}
+
+.andes-color-picker__preset[aria-disabled='true'] {
+  cursor: default;
+}
+
+.andes-color-picker__preset:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* The chosen colour gets a ring in the panel's own background colour, then the primary
+   one: legible on any swatch, light or dark. */
+.andes-color-picker__preset[data-selected] {
+  box-shadow:
+    0 0 0 2px var(--andes-color-popover, #fff),
+    0 0 0 4px var(--andes-color-primary, #2563eb);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .andes-color-picker__field,
+  .andes-color-picker__tool,
+  .andes-color-picker__clear,
+  .andes-color-picker__group-chevron,
+  .andes-color-picker__preset {
+    transition: none;
+  }
+
+  .andes-color-picker__preset:hover:not(:disabled, [aria-disabled='true']) {
+    transform: none;
+  }
+}
+
+/* ----- Copy ------------------------------------------------------------------------------ */
+
+.andes-color-picker__tool.andes-color-picker__tool--small,
+.andes-color-picker__tool.andes-color-picker__copy {
+  width: var(--andes-control-height-sm, 1.5rem);
+  height: var(--andes-control-height-sm, 1.5rem);
+}
+
+.andes-color-picker__tool--small svg,
+.andes-color-picker__copy svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.andes-color-picker__copy {
+  border: 1px solid var(--andes-color-input, #e2e8f0);
+  border-radius: var(--andes-control-radius-sm, 0.25rem);
+}
+
+.andes-color-picker__copy[data-copied] {
+  border-color: var(--andes-color-success, #16a34a);
+  color: var(--andes-color-success-text, #15803d);
+}
+
+/* OKLCH needs wider number boxes: they take a row of their own under the format switch,
+   after a full-width break (the `::after`, an empty line of its own: the rows are spaced
+   by the boxes' margin instead of the row gap, which would count that line twice), and
+   the opacity box fills the first row. */
+.andes-color-picker__fields[data-format='oklch'] {
+  row-gap: 0;
+}
+
+.andes-color-picker__fields[data-format='oklch']::after {
+  flex-basis: 100%;
+  order: 1;
+  content: '';
+}
+
+[data-format='oklch'] > [data-channel]:not([data-channel='a']) {
+  order: 2;
+  flex: 1 1 0;
+  margin-block-start: 0.375rem;
+}
+
+[data-format='oklch'] > [data-channel='a'] {
+  flex: 1 1 auto;
+}
+
+/* ----- Contrast ------------------------------------------------------------------------- */
+
+.andes-color-picker__contrast {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding-block-start: 0.75rem;
+  border-block-start: 1px solid var(--andes-color-border, #e2e8f0);
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+}
+
+.andes-color-picker__contrast-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* "Aa" in the colour on the contrast colour: the check, made visible. */
+.andes-color-picker__contrast-sample {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.5rem;
+  border-radius: var(--andes-radius-sm, 0.25rem);
+  background-color: var(--andes-color-picker-contrast-background, transparent);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--andes-color-foreground, #0f172a) 14%, transparent);
+  color: var(--andes-color-picker-contrast-foreground, currentColor);
+  font-size: 0.8125rem;
+  font-weight: var(--andes-font-weight-semibold, 600);
+}
+
+.andes-color-picker__contrast-label {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  color: var(--andes-color-muted-foreground, #64748b);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.andes-color-picker__contrast-ratio {
+  flex: none;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--andes-font-weight-semibold, 600);
+}
+
+.andes-color-picker__contrast-levels {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0;
+}
+
+.andes-color-picker__contrast-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.andes-color-picker__contrast-row dt {
+  color: var(--andes-color-muted-foreground, #64748b);
+}
+
+.andes-color-picker__contrast-row dd {
+  display: flex;
+  gap: 0.25rem;
+  margin: 0;
+}
+
+/* A failed level is struck through as well as tinted, so it does not rest on colour alone. */
+.andes-color-picker__badge {
+  display: inline-flex;
+  min-width: 2.25rem;
+  justify-content: center;
+  padding-inline: 0.375rem;
+  border-radius: var(--andes-radius-sm, 0.25rem);
+  background-color: color-mix(
+    in srgb,
+    var(--andes-color-danger, #dc2626) 12%,
+    transparent
+  );
+  color: var(--andes-color-danger-text, #b91c1c);
+  font-weight: var(--andes-font-weight-semibold, 600);
+  text-decoration: line-through;
+}
+
+.andes-color-picker__badge[data-pass] {
+  background-color: color-mix(
+    in srgb,
+    var(--andes-color-success, #16a34a) 14%,
+    transparent
+  );
+  color: var(--andes-color-success-text, #15803d);
+  text-decoration: none;
+}
+
+/* ----- Footer --------------------------------------------------------------------------- */
+
+.andes-color-picker__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.andes-color-picker__actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-inline-start: auto;
+}
+
+.andes-color-picker__button {
+  display: inline-flex;
+  box-sizing: border-box;
+  height: var(--andes-control-height-sm, 1.5rem);
+  align-items: center;
+  padding-inline: var(--andes-control-padding-x-sm, 0.4375rem);
+  border: 1px solid var(--andes-color-input, #e2e8f0);
+  border-radius: var(--andes-control-radius-sm, 0.25rem);
+  background-color: var(--andes-color-background, #fff);
+  color: var(--andes-color-foreground, #0f172a);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease;
+}
+
+.andes-color-picker__button:hover:not(:disabled) {
+  border-color: color-mix(
+    in srgb,
+    var(--andes-color-primary, #2563eb) 65%,
+    var(--andes-color-input, #e2e8f0)
+  );
+}
+
+.andes-color-picker__button--primary {
+  border-color: var(--andes-color-primary, #2563eb);
+  background-color: var(--andes-color-primary, #2563eb);
+  color: var(--andes-color-primary-foreground, #fff);
+}
+
+.andes-color-picker__button--primary:hover:not(:disabled) {
+  border-color: var(--andes-color-primary-hover, #1d4ed8);
+  background-color: var(--andes-color-primary-hover, #1d4ed8);
+}
+
+.andes-color-picker__button:focus-visible {
+  outline: 2px solid var(--andes-color-focus-ring, #2563eb);
+  outline-offset: 2px;
+}
+
+.andes-color-picker__button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .andes-color-picker__button {
+    transition: none;
+  }
+}

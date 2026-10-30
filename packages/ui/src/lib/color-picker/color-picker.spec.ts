@@ -996,6 +996,8 @@ describe('AndesColorPicker', () => {
         'hex',
         'rgb',
         'hsb',
+        'hsl',
+        'oklch',
       ]);
 
       select.value = 'rgb';
@@ -1424,6 +1426,7 @@ describe('AndesColorPicker', () => {
     });
 
     it('draws the fields with the field spec (hover, one focus ring, danger)', () => {
+      const style = css('color-picker-panel.css');
       expect(style).toMatch(
         /\.andes-color-picker__field:focus-within \{[^}]*border-color: var\(--andes-color-primary/,
       );

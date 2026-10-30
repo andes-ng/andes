@@ -52,6 +52,7 @@ import {
   type AndesSelectOptions,
   type AndesSelectPanelContext,
   type AndesSelectPlacement,
+  type AndesSelectSelectionEdges,
   type AndesSelectSize,
   type AndesSelectStatus,
   type AndesSelectTag,
@@ -88,6 +89,8 @@ function maxTagCountAttribute(
 function isEmptyValue(value: unknown): boolean {
   return value === null || value === undefined || value === '';
 }
+
+const NO_EDGES: AndesSelectSelectionEdges = { prev: false, next: false };
 
 const PLACEMENTS: Readonly<
   Record<
@@ -504,6 +507,41 @@ export class AndesSelect
   });
 
   readonly hasValue = computed(() => this.selectedValues().length > 0);
+
+  /**
+   * For every selected option, whether the option rendered right above and right below
+   * it is selected too, so their tints join into one block. "Right above" means the
+   * previous option still shown - options hidden by the search in between do not break
+   * a run - inside the same parent: a group boundary, a group label or a separator does.
+   */
+  private readonly edges = computed(() => {
+    // Projected items exist before the panel does and are only attached to it on open,
+    // so who sits next to whom is only known from then on.
+    this.overlay.panelElement();
+    const items = this._items();
+    const byElement = new Map(items.map((item) => [item.optionElement, item]));
+    const selected = new Set(
+      items.filter(
+        (item) => this.isSelected(item) && !this.isFilteredOut(item),
+      ),
+    );
+    const hidden = (item: AndesSelectItemRef) => this.isFilteredOut(item);
+    const joins = (
+      item: AndesSelectItemRef,
+      direction: 'previous' | 'next',
+    ) => {
+      const other = neighbour(item, direction, byElement, hidden);
+      return other !== null && selected.has(other);
+    };
+    const edges = new Map<AndesSelectItemRef, AndesSelectSelectionEdges>();
+    for (const item of selected) {
+      edges.set(item, {
+        prev: joins(item, 'previous'),
+        next: joins(item, 'next'),
+      });
+    }
+    return edges;
+  });
 
   readonly rawValue = computed(() => this.selectedValues()[0] ?? null);
 
@@ -935,6 +973,10 @@ export class AndesSelect
       restoreFocusTo: this._combobox(),
     });
     this.activateSelectedOption(initial);
+  }
+
+  override selectionEdges(item: AndesSelectItemRef): AndesSelectSelectionEdges {
+    return this.edges().get(item) ?? NO_EDGES;
   }
 
   /**
@@ -1754,6 +1796,36 @@ function isInPanelExtras(target: EventTarget | null): boolean {
       '[data-slot="select-panel-header"], [data-slot="select-panel-footer"]',
     ) !== null
   );
+}
+
+/**
+ * The option rendered next to `item` in the given direction, skipping options hidden by
+ * the search, or `null` when anything else comes first - a group label, a separator, the
+ * end of the group. Each item's host holds its option element as its first element.
+ */
+function neighbour(
+  item: AndesSelectItemRef,
+  direction: 'previous' | 'next',
+  byElement: ReadonlyMap<Element, AndesSelectItemRef>,
+  hidden: (item: AndesSelectItemRef) => boolean,
+): AndesSelectItemRef | null {
+  const step = (element: Element | null | undefined) =>
+    direction === 'next'
+      ? (element?.nextElementSibling ?? null)
+      : (element?.previousElementSibling ?? null);
+  let sibling = step(item.optionElement.parentElement);
+  while (sibling) {
+    const first = sibling.firstElementChild;
+    const candidate = first ? byElement.get(first) : undefined;
+    if (!candidate) {
+      return null;
+    }
+    if (!hidden(candidate)) {
+      return candidate;
+    }
+    sibling = step(sibling);
+  }
+  return null;
 }
 
 function textOf(value: unknown): string {

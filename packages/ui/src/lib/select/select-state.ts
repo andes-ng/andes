@@ -181,6 +181,15 @@ export type AndesSelectMaxTagPlaceholder =
   | ((omitted: readonly AndesSelectTag[]) => string)
   | TemplateRef<AndesSelectMaxTagPlaceholderContext>;
 
+/**
+ * Whether a selected option's tint joins the one above it (`prev`) and below it (`next`),
+ * so a run of consecutive selected options reads as one block.
+ */
+export interface AndesSelectSelectionEdges {
+  readonly prev: boolean;
+  readonly next: boolean;
+}
+
 /** A normalised `options` entry, as the panel renders it. */
 export type AndesSelectOptionEntry =
   | { readonly kind: 'option'; readonly option: AndesSelectOption }
@@ -363,6 +372,8 @@ export abstract class AndesSelectState {
   abstract readonly cursorVisible: Signal<boolean>;
   /** Text direction of the field, mirrored onto the panel, which lives outside it. */
   abstract readonly panelDirection: Signal<'ltr' | 'rtl' | null>;
+  /** Whether a selected option joins the selected options next to it. */
+  abstract selectionEdges(item: AndesSelectItemRef): AndesSelectSelectionEdges;
   /** Handles the pointer moving over an option: it becomes the highlighted one. */
   abstract onOptionPointerMove(
     item: AndesSelectItemRef,

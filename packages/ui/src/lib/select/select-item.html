@@ -20,6 +20,8 @@
   [attr.aria-disabled]="unavailable() || null"
   [attr.data-selected]="selected() ? '' : null"
   [attr.data-highlighted]="highlighted() ? '' : null"
+  [attr.data-joined-prev]="edges()?.prev ? '' : null"
+  [attr.data-joined-next]="edges()?.next ? '' : null"
   (pointermove)="onPointerMove($event)"
   (mousedown)="onMousedown($event)"
   (click)="onClick()"

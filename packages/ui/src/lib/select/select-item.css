@@ -79,6 +79,22 @@
   background-color: var(--andes-select-option-selected-highlight);
 }
 
+/*
+  Consecutive selected options form one block: the corners between two of them go
+  square, so their tints run together with no seam. The select works out which options
+  touch (skipping options hidden by the search, stopping at group labels and
+  separators). Block-start/-end corners, so the block reads the same in either direction.
+*/
+.andes-select__option[data-joined-prev] {
+  border-start-start-radius: 0;
+  border-start-end-radius: 0;
+}
+
+.andes-select__option[data-joined-next] {
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
+}
+
 /* Muted secondary text in an option template drops below 4.5:1 on these tinted rows (4:1
    on the selected tint). Re-scoping the token reaches consumer markup too; `currentColor`
    resolves where a descendant uses it in `color`, i.e. to this row's own text color. */

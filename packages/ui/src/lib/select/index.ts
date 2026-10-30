@@ -28,6 +28,7 @@ export type {
   AndesSelectOptions,
   AndesSelectPanelContext,
   AndesSelectPlacement,
+  AndesSelectSelectionEdges,
   AndesSelectSize,
   AndesSelectStatus,
   AndesSelectTag,

@@ -92,6 +92,9 @@ export class AndesSelectItem
       this.select.navigation.activeItem()?.element.parentElement ===
         this.host.nativeElement,
   );
+  protected readonly edges = computed(() =>
+    this.selected() ? this.select.selectionEdges(this) : null,
+  );
 
   constructor() {
     this.group?.registerItem(this);

@@ -65,6 +65,58 @@ export const Multiple: Story = {
 };
 
 /**
+ * Consecutive selected options join into one tinted block - rounded only at the run's
+ * outer corners - so a range of picks reads as one. A run breaks at a group label or a
+ * separator, not at options hidden by the search: type "p" in the third select. Hover a
+ * selected option to see its stronger tint; the selected disabled "Durian" keeps its
+ * place in the run.
+ */
+export const SelectedRuns: Story = {
+  render: () => ({
+    moduleMetadata: { imports: SELECT_IMPORTS },
+    props: {
+      fruits: FRUITS,
+      run: ['apricot', 'banana', 'blueberry', 'grape', 'kiwi'],
+      produce: [
+        {
+          label: 'Fruit',
+          options: [
+            { value: 'apple', label: 'Apple' },
+            { value: 'banana', label: 'Banana' },
+            { value: 'durian', label: 'Durian', disabled: true },
+          ],
+        },
+        {
+          label: 'Vegetables',
+          options: [
+            { value: 'leek', label: 'Leek' },
+            { value: 'carrot', label: 'Carrot' },
+          ],
+        },
+      ],
+      grouped: ['banana', 'durian', 'leek', 'carrot'],
+      searched: ['apricot', 'grape'],
+    },
+    template: `
+      <div style="width: 320px; display: flex; flex-direction: column; gap: 1.25rem;">
+        <div>
+          <andes-select aria-label="Fruit run" mode="multiple" [options]="fruits" [(value)]="run" />
+          ${note('Apricot to Blueberry form one block, Grape and Kiwi another.')}
+        </div>
+        <div>
+          <andes-select aria-label="Produce run" mode="multiple" [options]="produce" [(value)]="grouped" />
+          ${note('Each group keeps its own block.')}
+        </div>
+        <div>
+          <andes-select aria-label="Searched run" mode="multiple" [options]="fruits" [(value)]="searched" />
+          ${note('Type "p": Apricot and Grape, apart in the full list, join once the options between them are filtered out.')}
+        </div>
+      </div>
+    `,
+  }),
+};
+
+/**
  * Limits on a multiple select: `maxTagCount` collapses the overflow into a `+ N ...` tag
  * (with `maxTagTextLength` truncating long tags), `maxCount` caps the selection, and
  * `maxTagCount="responsive"` keeps the tags on one row and shows as many as fit - drag

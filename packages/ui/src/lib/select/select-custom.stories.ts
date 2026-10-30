@@ -160,41 +160,10 @@ export const PanelFooter: Story = {
 };
 
 /**
- * Where the panel opens: `side="top"` on the content makes it open above, and the
- * `placement` shorthand (`bottomLeft`, ...) does the same in one input; `side`/`align`
- * on the content still win when set. The second select is held open at `topRight`.
- */
-export const Positioning: Story = {
-  render: () => ({
-    moduleMetadata: { imports: SELECT_IMPORTS },
-    props: { fruits: FRUITS.slice(0, 3) },
-    template: `
-      <div style="padding-top: 12rem; display: flex; justify-content: space-between; gap: 1rem; width: 420px;">
-        <div style="width: 160px;">
-          <andes-select aria-label="Fruit, opens above" placeholder="side=top">
-            <andes-select-trigger>
-              <andes-select-value />
-            </andes-select-trigger>
-            <andes-select-content side="top">
-              <andes-select-item value="apple">Apple</andes-select-item>
-              <andes-select-item value="banana">Banana</andes-select-item>
-            </andes-select-content>
-          </andes-select>
-        </div>
-        <div style="width: 160px;">
-          <andes-select aria-label="Fruit, placement" placement="topRight" placeholder="topRight" [open]="true"
-            [options]="fruits">
-            <andes-select-content [matchTriggerWidth]="false" />
-          </andes-select>
-        </div>
-      </div>
-    `,
-  }),
-};
-
-/**
  * `matchTriggerWidth` sizes the panel: `false` fits it to its content (the first select),
- * a number sets it in px (the second one, 360px).
+ * a number sets it in px (the second one, 360px). `panelClass` (the third) puts classes on
+ * the panel, which renders outside the select's own DOM, so page CSS can restyle one
+ * select's panel - here a tinted border.
  */
 export const PanelWidth: Story = {
   render: () => ({
@@ -220,7 +189,20 @@ export const PanelWidth: Story = {
         <div style="width: 140px;">
           <andes-select aria-label="Terms, 360px" placeholder="360px" [options]="terms" [matchTriggerWidth]="360" />
         </div>
+        <div style="width: 200px;">
+          <andes-select aria-label="Terms, custom panel class" placeholder="panelClass" [options]="terms"
+            panelClass="story-outlined-panel" />
+        </div>
       </div>
     `,
+    // The panel is not part of this story's view, so the rule has to reach out of it,
+    // and it pairs the class with the panel's own to outweigh the panel's border rule.
+    styles: [
+      `
+      ::ng-deep .andes-select__panel.story-outlined-panel {
+        border-color: var(--andes-color-primary);
+      }
+      `,
+    ],
   }),
 };

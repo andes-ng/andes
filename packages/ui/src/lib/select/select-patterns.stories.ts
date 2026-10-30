@@ -138,3 +138,69 @@ export const InfiniteScroll: Story = {
     };
   },
 };
+
+/**
+ * The keyboard, on a 40-option list. On the field: `ArrowDown`, `Enter` or `Space` open
+ * on the selected option (else the first), `ArrowUp` on the selected option (else the
+ * last), `Home`/`End` on the first/last, and typing a letter opens on the first match.
+ * In the list: the arrows move one option, `PageDown`/`PageUp` one panel height,
+ * `Home`/`End` to the ends, letters jump by typeahead, `Enter`/`Space` pick, `Tab` and
+ * `Escape` close. Opened with the pointer, no option is highlighted until the pointer
+ * moves over one or a key is pressed - the first arrow key then highlights the option
+ * already active instead of skipping past it.
+ */
+export const Keyboard: Story = {
+  render: () => ({
+    moduleMetadata: { imports: SELECT_IMPORTS },
+    props: {
+      rooms: Array.from({ length: 40 }, (_, index) => ({
+        value: 101 + index,
+        label: `Room ${101 + index}`,
+        disabled: index % 9 === 4,
+      })),
+    },
+    template: `
+      <div style="width: 260px;">
+        <andes-select aria-label="Room" placeholder="Pick a room" [options]="rooms" />
+        ${note('Every ninth room, from 105, is disabled and skipped.')}
+      </div>
+    `,
+  }),
+};
+
+/**
+ * Outside Angular forms: with `name`, the select posts its value with a native `<form>`
+ * (one hidden input per value), and `autoFocus` focuses it once rendered. Submit to see
+ * what the form would send.
+ */
+export const NativeForm: Story = {
+  render: () => {
+    const sent = signal('');
+    return {
+      moduleMetadata: { imports: SELECT_IMPORTS },
+      props: {
+        fruits: FRUITS,
+        sent,
+        submit(event: SubmitEvent) {
+          event.preventDefault();
+          const data = new FormData(event.target as HTMLFormElement);
+          sent.set(
+            [...data.entries()]
+              .map(([key, value]) => `${key}=${String(value)}`)
+              .join('&'),
+          );
+        },
+      },
+      template: `
+        <form style="width: 260px; display: flex; flex-direction: column; gap: 0.75rem;" (submit)="submit($event)">
+          <andes-select aria-label="Favourite fruit" name="favourite" autoFocus value="banana" [options]="fruits" />
+          <andes-select aria-label="Basket" name="basket" mode="multiple" [value]="['apple', 'kiwi']" [options]="fruits" />
+          <button type="submit" style="align-self: flex-start; font: 0.875rem var(--andes-font-family), sans-serif;">
+            Submit
+          </button>
+          ${note('{{ sent() || "Nothing sent yet" }}')}
+        </form>
+      `,
+    };
+  },
+};

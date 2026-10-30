@@ -135,6 +135,8 @@ export const OptionsArrayWithTemplates: Story = {
 /**
  * `fieldNames` reads rows as they come from an API - here `{ id, name, email }` - without
  * mapping them first. Hover an option: an entry's `title` field becomes its tooltip.
+ * `optionLabelProp` (the second select) shows another field once an option is picked:
+ * the panel lists full currency names, the field and its tags show just the code.
  */
 export const FieldNames: Story = {
   render: () => ({
@@ -149,11 +151,25 @@ export const FieldNames: Story = {
       ],
       fieldNames: { value: 'id', label: 'name' },
       picked: 2,
+      currencies: [
+        { value: 'usd', label: 'US dollar (USD)', code: 'USD' },
+        { value: 'eur', label: 'Euro (EUR)', code: 'EUR' },
+        { value: 'pen', label: 'Peruvian sol (PEN)', code: 'PEN' },
+        { value: 'jpy', label: 'Japanese yen (JPY)', code: 'JPY' },
+      ],
+      accepted: ['usd', 'pen'],
     },
     template: `
-      <div style="width: 260px;">
-        <andes-select aria-label="Owner" [options]="people" [fieldNames]="fieldNames" [(value)]="picked" />
-        ${note('value: {{ picked }}')}
+      <div style="width: 260px; display: flex; flex-direction: column; gap: 1.25rem;">
+        <div>
+          <andes-select aria-label="Owner" [options]="people" [fieldNames]="fieldNames" [(value)]="picked" />
+          ${note('value: {{ picked }}')}
+        </div>
+        <div>
+          <andes-select aria-label="Accepted currencies" mode="multiple" optionLabelProp="code"
+            [options]="currencies" [(value)]="accepted" [matchTriggerWidth]="false" />
+          ${note('optionLabelProp="code"')}
+        </div>
       </div>
     `,
   }),

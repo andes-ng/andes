@@ -2,6 +2,7 @@ import { Component, signal, viewChild } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 
+import { expectLength } from '../../testing/computed-style';
 import {
   AndesSlider,
   AndesSliderMarkInput,
@@ -1425,8 +1426,8 @@ describe('AndesSlider', () => {
       expect(getComputedStyle(tooltip).transition).toBe(
         'opacity 0.15s cubic-bezier(0.2, 0, 0, 1)',
       );
-      expect(getComputedStyle(bubble).fontSize).toBe('0.75rem');
-      expect(getComputedStyle(bubble).lineHeight).toBe('1.25rem');
+      expectLength(getComputedStyle(bubble).fontSize, '0.75rem');
+      expectLength(getComputedStyle(bubble).lineHeight, '1.25rem');
     });
 
     it('fades a hover bubble out with the quick exit timing', () => {

@@ -1,11 +1,11 @@
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import type { Meta, StoryObj } from '@storybook/angular';
 
-import { AndesButton } from '../button/button';
+import { AndesInput } from '../input/input';
 import { AndesCheckbox } from './checkbox';
 
 const meta: Meta<AndesCheckbox> = {
-  title: 'Data Entry/Checkbox',
+  title: 'Data Entry/Checkbox/Basics/Field',
   component: AndesCheckbox,
   tags: ['autodocs'],
   argTypes: {
@@ -15,6 +15,12 @@ const meta: Meta<AndesCheckbox> = {
     required: { control: 'boolean' },
     readOnly: { control: 'boolean' },
     labelPosition: { control: 'inline-radio', options: ['end', 'start'] },
+    size: { control: 'inline-radio', options: ['sm', 'md', 'lg'] },
+    status: { control: 'select', options: [undefined, 'error', 'warning'] },
+    variant: {
+      control: 'inline-radio',
+      options: ['default', 'card', 'button'],
+    },
     name: { control: 'text' },
     value: { control: 'text' },
   },
@@ -25,18 +31,18 @@ const meta: Meta<AndesCheckbox> = {
     required: false,
     readOnly: false,
     labelPosition: 'end',
+    size: 'md',
+    variant: 'default',
   },
   render: (args) => ({
     props: args,
-    template: `<andes-checkbox [checked]="checked" [disabled]="disabled" [indeterminate]="indeterminate" [required]="required" [readOnly]="readOnly" [labelPosition]="labelPosition" [name]="name" [value]="value">Accept terms and conditions</andes-checkbox>`,
+    template: `<andes-checkbox [checked]="checked" [disabled]="disabled" [indeterminate]="indeterminate" [required]="required" [readOnly]="readOnly" [labelPosition]="labelPosition" [size]="size" [status]="status" [variant]="variant" [name]="name" [value]="value">Accept terms and conditions</andes-checkbox>`,
   }),
 };
 
 export default meta;
 
 type Story = StoryObj<AndesCheckbox>;
-
-const note = `font-family: var(--andes-font-family), sans-serif; font-size: 0.875rem; line-height: 1.375rem; color: var(--andes-color-foreground); margin-top: 1rem;`;
 
 /** Playground: every input is a control. */
 export const Default: Story = {};
@@ -84,6 +90,58 @@ export const Labels: Story = {
   }),
 };
 
+/**
+ * The shared control scale: a 14 / 16 / 20px box with 14px, 14px and 16px text - the same
+ * steps as the Input, so a checkbox lines up with the field next to it. Each row shows the
+ * unchecked, checked and indeterminate box, a wrapping label, and a Small Input for scale.
+ */
+export const Sizes: Story = {
+  render: () => ({
+    moduleMetadata: { imports: [AndesInput] },
+    props: {
+      rows: [
+        ['sm', 'Small'],
+        ['md', 'Medium (default)'],
+        ['lg', 'Large'],
+      ],
+    },
+    template: `
+      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        @for (row of rows; track row[0]) {
+          <div style="display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap;">
+            <andes-checkbox [size]="$any(row[0])">{{ row[1] }}</andes-checkbox>
+            <andes-checkbox [size]="$any(row[0])" [checked]="true">Checked</andes-checkbox>
+            <andes-checkbox [size]="$any(row[0])" [indeterminate]="true">Mixed</andes-checkbox>
+            <andes-input [size]="$any(row[0])" placeholder="Input, same size" aria-label="Input for scale" style="width: 12rem;" />
+          </div>
+        }
+      </div>
+    `,
+  }),
+};
+
+/**
+ * `status="error"` (painted AND announced through `aria-invalid`, like `aria-invalid="true"`)
+ * and `status="warning"` (painted only), on the plain box, a card and a button.
+ */
+export const Status: Story = {
+  render: () => ({
+    template: `
+      <div style="display: grid; grid-template-columns: repeat(3, max-content); gap: 1rem 2rem; align-items: start;">
+        <andes-checkbox status="error">Error</andes-checkbox>
+        <andes-checkbox status="error" [checked]="true">Error, checked</andes-checkbox>
+        <andes-checkbox aria-invalid="true">aria-invalid</andes-checkbox>
+        <andes-checkbox status="warning">Warning</andes-checkbox>
+        <andes-checkbox status="warning" [checked]="true">Warning, checked</andes-checkbox>
+        <andes-checkbox status="warning" disabled>Warning, disabled</andes-checkbox>
+        <andes-checkbox variant="card" status="error">Error card</andes-checkbox>
+        <andes-checkbox variant="card" status="warning" [checked]="true">Warning card</andes-checkbox>
+        <andes-checkbox variant="button" status="error">Error button</andes-checkbox>
+      </div>
+    `,
+  }),
+};
+
 /** A `FormControl` with `[formControl]` and `[(ngModel)]` in template-driven forms. */
 export const Binding: Story = {
   render: () => ({
@@ -96,101 +154,6 @@ export const Binding: Story = {
       <div style="display: flex; flex-direction: column; gap: 0.75rem;">
         <andes-checkbox [formControl]="control">Reactive form: {{ control.value }}</andes-checkbox>
         <andes-checkbox [(ngModel)]="subscribed">Template-driven form: {{ subscribed }}</andes-checkbox>
-      </div>
-    `,
-  }),
-};
-
-export const IndeterminateToChecked: Story = {
-  name: 'Indeterminate resolves to checked',
-  render: () => ({
-    props: { isChecked: false, isMixed: true },
-    // Clicking - or pressing Space on - a mixed checkbox checks it, like the native control.
-    template: `
-      <andes-checkbox [(checked)]="isChecked" [(indeterminate)]="isMixed">Mixed state</andes-checkbox>
-      <p style="${note}">
-        checked={{ isChecked }}, indeterminate={{ isMixed }}
-      </p>
-    `,
-  }),
-};
-
-export const Controlled: Story = {
-  name: 'Controlled (checked + disabled from outside)',
-  render: () => ({
-    moduleMetadata: { imports: [AndesButton] },
-    props: { isChecked: true, isDisabled: false },
-    // The parent owns both states: the buttons flip them, and `[(checked)]` keeps a user click
-    // in sync with the parent's own value.
-    template: `
-      <andes-checkbox [(checked)]="isChecked" [disabled]="isDisabled">
-        {{ isChecked ? 'Checked' : 'Unchecked' }}-{{ isDisabled ? 'Disabled' : 'Enabled' }}
-      </andes-checkbox>
-      <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-        <andes-button size="sm" (click)="isChecked = !isChecked">{{ isChecked ? 'Uncheck' : 'Check' }}</andes-button>
-        <andes-button size="sm" variant="outline" (click)="isDisabled = !isDisabled">{{ isDisabled ? 'Enable' : 'Disable' }}</andes-button>
-      </div>
-    `,
-  }),
-};
-
-export const ChangeEvent: Story = {
-  name: 'Change event',
-  render: () => ({
-    props: { isChecked: false, last: 'none yet' },
-    // `(changed)` receives an `AndesCheckboxChange`: new state, value, and the native event.
-    template: `
-      <andes-checkbox
-        value="newsletter"
-        [(checked)]="isChecked"
-        (changed)="last = 'checked=' + $event.checked + ', value=' + $event.value + ', native=' + $event.event.type"
-      >Subscribe to newsletter</andes-checkbox>
-      <p style="${note}">
-        Last change: {{ last }}
-      </p>
-    `,
-  }),
-};
-
-/**
- * `autoFocus` focuses the first checkbox on mount (press Space to toggle). The second one
- * reports `(focused)` / `(blurred)` with the native FocusEvent; `focus()`, `blur()` and
- * `nativeElement` are public on the component instance (here via a template reference).
- */
-export const Focus: Story = {
-  name: 'Focus, blur and the native input',
-  // Kept off the docs page: autoFocus would steal focus from the other stories there.
-  tags: ['!autodocs'],
-  render: () => ({
-    moduleMetadata: { imports: [AndesButton] },
-    props: { log: 'none yet' },
-    template: `
-      <andes-checkbox autoFocus>Focused on first render</andes-checkbox>
-      <andes-checkbox
-        #box
-        style="display: flex; margin-top: 1rem;"
-        (focused)="log = 'focused (' + $event.type + ')'"
-        (blurred)="log = 'blurred (' + $event.type + ')'"
-      >Remember me</andes-checkbox>
-      <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-        <andes-button size="sm" variant="outline" (mousedown)="$event.preventDefault()" (click)="box.focus()">focus()</andes-button>
-        <andes-button size="sm" variant="outline" (mousedown)="$event.preventDefault()" (click)="box.blur()">blur()</andes-button>
-        <andes-button size="sm" variant="outline" (click)="log = 'nativeElement: <' + box.nativeElement.tagName.toLowerCase() + ' type=' + box.nativeElement.type + '>'">Read nativeElement</andes-button>
-      </div>
-      <p style="${note}">Last event: {{ log }}</p>
-    `,
-  }),
-};
-
-export const CustomBorderWidth: Story = {
-  name: 'Custom border width',
-  render: () => ({
-    // `--andes-checkbox-border-width` (default 1px) is the styling hook for the box outline.
-    template: `
-      <div style="display: flex; gap: 1.5rem; --andes-checkbox-border-width: 2px;">
-        <andes-checkbox>2px border</andes-checkbox>
-        <andes-checkbox checked>2px border</andes-checkbox>
-        <andes-checkbox indeterminate>2px border</andes-checkbox>
       </div>
     `,
   }),

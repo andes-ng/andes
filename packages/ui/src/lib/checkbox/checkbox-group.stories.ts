@@ -164,7 +164,7 @@ export const Columns: Story = {
 
 /**
  * `readOnly` freezes the whole group (items stay focusable, keep their look and are announced
- * as read-only); `required` sets `aria-required` and, in a form, makes an empty selection
+ * as read-only); `required` marks the group `data-required` and, in a form, makes an empty selection
  * invalid - shown here with a FormControl whose errors are echoed, and `status="error"` once
  * it has been touched.
  */

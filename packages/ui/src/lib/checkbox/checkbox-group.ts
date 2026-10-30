@@ -108,7 +108,7 @@ function columnsAttribute(value: unknown): number | undefined {
     '[attr.aria-disabled]': 'isDisabled() || null',
     '[attr.data-disabled]': 'isDisabled() ? "" : null',
     '[attr.data-orientation]': 'resolvedOrientation()',
-    '[attr.aria-required]': 'required() || null',
+    '[attr.data-required]': 'required() ? "" : null',
     '[attr.data-readonly]': 'readOnly() ? "" : null',
     '[style.--andes-checkbox-group-columns]': 'columns() ?? null',
   },
@@ -155,7 +155,7 @@ export class AndesCheckboxGroup<T extends AndesCheckboxValue = string>
   readonly readOnly = input(false, { transform: booleanAttribute });
 
   /**
-   * At least one item must be checked: sets `aria-required` on the group and, under Angular
+   * At least one item must be checked: sets `data-required` on the group (`aria-required` is not allowed on a `group` role) and, under Angular
    * forms, makes the control invalid (`{ required: true }`) while the selection is empty.
    * Deliberately NOT forwarded to the items' native `required`, which would demand that every
    * single box be checked.

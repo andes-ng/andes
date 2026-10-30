@@ -141,7 +141,7 @@ describe('AndesCheckboxGroup presentation inheritance', () => {
       'andes-checkbox-group andes-checkbox-group--vertical',
     );
     expect(group.getAttribute('data-orientation')).toBe('vertical');
-    expect(group.hasAttribute('aria-required')).toBe(false);
+    expect(group.hasAttribute('data-required')).toBe(false);
     expect(group.hasAttribute('style')).toBe(false);
     expect(labels().every((l) => l.className === 'andes-checkbox')).toBe(true);
   });
@@ -208,10 +208,11 @@ describe('AndesCheckboxGroup readOnly and required', () => {
     expect(host.picked()).toEqual([]);
   });
 
-  it('required sets aria-required on the group', () => {
+  it('required marks the group with data-required, not aria-required', () => {
     const { group } = render((h) => h.required.set(true));
 
-    expect(group.getAttribute('aria-required')).toBe('true');
+    expect(group.hasAttribute('data-required')).toBe(true);
+    expect(group.hasAttribute('aria-required')).toBe(false);
   });
 });
 

@@ -1,15 +1,24 @@
 import { Directive, inject, TemplateRef } from '@angular/core';
 
 import { AndesCheckboxValue } from './checkbox-group-state';
+import type { AndesCheckboxVariant } from './checkbox-types';
 
 /**
  * One entry of `AndesCheckboxGroup`'s `options` input, in its object form. A bare string or
- * number is shorthand for `{ label: String(v), value: v }`.
+ * number is shorthand for `{ label: String(v), value: v }`; an object value is always given in
+ * this form.
  */
 export interface AndesCheckboxOption<T extends AndesCheckboxValue = string> {
   readonly label: string;
   readonly value: T;
+  /**
+   * Secondary text under the label (muted, and linked to the input with `aria-describedby`),
+   * e.g. what a plan includes on a card.
+   */
+  readonly description?: string;
   readonly disabled?: boolean;
+  /** This option's own variant, over the group's (one highlighted card in a plain list). */
+  readonly variant?: AndesCheckboxVariant;
   /** Native tooltip for the option (the rendered checkbox's `title` attribute). */
   readonly title?: string;
   /** Extra class(es) on the rendered `<andes-checkbox>`, e.g. to style or size one option. */
@@ -18,9 +27,13 @@ export interface AndesCheckboxOption<T extends AndesCheckboxValue = string> {
   readonly style?: string | Readonly<Record<string, string | number>>;
 }
 
-/** Anything `AndesCheckboxGroup`'s `options` input accepts per entry. */
+/**
+ * Anything `AndesCheckboxGroup`'s `options` input accepts per entry: the option object, or a
+ * bare string / number as shorthand. Object values have no shorthand - an object entry is
+ * always read as an option - so they must be wrapped as `{ label, value }`.
+ */
 export type AndesCheckboxOptionInput<T extends AndesCheckboxValue = string> =
-  T | AndesCheckboxOption<T>;
+  (T extends object ? never : T) | AndesCheckboxOption<T>;
 
 /** Template context of `AndesCheckboxOptionLabel`. */
 export interface AndesCheckboxOptionLabelContext<

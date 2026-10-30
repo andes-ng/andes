@@ -3,6 +3,7 @@
 <andes-checkbox
   [value]="option.value"
   [disabled]="option.disabled"
+  [variant]="option.variant"
   [attr.title]="option.title ?? null"
   [class]="option.className ?? ''"
   [style]="option.style ?? null"
@@ -12,6 +13,8 @@
     [ngTemplateOutlet]="custom.template"
     [ngTemplateOutletContext]="{ $implicit: option, index: index }"
   />
-  } @else { {{ option.label }} }
+  } @else { {{ option.label }} } @if (option.description) {
+  <span slot="description">{{ option.description }}</span>
+  }
 </andes-checkbox>
 }

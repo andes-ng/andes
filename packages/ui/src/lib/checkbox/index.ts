@@ -4,7 +4,14 @@ export type {
   AndesCheckboxLabelPosition,
 } from './checkbox';
 export { AndesCheckboxGroup } from './checkbox-group';
-export type { AndesCheckboxGroupOrientation } from './checkbox-group';
+export type {
+  AndesCheckboxCompareWith,
+  AndesCheckboxGroupLimit,
+  AndesCheckboxGroupOrientation,
+  AndesCheckboxSize,
+  AndesCheckboxStatus,
+  AndesCheckboxVariant,
+} from './checkbox-types';
 export type { AndesCheckboxValue } from './checkbox-group-state';
 export { AndesCheckboxSelectAll } from './checkbox-select-all';
 export { AndesCheckboxOptionLabel } from './checkbox-option-label';

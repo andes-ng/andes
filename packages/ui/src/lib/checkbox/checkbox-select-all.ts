@@ -58,6 +58,18 @@ export class AndesCheckboxSelectAll {
    * everything - matching the native platform rather than second-guessing it.
    */
   protected onChange(event: Event): void {
-    this.state.setAllSelected((event.target as HTMLInputElement).checked);
+    const native = event.target as HTMLInputElement;
+    this.state.setAllSelected(native.checked);
+
+    // When the click changed nothing (a `minCount` keeping the whole selection), the aggregate
+    // stays put while the native box has already flipped - and since the bound value did not
+    // change either, no binding would ever write the box back. So the aggregate is written to
+    // the models AND straight to the DOM properties, snapping the box to the truth.
+    const all = this.state.allSelected();
+    const mixed = this.state.indeterminate();
+    this.checkbox.checked.set(all);
+    this.checkbox.indeterminate.set(mixed);
+    native.checked = all;
+    native.indeterminate = mixed;
   }
 }

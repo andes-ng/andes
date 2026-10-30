@@ -18,6 +18,8 @@ updates:
         patterns:
           - '@angular/*'
           - 'angular-*'
+          # Moves with the framework: a build tool on another minor pulls a second copy of @angular/core.
+          - 'ng-packagr'
       nx:
         patterns:
           - '@nx/*'
@@ -30,6 +32,12 @@ updates:
         update-types:
           - 'minor'
           - 'patch'
+    ignore:
+      # jsdom 28+ resolves computed lengths to pixels, which breaks the specs that assert authored
+      # values (24 failures on develop alone). Lift this once the specs are migrated.
+      - dependency-name: 'jsdom'
+        update-types:
+          - 'version-update:semver-major'
     cooldown:
       semver-major-days: 14
 

@@ -16,6 +16,20 @@ import { AndesTableRow } from './table-row';
 import { AndesTableSelectAll, AndesTableSelection } from './table-selection';
 import type { AndesSortDirection, AndesSortState } from './table-sort';
 
+/**
+ * jsdom has no Popover API: `showPopover()` does not exist and its user-agent rule
+ * `[popover]:not(:popover-open) { display: none }` keeps every popover hidden for good, and a
+ * hidden element cannot take focus. Show a popover the way a browser does once it is open.
+ */
+beforeEach(() => {
+  Object.defineProperty(HTMLElement.prototype, 'showPopover', {
+    configurable: true,
+    value(this: HTMLElement) {
+      this.style.display = 'block';
+    },
+  });
+});
+
 interface Row {
   readonly id: string;
   readonly name: string;

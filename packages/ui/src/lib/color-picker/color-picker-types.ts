@@ -147,6 +147,8 @@ export interface AndesColorPickerLabels {
   removeStop: string;
   /** Name of the gradient angle dial and field. */
   angle: string;
+  /** Name of the field that places the selected gradient stop (percent). */
+  stopPosition: string;
   /** Heading of the contrast check: `{color}` is the `contrastWith` colour. */
   contrast: string;
   /** Text-size rows of the contrast check. */
@@ -196,6 +198,7 @@ export const ANDES_COLOR_PICKER_DEFAULT_LABELS: AndesColorPickerLabels = {
   addStop: 'Add stop',
   removeStop: 'Remove stop',
   angle: 'Angle',
+  stopPosition: 'Stop position',
   contrast: 'Contrast with {color}',
   contrastNormal: 'Normal text',
   contrastLarge: 'Large text',

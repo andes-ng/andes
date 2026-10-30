@@ -512,6 +512,7 @@ export class AndesColorPicker
       this.focusInPanel = false;
       this.pinned = false;
       this.escapePressed = false;
+      this.ctl.nestedOverlayOpen.set(false);
       this.arrowOffset.set(null);
       this.openState.set(false);
       this.ctl.announcement.set('');
@@ -739,8 +740,14 @@ export class AndesColorPicker
   }
 
   private holding(): boolean {
+    // A list opened from a field (the format select) is part of the panel though it lives
+    // in an overlay of its own, so with it up the panel is still being used.
     return (
-      this.triggerHover || this.panelHover || this.focusInPanel || this.pinned
+      this.triggerHover ||
+      this.panelHover ||
+      this.focusInPanel ||
+      this.pinned ||
+      this.ctl.nestedOverlayOpen()
     );
   }
 

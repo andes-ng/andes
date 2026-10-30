@@ -380,11 +380,8 @@ export class AndesColorPanelController {
   /** What the hex field holds while it is being edited, so typing is never rewritten. */
   private readonly hexDraft = signal<string | null>(null);
   readonly hexText = computed(() => this.hexDraft() ?? this.editHexDigits());
-  /** What a number field holds while it is being edited. */
-  private readonly channelDraft = signal<{
-    channel: AndesColorChannel;
-    text: string;
-  } | null>(null);
+  /** True while a list opened from a field (the format select) is up over the panel. */
+  readonly nestedOverlayOpen = signal(false);
 
   /** Spoken after a gesture ends, through a polite live region in the panel. */
   readonly announcement = signal('');
@@ -800,50 +797,38 @@ export class AndesColorPanelController {
     }
   }
 
-  /** What a number field shows: what is being typed into it, else the colour's value. */
-  channelText(channel: AndesColorChannel): string {
-    const draft = this.channelDraft();
-    return draft?.channel === channel
-      ? draft.text
-      : String(this.channelValue(channel));
+  /** Fraction digits a number field keeps. */
+  channelPrecision(channel: AndesColorChannel): number {
+    const step = this.channelStep(channel);
+    return step >= 1 ? 0 : String(step).split('.')[1].length;
   }
 
-  onChannelInput(channel: AndesColorChannel, field: HTMLInputElement): void {
-    this.channelDraft.set({ channel, text: field.value });
-    const parsed = field.value.trim() === '' ? NaN : Number(field.value);
-    if (!Number.isFinite(parsed)) {
-      return;
-    }
-    this.apply(this.withChannel(channel, parsed));
-  }
-
-  onChannelCommit(channel: AndesColorChannel, field: HTMLInputElement): void {
-    const parsed = field.value.trim() === '' ? NaN : Number(field.value);
+  /** A number field reports a value (each keystroke that reads as a number, a step). */
+  setChannel(channel: AndesColorChannel, value: number | string | null): void {
+    const parsed = value === null || value === '' ? NaN : Number(value);
     if (Number.isFinite(parsed)) {
-      this.apply(this.withChannel(channel, parsed), true);
+      this.apply(this.withChannel(channel, parsed));
     }
-    this.channelDraft.set(null);
-    // Whatever was typed, the field now shows what the colour really is.
-    field.value = String(this.channelValue(channel));
   }
 
-  onHexInput(field: HTMLInputElement): void {
-    this.hexDraft.set(field.value);
-    const parsed = this.parseHexField(field.value);
-    this.hexInvalid.set(parsed === null && field.value.trim() !== '');
+  /** What the hex field is told while it is edited: typing is applied once it reads as hex. */
+  onHexInput(text: string): void {
+    this.hexDraft.set(text);
+    const parsed = this.parseHexField(text);
+    this.hexInvalid.set(parsed === null && text.trim() !== '');
     if (parsed) {
       this.apply(parsed);
     }
   }
 
-  onHexCommit(field: HTMLInputElement): void {
-    const parsed = this.parseHexField(field.value);
+  /** Enter or blur in the hex field: the typed colour is final, the field shows the colour. */
+  onHexCommit(): void {
+    const parsed = this.parseHexField(this.hexText());
     if (parsed) {
       this.apply(parsed, true);
     }
     this.hexInvalid.set(false);
     this.hexDraft.set(null);
-    field.value = this.editHexDigits();
   }
 
   // ----- Gradient --------------------------------------------------------------------
@@ -1055,7 +1040,6 @@ export class AndesColorPanelController {
     this.draft.set(null);
     this.hexDraft.set(null);
     this.hexInvalid.set(false);
-    this.channelDraft.set(null);
     this.sink.cancelled();
   }
 

@@ -36,6 +36,10 @@ function press(
     cancelable: true,
     ...init,
   });
+  // The overlay reads the legacy key code.
+  Object.defineProperty(event, 'keyCode', {
+    get: () => ({ Escape: 27, Enter: 13 })[key] ?? 0,
+  });
   target.dispatchEvent(event);
   current?.detectChanges();
   return event;
@@ -204,7 +208,7 @@ describe('AndesColorPickerPanel', () => {
       true,
     );
     expect(
-      q<HTMLButtonElement>('[data-slot="color-picker-copy"]')?.disabled,
+      q<HTMLButtonElement>('[data-slot="color-picker-copy"] button')?.disabled,
     ).toBe(true);
     press(area(), 'ArrowLeft');
     expect(host.value()).toBe('#1677ff');
@@ -218,7 +222,7 @@ describe('AndesColorPickerPanel', () => {
       expect(host.changes.length).toBe(1);
       expect(host.completes).toEqual([]);
 
-      q<HTMLButtonElement>('[data-slot="color-picker-apply"]')?.click();
+      q<HTMLButtonElement>('[data-slot="color-picker-apply"] button')?.click();
       detect();
       expect(host.value()).toBe('#3086ff');
       expect(host.completes.map((event) => event.value)).toEqual(['#3086ff']);
@@ -228,7 +232,7 @@ describe('AndesColorPickerPanel', () => {
     it('goes back to the value on Cancel and on Escape, reporting cancelled', () => {
       const { q, area, host, detect } = setup((h) => h.confirm.set(true));
       press(area(), 'ArrowLeft');
-      q<HTMLButtonElement>('[data-slot="color-picker-cancel"]')?.click();
+      q<HTMLButtonElement>('[data-slot="color-picker-cancel"] button')?.click();
       detect();
       expect(host.cancelled).toBe(1);
       expect(area().getAttribute('aria-valuetext')).toBe(
@@ -248,7 +252,58 @@ describe('AndesColorPickerPanel', () => {
 
     it('shows no buttons without confirm', () => {
       const { q } = setup();
-      expect(q('[data-slot="color-picker-apply"]')).toBeNull();
+      expect(q('[data-slot="color-picker-apply"] button')).toBeNull();
+    });
+  });
+
+  describe('format select', () => {
+    const list = () =>
+      document.querySelector<HTMLElement>('[data-slot="select-content"]');
+    const options = () =>
+      Array.from(
+        list()?.querySelectorAll<HTMLElement>('[role="option"]') ?? [],
+      );
+
+    it('switches the fields through our select, not a native one', async () => {
+      const { q, fixture, detect } = setup();
+      expect(q('select')).toBeNull();
+      const combobox = q<HTMLButtonElement>(
+        '[data-slot="color-picker-format"] [role="combobox"]',
+      ) as HTMLButtonElement;
+      expect(combobox.getAttribute('aria-label')).toBe('Color format');
+      combobox.click();
+      detect();
+      await fixture.whenStable();
+      options()[1].click();
+      detect();
+      expect(q('input[aria-label="Red"]')).not.toBeNull();
+      expect(q('input[aria-label="Hex color"]')).toBeNull();
+      expect(combobox.textContent?.trim()).toBe('RGB');
+    });
+
+    it('closes only its list on Escape, keeping the staged edits, then the edits on the next one', async () => {
+      const { q, area, host, fixture, detect } = setup((h) =>
+        h.confirm.set(true),
+      );
+      press(area(), 'ArrowLeft', { shiftKey: true });
+      const combobox = q<HTMLButtonElement>(
+        '[data-slot="color-picker-format"] [role="combobox"]',
+      ) as HTMLButtonElement;
+      combobox.focus();
+      combobox.click();
+      detect();
+      await fixture.whenStable();
+      expect(list()).not.toBeNull();
+
+      press(combobox, 'Escape');
+      await fixture.whenStable();
+      detect();
+      expect(list()).toBeNull();
+      expect(host.cancelled).toBe(0);
+      expect(document.activeElement).toBe(combobox);
+
+      press(combobox, 'Escape');
+      expect(host.cancelled).toBe(1);
     });
   });
 
@@ -319,7 +374,9 @@ describe('AndesColorPickerPanel', () => {
       expect(control.value).toBe('#ff0000');
       expect(control.dirty).toBe(false);
       (
-        root.querySelector('[data-slot="color-picker-apply"]') as HTMLElement
+        root.querySelector(
+          '[data-slot="color-picker-apply"] button',
+        ) as HTMLElement
       ).click();
       fixture.detectChanges();
       expect(control.value).toBe('#ff1a1a');

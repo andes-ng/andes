@@ -17,31 +17,56 @@
       (valueChange)="ctl.setAngle($event)"
       (commit)="ctl.setAngle($event, true)"
     />
-    <span class="andes-color-picker__field andes-color-picker__field--angle">
-      <input
-        #angleInput
-        type="number"
-        inputmode="numeric"
-        step="1"
-        min="0"
-        max="360"
-        class="andes-color-picker__input"
-        data-slot="color-picker-angle-input"
-        [attr.aria-label]="ctl.text().angle"
-        [value]="ctl.angle()"
-        [disabled]="ctl.isDisabled()"
-        [readOnly]="ctl.isReadOnly()"
-        (input)="onAngleInput(angleInput, false)"
-        (change)="onAngleInput(angleInput, true)"
-      />
-      <span class="andes-color-picker__affix" aria-hidden="true">°</span>
-    </span>
+    <andes-input-number
+      #angleField
+      class="andes-color-picker__number"
+      data-slot="color-picker-angle-input"
+      [size]="controlSize()"
+      [controls]="false"
+      [min]="0"
+      [max]="360"
+      [precision]="0"
+      [aria-label]="ctl.text().angle"
+      [value]="ctl.angle()"
+      [disabled]="ctl.isDisabled()"
+      [readOnly]="ctl.isReadOnly()"
+      (valueChange)="onAngleValue($event)"
+      (stepped)="ctl.completeEdit()"
+      (pressEnter)="ctl.completeEdit()"
+      (blurred)="onNumberBlur(angleField, ctl.angle())"
+    >
+      <span slot="suffix" class="andes-color-picker__affix" aria-hidden="true"
+        >°</span
+      >
+    </andes-input-number>
+    <andes-input-number
+      #stopField
+      class="andes-color-picker__number"
+      data-slot="color-picker-stop-position"
+      [size]="controlSize()"
+      [controls]="false"
+      [min]="0"
+      [max]="100"
+      [precision]="0"
+      [aria-label]="ctl.text().stopPosition"
+      [value]="ctl.activeStop().position"
+      [disabled]="ctl.isDisabled()"
+      [readOnly]="ctl.isReadOnly()"
+      (valueChange)="onStopPositionValue($event)"
+      (stepped)="ctl.completeEdit()"
+      (pressEnter)="ctl.completeEdit()"
+      (blurred)="onNumberBlur(stopField, ctl.activeStop().position)"
+    >
+      <span slot="suffix" class="andes-color-picker__affix" aria-hidden="true"
+        >%</span
+      >
+    </andes-input-number>
     <span class="andes-color-picker__spacer"></span>
-    <button
-      type="button"
-      class="andes-color-picker__tool andes-color-picker__tool--small"
+    <andes-button
+      variant="outline"
+      [size]="buttonSize()"
       data-slot="color-picker-add-stop"
-      [attr.aria-label]="ctl.text().addStop"
+      [aria-label]="ctl.text().addStop"
       [attr.title]="ctl.text().addStop"
       [disabled]="!ctl.editable()"
       (click)="ctl.addStop()"
@@ -57,12 +82,12 @@
       >
         <path d="M12 5v14M5 12h14" />
       </svg>
-    </button>
-    <button
-      type="button"
-      class="andes-color-picker__tool andes-color-picker__tool--small"
+    </andes-button>
+    <andes-button
+      variant="outline"
+      [size]="buttonSize()"
       data-slot="color-picker-remove-stop"
-      [attr.aria-label]="ctl.text().removeStop"
+      [aria-label]="ctl.text().removeStop"
       [attr.title]="ctl.text().removeStop"
       [disabled]="!ctl.editable() || ctl.stops().length <= 2"
       (click)="removeActiveStop()"
@@ -78,7 +103,7 @@
       >
         <path d="M5 12h14" />
       </svg>
-    </button>
+    </andes-button>
   </div>
 </div>
 }
@@ -98,11 +123,11 @@
 
 <div class="andes-color-picker__controls">
   @if (ctl.supportsEyeDropper()) {
-  <button
-    type="button"
-    class="andes-color-picker__tool"
+  <andes-button
+    variant="ghost"
+    size="icon"
     data-slot="color-picker-eyedropper"
-    [attr.aria-label]="ctl.text().eyeDropper"
+    [aria-label]="ctl.text().eyeDropper"
     [attr.title]="ctl.text().eyeDropper"
     [disabled]="!ctl.editable()"
     (click)="ctl.pickWithEyeDropper()"
@@ -123,7 +148,7 @@
         d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z"
       />
     </svg>
-  </button>
+  </andes-button>
   }
 
   <div class="andes-color-picker__sliders">
@@ -190,141 +215,150 @@
   data-slot="color-picker-fields"
   [attr.data-format]="ctl.currentFormat()"
 >
-  @if (!ctl.source.disabledFormat()) {
-  <span class="andes-color-picker__field andes-color-picker__format">
-    <select
-      class="andes-color-picker__input"
-      [attr.aria-label]="ctl.text().format"
+  <div class="andes-color-picker__fields-head">
+    @if (!ctl.source.disabledFormat()) {
+    <andes-select
+      #formatSelect
+      class="andes-color-picker__format"
+      data-slot="color-picker-format"
+      [size]="controlSize()"
+      [options]="ctl.formats"
+      [value]="ctl.currentFormat()"
+      [matchTriggerWidth]="false"
+      [aria-label]="ctl.text().format"
       [disabled]="!ctl.editable()"
-      (change)="ctl.selectFormat($any($event.target).value)"
+      (selectionChange)="onFormatSelect(formatSelect, $event)"
+      (openChange)="ctl.nestedOverlayOpen.set($event)"
+    />
+    } @if (ctl.source.showCopy()) {
+    <andes-button
+      class="andes-color-picker__copy"
+      data-slot="color-picker-copy"
+      variant="outline"
+      [size]="buttonSize()"
+      [color]="ctl.copiedState() ? 'success' : undefined"
+      [aria-label]="ctl.text().copy"
+      [attr.title]="ctl.copiedState() ? ctl.text().copied : ctl.text().copy"
+      [attr.data-copied]="ctl.copiedState() ? '' : null"
+      [disabled]="ctl.isDisabled() || ctl.isEmpty()"
+      (click)="ctl.copy()"
     >
-      @for (option of ctl.formats; track option.value) {
-      <option
-        [value]="option.value"
-        [selected]="option.value === ctl.currentFormat()"
+      @if (ctl.copiedState()) {
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+        focusable="false"
       >
-        {{ option.label }}
-      </option>
+        <path d="M20 6 9 17l-5-5" />
+      </svg>
+      } @else {
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <rect x="9" y="9" width="12" height="12" rx="2" />
+        <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
+      </svg>
       }
-    </select>
-    <svg
-      class="andes-color-picker__chevron"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path d="m6 9 6 6 6-6" />
-    </svg>
-  </span>
-  } @if (ctl.currentFormat() === 'hex') {
-  <span
-    class="andes-color-picker__field andes-color-picker__field--hex"
-    [attr.data-invalid]="ctl.hexInvalid() ? '' : null"
+    </andes-button>
+    }
+  </div>
+
+  <div
+    class="andes-color-picker__values"
+    data-slot="color-picker-values"
+    [attr.data-format]="ctl.currentFormat()"
+    [attr.data-alpha]="ctl.alphaVisible() ? '' : null"
+    [attr.data-hex]="ctl.currentFormat() === 'hex' ? '' : null"
   >
-    <span class="andes-color-picker__affix" aria-hidden="true">#</span>
-    <input
+    @if (ctl.currentFormat() === 'hex') {
+    <andes-input
       #hex
-      type="text"
-      class="andes-color-picker__input"
+      class="andes-color-picker__hex"
+      data-slot="color-picker-hex"
+      dir="ltr"
       spellcheck="false"
       autocomplete="off"
-      [attr.aria-label]="ctl.text().hex"
-      [attr.aria-invalid]="ctl.hexInvalid() || null"
+      [size]="controlSize()"
+      [aria-label]="ctl.text().hex"
+      [status]="ctl.hexInvalid() ? 'error' : undefined"
       [value]="ctl.hexText()"
       [disabled]="ctl.isDisabled()"
       [readOnly]="ctl.isReadOnly()"
-      (input)="ctl.onHexInput(hex)"
-      (keydown)="onHexKeydown($event, hex)"
-      (blur)="ctl.onHexCommit(hex)"
-    />
-  </span>
-  } @else { @for (channel of ctl.channels(); track channel) {
-  <span class="andes-color-picker__field" [attr.data-channel]="channel">
-    <input
-      #channelInput
-      type="number"
-      min="0"
-      class="andes-color-picker__input"
-      [attr.inputmode]="channelInputMode(channel)"
-      [attr.step]="ctl.channelStep(channel)"
-      [attr.max]="ctl.channelMax(channel)"
-      [attr.aria-label]="ctl.channelLabel(channel)"
-      [value]="ctl.channelText(channel)"
+      (valueChange)="ctl.onHexInput($event)"
+      (pressEnter)="onHexEnter($event)"
+      (blurred)="ctl.onHexCommit()"
+    >
+      <span slot="prefix" class="andes-color-picker__affix" aria-hidden="true"
+        >#</span
+      >
+    </andes-input>
+    <ng-container [ngTemplateOutlet]="alphaField" />
+    } @else { @for (channel of ctl.channels(); track channel) {
+    <andes-input-number
+      #channelField
+      class="andes-color-picker__number"
+      data-slot="color-picker-channel"
+      [attr.data-channel]="channel"
+      [size]="controlSize()"
+      [controls]="false"
+      [min]="0"
+      [max]="ctl.channelMax(channel)"
+      [step]="ctl.channelStep(channel)"
+      [precision]="ctl.channelPrecision(channel)"
+      [aria-label]="ctl.channelLabel(channel)"
+      [value]="ctl.channelValue(channel)"
       [disabled]="ctl.isDisabled()"
       [readOnly]="ctl.isReadOnly()"
-      (input)="ctl.onChannelInput(channel, channelInput)"
-      (change)="ctl.onChannelCommit(channel, channelInput)"
+      (valueChange)="ctl.setChannel(channel, $event)"
+      (stepped)="ctl.completeEdit()"
+      (pressEnter)="ctl.completeEdit()"
+      (blurred)="onNumberBlur(channelField, ctl.channelValue(channel))"
     />
-  </span>
-  } } @if (ctl.alphaVisible()) {
-  <span
-    class="andes-color-picker__field andes-color-picker__field--alpha"
-    data-channel="a"
-  >
-    <input
-      #alphaInput
-      type="number"
-      inputmode="numeric"
-      step="1"
-      min="0"
-      max="100"
-      class="andes-color-picker__input"
-      [attr.aria-label]="ctl.channelLabel('a')"
-      [value]="ctl.channelText('a')"
-      [disabled]="ctl.isDisabled()"
-      [readOnly]="ctl.isReadOnly()"
-      (input)="ctl.onChannelInput('a', alphaInput)"
-      (change)="ctl.onChannelCommit('a', alphaInput)"
-    />
-    <span class="andes-color-picker__affix" aria-hidden="true">%</span>
-  </span>
-  } @if (ctl.source.showCopy()) {
-  <button
-    type="button"
-    class="andes-color-picker__tool andes-color-picker__copy"
-    data-slot="color-picker-copy"
-    [attr.aria-label]="ctl.text().copy"
-    [attr.title]="ctl.copiedState() ? ctl.text().copied : ctl.text().copy"
-    [attr.data-copied]="ctl.copiedState() ? '' : null"
-    [disabled]="ctl.isDisabled() || ctl.isEmpty()"
-    (click)="ctl.copy()"
-  >
-    @if (ctl.copiedState()) {
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-    } @else {
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <rect x="9" y="9" width="12" height="12" rx="2" />
-      <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
-    </svg>
-    }
-  </button>
-  }
+    } @if (ctl.alphaVisible()) {
+    <ng-container [ngTemplateOutlet]="alphaField" />
+    } }
+  </div>
 </div>
+
+<ng-template #alphaField>
+  @if (ctl.alphaVisible()) {
+  <andes-input-number
+    #alphaNumber
+    class="andes-color-picker__number andes-color-picker__number--alpha"
+    data-slot="color-picker-channel"
+    data-channel="a"
+    [size]="controlSize()"
+    [controls]="false"
+    [min]="0"
+    [max]="100"
+    [precision]="0"
+    [aria-label]="ctl.channelLabel('a')"
+    [value]="ctl.channelValue('a')"
+    [disabled]="ctl.isDisabled()"
+    [readOnly]="ctl.isReadOnly()"
+    (valueChange)="ctl.setChannel('a', $event)"
+    (stepped)="ctl.completeEdit()"
+    (pressEnter)="ctl.completeEdit()"
+    (blurred)="onNumberBlur(alphaNumber, ctl.channelValue('a'))"
+  >
+    <span slot="suffix" class="andes-color-picker__affix" aria-hidden="true"
+      >%</span
+    >
+  </andes-input-number>
+  }
+</ng-template>
 
 @if (ctl.source.showCopy()) {
 <span
@@ -506,24 +540,24 @@
   <ng-content select="[slot=panel-footer]" />
   @if (ctl.source.confirm()) {
   <div class="andes-color-picker__actions">
-    <button
-      type="button"
-      class="andes-color-picker__button"
+    <andes-button
+      variant="outline"
       data-slot="color-picker-cancel"
+      [size]="controlSize()"
       [disabled]="ctl.isDisabled()"
       (click)="ctl.cancelDraft()"
     >
       {{ ctl.text().cancel }}
-    </button>
-    <button
-      type="button"
-      class="andes-color-picker__button andes-color-picker__button--primary"
+    </andes-button>
+    <andes-button
+      variant="primary"
       data-slot="color-picker-apply"
+      [size]="controlSize()"
       [disabled]="!ctl.editable()"
       (click)="ctl.applyDraft()"
     >
       {{ ctl.text().apply }}
-    </button>
+    </andes-button>
   </div>
   }
 </div>

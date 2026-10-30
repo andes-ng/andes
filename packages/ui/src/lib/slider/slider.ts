@@ -1401,12 +1401,17 @@ export class AndesSlider implements ControlValueAccessor {
     if (distance * values.length > span + EPSILON) {
       return null;
     }
+    // The slot also stays inside the slider's own bounds.
+    const low = Math.min(this.min(), this.max());
+    const high = Math.max(this.min(), this.max());
     const lo =
-      index > 0 ? this.ceilToGrid(values[index - 1] + distance) : -Infinity;
+      index > 0
+        ? this.ceilToGrid(values[index - 1] + distance)
+        : this.ceilToGrid(low);
     const hi =
       index < values.length
         ? this.floorToGrid(values[index] - distance)
-        : Infinity;
+        : this.floorToGrid(high);
     return lo > hi ? null : clamp(wanted, lo, hi);
   }
 

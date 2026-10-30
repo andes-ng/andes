@@ -883,20 +883,36 @@ describe('AndesCascader', () => {
     });
 
     it('mirrors the horizontal arrows in right-to-left pages', () => {
-      const { combobox, active, fixture } = setup();
+      const { combobox, active, columns, fixture } = setup();
       fixture.nativeElement.style.direction = 'rtl';
+      // The column that holds the option under the cursor.
+      const cursorColumn = () =>
+        columns().findIndex((column) =>
+          column.contains(
+            document.getElementById(
+              combobox().getAttribute('aria-activedescendant') ?? '',
+            ),
+          ),
+        );
       combobox().focus();
       press(combobox(), 'ArrowDown');
+      expect(cursorColumn()).toBe(0);
+      expect(columns().length).toBe(2);
 
+      // ArrowRight goes back, and there is nothing above the first level.
       press(combobox(), 'ArrowRight');
       expect(active()).toBe('Lima');
+      expect(cursorColumn()).toBe(0);
+      expect(columns().length).toBe(2);
+
+      // ArrowLeft goes forward into the next column and opens the one after it.
       press(combobox(), 'ArrowLeft');
       expect(active()).toBe('Lima');
-      expect(document.querySelectorAll('.andes-cascader__column').length).toBe(
-        2,
-      );
-      press(combobox(), 'ArrowLeft');
-      expect(active()).toBe('Lima');
+      expect(cursorColumn()).toBe(1);
+      expect(columns().length).toBe(3);
+
+      press(combobox(), 'ArrowRight');
+      expect(cursorColumn()).toBe(0);
     });
 
     it('ignores modified keys', () => {

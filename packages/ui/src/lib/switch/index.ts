@@ -1,2 +1,10 @@
 export { AndesSwitch } from './switch';
-export type { AndesSwitchChangeEvent, AndesSwitchSize } from './switch';
+export type {
+  AndesSwitchBeforeChange,
+  AndesSwitchBlockedEvent,
+  AndesSwitchChangeEvent,
+  AndesSwitchLabelPosition,
+  AndesSwitchSize,
+  AndesSwitchStatus,
+  AndesSwitchVariant,
+} from './switch';

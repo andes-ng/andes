@@ -45,6 +45,8 @@ export interface AndesColorAreaChange {
     '[attr.aria-valuenow]': 'saturationRounded()',
     '[attr.aria-valuetext]': 'valueText()',
     '[attr.aria-disabled]': 'disabled() ? "true" : null',
+    '[attr.aria-readonly]': 'readonly() ? "true" : null',
+    '[attr.data-readonly]': 'readonly() ? "" : null',
     '[style.--andes-color-area-hue]': 'hue()',
     '[style.--andes-color-area-x]': 'saturation() / 100',
     '[style.--andes-color-area-y]': '1 - brightness() / 100',
@@ -72,6 +74,8 @@ export class AndesColorArea {
   /** Spoken value naming both axes. */
   readonly valueText = input.required<string>();
   readonly disabled = input(false, { transform: booleanAttribute });
+  /** Focusable and announced, but neither keys nor the pointer change the value. */
+  readonly readonly = input(false, { transform: booleanAttribute });
 
   /** Every change, while dragging or on the keyboard. */
   readonly areaChange = output<AndesColorAreaChange>();
@@ -85,7 +89,13 @@ export class AndesColorArea {
   private dragging = false;
 
   protected onKeydown(event: KeyboardEvent): void {
-    if (this.disabled() || event.altKey || event.ctrlKey || event.metaKey) {
+    if (
+      this.disabled() ||
+      this.readonly() ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey
+    ) {
       return;
     }
     const step = event.shiftKey ? 10 : 1;
@@ -129,7 +139,7 @@ export class AndesColorArea {
   }
 
   protected onPointerDown(event: PointerEvent): void {
-    if (this.disabled() || (event.button ?? 0) !== 0) {
+    if (this.disabled() || this.readonly() || (event.button ?? 0) !== 0) {
       return;
     }
     event.preventDefault();

@@ -58,6 +58,8 @@ const HUE_RAIL =
     '[attr.aria-valuenow]': 'roundedValue()',
     '[attr.aria-valuetext]': 'valueText() ?? null',
     '[attr.aria-disabled]': 'disabled() ? "true" : null',
+    '[attr.aria-readonly]': 'readonly() ? "true" : null',
+    '[attr.data-readonly]': 'readonly() ? "" : null',
     '[style.--andes-color-slider-position]': 'position()',
     '[style.--andes-color-slider-color]': 'color()',
     '[style.--andes-color-slider-rail-color]': 'railColor() ?? color()',
@@ -88,6 +90,8 @@ export class AndesColorSlider {
   /** The opaque colour the alpha rail fades to; defaults to `color`. */
   readonly railColor = input<string | undefined>(undefined);
   readonly disabled = input(false, { transform: booleanAttribute });
+  /** Focusable and announced, but neither keys nor the pointer change the value. */
+  readonly readonly = input(false, { transform: booleanAttribute });
 
   /** Every change, while dragging or typing on the keyboard. */
   readonly valueChange = output<number>();
@@ -110,7 +114,13 @@ export class AndesColorSlider {
   private dragging = false;
 
   protected onKeydown(event: KeyboardEvent): void {
-    if (this.disabled() || event.altKey || event.ctrlKey || event.metaKey) {
+    if (
+      this.disabled() ||
+      this.readonly() ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey
+    ) {
       return;
     }
     const step = event.shiftKey ? this.bigStep() : this.step();
@@ -146,7 +156,7 @@ export class AndesColorSlider {
   }
 
   protected onPointerDown(event: PointerEvent): void {
-    if (this.disabled() || (event.button ?? 0) !== 0) {
+    if (this.disabled() || this.readonly() || (event.button ?? 0) !== 0) {
       return;
     }
     // Keeps the press from starting a text selection or stealing focus to <body>.

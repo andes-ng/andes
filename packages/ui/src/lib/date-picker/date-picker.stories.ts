@@ -19,7 +19,7 @@ const meta: Meta<AndesDatePicker> = {
     layout: 'padded',
   },
   argTypes: {
-    mode: { control: 'select', options: ['single', 'range'] },
+    mode: { control: 'select', options: ['single', 'range', 'multiple'] },
     picker: {
       control: 'select',
       options: ['date', 'week', 'month', 'quarter', 'year'],

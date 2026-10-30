@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/angular';
 
+import { AndesSelect } from '../select/select';
 import { AndesCalendar } from './calendar';
 
 /** Pinned so the docs render the same grid regardless of when they are built. */
@@ -10,7 +11,7 @@ const meta: Meta<AndesCalendar> = {
   component: AndesCalendar,
   tags: ['autodocs'],
   argTypes: {
-    mode: { control: 'select', options: ['single', 'range'] },
+    mode: { control: 'select', options: ['single', 'range', 'multiple'] },
     locale: {
       control: 'select',
       options: ['en-US', 'es-PE', 'es-ES', 'fr-FR', 'ja-JP'],
@@ -280,59 +281,36 @@ export const Fullscreen: Story = {
 
 /**
  * `headerTemplate` replaces the navigation header. The context exposes the
- * visible month plus `goTo` and `setView`.
+ * visible month plus `goTo` and `setView` - here driving two `AndesSelect`s (for
+ * month and year selects alone, `captionLayout` has them built in).
  */
 export const CustomHeader: Story = {
   render: () => ({
+    moduleMetadata: { imports: [AndesSelect] },
     props: {
       defaultMonth: FEBRUARY_2024,
-      months: Array.from({ length: 12 }, (_, month) =>
-        new Intl.DateTimeFormat('en-US', { month: 'long' }).format(
+      monthOptions: Array.from({ length: 12 }, (_, month) => ({
+        value: month,
+        label: new Intl.DateTimeFormat('en-US', { month: 'long' }).format(
           new Date(2024, month, 1),
         ),
-      ),
-      years: [2022, 2023, 2024, 2025, 2026],
+      })),
+      yearOptions: [2022, 2023, 2024, 2025, 2026].map((year) => ({
+        value: year,
+        label: String(year),
+      })),
       toDate: (year: string | number, month: string | number) =>
         new Date(Number(year), Number(month), 1),
     },
     template: `
       <ng-template #header let-month let-goTo="goTo">
-        <div style="display: flex; gap: 0.5rem; font: 0.875rem var(--andes-font-family), sans-serif;">
-          <select class="demo-field" aria-label="Month" (change)="goTo(toDate(month.getFullYear(), $any($event.target).value))">
-            @for (name of months; track $index) { <option [value]="$index" [selected]="$index === month.getMonth()">{{ name }}</option> }
-          </select>
-          <select class="demo-field" aria-label="Year" (change)="goTo(toDate($any($event.target).value, month.getMonth()))">
-            @for (year of years; track year) { <option [value]="year" [selected]="year === month.getFullYear()">{{ year }}</option> }
-          </select>
+        <div style="display: flex; gap: 0.5rem;">
+          <andes-select size="sm" aria-label="Month" style="width: 8rem;" [showSearch]="false" [options]="monthOptions" [value]="month.getMonth()" (selectionChange)="goTo(toDate(month.getFullYear(), $event))" />
+          <andes-select size="sm" aria-label="Year" style="width: 6.5rem;" [showSearch]="false" [options]="yearOptions" [value]="month.getFullYear()" (selectionChange)="goTo(toDate($event, month.getMonth()))" />
         </div>
       </ng-template>
       <andes-calendar locale="en-US" [defaultMonth]="defaultMonth" [headerTemplate]="header" />
     `,
-    // Small fields drawn like the library's own: one border, and on focus a primary
-    // border with a soft ring instead of the browser's outline around it.
-    styles: [
-      `
-      .demo-field {
-        height: 1.5rem;
-        box-sizing: border-box;
-        padding: 0 0.4375rem;
-        border: 1px solid var(--andes-color-input);
-        border-radius: var(--andes-radius-md);
-        background: var(--andes-color-background);
-        color: var(--andes-color-foreground);
-        font: 0.875rem/1.375rem var(--andes-font-family), sans-serif;
-        outline: none;
-        transition: border-color 150ms ease, box-shadow 150ms ease;
-      }
-      .demo-field:hover {
-        border-color: color-mix(in srgb, var(--andes-color-primary) 65%, var(--andes-color-input));
-      }
-      .demo-field:focus {
-        border-color: var(--andes-color-primary);
-        box-shadow: 0 0 0 2px color-mix(in srgb, var(--andes-color-primary) 20%, transparent);
-      }
-      `,
-    ],
   }),
 };
 
@@ -368,6 +346,86 @@ export const PanelViewAndSelectSource: Story = {
               <div>{{ line }}</div>
             }
           </div>
+        </div>
+      </div>
+    `,
+  }),
+};
+
+/**
+ * `captionLayout` puts the library's own select (`AndesSelect`, small and borderless)
+ * in the header for the month and the year, in place of the caption: keyboard operable
+ * and labelled ("Month", "Year"), its list opening above any popover around it. The
+ * year list runs from `min` to `max` (here 2023-2025, with the months outside them
+ * disabled), from `startYear`/`endYear`, or a hundred years either side.
+ * With `numberOfMonths` each month has its own selects; in RTL the header mirrors.
+ * `dropdown-months` / `dropdown-years` keep only one of the two as a select.
+ */
+export const CaptionDropdowns: Story = {
+  render: () => ({
+    props: {
+      febMonth: FEBRUARY_2024,
+      earliest: new Date(2023, 2, 15),
+      latest: new Date(2025, 9, 2),
+      caption: CAPTION,
+      row: ROW,
+    },
+    template: `
+      <div [style]="row">
+        <div>
+          <p [style]="caption">dropdown, min Mar 15 2023 / max Oct 2 2025</p>
+          <andes-calendar locale="en-US" captionLayout="dropdown" [min]="earliest" [max]="latest" [defaultMonth]="febMonth" />
+        </div>
+        <div>
+          <p [style]="caption">Two months, range</p>
+          <andes-calendar mode="range" locale="en-US" captionLayout="dropdown" [numberOfMonths]="2" [defaultMonth]="febMonth" />
+        </div>
+        <div>
+          <p [style]="caption">dropdown-years, startYear 2000 / endYear 2030</p>
+          <andes-calendar locale="en-US" captionLayout="dropdown-years" [startYear]="2000" [endYear]="2030" [defaultMonth]="febMonth" />
+        </div>
+        <div dir="rtl">
+          <p [style]="caption">RTL, ar-EG</p>
+          <andes-calendar locale="ar-EG" captionLayout="dropdown" [defaultMonth]="febMonth" />
+        </div>
+      </div>
+    `,
+  }),
+};
+
+/**
+ * `mode="multiple"` selects any number of separate days: each click (or Enter/Space)
+ * toggles a day, and the value is a `Date[]` in order. `maxCount` caps it - with three
+ * days picked, the rest are disabled until one is toggled off. It works with the period
+ * pickers too (months here).
+ */
+export const Multiple: Story = {
+  render: () => ({
+    props: {
+      febMonth: FEBRUARY_2024,
+      days: [
+        new Date(2024, 1, 6),
+        new Date(2024, 1, 14),
+        new Date(2024, 1, 22),
+      ],
+      cappedDays: [new Date(2024, 1, 5), new Date(2024, 1, 7)],
+      monthList: [new Date(2024, 0, 1), new Date(2024, 3, 1)],
+      caption: CAPTION,
+      row: ROW,
+    },
+    template: `
+      <div [style]="row">
+        <div>
+          <p [style]="caption">multiple: {{ days.length }} selected</p>
+          <andes-calendar mode="multiple" locale="en-US" [(value)]="days" [defaultMonth]="febMonth" />
+        </div>
+        <div>
+          <p [style]="caption">maxCount = 3</p>
+          <andes-calendar mode="multiple" locale="en-US" [maxCount]="3" [(value)]="cappedDays" [defaultMonth]="febMonth" />
+        </div>
+        <div>
+          <p [style]="caption">picker="month"</p>
+          <andes-calendar mode="multiple" picker="month" locale="en-US" [(value)]="monthList" />
         </div>
       </div>
     `,

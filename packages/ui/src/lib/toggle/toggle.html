@@ -12,5 +12,15 @@
   (click)="onClick()"
   (blur)="onBlur()"
 >
-  <ng-content />
+  <span class="andes-toggle__icon" aria-hidden="true"
+    >@if (iconStart(); as startTemplate) {
+    <ng-container *ngTemplateOutlet="startTemplate" />
+    }<ng-content select="[slot=icon-start]"
+  /></span>
+  <span class="andes-toggle__label"><ng-content /></span>
+  <span class="andes-toggle__icon" aria-hidden="true"
+    >@if (iconEnd(); as endTemplate) {
+    <ng-container *ngTemplateOutlet="endTemplate" />
+    }<ng-content select="[slot=icon-end]"
+  /></span>
 </button>

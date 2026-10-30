@@ -1,5 +1,6 @@
 import { Component, forwardRef, Input, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { readFileSync } from 'node:fs';
 import {
   ControlValueAccessor,
   FormControl,
@@ -13,6 +14,7 @@ import { AndesFormDescription } from './form-description';
 import { AndesFormError } from './form-error';
 import { AndesFormField } from './form-field';
 import { AndesFormLabel } from './form-label';
+import { declaredValue, expectLength } from '../../testing/computed-style';
 
 /**
  * Minimal stand-in for a wrapping `ControlValueAccessor` *component* (the shape AndesInput/
@@ -529,10 +531,15 @@ describe('AndesFormField', () => {
   // because it never asks the CSS engine to resolve a selector. Measured before the fix:
   // error color `rgb(0, 0, 0)` and label font-size/font-weight both empty strings.
   //
-  // jsdom's CSSOM does not resolve `var()`, so token-valued properties are asserted as the
-  // literal `var(--andes-*)` text they were authored with - which still proves the rule
-  // matched, since an unmatched rule yields an empty string (or the UA default) instead.
+  // jsdom does not resolve `var()`, so token-valued longhands are asserted as the literal
+  // `var(--andes-*)` text they were authored with - which still proves the rule matched, since
+  // an unmatched rule yields the initial value instead. A shorthand holding `var()` is not
+  // expanded at all, so those are asserted through the stylesheet declaration.
   describe('applies real styles to every part (not dead CSS)', () => {
+    /** The rule that tints a native control placed directly in an invalid field. */
+    const INVALID_CONTROL_SELECTOR =
+      ".andes-form-field--invalid > .andes-form-field__control > :where(input:not([type='checkbox'], [type='radio']), select, textarea)";
+
     function renderStyled() {
       const fixture = TestBed.createComponent(NativeInputHost);
       fixture.detectChanges();
@@ -586,8 +593,8 @@ describe('AndesFormField', () => {
     it('styles the <p> rendered by AndesFormDescription', () => {
       const style = getComputedStyle(renderStyled().description);
 
-      expect(style.fontSize).toBe('0.75rem');
-      expect(style.lineHeight).toBe('1.25rem');
+      expectLength(style.fontSize, '0.75rem');
+      expectLength(style.lineHeight, '1.25rem');
       expect(style.color).toBe('var(--andes-color-muted-foreground)');
       // <p>'s UA default margin is 1em 0 - proving it is 0 proves the rule matched.
       expect(style.margin).toBe('0px');
@@ -601,19 +608,15 @@ describe('AndesFormField', () => {
         'var(--andes-color-danger-text, var(--andes-color-danger-hover))',
       );
       expect(style.color).not.toBe('rgb(0, 0, 0)');
-      expect(style.fontSize).toBe('0.75rem');
-      expect(style.lineHeight).toBe('1.25rem');
+      expectLength(style.fontSize, '0.75rem');
+      expectLength(style.lineHeight, '1.25rem');
       expect(style.margin).toBe('0px');
     });
 
     it('tints the projected native control´s border while the field is invalid', () => {
       const { input, field } = renderStyled();
 
-      // A control in a field that is NOT in the invalid state, as the differential baseline:
-      // the same property, on the same kind of element, with the rule deliberately not
-      // applying. jsdom cannot resolve `var()` so it reports an unhelpful placeholder for the
-      // value itself - but "the rule matched here and not there" is exactly what makes this a
-      // real CSS-engine assertion rather than a class-name check.
+      // A control in a field that is NOT in the invalid state, as the differential baseline.
       const validFixture = TestBed.createComponent(OptionalControlHost);
       validFixture.detectChanges();
       const validInput = validFixture.nativeElement.querySelector(
@@ -626,17 +629,21 @@ describe('AndesFormField', () => {
           ?.classList,
       ).not.toContain('andes-form-field--invalid');
 
-      // `.andes-form-field--invalid > .andes-form-field__control > :where(input, ...)` targets an element the
-      // consumer authored and Angular projected in, so it was unreachable from a scoped
-      // stylesheet - this property read back as an empty string before the fix, exactly like
-      // the untinted baseline below still does.
-      const tinted = getComputedStyle(input).getPropertyValue('border-color');
-      const untinted =
-        getComputedStyle(validInput).getPropertyValue('border-color');
-
-      expect(untinted).toBe('');
-      expect(tinted).not.toBe('');
-      expect(tinted).not.toBe(untinted);
+      // `border-color: var(--andes-color-danger)` is a shorthand holding `var()`, which jsdom
+      // neither expands nor resolves, so the computed border colour cannot tell the tinted
+      // control from the untinted one. Assert the declaration itself, and that its selector
+      // reaches the projected control of an invalid field but not the one of a valid field. That
+      // selector targets an element the consumer authored and Angular projected in, so it was
+      // unreachable from a scoped stylesheet before the fix.
+      const css = readFileSync(
+        'packages/ui/src/lib/form-field/form-field.css',
+        'utf8',
+      );
+      expect(declaredValue(css, INVALID_CONTROL_SELECTOR, 'border-color')).toBe(
+        'var(--andes-color-danger)',
+      );
+      expect(input.matches(INVALID_CONTROL_SELECTOR)).toBe(true);
+      expect(validInput.matches(INVALID_CONTROL_SELECTOR)).toBe(false);
     });
 
     // A focused invalid control shows one indicator - the status border plus a soft 2px ring -
@@ -680,8 +687,10 @@ describe('AndesFormField', () => {
       expect(
         fixture.nativeElement.querySelector('.andes-form-field').classList,
       ).toContain('andes-form-field--invalid');
-      expect(getComputedStyle(input).getPropertyValue('border-color')).toBe('');
-      expect(getComputedStyle(input).boxShadow).toBe('');
+      // The tint is a `border-color: var()` shorthand jsdom cannot compute, so prove the
+      // selector of the tint does not reach this deeper input instead.
+      expect(input.matches(INVALID_CONTROL_SELECTOR)).toBe(false);
+      expect(getComputedStyle(input).boxShadow).toBe('none');
     });
   });
 

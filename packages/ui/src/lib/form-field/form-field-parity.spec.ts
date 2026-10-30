@@ -1,5 +1,6 @@
 import { Component, signal, type TemplateRef, viewChild } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { readFileSync } from 'node:fs';
 import {
   type AbstractControl,
   FormControl,
@@ -26,6 +27,7 @@ import type {
   AndesFormShowErrorsOn,
   AndesFormValidateStatus,
 } from './form-field-tokens';
+import { declaredValue, expectInherited } from '../../testing/computed-style';
 
 /**
  * Coverage for the presentation features layered onto AndesFormField
@@ -496,7 +498,16 @@ describe('AndesFormField - presentation features', () => {
       expect(tip.textContent?.trim()).toBe('Your legal name.');
       expect(tip.hidden).toBe(true);
       // A native button would otherwise fall back to the UA font.
-      expect(getComputedStyle(trigger).fontFamily).toBe('inherit');
+      // `inherit` computes to the parent's font, which a native button would not get on its own,
+      // so also assert the declaration the stylesheet makes.
+      expectInherited(trigger, ['font-family']);
+      expect(
+        declaredValue(
+          readFileSync('packages/ui/src/lib/form-field/form-field.css', 'utf8'),
+          '.andes-form-label__tooltip-trigger',
+          'font-family',
+        ),
+      ).toBe('inherit');
     });
 
     it('opens the tooltip on focus and hover, and closes it on Escape/blur/leave', () => {

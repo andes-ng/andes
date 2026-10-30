@@ -29,6 +29,8 @@ import {
   startOfDay,
   startOfMonth,
   toDateKey,
+  toDateList,
+  toOpenDateRange,
   weekdayNames,
 } from './date-utils';
 
@@ -596,6 +598,66 @@ describe('date-utils', () => {
       expect(toDateKey(date)).toBe('2024-02-05');
       expect(date.getHours()).toBe(23);
       expect(date.getSeconds()).toBe(1);
+    });
+  });
+  describe('toOpenDateRange', () => {
+    const keysOf = (value: unknown) => {
+      const range = toOpenDateRange(value);
+      return range
+        ? [
+            range.start ? toDateKey(range.start) : null,
+            range.end ? toDateKey(range.end) : null,
+          ]
+        : null;
+    };
+
+    it('keeps an open start, which toDateRange drops', () => {
+      expect(keysOf([null, new Date(2024, 1, 9)])).toEqual([
+        null,
+        '2024-02-09',
+      ]);
+      expect(keysOf({ start: null, end: '2024-02-09' })).toEqual([
+        null,
+        '2024-02-09',
+      ]);
+    });
+
+    it('orders a complete range and reads every accepted shape', () => {
+      expect(keysOf([new Date(2024, 1, 9), new Date(2024, 1, 2)])).toEqual([
+        '2024-02-02',
+        '2024-02-09',
+      ]);
+      expect(keysOf(new Date(2024, 1, 9))).toEqual(['2024-02-09', null]);
+      expect(keysOf('2024-02-09')).toEqual(['2024-02-09', null]);
+    });
+
+    it('is null when both sides are empty', () => {
+      expect(toOpenDateRange(null)).toBeNull();
+      expect(toOpenDateRange('')).toBeNull();
+      expect(toOpenDateRange([null, null])).toBeNull();
+      expect(toOpenDateRange({ start: 'nope', end: undefined })).toBeNull();
+    });
+  });
+
+  describe('toDateList', () => {
+    it('coerces, sorts and de-duplicates by day', () => {
+      const list = toDateList([
+        new Date(2024, 1, 9, 15),
+        '2024-02-01',
+        new Date(2024, 1, 9),
+        'not a date',
+        null,
+      ]);
+      expect(list.map(toDateKey)).toEqual(['2024-02-01', '2024-02-09']);
+      expect(list[1].getHours()).toBe(0);
+    });
+
+    it('wraps a single value and treats nothing as empty', () => {
+      expect(toDateList(new Date(2024, 1, 9)).map(toDateKey)).toEqual([
+        '2024-02-09',
+      ]);
+      expect(toDateList(null)).toEqual([]);
+      expect(toDateList(undefined)).toEqual([]);
     });
   });
 });

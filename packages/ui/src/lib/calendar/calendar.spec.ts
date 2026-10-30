@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { Component, signal, TemplateRef, viewChild } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
+import { declaredValue } from '../../testing/computed-style';
+
 import {
   AndesCalendar,
   type AndesCalendarCellContext,
@@ -439,9 +441,17 @@ describe('AndesCalendar', () => {
     it('renders the nav buttons in the component font', () => {
       const { previous, next } = createHost();
 
-      // A native button would otherwise fall back to the UA font.
-      expect(getComputedStyle(previous()).fontFamily).toBe('inherit');
-      expect(getComputedStyle(next()).fontFamily).toBe('inherit');
+      // A native button would otherwise fall back to the UA font. Read from the
+      // stylesheet: jsdom 28+ resolves `inherit` to the parent's family.
+      const css = readFileSync(
+        join(dirname(fileURLToPath(import.meta.url)), 'calendar.css'),
+        'utf-8',
+      );
+      expect(declaredValue(css, '.andes-calendar__nav', 'font-family')).toBe(
+        'inherit',
+      );
+      expect(previous().classList).toContain('andes-calendar__nav');
+      expect(next().classList).toContain('andes-calendar__nav');
     });
   });
 

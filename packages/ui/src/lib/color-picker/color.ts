@@ -1,19 +1,26 @@
 import {
   clamp,
+  compositeOver,
+  contrastRatio,
   formatHex,
   formatHsb,
   formatHsl,
+  formatOklch,
   formatRgb,
   hsbToHsl,
   hsbToRgb,
   hslToHsb,
+  oklchToRgb,
   parseColor,
+  relativeLuminance,
   rgbToHsb,
+  rgbToOklch,
   roundTo,
   wrapHue,
   type AndesColorFormat,
   type AndesHsba,
   type AndesHsla,
+  type AndesOklch,
   type AndesRgba,
 } from './color-math';
 
@@ -81,6 +88,16 @@ export class AndesColor {
     return new AndesColor(hsb.h, hsb.s, hsb.b, a);
   }
 
+  /**
+   * From OKLCH: lightness 0-1, chroma (0-0.4 covers sRGB), hue in degrees, alpha 0-1. Colours
+   * outside sRGB are clipped channel by channel (see {@link oklchToRgb}).
+   */
+  static fromOklch(l: number, c: number, h: number, a = 1): AndesColor {
+    const rgb = oklchToRgb(l, c, h);
+    const hsb = rgbToHsb(rgb.r, rgb.g, rgb.b);
+    return new AndesColor(hsb.h, hsb.s, hsb.b, a);
+  }
+
   /** Reads CSS-style text (see {@link parseColor}); `null` when it is not a colour. */
   static parse(
     input: string,
@@ -138,6 +155,15 @@ export class AndesColor {
     };
   }
 
+  /**
+   * OKLCH, unrounded: computed from the exact (unrounded) RGB of the colour, so a value read
+   * from `oklch()` text gives back the numbers it was written with.
+   */
+  toOklch(): AndesOklch {
+    const rgb = hsbToRgb(this.hue, this.saturation, this.brightness);
+    return { ...rgbToOklch(rgb.r, rgb.g, rgb.b), a: this.alpha };
+  }
+
   /** `#rrggbb`, or `#rrggbbaa` when not opaque (unless `allowAlpha` is `false`). */
   toHex(allowAlpha = true): string {
     // The exact alpha, not the two-decimal one: a hex byte keeps more than that, so text
@@ -160,6 +186,11 @@ export class AndesColor {
     return formatHsb(this.toHsb());
   }
 
+  /** `oklch(L% C H)` / `oklch(L% C H / a)`: lightness to 2 decimals, chroma to 4, hue to 2. */
+  toOklchString(): string {
+    return formatOklch({ ...this.toOklch(), a: roundTo(this.alpha, 2) });
+  }
+
   /** The colour as text in one of the picker's formats. */
   toFormat(format: AndesColorFormat, allowAlpha = true): string {
     const color = allowAlpha ? this : this.withAlpha(1);
@@ -168,6 +199,10 @@ export class AndesColor {
         return color.toRgbString();
       case 'hsb':
         return color.toHsbString();
+      case 'hsl':
+        return color.toHslString();
+      case 'oklch':
+        return color.toOklchString();
       default:
         return color.toHex();
     }
@@ -190,6 +225,36 @@ export class AndesColor {
       patch.s ?? this.saturation,
       patch.b ?? this.brightness,
       patch.a ?? this.alpha,
+    );
+  }
+
+  /**
+   * A copy with some of the HSL components replaced; the hue is kept as it is when only
+   * saturation or lightness change, even where HSL has none (greys).
+   */
+  withHsl(patch: { h?: number; s?: number; l?: number }): AndesColor {
+    const current = hsbToHsl(this.hue, this.saturation, this.brightness);
+    const hsb = hslToHsb(
+      patch.h ?? this.hue,
+      patch.s ?? current.s,
+      patch.l ?? current.l,
+    );
+    return new AndesColor(patch.h ?? this.hue, hsb.s, hsb.b, this.alpha);
+  }
+
+  /**
+   * WCAG 2 contrast ratio (1-21) of this colour drawn on `background`. Translucency is
+   * resolved the way the eye sees it: a translucent background is first composited onto
+   * white (the page), then this colour, if translucent, is composited onto that. Unrounded:
+   * compare it with the thresholds as is (4.5 is not met by 4.499).
+   */
+  contrastRatio(background: AndesColor): number {
+    const white: AndesRgba = { r: 255, g: 255, b: 255, a: 1 };
+    const base = compositeOver(background.exactRgba(), white);
+    const front = compositeOver(this.exactRgba(), base);
+    return contrastRatio(
+      relativeLuminance(front.r, front.g, front.b),
+      relativeLuminance(base.r, base.g, base.b),
     );
   }
 
@@ -227,6 +292,14 @@ export class AndesColor {
 
   toString(): string {
     return this.toHex();
+  }
+
+  /** Unrounded RGBA: channel floats 0-255 and the exact alpha. */
+  private exactRgba(): AndesRgba {
+    return {
+      ...hsbToRgb(this.hue, this.saturation, this.brightness),
+      a: this.alpha,
+    };
   }
 
   toJSON(): string {

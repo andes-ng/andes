@@ -1,12 +1,16 @@
 /**
- * Pure colour math for the colour picker: conversions between RGB, HSB (also called HSV) and
- * HSL, a tolerant string parser and the matching formatters. Nothing here touches the DOM or
- * Angular, so it is tested on its own.
+ * Pure colour math for the colour picker: conversions between RGB, HSB (also called HSV),
+ * HSL and OKLCH, a tolerant string parser, the matching formatters and the WCAG contrast
+ * ratio. Nothing here touches the DOM or Angular, so it is tested on its own.
  *
  * Conventions used by every function in this module:
  * - `r`, `g`, `b` are 0-255, `a` is 0-1;
  * - `h` is degrees, 0-360 (360 is folded back to 0 by the parsers);
- * - `s`, `b` (HSB) and `s`, `l` (HSL) are percentages, 0-100.
+ * - `s`, `b` (HSB) and `s`, `l` (HSL) are percentages, 0-100;
+ * - OKLCH lightness `l` is 0-1, chroma `c` is unbounded (sRGB colours stay under 0.33) and
+ *   its hue is in degrees.
+ *
+ * Parsing uses string operations and static regular expressions only.
  */
 
 /** An RGB colour with alpha: channels 0-255, alpha 0-1. */
@@ -33,8 +37,19 @@ export interface AndesHsla {
   a: number;
 }
 
-/** The text formats a colour can be shown and edited in. */
-export type AndesColorFormat = 'hex' | 'rgb' | 'hsb';
+/** An OKLCH colour with alpha: lightness 0-1, chroma 0-0.4 (sRGB), hue in degrees, alpha 0-1. */
+export interface AndesOklch {
+  l: number;
+  c: number;
+  h: number;
+  a: number;
+}
+
+/**
+ * The text formats a colour can be shown and edited in. `hsb` is the picker's own notation
+ * (not CSS); every other format is valid CSS colour text.
+ */
+export type AndesColorFormat = 'hex' | 'rgb' | 'hsb' | 'hsl' | 'oklch';
 
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
@@ -229,8 +244,7 @@ export interface AndesParsedColor extends AndesRgba {
   hsb?: { h: number; s: number; b: number };
 }
 
-const NUMBER = String.raw`[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?`;
-const COMPONENT = new RegExp(`^(${NUMBER})(%|deg)?$`, 'i');
+const COMPONENT = /^([+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?)(%|deg)?$/i;
 const HEX_DIGITS = /^[\da-f]+$/i;
 
 interface ParsedComponent {
@@ -303,6 +317,10 @@ function parseFunctional(
     return null;
   }
 
+  if (name === 'oklch') {
+    return parseOklchComponents(first, second, third, a);
+  }
+
   if (name === 'rgb' || name === 'rgba') {
     if ([first, second, third].some((part) => part.unit === 'deg')) {
       return null;
@@ -347,8 +365,8 @@ export interface AndesParseColorOptions {
 /**
  * Reads a colour from text: `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`, `rgb()`/`rgba()`,
  * `hsl()`/`hsla()`, `hsb()`/`hsba()`/`hsv()`/`hsva()` (comma or space separated, alpha after a
- * comma or a slash, percentages allowed), a subset of the named colours and `transparent`.
- * Returns `null` for anything else.
+ * comma or a slash, percentages allowed), `oklch()` (space separated, alpha after a slash), a
+ * subset of the named colours and `transparent`. Returns `null` for anything else.
  */
 export function parseColor(
   input: string,
@@ -372,7 +390,9 @@ export function parseColor(
     return parseHex(named.slice(1));
   }
 
-  const functional = /^(rgba?|hsla?|hsba?|hsva?)\(\s*([^)]*?)\s*\)$/.exec(text);
+  const functional = /^(rgba?|hsla?|hsba?|hsva?|oklch)\(\s*([^)]*?)\s*\)$/.exec(
+    text,
+  );
   if (functional) {
     const name = functional[1].replace(/^hsv/, 'hsb');
     const args = functional[2].split(/[\s,/]+/).filter(Boolean);
@@ -419,4 +439,164 @@ export function formatHsl(hsla: AndesHsla): string {
 export function formatHsb(hsba: AndesHsba): string {
   const body = `${Math.round(wrapHue(hsba.h))}, ${Math.round(hsba.s)}%, ${Math.round(hsba.b)}%`;
   return hsba.a < 1 ? `hsba(${body}, ${alphaText(hsba.a)})` : `hsb(${body})`;
+}
+
+/** `oklch(L% C H)`, or `oklch(L% C H / a)` when the colour is not opaque. */
+export function formatOklch(oklch: AndesOklch): string {
+  const lightness = roundTo(clamp(oklch.l, 0, 1) * 100, 2);
+  const chroma = roundTo(Math.max(oklch.c, 0), 4);
+  // An achromatic colour has no hue; `0` is what CSS serialises for it.
+  const hue = chroma === 0 ? 0 : roundTo(wrapHue(oklch.h), 2) % 360;
+  const body = `${lightness}% ${chroma} ${hue}`;
+  return oklch.a < 1
+    ? `oklch(${body} / ${alphaText(oklch.a)})`
+    : `oklch(${body})`;
+}
+
+// ----- OKLCH ------------------------------------------------------------------------------
+
+/** sRGB transfer function, decoding: a 0-1 channel to linear light. */
+export function srgbToLinear(channel: number): number {
+  const value = clamp(channel, 0, 1);
+  return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+}
+
+/** sRGB transfer function, encoding: linear light to a 0-1 channel. */
+export function linearToSrgb(channel: number): number {
+  const value = clamp(channel, 0, 1);
+  return value <= 0.0031308
+    ? value * 12.92
+    : 1.055 * value ** (1 / 2.4) - 0.055;
+}
+
+/**
+ * Converts RGB (0-255, floats welcome) to OKLCH through linear sRGB and OKLab, with the
+ * published OKLab matrices. Chroma under `1e-6` counts as none, and its hue is then `0`.
+ */
+export function rgbToOklch(
+  r: number,
+  g: number,
+  b: number,
+): { l: number; c: number; h: number } {
+  const red = srgbToLinear(r / 255);
+  const green = srgbToLinear(g / 255);
+  const blue = srgbToLinear(b / 255);
+
+  const l = Math.cbrt(
+    0.4122214708 * red + 0.5363325363 * green + 0.0514459929 * blue,
+  );
+  const m = Math.cbrt(
+    0.2119034982 * red + 0.6806995451 * green + 0.1073969566 * blue,
+  );
+  const s = Math.cbrt(
+    0.0883024619 * red + 0.2817188376 * green + 0.6299787005 * blue,
+  );
+
+  const lightness = 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s;
+  const a = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s;
+  const bAxis = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s;
+
+  const chroma = Math.hypot(a, bAxis);
+  return {
+    l: lightness,
+    c: chroma < 1e-6 ? 0 : chroma,
+    h: chroma < 1e-6 ? 0 : wrapHue((Math.atan2(bAxis, a) * 180) / Math.PI),
+  };
+}
+
+/**
+ * Converts OKLCH to RGB (0-255 floats). Colours outside the sRGB gamut are clipped channel by
+ * channel, which is what a browser does when it paints them on an sRGB screen; the clip can
+ * shift the hue of very saturated colours a little.
+ */
+export function oklchToRgb(
+  l: number,
+  c: number,
+  h: number,
+): { r: number; g: number; b: number } {
+  const radians = (wrapHue(h) * Math.PI) / 180;
+  const chroma = Math.max(c, 0);
+  const a = chroma * Math.cos(radians);
+  const bAxis = chroma * Math.sin(radians);
+  const lightness = clamp(l, 0, 1);
+
+  const l3 = (lightness + 0.3963377774 * a + 0.2158037573 * bAxis) ** 3;
+  const m3 = (lightness - 0.1055613458 * a - 0.0638541728 * bAxis) ** 3;
+  const s3 = (lightness - 0.0894841775 * a - 1.291485548 * bAxis) ** 3;
+
+  const red = 4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3;
+  const green = -1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3;
+  const blue = -0.0041960863 * l3 - 0.7034186147 * m3 + 1.707614701 * s3;
+
+  return {
+    r: linearToSrgb(red) * 255,
+    g: linearToSrgb(green) * 255,
+    b: linearToSrgb(blue) * 255,
+  };
+}
+
+/**
+ * The three `oklch()` components: lightness as a 0-1 number or a percentage, chroma as a
+ * number or a percentage of 0.4 (the CSS reference range), hue as a number or `deg`.
+ */
+function parseOklchComponents(
+  lightness: ParsedComponent,
+  chroma: ParsedComponent,
+  hue: ParsedComponent,
+  alpha: number,
+): AndesParsedColor | null {
+  if (lightness.unit === 'deg' || chroma.unit === 'deg' || hue.unit === '%') {
+    return null;
+  }
+  const l = lightness.unit === '%' ? lightness.value / 100 : lightness.value;
+  const c = chroma.unit === '%' ? (chroma.value / 100) * 0.4 : chroma.value;
+  const rgb = oklchToRgb(clamp(l, 0, 1), Math.max(c, 0), hue.value);
+  return {
+    r: Math.round(rgb.r),
+    g: Math.round(rgb.g),
+    b: Math.round(rgb.b),
+    a: alpha,
+    // The unrounded reading, so the colour keeps the precision the text had.
+    hsb: rgbToHsb(rgb.r, rgb.g, rgb.b),
+  };
+}
+
+// ----- Contrast ---------------------------------------------------------------------------
+
+/**
+ * WCAG 2 relative luminance of an opaque sRGB colour (channels 0-255): 0 for black, 1 for
+ * white.
+ */
+export function relativeLuminance(r: number, g: number, b: number): number {
+  return (
+    0.2126 * srgbToLinear(r / 255) +
+    0.7152 * srgbToLinear(g / 255) +
+    0.0722 * srgbToLinear(b / 255)
+  );
+}
+
+/** WCAG 2 contrast ratio of two relative luminances: 1 (none) to 21 (black on white). */
+export function contrastRatio(first: number, second: number): number {
+  const lighter = Math.max(first, second);
+  const darker = Math.min(first, second);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+/**
+ * Paints `top` over `bottom` with ordinary alpha compositing (source-over). Over an opaque
+ * `bottom` the result is opaque.
+ */
+export function compositeOver(top: AndesRgba, bottom: AndesRgba): AndesRgba {
+  const alpha = top.a + bottom.a * (1 - top.a);
+  if (alpha === 0) {
+    return { r: 0, g: 0, b: 0, a: 0 };
+  }
+  const channel = (front: number, back: number) =>
+    (front * top.a + back * bottom.a * (1 - top.a)) / alpha;
+  return {
+    r: channel(top.r, bottom.r),
+    g: channel(top.g, bottom.g),
+    b: channel(top.b, bottom.b),
+    a: alpha,
+  };
 }

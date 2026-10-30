@@ -12,6 +12,7 @@ import { AndesDropdownMenuRadioItem } from './dropdown-menu-radio-item';
 import { AndesDropdownMenuSeparator } from './dropdown-menu-separator';
 import { AndesDropdownMenuShortcut } from './dropdown-menu-shortcut';
 import { AndesDropdownMenuTrigger } from './dropdown-menu-trigger';
+import { declaredValue, expectLength } from '../../testing/computed-style';
 
 /**
  * jsdom reports zero geometry for every element, which makes CDK's
@@ -515,9 +516,18 @@ describe('AndesDropdownMenu', () => {
       expect(style.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
       expect(style.backgroundColor).not.toBe('');
       expect(style.borderRadius).not.toBe('0px');
-      expect(style.padding).not.toBe('0px');
       expect(style.boxShadow).not.toBe('none');
       expect(style.boxShadow).not.toBe('');
+      // jsdom does not expand a shorthand holding `var()`, so `padding` reads back as its
+      // initial `0` whether or not the rule matched: assert the declaration itself (the
+      // `display: flex` above proves the same rule is the one that applied).
+      const css = readFileSync(
+        'packages/ui/src/lib/dropdown-menu/dropdown-menu.css',
+        'utf8',
+      );
+      expect(
+        declaredValue(css, '.andes-dropdown-menu__content', 'padding'),
+      ).toBe('var(--andes-space-1)');
     });
 
     it('lays a menu item out as a flex row with real padding, not inline text', async () => {
@@ -532,10 +542,19 @@ describe('AndesDropdownMenu', () => {
       // actually distinguishes a real match from dead CSS.
       expect(style.display).toBe('flex');
       expect(style.alignItems).toBe('center');
-      expect(style.padding).not.toBe('0px');
+      // A shorthand holding `var()` is not expanded by jsdom (it reads back as `0`
+      // whether or not the rule matched), so assert the declaration; `display: flex`
+      // above and the resolved `min-height` below prove that same rule applied.
+      const css = readFileSync(
+        'packages/ui/src/lib/dropdown-menu/dropdown-menu.css',
+        'utf8',
+      );
+      expect(declaredValue(css, '.andes-dropdown-menu__item', 'padding')).toBe(
+        'var(--andes-space-1) var(--andes-space-3)',
+      );
       expect(style.cursor).toBe('pointer');
       // The md control height, shared with every other row kind.
-      expect(style.minHeight).toBe('2rem');
+      expectLength(style.minHeight, '2rem');
     });
 
     it('sets 14/22 panel text and a 12/20 caption group label', async () => {
@@ -549,8 +568,8 @@ describe('AndesDropdownMenu', () => {
       const label = getComputedStyle(
         menu()!.querySelector('andes-dropdown-menu-label') as Element,
       );
-      expect(label.fontSize).toBe('0.75rem');
-      expect(label.lineHeight).toBe('1.25rem');
+      expectLength(label.fontSize, '0.75rem');
+      expectLength(label.lineHeight, '1.25rem');
     });
 
     it('enters with the shared 150ms soft fade and a drift of at most 4px', () => {
@@ -644,8 +663,8 @@ describe('AndesDropdownMenu', () => {
       // `inline` is what an unstyled `<span>` computes to, so proving it is
       // `inline-flex` proves the indicator rule actually matched.
       expect(getComputedStyle(indicator()).display).toBe('inline-flex');
-      expect(getComputedStyle(indicator()).width).not.toBe('auto');
-      expect(getComputedStyle(indicator()).height).not.toBe('auto');
+      expectLength(getComputedStyle(indicator()).width, '1rem');
+      expectLength(getComputedStyle(indicator()).height, '1rem');
     });
 
     it('renders a real, laid-out dot only on the selected radio item', async () => {
@@ -674,8 +693,10 @@ describe('AndesDropdownMenu', () => {
       const icon = document.querySelector('#editIcon') as SVGElement;
       const style = getComputedStyle(icon);
 
-      expect(style.width).toBe('1em');
-      expect(style.height).toBe('1em');
+      // `1em` resolves against the icon's own font size, which jsdom leaves at the 16px
+      // default (the item's font size is a `var()` it does not resolve).
+      expectLength(style.width, '1em');
+      expectLength(style.height, '1em');
       expect(style.flexShrink).toBe('0');
     });
   });

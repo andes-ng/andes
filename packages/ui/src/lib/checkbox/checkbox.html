@@ -2,9 +2,19 @@
   class="andes-checkbox"
   data-slot="checkbox"
   [class.andes-checkbox--disabled]="isDisabled()"
-  [class.andes-checkbox--readonly]="readOnly()"
-  [class.andes-checkbox--invalid]="ariaInvalid()"
+  [class.andes-checkbox--readonly]="isReadOnly()"
+  [class.andes-checkbox--invalid]="isInvalid()"
+  [class.andes-checkbox--warning]="effectiveStatus() === 'warning'"
   [class.andes-checkbox--label-start]="labelPosition() === 'start'"
+  [class.andes-checkbox--sm]="effectiveSize() === 'sm'"
+  [class.andes-checkbox--lg]="effectiveSize() === 'lg'"
+  [class.andes-checkbox--card]="effectiveVariant() === 'card'"
+  [class.andes-checkbox--button]="effectiveVariant() === 'button'"
+  [class.andes-checkbox--no-indicator]="!showIndicator()"
+  [class.andes-checkbox--segment]="segment() === 'horizontal'"
+  [class.andes-checkbox--segment-vertical]="segment() === 'vertical'"
+  [attr.data-motion]="motion()"
+  (animationend)="onMotionEnd()"
 >
   <span class="andes-checkbox__control">
     <input
@@ -16,19 +26,26 @@
       [disabled]="isDisabled()"
       [attr.id]="id()"
       [attr.name]="effectiveName()"
-      [attr.value]="value()"
+      [attr.value]="nativeValue()"
       [attr.required]="required() || null"
       [attr.aria-label]="ariaLabel()"
-      [attr.aria-labelledby]="ariaLabelledby()"
-      [attr.aria-describedby]="ariaDescribedby()"
-      [attr.aria-invalid]="ariaInvalid() || null"
-      [attr.aria-readonly]="readOnly() || null"
+      [attr.aria-labelledby]="effectiveLabelledby()"
+      [attr.aria-describedby]="effectiveDescribedby()"
+      [attr.aria-invalid]="isInvalid() || null"
+      [attr.aria-readonly]="isReadOnly() || null"
       (click)="onNativeClick($event)"
       (change)="onNativeChange($event)"
       (focus)="onNativeFocus($event)"
       (blur)="onNativeBlur($event)"
     />
     <span class="andes-checkbox__box" aria-hidden="true">
+      @if (effectiveCheckedIcon(); as customChecked) {
+      <span
+        class="andes-checkbox__icon andes-checkbox__icon--check andes-checkbox__icon--custom"
+      >
+        <ng-container [ngTemplateOutlet]="customChecked" />
+      </span>
+      } @else {
       <svg
         class="andes-checkbox__icon andes-checkbox__icon--check"
         viewBox="0 0 16 16"
@@ -42,6 +59,13 @@
           stroke-linejoin="round"
         />
       </svg>
+      } @if (effectiveIndeterminateIcon(); as customIndeterminate) {
+      <span
+        class="andes-checkbox__icon andes-checkbox__icon--indeterminate andes-checkbox__icon--custom"
+      >
+        <ng-container [ngTemplateOutlet]="customIndeterminate" />
+      </span>
+      } @else {
       <svg
         class="andes-checkbox__icon andes-checkbox__icon--indeterminate"
         viewBox="0 0 16 16"
@@ -55,7 +79,19 @@
           stroke-linejoin="round"
         />
       </svg>
+      }
     </span>
   </span>
-  <span class="andes-checkbox__label"><ng-content /></span>
+  <span
+    #labelText
+    class="andes-checkbox__label"
+    [attr.id]="hasDescription() ? labelTextId : null"
+    ><ng-content
+  /></span>
+  <span
+    #description
+    class="andes-checkbox__description"
+    [attr.id]="hasDescription() ? descriptionId : null"
+    ><ng-content select="[slot=description]"
+  /></span>
 </label>

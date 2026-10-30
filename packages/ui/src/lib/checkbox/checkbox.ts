@@ -1,10 +1,12 @@
 import {
+  afterEveryRender,
   afterNextRender,
   booleanAttribute,
   ChangeDetectionStrategy,
   Component,
   computed,
   DestroyRef,
+  effect,
   ElementRef,
   forwardRef,
   inject,
@@ -12,8 +14,10 @@ import {
   model,
   output,
   signal,
+  TemplateRef,
   viewChild,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 import {
@@ -21,6 +25,22 @@ import {
   AndesCheckboxGroupState,
   AndesCheckboxValue,
 } from './checkbox-group-state';
+import {
+  AndesCheckboxSize,
+  AndesCheckboxStatus,
+  AndesCheckboxVariant,
+  optionalBooleanAttribute,
+} from './checkbox-types';
+
+let nextCheckboxId = 0;
+
+/**
+ * The state change the box is animating, exposed as the label's `data-motion` attribute (the
+ * stylesheet's only animation hook). Absent on first render and after each animation ends.
+ */
+type AndesCheckboxMotion = 'check' | 'indeterminate' | 'uncheck';
+
+type AndesCheckboxVisual = 'checked' | 'indeterminate' | 'unchecked';
 
 /** Which side of the box the projected label sits on, in the current writing direction. */
 export type AndesCheckboxLabelPosition = 'start' | 'end';
@@ -43,7 +63,7 @@ export interface AndesCheckboxChange {
 
 @Component({
   selector: 'andes-checkbox',
-  imports: [],
+  imports: [NgTemplateOutlet],
   templateUrl: './checkbox.html',
   styleUrl: './checkbox.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -155,6 +175,49 @@ export class AndesCheckbox implements ControlValueAccessor {
   readonly labelPosition = input<AndesCheckboxLabelPosition>('end');
 
   /**
+   * Box and label scale, the same sm / md / lg steps as AndesInput so a checkbox sits level
+   * with the fields around it. Unset, it takes the enclosing group's `size` (an explicit size
+   * on the checkbox wins), then `md`.
+   */
+  readonly size = input<AndesCheckboxSize | undefined>(undefined);
+
+  /**
+   * Validation tier, like AndesInput's: `error` paints the box (or card / button border) in
+   * the danger color and sets `aria-invalid` - the same result as `aria-invalid="true"` -
+   * while `warning` only paints the warning color, since a warning is not a failure. Unset, it
+   * takes the enclosing group's `status`.
+   */
+  readonly status = input<AndesCheckboxStatus | undefined>(undefined);
+
+  /**
+   * `default` (the plain box), `card` (a bordered card that is clickable as a whole and lights
+   * up when checked) or `button` (a toggle button; inside a group the buttons join into one
+   * segmented control). Unset, it takes the enclosing group's `variant`.
+   */
+  readonly variant = input<AndesCheckboxVariant | undefined>(undefined);
+
+  /**
+   * Whether the box is drawn. Defaults to shown, except for `variant="button"`, whose checked
+   * state is carried by the button itself (pass `indicator` to add the box back). Hiding it
+   * never removes the native input, so the control keeps its keyboard stop and semantics.
+   */
+  readonly indicator = input<boolean | undefined, unknown>(undefined, {
+    transform: optionalBooleanAttribute,
+  });
+
+  /**
+   * Replaces the default tick. A context-free template whose `<svg>` is sized to the box's
+   * glyph area and drawn in `currentColor` (the primary foreground), like AndesInput's
+   * `clearIcon`. Unset, it takes the enclosing group's `checkedIcon`.
+   */
+  readonly checkedIcon = input<TemplateRef<unknown> | undefined>(undefined);
+
+  /** Replaces the default indeterminate dash; same contract as `checkedIcon`. */
+  readonly indeterminateIcon = input<TemplateRef<unknown> | undefined>(
+    undefined,
+  );
+
+  /**
    * Focuses the native input once, right after the first render. Read once on purpose (like the
    * HTML `autofocus` attribute): toggling it later never steals focus.
    */
@@ -189,6 +252,23 @@ export class AndesCheckbox implements ControlValueAccessor {
 
   private readonly inputRef =
     viewChild.required<ElementRef<HTMLInputElement>>('input');
+  private readonly labelTextRef =
+    viewChild.required<ElementRef<HTMLElement>>('labelText');
+  private readonly descriptionRef =
+    viewChild.required<ElementRef<HTMLElement>>('description');
+  private readonly destroyRef = inject(DestroyRef);
+
+  private readonly uid = ++nextCheckboxId;
+  protected readonly labelTextId = `andes-checkbox-${this.uid}-label`;
+  protected readonly descriptionId = `andes-checkbox-${this.uid}-description`;
+
+  /**
+   * Whether anything was projected into `[slot=description]` / the default slot. Read from the
+   * DOM after each render (projected content cannot be queried by attribute selector), so they
+   * stay `false` during server rendering and the description wiring lands on hydration.
+   */
+  protected readonly hasDescription = signal(false);
+  private readonly hasLabelText = signal(false);
 
   /**
    * `model()` intentionally has no `transform` option - unlike `input()`, a two-way binding's
@@ -244,12 +324,112 @@ export class AndesCheckbox implements ControlValueAccessor {
   );
 
   private readonly formDisabled = signal(false);
-  protected readonly isDisabled = computed(
+
+  /**
+   * The checkbox's own disabled state: its input, its form control, or the group's. This is
+   * what the group's aggregate sees - never the `maxCount` disabling below, which is temporary
+   * and must not make select-all think the item is out of reach.
+   */
+  private readonly ownDisabled = computed(
     () =>
       this.disabled() ||
       this.formDisabled() ||
       (this.group?.disabled() ?? false),
   );
+
+  /** Disabled because the group's `maxCount` is reached and this item is unchecked. */
+  private readonly limitDisabled = computed(() => {
+    const value = this.groupValue();
+    return value !== undefined && (this.group?.isLimitDisabled(value) ?? false);
+  });
+
+  protected readonly isDisabled = computed(
+    () => this.ownDisabled() || this.limitDisabled(),
+  );
+
+  /** Its own `readOnly`, or a read-only group's (which, like `disabled`, covers `skipGroup`). */
+  protected readonly isReadOnly = computed(
+    () => this.readOnly() || (this.group?.readOnly() ?? false),
+  );
+
+  protected readonly effectiveSize = computed(
+    () => this.size() ?? this.group?.size() ?? 'md',
+  );
+  protected readonly effectiveStatus = computed(
+    () => this.status() ?? this.group?.status(),
+  );
+  protected readonly effectiveVariant = computed(
+    () => this.variant() ?? this.group?.variant() ?? 'default',
+  );
+  protected readonly showIndicator = computed(
+    () =>
+      this.indicator() ??
+      this.group?.indicator() ??
+      this.effectiveVariant() !== 'button',
+  );
+
+  /** `aria-invalid` and `status="error"` are one state: same look, same announcement. */
+  protected readonly isInvalid = computed(
+    () => this.ariaInvalid() || this.effectiveStatus() === 'error',
+  );
+
+  /**
+   * A button inside a group (laid out as a row or a column, not a grid) joins its neighbours
+   * into one segmented control: shared borders, outer corners only.
+   */
+  protected readonly segment = computed<'horizontal' | 'vertical' | null>(() =>
+    this.effectiveVariant() === 'button' &&
+    this.group !== null &&
+    this.group.columns() === undefined
+      ? this.group.orientation()
+      : null,
+  );
+
+  protected readonly effectiveCheckedIcon = computed(
+    () => this.checkedIcon() ?? this.group?.checkedIcon(),
+  );
+  protected readonly effectiveIndeterminateIcon = computed(
+    () => this.indeterminateIcon() ?? this.group?.indeterminateIcon(),
+  );
+
+  /** Only strings and numbers have a meaningful native `value`; an object submits nothing. */
+  protected readonly nativeValue = computed(() => {
+    const value = this.value();
+    return typeof value === 'string' || typeof value === 'number'
+      ? value
+      : null;
+  });
+
+  /**
+   * The description sits inside the `<label>` (so clicking it toggles, and a card is clickable
+   * as a whole), which would also fold it into the accessible NAME. Pointing the input at the
+   * label text alone keeps the name short and leaves the description to `aria-describedby`.
+   */
+  protected readonly effectiveLabelledby = computed(
+    () =>
+      this.ariaLabelledby() ??
+      (this.hasDescription() && this.hasLabelText() && !this.ariaLabel()
+        ? this.labelTextId
+        : undefined),
+  );
+
+  protected readonly effectiveDescribedby = computed(() => {
+    const ids = [
+      this.ariaDescribedby(),
+      this.hasDescription() ? this.descriptionId : undefined,
+    ].filter((id): id is string => !!id);
+    return ids.length > 0 ? ids.join(' ') : undefined;
+  });
+
+  /** See `AndesCheckboxMotion`. */
+  protected readonly motion = signal<AndesCheckboxMotion | null>(null);
+
+  /**
+   * Off until a moment after the first render, so the initial state - including a value a
+   * template-driven `ngModel` writes in a microtask after that render - never animates.
+   */
+  private motionReady = false;
+  private lastVisual: AndesCheckboxVisual | null = null;
 
   private onChange: (value: boolean) => void = () => undefined;
   private onTouched: () => void = () => undefined;
@@ -262,15 +442,48 @@ export class AndesCheckbox implements ControlValueAccessor {
       // over as signals, so the group re-reads them itself instead of needing a re-register.
       const unregister = group.registerItem({
         value: this.groupValue,
-        disabled: this.isDisabled,
+        disabled: this.ownDisabled,
       });
-      inject(DestroyRef).onDestroy(unregister);
+      this.destroyRef.onDestroy(unregister);
     }
 
     afterNextRender(() => {
       if (this.autoFocus()) {
         this.focus();
       }
+      const timer = setTimeout(() => (this.motionReady = true));
+      this.destroyRef.onDestroy(() => clearTimeout(timer));
+    });
+
+    afterEveryRender({
+      read: () => {
+        const description = this.descriptionRef().nativeElement;
+        const label = this.labelTextRef().nativeElement;
+        this.hasDescription.set(hasContent(description));
+        this.hasLabelText.set(hasContent(label));
+      },
+    });
+
+    // Turns a change of the RENDERED state (whatever caused it: a click, select-all, a form
+    // write) into the one-shot `data-motion` hook the stylesheet animates.
+    effect(() => {
+      const visual: AndesCheckboxVisual = this.indeterminateProp()
+        ? 'indeterminate'
+        : this.checkedProp()
+          ? 'checked'
+          : 'unchecked';
+      const previous = this.lastVisual;
+      this.lastVisual = visual;
+      if (!this.motionReady || previous === null || previous === visual) {
+        return;
+      }
+      this.motion.set(
+        visual === 'checked'
+          ? 'check'
+          : visual === 'indeterminate'
+            ? 'indeterminate'
+            : 'uncheck',
+      );
     });
   }
 
@@ -294,9 +507,24 @@ export class AndesCheckbox implements ControlValueAccessor {
   }
 
   protected onNativeClick(event: MouseEvent): void {
-    if (this.readOnly()) {
+    if (this.isReadOnly()) {
       event.preventDefault();
+      return;
     }
+
+    // At the group's `minCount` a checked item may not be unchecked. Blocked at the click,
+    // like `readOnly`, because by `change` time the native box has already flipped.
+    const group = this.group;
+    const value = this.groupValue();
+    if (group !== null && value !== undefined && group.isLocked(value)) {
+      event.preventDefault();
+      group.notifyMinBlocked();
+    }
+  }
+
+  /** The one-shot animation finished: drop the hook so a re-shown box does not replay it. */
+  protected onMotionEnd(): void {
+    this.motion.set(null);
   }
 
   protected onNativeChange(event: Event): void {
@@ -356,4 +584,10 @@ export class AndesCheckbox implements ControlValueAccessor {
   setDisabledState(isDisabled: boolean): void {
     this.formDisabled.set(isDisabled);
   }
+}
+
+function hasContent(element: HTMLElement): boolean {
+  return (
+    element.childElementCount > 0 || (element.textContent ?? '').trim() !== ''
+  );
 }

@@ -176,6 +176,11 @@ export class AndesSelectTrigger {
       : tag.label;
   }
 
+  /** Native tooltip of the `+ N ...` tag: the labels it stands for. */
+  protected omittedTitle(omitted: readonly AndesSelectTag[]): string {
+    return omitted.map((tag) => tag.label).join(', ');
+  }
+
   protected tagContext(tag: AndesSelectTag) {
     return { $implicit: tag, onClose: () => this.removeTag(tag) };
   }

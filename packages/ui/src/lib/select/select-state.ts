@@ -190,6 +190,9 @@ export interface AndesSelectSelectionEdges {
   readonly next: boolean;
 }
 
+/** Class input shape accepted by `panelClass`. */
+export type AndesSelectPanelClass = string | readonly string[] | null;
+
 /** A normalised `options` entry, as the panel renders it. */
 export type AndesSelectOptionEntry =
   | { readonly kind: 'option'; readonly option: AndesSelectOption }
@@ -370,8 +373,14 @@ export abstract class AndesSelectState {
    * navigation or a keyboard open, where the highlight is the keyboard cursor.
    */
   abstract readonly cursorVisible: Signal<boolean>;
+  /** Extra classes for the panel element (`panelClass`). */
+  abstract readonly panelClass: Signal<AndesSelectPanelClass>;
   /** Text direction of the field, mirrored onto the panel, which lives outside it. */
   abstract readonly panelDirection: Signal<'ltr' | 'rtl' | null>;
+  /** `name` for the hidden inputs that post the value with a native form. */
+  abstract readonly name: Signal<string | undefined>;
+  /** The selected values as strings, one hidden input each, when `name` is set. */
+  abstract readonly formValues: Signal<readonly string[]>;
   /** Whether a selected option joins the selected options next to it. */
   abstract selectionEdges(item: AndesSelectItemRef): AndesSelectSelectionEdges;
   /** Handles the pointer moving over an option: it becomes the highlighted one. */

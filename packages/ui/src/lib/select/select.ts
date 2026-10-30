@@ -9,6 +9,7 @@ import {
 } from '@andes-ng/primitives';
 import { Directionality } from '@angular/cdk/bidi';
 import {
+  afterNextRender,
   afterRenderEffect,
   booleanAttribute,
   ChangeDetectionStrategy,
@@ -50,6 +51,7 @@ import {
   type AndesSelectOptionContext,
   type AndesSelectOptionEntry,
   type AndesSelectOptions,
+  type AndesSelectPanelClass,
   type AndesSelectPanelContext,
   type AndesSelectPlacement,
   type AndesSelectSelectionEdges,
@@ -243,6 +245,26 @@ export class AndesSelect
   readonly displayWith = input<AndesSelectDisplayWith | undefined>(undefined);
   /** Emit and accept `{ value, label }` objects instead of bare values. */
   readonly labelInValue = input(false, { transform: booleanAttribute });
+  /**
+   * The option field shown in the trigger (and in tags) once the option is selected,
+   * instead of its label: a short code for an option whose panel row is long, say. Read
+   * from an `options` entry, or from an item's `data`; an option without that field falls
+   * back to its label.
+   */
+  readonly optionLabelProp = input<string | undefined>(undefined);
+  /**
+   * Posts the value with a native `<form>` submission: one hidden input per selected
+   * value, carrying this `name`. Not needed with Angular forms, which read the value
+   * through the control instead.
+   */
+  readonly name = input<string | undefined>(undefined);
+  /** Focuses the combobox once the select has rendered, like a native `autofocus`. */
+  readonly autoFocus = input(false, { transform: booleanAttribute });
+  /**
+   * Extra classes on the panel element, for styling a single select's panel - which
+   * renders in the overlay container, outside the select's own DOM - from page CSS.
+   */
+  readonly panelClass = input<AndesSelectPanelClass>(null);
 
   /**
    * Turns the combobox into a text input that filters the options. Defaults to on in
@@ -507,6 +529,14 @@ export class AndesSelect
   });
 
   readonly hasValue = computed(() => this.selectedValues().length > 0);
+
+  readonly formValues = computed<readonly string[]>(() =>
+    this.name()
+      ? this.selectedValues().map((value) =>
+          typeof value === 'object' ? JSON.stringify(value) : String(value),
+        )
+      : [],
+  );
 
   /**
    * For every selected option, whether the option rendered right above and right below
@@ -901,6 +931,12 @@ export class AndesSelect
     });
     inject(DestroyRef).onDestroy(() => this.unwatchScroll());
 
+    afterNextRender(() => {
+      if (this.autoFocus()) {
+        this.focus();
+      }
+    });
+
     this.overlay.keydownEvents
       .pipe(takeUntilDestroyed())
       .subscribe((event) => this.onPanelKeydown(event));
@@ -1104,6 +1140,20 @@ export class AndesSelect
 
   override labelFor(value: unknown): string {
     const item = this.findItem(value);
+    const prop = this.optionLabelProp();
+    if (prop) {
+      const compare = this.compareWith();
+      const source =
+        item?.data() ??
+        this.flatOptions().find((entry) => compare(entry.value, value));
+      const field =
+        source && typeof source === 'object'
+          ? (source as Record<string, unknown>)[prop]
+          : undefined;
+      if (!isEmptyValue(field)) {
+        return String(field);
+      }
+    }
     const rendered = item?.getLabel();
     if (rendered) {
       return rendered;
@@ -1395,6 +1445,13 @@ export class AndesSelect
         }
         this._cursorVisible.set(true);
         return;
+      case 'PageDown':
+      case 'PageUp':
+        if (open) {
+          event.preventDefault();
+          this.movePage(event.key === 'PageDown' ? 1 : -1);
+        }
+        return;
       case 'Enter':
         if (event.isComposing) {
           return;
@@ -1467,6 +1524,11 @@ export class AndesSelect
           return;
         }
         break;
+      case 'PageDown':
+      case 'PageUp':
+        event.preventDefault();
+        this.movePage(event.key === 'PageDown' ? 1 : -1);
+        return;
       case 'Tab':
         // Closing returns focus to the trigger, from where a second Tab leaves the
         // field. Letting Tab through instead would move focus off an option that is
@@ -1496,6 +1558,47 @@ export class AndesSelect
     }
     this._cursorVisible.set(true);
     return true;
+  }
+
+  /**
+   * `PageDown`/`PageUp`: moves the active option by one panel height of options (ten
+   * when the list has not been laid out), stopping at the first or last enabled one.
+   */
+  private movePage(direction: 1 | -1): void {
+    const items = this.navigation.items();
+    const enabled = items.filter((item) => !item.isDisabled());
+    if (enabled.length === 0) {
+      return;
+    }
+    const active = this.navigation.activeItem();
+    const viewport = this.overlay
+      .panelElement()
+      ?.querySelector<HTMLElement>('[data-slot="select-viewport"]');
+    const rowHeight = active?.element.offsetHeight ?? 0;
+    const pageSize =
+      viewport && rowHeight > 0
+        ? Math.max(1, Math.floor(viewport.clientHeight / rowHeight) - 1)
+        : 10;
+    const start = active
+      ? items.indexOf(active)
+      : direction > 0
+        ? -1
+        : items.length;
+    const targetIndex = Math.min(
+      items.length - 1,
+      Math.max(0, start + direction * pageSize),
+    );
+    // The nearest enabled option at or before the target (after it, for PageUp), so a
+    // page never jumps past the end, nor stops short on a disabled row.
+    const ordered = direction > 0 ? [...enabled].reverse() : enabled;
+    const target =
+      ordered.find((item) =>
+        direction > 0
+          ? items.indexOf(item) <= targetIndex
+          : items.indexOf(item) >= targetIndex,
+      ) ?? ordered[ordered.length - 1];
+    this.navigation.focusItem(target);
+    this._cursorVisible.set(true);
   }
 
   private commitActiveOption(): void {

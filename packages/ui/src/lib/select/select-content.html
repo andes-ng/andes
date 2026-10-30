@@ -3,6 +3,7 @@
     andesOverlayContent
     data-slot="select-panel"
     class="andes-select__panel"
+    [class]="select.panelClass()"
     [id]="select.panelId"
     [attr.dir]="select.panelDirection()"
     [attr.data-cursor]="select.cursorVisible() ? '' : null"

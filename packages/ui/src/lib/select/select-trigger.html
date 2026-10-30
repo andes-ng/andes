@@ -90,6 +90,7 @@
       <span
         class="andes-select__tag andes-select__tag--rest"
         data-slot="select-tag-rest"
+        [attr.title]="omittedTitle(omitted)"
       >
         @if (select.maxTagPlaceholderTemplate(); as restTemplate) {
         <ng-container
@@ -269,4 +270,13 @@
   </span>
 
   <span hidden [id]="select.summaryId">{{ select.selectionSummary() }}</span>
+  @if (select.name(); as name) { @for (value of select.formValues(); track
+  $index) {
+  <input
+    type="hidden"
+    data-slot="select-form-value"
+    [name]="name"
+    [value]="value"
+  />
+  } }
 </div>

@@ -26,6 +26,7 @@ export type {
   AndesSelectOptionEntry,
   AndesSelectOptionGroup,
   AndesSelectOptions,
+  AndesSelectPanelClass,
   AndesSelectPanelContext,
   AndesSelectPlacement,
   AndesSelectSelectionEdges,

@@ -4,9 +4,12 @@ export { ANDES_SEGMENTED } from './segmented-types';
 export type {
   AndesSegmentedApi,
   AndesSegmentedChange,
+  AndesSegmentedMotion,
   AndesSegmentedOptionConfig,
   AndesSegmentedOptionContext,
   AndesSegmentedOptionInput,
   AndesSegmentedShape,
   AndesSegmentedSize,
+  AndesSegmentedStatus,
+  AndesSegmentedVariant,
 } from './segmented-types';

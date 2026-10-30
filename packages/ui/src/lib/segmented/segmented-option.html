@@ -5,6 +5,7 @@
   data-slot="segmented-option-button"
   [attr.aria-checked]="checked()"
   [attr.aria-label]="ariaLabel()"
+  [attr.aria-describedby]="description() ? descriptionId : null"
   [attr.title]="tooltip() ?? null"
   [attr.tabindex]="tabIndex()"
   [disabled]="isDisabled()"
@@ -19,4 +20,12 @@
     <ng-content select="[slot=icon]" />
   </span>
   <span class="andes-segmented-option__label"><ng-content /></span>
+  @if (description(); as text) {
+  <span
+    class="andes-segmented-option__description"
+    data-slot="segmented-option-description"
+    [id]="descriptionId"
+    >{{ text }}</span
+  >
+  }
 </button>

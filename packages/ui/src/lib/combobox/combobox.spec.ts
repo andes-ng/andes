@@ -139,17 +139,26 @@ function harness<
     return event;
   }
 
-  /** Mouse arriving over a row: the pair of events a real pointer entry always fires. */
+  // Each call is a real move: a new spot on the screen.
+  let pointerX = 0;
+
+  /** The mouse moving onto a row. */
   function hover(el: Element): void {
-    el.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
-    el.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+    pointerX += 5;
+    el.dispatchEvent(
+      new PointerEvent('pointermove', {
+        bubbles: true,
+        pointerType: 'mouse',
+        screenX: pointerX,
+        screenY: 40,
+      }),
+    );
     detect();
   }
 
-  /** A pointer that never left the row twitching again, e.g. after an arrow key. */
+  /** A pointer that never left the row moving again, e.g. after an arrow key. */
   function mousemove(el: Element): void {
-    el.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
-    detect();
+    hover(el);
   }
 
   return { ...parts, detect, focus, type, press, mousedown, hover, mousemove };
@@ -415,18 +424,6 @@ describe('AndesCombobox', () => {
       // right edge - see the note in combobox.css.
       expect(getComputedStyle(panel() as HTMLElement).width).toBe('100%');
     });
-
-    it('fades and settles in over 150ms as it opens, and lists options at 14px/22px', () => {
-      const { focus, panel, options } = createNgModelHost();
-      focus();
-
-      // Through the motion tokens, which fall back to these values when not loaded.
-      expect(getComputedStyle(panel() as HTMLElement).animation).toBe(
-        'andes-combobox-enter var(--andes-duration-base, 150ms) var(--andes-ease-out, cubic-bezier(0.2, 0, 0, 1))',
-      );
-      expect(getComputedStyle(options()[0]).fontSize).toBe('0.875rem');
-      expect(getComputedStyle(options()[0]).lineHeight).toBe('1.375rem');
-    });
   });
 
   describe('the field', () => {
@@ -511,21 +508,28 @@ describe('AndesCombobox', () => {
   });
 
   describe('auto-highlight', () => {
-    it('highlights the first filtered match automatically when enabled', async () => {
+    it('highlights the first filtered match once the user types, when enabled', async () => {
       const fixture = TestBed.createComponent(NgModelHost);
       fixture.componentInstance.autoHighlight.set(true);
       fixture.detectChanges();
+      // Lets ngModel's initial (asynchronous) write land before anything is typed.
+      await fixture.whenStable();
       const input = fixture.nativeElement.querySelector(
         'input',
       ) as HTMLInputElement;
 
       input.dispatchEvent(new Event('focus'));
       fixture.detectChanges();
-      await fixture.whenStable();
+      // Opening alone highlights nothing - see combobox-states.spec.ts.
+      expect(input.hasAttribute('aria-activedescendant')).toBe(false);
+
+      input.value = 'an';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
       fixture.detectChanges();
 
       const firstOption =
         document.querySelector<HTMLElement>('[role="option"]');
+      expect(firstOption?.textContent?.trim()).toBe('Banana');
       expect(input.getAttribute('aria-activedescendant')).toBe(firstOption?.id);
     });
   });

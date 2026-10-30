@@ -577,14 +577,15 @@ describe('AndesCombobox (data-driven options mode)', () => {
       expect(options()).toHaveLength(4);
     });
 
-    it('auto-highlights the first option of results that arrive while open', async () => {
-      const { fixture, host, focus, input, options, settle } =
-        setup(OptionsHost);
+    it('auto-highlights the first option of results that arrive for the typed text', async () => {
+      const { host, focus, type, input, options, settle } = setup(OptionsHost);
       host.autoHighlight.set(true);
+      host.filterOption.set(false);
       host.options.set([]);
       host.loading.set(true);
-      fixture.detectChanges();
+      await settle();
       focus();
+      type('a');
 
       host.options.set(FRUIT_OPTIONS);
       host.loading.set(false);

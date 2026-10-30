@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
+import { expectLength } from '../../testing/computed-style';
 import { AndesDrawer } from './drawer';
 import { AndesDrawerClose } from './drawer-close';
 import { AndesDrawerContent } from './drawer-content';
@@ -335,8 +336,8 @@ describe('AndesDrawer', () => {
     const title = getComputedStyle(
       document.querySelector('#title h2') as Element,
     );
-    expect(title.fontSize).toBe('1rem');
-    expect(title.lineHeight).toBe('1.5rem');
+    expectLength(title.fontSize, '1rem');
+    expectLength(title.lineHeight, '1.5rem');
     expect(title.fontWeight).toBe('600');
     const body = getComputedStyle(panel() as Element);
     expect(body.fontSize).toBe('var(--andes-text-font-size, 0.875rem)');

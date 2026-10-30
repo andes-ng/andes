@@ -1,6 +1,7 @@
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
+import { expectLength } from '../../testing/computed-style';
 import { AndesSheet, type AndesSheetSide } from './sheet';
 import { AndesSheetClose } from './sheet-close';
 import { AndesSheetContent } from './sheet-content';
@@ -1080,8 +1081,8 @@ describe('AndesSheet (panel options)', () => {
       const title = document.querySelector('andes-sheet-title h2') as Element;
       const style = getComputedStyle(title);
 
-      expect(style.fontSize).toBe('1rem');
-      expect(style.lineHeight).toBe('1.5rem');
+      expectLength(style.fontSize, '1rem');
+      expectLength(style.lineHeight, '1.5rem');
       expect(style.fontWeight).toBe('600');
     });
   });

@@ -2,6 +2,7 @@ export { AndesRadioGroup } from './radio-group';
 export type {
   AndesRadioButtonStyle,
   AndesRadioChange,
+  AndesRadioCompareWith,
   AndesRadioGroupOrientation,
   AndesRadioLabelPlacement,
   AndesRadioOption,
@@ -9,5 +10,7 @@ export type {
   AndesRadioOptionLabelContext,
   AndesRadioOptionType,
   AndesRadioSize,
+  AndesRadioStatus,
+  AndesRadioVariant,
 } from './radio-group';
 export { AndesRadio } from './radio';

@@ -31,3 +31,23 @@
   display: flex;
   width: 100%;
 }
+
+/* Cards stand apart a little more than plain rows, so their borders never touch. */
+:host(.andes-radio-group--card) {
+  gap: var(--andes-space-3);
+}
+
+/* `columns`: a grid of N equal columns (the count arrives as a custom property bound on the
+   host), each item filling its cell. Declared last so it wins over the flex layouts above;
+   a button group in columns keeps a small gap, as separate buttons rather than one bar. */
+:host(.andes-radio-group--columns) {
+  display: grid;
+  grid-template-columns: repeat(
+    var(--andes-radio-group-columns, 1),
+    minmax(0, 1fr)
+  );
+}
+
+:host(.andes-radio-group--button.andes-radio-group--columns) {
+  gap: var(--andes-space-2);
+}

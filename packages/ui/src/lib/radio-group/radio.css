@@ -29,6 +29,12 @@
   opacity: 0.6;
 }
 
+/* Distinct from disabled on purpose - stays fully opaque (it is a normal, focusable control
+   the user just cannot change), only the cursor changes to signal it will not select. */
+:host(.andes-radio--readonly) .andes-radio__label {
+  cursor: default;
+}
+
 /* Label before the control. The label fills the item and pushes the control to the far end,
    so a vertical stack of items keeps its controls aligned regardless of label length. */
 :host(.andes-radio--label-start) .andes-radio__label {
@@ -87,8 +93,9 @@
   border-color: var(--andes-color-primary);
 }
 
+/* A read-only radio will not select, so it does not light up on hover either. */
 /* prettier-ignore */
-:host(:not(.andes-radio--disabled)) .andes-radio__label:hover .andes-radio__control {
+:host(:not(.andes-radio--disabled):not(.andes-radio--readonly)) .andes-radio__label:hover .andes-radio__control {
   border-color: var(--andes-color-primary);
 }
 
@@ -99,26 +106,59 @@
   height: 0.5rem;
   border-radius: var(--andes-radius-full);
   background-color: var(--andes-color-primary);
-  /* Grows from half size while fading in, so selecting reads as a soft settle rather than a
-     dot popping out of nothing. */
   opacity: 0;
   transform: scale(0.5);
-  transition:
-    opacity var(--andes-motion-duration-mid, 0.2s)
-      var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1)),
-    transform var(--andes-motion-duration-mid, 0.2s)
-      var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1));
+}
+
+/* A `indicator` template: the consumer's glyph fills the dot's area, in the primary color. */
+.andes-radio__dot--custom {
+  /* The glyph gets the circle's whole 14px content box minus a pixel each side (12px), like the
+     checkbox's tick, since a glyph inside the 8px dot would be too small to read. */
+  width: 0.75rem;
+  height: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0;
+  background-color: transparent;
+  color: var(--andes-color-primary);
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.andes-radio__dot--custom ::ng-deep svg {
+  width: 100%;
+  height: 100%;
+  flex-shrink: 0;
 }
 
 :host(.andes-radio--checked) .andes-radio__dot {
   opacity: 1;
-  transform: scale(1);
+  transform: none;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .andes-radio__dot {
-    transform: none;
-    transition: opacity 0.15s ease;
+/* Motion: a one-shot animation keyed off `data-motion`, which the component sets only when a
+   radio BECOMES checked after the first render - so one that starts out checked never
+   animates. The dot scales in while the ring's border color fills (the transition on the
+   circle). Only with motion allowed, and not in forced-colors mode, where the system palette
+   already redraws the circle. */
+
+@keyframes andes-radio-dot {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) and (forced-colors: none) {
+  /* prettier-ignore */
+  .andes-radio__label[data-motion='check'] .andes-radio__dot {
+    animation: andes-radio-dot var(--andes-motion-duration-mid, 0.15s) var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1));
   }
 }
 
@@ -137,6 +177,19 @@
 /* prettier-ignore */
 :host(.andes-radio--invalid) .andes-radio__input:focus-visible ~ .andes-radio__control {
   outline-color: var(--andes-color-danger);
+}
+
+/* Warning: the softer tier (the same warning shade AndesInput and AndesCheckbox use for the
+   border). The component never sets it together with invalid, so the two never compete. */
+
+/* prettier-ignore */
+:host(.andes-radio--warning) .andes-radio__control, :host(.andes-radio--warning) .andes-radio__label:hover .andes-radio__control {
+  border-color: var(--andes-color-warning-hover);
+}
+
+/* prettier-ignore */
+:host(.andes-radio--warning) .andes-radio__input:focus-visible ~ .andes-radio__control {
+  outline-color: var(--andes-color-warning-hover);
 }
 
 .andes-radio__text:empty {
@@ -237,7 +290,8 @@
    the joint read as a doubled line. Over the border, the shared edge stays one line. The
    inset hairline in the page color separates the ring from a solid checked segment's fill,
    which is the same blue and would otherwise swallow it. */
-.andes-radio__input:focus-visible ~ .andes-radio__text {
+/* prettier-ignore */
+:host(.andes-radio--button) .andes-radio__input:focus-visible ~ .andes-radio__text {
   outline: 2px solid var(--andes-color-focus-ring);
   outline-offset: -1px;
   box-shadow: inset 0 0 0 1px var(--andes-color-background);
@@ -258,21 +312,21 @@
   --andes-radio-button-radius: var(--andes-control-radius-lg, 0.5rem);
 }
 
-:host(.andes-radio--sm) .andes-radio__text {
+:host(.andes-radio--button.andes-radio--sm) .andes-radio__text {
   height: var(--andes-control-height-sm, 1.5rem);
   padding-inline: 0.4375rem;
   font-size: var(--andes-control-font-size-sm, 0.875rem);
   line-height: var(--andes-control-line-height, 1.375rem);
 }
 
-:host(.andes-radio--md) .andes-radio__text {
+:host(.andes-radio--button.andes-radio--md) .andes-radio__text {
   height: var(--andes-control-height-md, 2rem);
   padding-inline: 0.9375rem;
   font-size: var(--andes-control-font-size-md, 0.875rem);
   line-height: var(--andes-control-line-height, 1.375rem);
 }
 
-:host(.andes-radio--lg) .andes-radio__text {
+:host(.andes-radio--button.andes-radio--lg) .andes-radio__text {
   height: var(--andes-control-height-lg, 2.5rem);
   padding-inline: 0.9375rem;
   font-size: var(--andes-control-font-size-lg, 1rem);
@@ -309,6 +363,19 @@
   background-color: var(--andes-color-primary-hover);
 }
 
+/* Warning - the softer tier; an invalid segment never carries it (see radio.ts), so the two
+   do not compete. Kept after the checked styles so it wins over them. */
+
+/* prettier-ignore */
+:host(.andes-radio--button.andes-radio--warning) .andes-radio__text, :host(.andes-radio--button.andes-radio--warning.andes-radio--checked) .andes-radio__text {
+  border-color: var(--andes-color-warning-hover);
+}
+
+/* prettier-ignore */
+:host(.andes-radio--button.andes-radio--warning) .andes-radio__input:focus-visible ~ .andes-radio__text {
+  outline-color: var(--andes-color-warning-hover);
+}
+
 /* Invalid (the group's `aria-invalid`) - kept last so it wins over the checked styles. */
 
 /* prettier-ignore */
@@ -319,4 +386,225 @@
 /* prettier-ignore */
 :host(.andes-radio--button.andes-radio--invalid) .andes-radio__input:focus-visible ~ .andes-radio__text {
   outline-color: var(--andes-color-danger);
+}
+
+/* Button option type inside a group with `columns`: separate buttons in a grid, not one
+   segmented bar - every corner is rounded and nothing overlaps (the component leaves the
+   orientation class off, so the segment rules above do not apply). */
+
+:host(.andes-radio--button.andes-radio--grid) {
+  margin: 0;
+}
+
+:host(.andes-radio--button.andes-radio--grid) .andes-radio__text {
+  border-radius: var(--andes-radio-button-radius);
+}
+
+/* Description: secondary text under the label, indented to the label's own start edge (not
+   the circle's), so the two read as one block. A grid places it: one column for the circle,
+   one for the text, which also follows `labelPlacement` and the writing direction. */
+
+:host(:not(.andes-radio--button)) .andes-radio__text,
+.andes-radio__description {
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.andes-radio__description {
+  display: block;
+  font-size: var(--andes-font-size-sm, 0.875rem);
+  line-height: var(--andes-line-height-sm, 1.25rem);
+  color: var(--andes-color-muted-foreground);
+}
+
+.andes-radio__description:empty {
+  display: none;
+}
+
+/* Every selector below stays on one line on purpose (see the note at the top of this file). */
+
+/* prettier-ignore */
+.andes-radio__label:has(> .andes-radio__description:not(:empty)) {
+  display: inline-grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  /* Rows keep their content height even when the card is stretched taller (by a neighbour in
+     the same grid row), so the description stays right under the label. */
+  align-content: start;
+  column-gap: var(--andes-space-2);
+  row-gap: 0;
+}
+
+/* prettier-ignore */
+.andes-radio__label:has(> .andes-radio__description:not(:empty)) > .andes-radio__control {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+/* prettier-ignore */
+.andes-radio__label:has(> .andes-radio__description:not(:empty)) > .andes-radio__text {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+/* prettier-ignore */
+.andes-radio__label:has(> .andes-radio__description:not(:empty)) > .andes-radio__description {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+/* prettier-ignore */
+:host(.andes-radio--label-start) .andes-radio__label:has(> .andes-radio__description:not(:empty)) {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+/* prettier-ignore */
+:host(.andes-radio--label-start) .andes-radio__label:has(> .andes-radio__description:not(:empty)) > .andes-radio__control {
+  grid-column: 2;
+}
+
+/* prettier-ignore */
+:host(.andes-radio--label-start) .andes-radio__label:has(> .andes-radio__description:not(:empty)) > .andes-radio__text, :host(.andes-radio--label-start) .andes-radio__label:has(> .andes-radio__description:not(:empty)) > .andes-radio__description {
+  grid-column: 1;
+}
+
+/* Without a circle the text takes the whole row. */
+
+/* prettier-ignore */
+:host(.andes-radio--no-indicator) .andes-radio__label:has(> .andes-radio__description:not(:empty)) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* prettier-ignore */
+:host(.andes-radio--no-indicator) .andes-radio__label:has(> .andes-radio__description:not(:empty)) > .andes-radio__text, :host(.andes-radio--no-indicator) .andes-radio__label:has(> .andes-radio__description:not(:empty)) > .andes-radio__description {
+  grid-column: 1;
+}
+
+/* Card variant: the label element itself becomes the card, so the whole surface is the click
+   target with no extra wiring (a native label already forwards the click to its input).
+   */
+
+:host(.andes-radio--card) .andes-radio__label {
+  --_andes-radio-card-padding-block: var(--andes-space-3);
+  --_andes-radio-card-padding-inline: var(--andes-space-4);
+  flex: 1 1 auto;
+  box-sizing: border-box;
+  padding-block: var(--_andes-radio-card-padding-block);
+  padding-inline: var(--_andes-radio-card-padding-inline);
+  border: 1px solid var(--andes-color-border);
+  border-radius: var(--andes-radius-md);
+  background-color: var(--andes-color-card, var(--andes-color-background));
+  color: var(--andes-color-card-foreground, var(--andes-color-foreground));
+  transition:
+    background-color var(--andes-motion-duration-fast, 0.12s)
+      var(--andes-motion-ease-in-out, cubic-bezier(0.645, 0.045, 0.355, 1)),
+    border-color var(--andes-motion-duration-fast, 0.12s)
+      var(--andes-motion-ease-in-out, cubic-bezier(0.645, 0.045, 0.355, 1));
+}
+
+/* The label text of a card reads as its title. */
+:host(.andes-radio--card) .andes-radio__text {
+  font-weight: 500;
+}
+
+/* prettier-ignore */
+:host(.andes-radio--card:not(.andes-radio--disabled):not(.andes-radio--readonly)) .andes-radio__label:hover {
+  border-color: var(--andes-color-primary);
+}
+
+/* The card carries the focus ring; a second ring on the circle inside it would be noise. */
+/* prettier-ignore */
+:host(.andes-radio--card) .andes-radio__label:has(.andes-radio__input:focus-visible) {
+  outline: 2px solid var(--andes-color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* prettier-ignore */
+:host(.andes-radio--card) .andes-radio__input:focus-visible ~ .andes-radio__control {
+  outline: none;
+}
+
+/* prettier-ignore */
+:host(.andes-radio--card.andes-radio--checked) .andes-radio__label {
+  border-color: var(--andes-color-primary);
+  background-color: var(--andes-color-primary-subtle);
+}
+
+/* Status wins over the checked and hover borders (declared after them; the :not() chain lifts
+   the hover variant to the specificity of the hover rule above). */
+
+/* prettier-ignore */
+:host(.andes-radio--card.andes-radio--warning) .andes-radio__label, :host(.andes-radio--card.andes-radio--warning:not(.andes-radio--disabled):not(.andes-radio--readonly)) .andes-radio__label:hover {
+  border-color: var(--andes-color-warning-hover);
+}
+
+/* prettier-ignore */
+:host(.andes-radio--card.andes-radio--invalid) .andes-radio__label, :host(.andes-radio--card.andes-radio--invalid:not(.andes-radio--disabled):not(.andes-radio--readonly)) .andes-radio__label:hover {
+  border-color: var(--andes-color-danger);
+}
+
+/* prettier-ignore */
+:host(.andes-radio--card.andes-radio--warning) .andes-radio__label:has(.andes-radio__input:focus-visible) {
+  outline-color: var(--andes-color-warning-hover);
+}
+
+/* prettier-ignore */
+:host(.andes-radio--card.andes-radio--invalid) .andes-radio__label:has(.andes-radio__input:focus-visible) {
+  outline-color: var(--andes-color-danger);
+}
+
+/* Reduced motion: no color transitions either. Kept last so equal-specificity selectors
+   above lose to it. */
+@media (prefers-reduced-motion: reduce) {
+  .andes-radio__control,
+  :host(.andes-radio--card) .andes-radio__label,
+  :host(.andes-radio--button) .andes-radio__text {
+    transition: none;
+  }
+}
+
+/* Forced colors (Windows high contrast): author colors are replaced, which would leave a
+   checked circle indistinguishable from an empty one and a checked button or card identical
+   to an unchecked one. Map them onto the system palette explicitly. */
+@media (forced-colors: active) {
+  .andes-radio__control {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+    background-color: Canvas;
+  }
+
+  :host(.andes-radio--checked) .andes-radio__control {
+    border-color: Highlight;
+  }
+
+  .andes-radio__dot {
+    background-color: Highlight;
+  }
+
+  .andes-radio__dot--custom {
+    background-color: transparent;
+    color: Highlight;
+  }
+
+  :host(.andes-radio--disabled) .andes-radio__control {
+    border-color: GrayText;
+  }
+
+  :host(.andes-radio--disabled) .andes-radio__dot {
+    background-color: GrayText;
+  }
+
+  :host(.andes-radio--card.andes-radio--checked) .andes-radio__label {
+    forced-color-adjust: none;
+    border-color: Highlight;
+    background-color: Canvas;
+    color: CanvasText;
+  }
+
+  /* prettier-ignore */
+  :host(.andes-radio--button.andes-radio--checked) .andes-radio__text {
+    forced-color-adjust: none;
+    border-color: Highlight;
+    background-color: Highlight;
+    color: HighlightText;
+  }
 }

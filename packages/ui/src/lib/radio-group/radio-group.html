@@ -2,6 +2,7 @@
 <andes-radio
   [value]="option.value"
   [disabled]="!!option.disabled"
+  [variant]="option.variant"
   [id]="option.id"
   [attr.title]="option.title ?? null"
   [class]="option.class ?? ''"
@@ -13,12 +14,14 @@
       labelTemplate;
       context: {
         $implicit: option,
-        checked: value() === option.value,
+        checked: isSelected(option.value),
         index: $index,
       }
     "
   />
-  } @else { {{ option.label }} }
+  } @else { {{ option.label }} } @if (option.description) {
+  <span slot="description">{{ option.description }}</span>
+  }
 </andes-radio>
 }
 <ng-content />

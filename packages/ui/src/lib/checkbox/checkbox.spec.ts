@@ -4,6 +4,7 @@ import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { By } from '@angular/platform-browser';
 
 import { AndesCheckbox, AndesCheckboxChange } from './checkbox';
+import { AndesCheckboxValue } from './checkbox-group-state';
 
 @Component({
   imports: [AndesCheckbox],
@@ -790,7 +791,7 @@ describe('AndesCheckbox', () => {
       >`,
     })
     class NumericHost {
-      last: string | number | undefined;
+      last: AndesCheckboxValue | undefined;
     }
 
     const fixture = TestBed.createComponent(NumericHost);

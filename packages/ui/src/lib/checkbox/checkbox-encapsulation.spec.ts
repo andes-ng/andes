@@ -33,8 +33,68 @@ const SCOPE = 'andes-test-scope';
 function runtimeScopedCss(): string {
   const raw = readFileSync(CSS_PATH, 'utf8');
 
-  return encapsulateStyle(raw).replace(/%COMP%/g, SCOPE);
+  return encapsulateStyle(raw).split('%COMP%').join(SCOPE);
 }
+
+/** The raw stylesheet source, for the contract tests that read it as text. */
+function rawCss(): string {
+  return readFileSync(CSS_PATH, 'utf8');
+}
+
+/**
+ * The body of the first at-rule whose prelude is exactly `prelude`, found by brace counting
+ * (plain string operations - no dynamic patterns).
+ */
+function atRuleBody(css: string, prelude: string): string {
+  const start = css.indexOf(`${prelude} {`);
+  if (start < 0) {
+    return '';
+  }
+  const open = css.indexOf('{', start);
+  let depth = 0;
+  for (let index = open; index < css.length; index++) {
+    if (css[index] === '{') {
+      depth++;
+    } else if (css[index] === '}') {
+      depth--;
+      if (depth === 0) {
+        return css.slice(open + 1, index);
+      }
+    }
+  }
+  return '';
+}
+
+/** Every index at which `needle` occurs in `haystack`. */
+function indicesOf(haystack: string, needle: string): number[] {
+  const found: number[] = [];
+  let index = haystack.indexOf(needle);
+  while (index >= 0) {
+    found.push(index);
+    index = haystack.indexOf(needle, index + needle.length);
+  }
+  return found;
+}
+
+/** `css` without its comments. */
+function withoutComments(css: string): string {
+  let out = '';
+  let index = 0;
+  while (index < css.length) {
+    const start = css.indexOf('/*', index);
+    if (start < 0) {
+      out += css.slice(index);
+      break;
+    }
+    out += css.slice(index, start);
+    const end = css.indexOf('*/', start + 2);
+    index = end < 0 ? css.length : end + 2;
+  }
+  return out;
+}
+
+const MOTION_QUERY =
+  '@media (prefers-reduced-motion: no-preference) and (forced-colors: none)';
 
 /**
  * Re-stamps a rendered checkbox's scoping attributes with `SCOPE`, so that only the CSS this
@@ -123,11 +183,16 @@ describe('AndesCheckbox style encapsulation', () => {
       // and emits that attribute as a standalone extra descendant step - matching an element
       // that does not exist. Guarding the whole stylesheet (rather than the three known
       // rules) is what makes this catch the next multi-line selector someone adds.
-      const phantomStep = new RegExp(`(^|[\\s>~+(,])\\[_ngcontent-${SCOPE}\\]`);
+      const attr = `[_ngcontent-${SCOPE}]`;
+      const stepBoundaries = ' \t>~+(,';
 
       const offenders = runtimeScopedCss()
         .split('\n')
-        .filter((line) => phantomStep.test(line));
+        .filter((line) =>
+          indicesOf(line, attr).some(
+            (index) => index === 0 || stepBoundaries.includes(line[index - 1]),
+          ),
+        );
 
       expect(offenders).toEqual([]);
     });
@@ -185,6 +250,96 @@ describe('AndesCheckbox style encapsulation', () => {
       expect(input.indeterminate).toBe(true);
       expect(opacityOf('.andes-checkbox__icon--indeterminate')).toBe('1');
       expect(opacityOf('.andes-checkbox__icon--check')).toBe('0');
+    });
+  });
+
+  describe('stylesheet contract', () => {
+    it('only animates inside the motion-allowed, non-forced-colors query', () => {
+      const css = rawCss();
+      const motion = atRuleBody(css, MOTION_QUERY);
+
+      expect(motion).not.toBe('');
+      const everywhere = indicesOf(css, 'animation:').length;
+      const inside = indicesOf(motion, 'animation:').length;
+      expect(inside).toBeGreaterThan(0);
+      expect(inside).toBe(everywhere);
+    });
+
+    it('keys every animation off the one-shot data-motion hook', () => {
+      const motion = withoutComments(atRuleBody(rawCss(), MOTION_QUERY));
+      const selectors = motion
+        .split('}')
+        .map((block) => block.split('{')[0].trim())
+        .filter((selector) => selector !== '');
+
+      for (const selector of selectors) {
+        expect(selector).toContain("[data-motion='");
+      }
+      expect(motion).toContain("[data-motion='check']");
+      expect(motion).toContain("[data-motion='indeterminate']");
+      expect(motion).toContain("[data-motion='uncheck']");
+    });
+
+    it('draws the tick with stroke-dashoffset and pops the box', () => {
+      const css = rawCss();
+      const draw = atRuleBody(css, '@keyframes andes-checkbox-draw');
+      const pop = atRuleBody(css, '@keyframes andes-checkbox-pop');
+
+      expect(draw).toContain('stroke-dashoffset: 14');
+      expect(draw).toContain('stroke-dashoffset: 0');
+      expect(pop).toContain('scale(1.1)');
+    });
+
+    it('drops every transition under prefers-reduced-motion', () => {
+      const reduced = atRuleBody(
+        rawCss(),
+        '@media (prefers-reduced-motion: reduce)',
+      );
+
+      expect(reduced).toContain('.andes-checkbox__box');
+      expect(reduced).toContain('.andes-checkbox__icon');
+      expect(reduced).toContain('transition: none');
+    });
+
+    it('keeps the pointer target at 24px, and 44px on coarse pointers', () => {
+      const css = rawCss();
+      const coarse = atRuleBody(css, '@media (pointer: coarse)');
+
+      expect(css).toContain('--_andes-checkbox-hit: 1.5rem;');
+      expect(coarse).toContain('--_andes-checkbox-hit: 2.75rem;');
+      expect(css).toContain(
+        'width: calc(100% + 2 * var(--_andes-checkbox-hit-extra));',
+      );
+    });
+
+    it('maps the checked box and button onto system colors in forced-colors mode', () => {
+      const forced = atRuleBody(rawCss(), '@media (forced-colors: active)');
+
+      expect(forced).toContain('background-color: Highlight;');
+      expect(forced).toContain('color: HighlightText;');
+      expect(forced).toContain('.andes-checkbox--button:has(');
+    });
+
+    it('uses tokens, never literal colors, outside the forced-colors block', () => {
+      const css = withoutComments(rawCss());
+      const forced = atRuleBody(css, '@media (forced-colors: active)');
+      const rest = css.split(forced).join('');
+
+      expect(indicesOf(rest, '#')).toEqual([]);
+      expect(indicesOf(rest, 'rgb(')).toEqual([]);
+      expect(indicesOf(rest, 'hsl(')).toEqual([]);
+    });
+
+    it('scopes the card and button :has() rules to the component', () => {
+      const css = runtimeScopedCss();
+      const attr = `[_ngcontent-${SCOPE}]`;
+
+      expect(css).toContain(
+        `.andes-checkbox--card${attr}:has(.andes-checkbox__input:checked)`,
+      );
+      expect(css).toContain(
+        `.andes-checkbox--button${attr}:has(.andes-checkbox__input:focus-visible)`,
+      );
     });
   });
 });

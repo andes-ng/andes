@@ -23,6 +23,15 @@ const meta: Meta<AndesRate> = {
     disabled: { control: 'boolean' },
     size: { control: 'text' },
     color: { control: 'color' },
+    colors: { control: 'object' },
+    emptyColor: { control: 'color' },
+    status: {
+      control: 'inline-radio',
+      options: [undefined, 'error', 'warning'],
+    },
+    name: { control: 'text' },
+    required: { control: 'boolean' },
+    autoFocus: { control: 'boolean' },
     tooltips: { control: 'object' },
   },
   args: {
@@ -37,7 +46,7 @@ const meta: Meta<AndesRate> = {
   },
   render: (args) => ({
     props: args,
-    template: `<andes-rate [value]="value" [count]="count" [allowHalf]="allowHalf" [allowClear]="allowClear" [readonly]="readonly" [disabled]="disabled" [size]="size" [color]="color" [tooltips]="tooltips" aria-label="Rating" />`,
+    template: `<andes-rate [value]="value" [count]="count" [allowHalf]="allowHalf" [allowClear]="allowClear" [readonly]="readonly" [disabled]="disabled" [size]="size" [color]="color" [colors]="colors" [emptyColor]="emptyColor" [status]="status" [name]="name" [required]="required" [tooltips]="tooltips" aria-label="Rating" />`,
   }),
 };
 
@@ -155,21 +164,55 @@ export const Tooltips: Story = {
   }),
 };
 
-export const Color: Story = {
+export const Colors: Story = {
   parameters: {
     docs: {
       description: {
         story:
-          '`color` (or the `--andes-rate-color` / `--andes-rate-empty-color` custom properties) changes the fill.',
+          '`color` sets one filled colour. `colors` picks it from the highlighted value instead: an array has one colour per character position, a function receives the value; hovering previews the colour of the value under the pointer. `emptyColor` (or `--andes-rate-empty-color`) recolours the unfilled characters, for surfaces where the default grey disappears.',
       },
     },
   },
   render: () => ({
+    props: {
+      mood: signal(2),
+      grade: signal(4),
+      scale: ['#dc2626', '#ea580c', '#ca8a04', '#65a30d', '#16a34a'],
+      byValue: (value: number) =>
+        value <= 2
+          ? 'var(--andes-color-danger)'
+          : value < 4
+            ? 'var(--andes-color-warning)'
+            : 'var(--andes-color-success)',
+    },
     template: `
       <div style="${col}">
-        <andes-rate [value]="4" color="var(--andes-color-danger)" aria-label="Red" />
-        <andes-rate [value]="4" color="var(--andes-color-success)" aria-label="Green" />
-        <andes-rate [value]="4" style="--andes-rate-color: var(--andes-color-primary);" aria-label="Primary" />
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <andes-rate [value]="4" color="var(--andes-color-danger)" aria-label="Single colour" />
+          <span style="${caption}">color</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <andes-rate [(value)]="mood" [colors]="scale" aria-label="Mood" />
+          <span style="${caption}">colors (one per position): {{ mood() }}</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <andes-rate [(value)]="grade" [colors]="byValue" allowHalf aria-label="Grade" />
+          <span style="${caption}">colors (function of the value): {{ grade() }}</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <andes-rate [value]="4.3" readonly style="--andes-rate-color: var(--andes-color-primary);" aria-label="Primary" />
+          <span style="${caption}">--andes-rate-color</span>
+        </div>
+        <div style="background: #0f172a; color: #e2e8f0; padding: 1rem 1.25rem; border-radius: 8px; display: grid; gap: 0.75rem; justify-items: start;">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <andes-rate [value]="3" emptyColor="#475569" size="lg" aria-label="Rating on a dark surface" />
+            <span style="font-size: 12px;">emptyColor on a dark surface</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <andes-rate [value]="3.5" readonly emptyColor="#475569" [colors]="scale" size="lg" aria-label="Average on a dark surface" />
+            <span style="font-size: 12px;">3.5, read-only, colours by value</span>
+          </div>
+        </div>
       </div>`,
   }),
 };
@@ -225,6 +268,138 @@ export const ReactiveForm: Story = {
         <andes-rate [formControl]="control" aria-label="Satisfaction" />
         <span style="${caption}">Control value: {{ control.value }} - touched: {{ control.touched }}</span>
         <button type="button" style="font: inherit; padding: 0 12px; height: 32px; border-radius: var(--andes-radius-md, 8px); border: 1px solid var(--andes-color-input); background: var(--andes-color-background); color: inherit; cursor: pointer;" (click)="control.disabled ? control.enable() : control.disable()">Toggle disabled</button>
+      </div>`,
+  }),
+};
+
+export const Fractional: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A read-only (or disabled) rate paints any value between 0 and `count` proportionally: 4.3 fills 30% of the fifth character, whatever the character is (the star, text, or a template) and in the reading direction. The slider still reports the real value (`aria-valuenow="4.3"`). An interactive rate keeps whole steps (half with `allowHalf`): it draws the nearest one, so it never shows a value the pointer cannot pick.',
+      },
+    },
+  },
+  render: () => ({
+    props: {
+      averages: [
+        { label: 'Hotel Aurora', value: 4.3, reviews: 1284 },
+        { label: 'Cafe Norte', value: 3.7, reviews: 312 },
+        { label: 'Taller Sur', value: 2.1, reviews: 47 },
+      ],
+    },
+    template: `
+      <div style="${col}">
+        @for (item of averages; track item.label) {
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="min-inline-size: 7rem; font-weight: 500;">{{ item.label }}</span>
+            <andes-rate [value]="item.value" readonly [aria-label]="item.label + ' average rating'" />
+            <span>{{ item.value }}</span>
+            <span style="${caption}">({{ item.reviews }} reviews)</span>
+          </div>
+        }
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <andes-rate [value]="2.6" readonly character="♥" size="lg" color="var(--andes-color-danger)" aria-label="Hearts, 2.6" />
+          <span style="${caption}">text character, 2.6</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <andes-rate [value]="3.4" disabled aria-label="Disabled, 3.4" />
+          <span style="${caption}">disabled, 3.4</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <andes-rate [value]="3.7" aria-label="Interactive, 3.7" />
+          <span style="${caption}">interactive 3.7 draws 4 whole stars</span>
+        </div>
+        <div dir="rtl" style="display: flex; align-items: center; gap: 0.5rem;">
+          <span style="min-inline-size: 7rem; font-weight: 500;">فندق الأمل</span>
+          <andes-rate [value]="4.3" readonly aria-label="متوسط التقييم" />
+          <span>4.3</span>
+          <span style="${caption}">(1284 تقييم)</span>
+        </div>
+      </div>`,
+  }),
+};
+
+export const StatusAndForm: Story = {
+  name: 'Status and form',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`status` tints the empty characters and rings the row with the danger or warning colour; `error` is also announced with `aria-invalid`. `name` adds a hidden input so the value travels in a native form post; `required` makes a value of 0 an Angular forms error (`{ required: true }`) and shows as `data-required` (the slider role has no `aria-required`).',
+      },
+    },
+  },
+  render: () => ({
+    props: {
+      scoreControl: new FormControl(0, { nonNullable: true }),
+      posted: signal<string>('nothing posted yet'),
+      send: (event: Event) => {
+        event.preventDefault();
+        const data = new FormData(event.target as HTMLFormElement);
+        return `score=${String(data.get('score') ?? '')}&comment=${String(data.get('comment') ?? '')}`;
+      },
+    },
+    template: `
+      <div style="${col}">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <andes-rate [value]="2" status="error" aria-label="Error" />
+          <span style="${caption}">error (aria-invalid)</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <andes-rate [value]="2" status="warning" aria-label="Warning" />
+          <span style="${caption}">warning</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <andes-rate [value]="0" status="error" aria-label="Error, empty" />
+          <span style="${caption}">error, nothing rated</span>
+        </div>
+        <form style="display: grid; gap: 0.75rem; justify-items: start;" (submit)="posted.set(send($event))">
+          <label id="story-rate-label" style="font-weight: 500;">Your rating (required)</label>
+          <andes-rate
+            [formControl]="scoreControl"
+            name="score"
+            required
+            [status]="scoreControl.invalid && scoreControl.touched ? 'error' : undefined"
+            aria-labelledby="story-rate-label"
+          />
+          @if (scoreControl.invalid && scoreControl.touched) {
+            <span style="font-size: 12px; line-height: 20px; color: var(--andes-color-danger);">Pick at least one star.</span>
+          }
+          <input name="comment" placeholder="Comment" style="font: inherit; height: 32px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--andes-color-input); background: var(--andes-color-background); color: inherit;" />
+          <button type="submit" style="font: inherit; padding: 0 12px; height: 32px; border-radius: var(--andes-radius-md, 8px); border: 1px solid var(--andes-color-input); background: var(--andes-color-background); color: inherit; cursor: pointer;" (click)="scoreControl.markAsTouched()">Send</button>
+          <span style="${caption}">Form post: {{ posted() }} - control: {{ scoreControl.valid ? 'valid' : 'invalid (required)' }}</span>
+        </form>
+      </div>`,
+  }),
+};
+
+export const Focus: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`autoFocus` focuses the rate once, right after it renders in the browser (never on the server); it is read once, like the HTML `autofocus` attribute. `focus()` and `blur()` are public methods for the same job from code. A disabled rate takes no focus.',
+      },
+    },
+  },
+  render: () => ({
+    props: { mounted: signal(false), focusedNow: signal(false) },
+    template: `
+      <div style="${col}">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <andes-rate #target [value]="3" (focused)="focusedNow.set(true)" (blurred)="focusedNow.set(false)" aria-label="Rate programmatically" />
+          <button type="button" style="font: inherit; padding: 0 12px; height: 32px; border-radius: var(--andes-radius-md, 8px); border: 1px solid var(--andes-color-input); background: var(--andes-color-background); color: inherit; cursor: pointer;" (click)="target.focus()">focus()</button>
+          <button type="button" style="font: inherit; padding: 0 12px; height: 32px; border-radius: var(--andes-radius-md, 8px); border: 1px solid var(--andes-color-input); background: var(--andes-color-background); color: inherit; cursor: pointer;" (click)="target.blur()">blur()</button>
+          <span style="${caption}">{{ focusedNow() ? 'focused' : 'not focused' }}</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <button type="button" style="font: inherit; padding: 0 12px; height: 32px; border-radius: var(--andes-radius-md, 8px); border: 1px solid var(--andes-color-input); background: var(--andes-color-background); color: inherit; cursor: pointer;" (click)="mounted.set(!mounted())">{{ mounted() ? 'Remove' : 'Mount' }} a rate with autoFocus</button>
+          @if (mounted()) {
+            <andes-rate [value]="2" autoFocus aria-label="Focused on mount" />
+          }
+        </div>
       </div>`,
   }),
 };

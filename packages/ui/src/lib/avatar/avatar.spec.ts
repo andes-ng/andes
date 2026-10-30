@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
+import { expectLength, px } from '../../testing/computed-style';
 import { AndesAvatar, AndesAvatarShape, AndesAvatarSize } from './avatar';
 import {
   AndesAvatarBadge,
@@ -382,8 +383,8 @@ describe('AndesAvatarGroup', () => {
     ) as HTMLElement;
     const style = getComputedStyle(count);
 
-    expect(style.width).toBe('2.5rem');
-    expect(style.height).toBe('2.5rem');
+    expectLength(style.width, '2.5rem');
+    expectLength(style.height, '2.5rem');
     expect(style.borderRadius).not.toBe('');
     expect(style.borderRadius).not.toBe('0px');
   });
@@ -759,14 +760,16 @@ describe('AndesAvatarBadge', () => {
   });
 
   it('positions itself absolutely against the avatar and scales with its size', () => {
-    const { badge } = createBadgeHost();
+    const { avatar, badge } = createBadgeHost();
     const style = getComputedStyle(badge);
 
     expect(style.position).toBe('absolute');
     // `em`, so the dot tracks AndesAvatar's per-size font-size step instead of
-    // this component duplicating (and drifting from) that scale.
-    expect(style.width).toBe('0.75em');
-    expect(style.height).toBe('0.75em');
+    // this component duplicating (and drifting from) that scale: 0.75 of the
+    // avatar's own font size, resolved.
+    const avatarFontSize = { fontSize: px(getComputedStyle(avatar).fontSize) };
+    expectLength(style.width, '0.75em', avatarFontSize);
+    expectLength(style.height, '0.75em', avatarFontSize);
   });
 
   // The badge sits ON the avatar's edge, so it can only be fully visible if

@@ -2,6 +2,7 @@ import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 
+import { expectInherited } from '../../testing/computed-style';
 import { AndesInputOtp, AndesInputOtpFormatter } from './input-otp';
 
 describe('AndesInputOtp', () => {
@@ -314,7 +315,10 @@ describe('AndesInputOtp', () => {
     expect(getComputedStyle(root).fontFamily).toBe(
       'var(--andes-font-family), sans-serif',
     );
-    expect(getComputedStyle(cells()[0]).font).toBe('inherit');
+    // `font: inherit` resolves to the root's font, line-height included (a bare input keeps
+    // `normal`), so the cells set their text exactly like the rest of the field.
+    expect(cells()[0].parentElement).toBe(root);
+    expectInherited(cells()[0], ['font-family', 'font-size', 'line-height']);
   });
 
   it('focus() focuses the first empty cell', () => {

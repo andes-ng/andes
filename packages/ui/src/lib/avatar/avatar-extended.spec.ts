@@ -1,6 +1,7 @@
 import { Component, signal, type TemplateRef, viewChild } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
+import { expectLength } from '../../testing/computed-style';
 import { AndesAvatar, type AndesAvatarShape } from './avatar';
 import { AndesAvatarFallback } from './avatar-fallback';
 import { AndesAvatarGroup, type AndesAvatarGroupMax } from './avatar-group';
@@ -552,8 +553,9 @@ describe('AndesAvatarGroupCount click trigger', () => {
     expect(style.animation).toContain(
       'andes-avatar-panel-in 280ms cubic-bezier(0.16, 1, 0.3, 1)',
     );
-    expect(style.fontSize).toBe('0.875rem');
-    expect(style.lineHeight).toBe('1.375rem');
+    // 14px text on a 22px line.
+    expectLength(style.fontSize, '0.875rem');
+    expectLength(style.lineHeight, '1.375rem');
   });
 
   it('leaves with a quicker fade that drifts back the way it came in', () => {

@@ -6,6 +6,7 @@ import { Component, signal, viewChild } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 
+import { expectLength, toPx } from '../../testing/computed-style';
 import {
   AndesTextarea,
   AndesTextareaAutoSize,
@@ -334,7 +335,8 @@ describe('AndesTextarea', () => {
         '0 0 0 2px var(--_andes-textarea-ring)',
       );
       expect(getComputedStyle(wrapper).outline).toBe('none');
-      expect(getComputedStyle(textarea).outline).toBe('0');
+      // `outline: 0` computes to a zero width (an undeclared outline reads as '').
+      expectLength(getComputedStyle(textarea).outline, 0);
       expect(getComputedStyle(textarea).boxShadow).toBe('none');
     });
 
@@ -1018,11 +1020,12 @@ describe('AndesTextarea', () => {
   });
 
   describe('auto-size', () => {
-    // The `md` size declares `line-height: 1.375rem` (see textarea.css), which is what
-    // `getComputedStyle(...).lineHeight` resolves to for these host fixtures (default
-    // size 'md'). `parseFloat('1.375rem')` reads as `1.375`, so that - not the old hard-coded
-    // `20` fallback - is the real per-row multiplier the row math below is built on.
-    const MD_LINE_HEIGHT = 1.375;
+    // The `md` size declares `line-height: 1.375rem` (see textarea.css), which
+    // `getComputedStyle(...).lineHeight` resolves to 22px for these host fixtures (default
+    // size 'md'). That - not the hard-coded `20` fallback - is the real per-row multiplier the
+    // row math below is built on. (The block padding is a `var()` shorthand jsdom leaves
+    // unexpanded, so it adds 0 here.)
+    const MD_LINE_HEIGHT = toPx('1.375rem');
 
     it('grows to fit content up to autoSize maxRows', () => {
       const { fixture, textarea } = createHost();
@@ -1034,7 +1037,7 @@ describe('AndesTextarea', () => {
       textarea.dispatchEvent(new Event('input'));
       fixture.detectChanges();
 
-      // 4 rows at the real computed line-height (1.375) = 5.5px ceiling.
+      // 4 rows at the real computed line-height (22px) = 88px ceiling.
       expect(textarea.style.height).toBe(`${4 * MD_LINE_HEIGHT}px`);
       expect(textarea.style.overflowY).toBe('auto');
     });
@@ -1044,14 +1047,14 @@ describe('AndesTextarea', () => {
       fixture.componentInstance.autoSize.set({ minRows: 3 });
       fixture.detectChanges();
 
-      // The floor (3 rows * 1.375 = 4.125px) is now small enough that it must be exercised
-      // with a scrollHeight below it, or the content height would dominate instead.
+      // The floor (3 rows * 22px = 66px) is exercised with a scrollHeight below it, or the
+      // content height would dominate instead.
       setScrollHeight(textarea, 0);
       textarea.value = 'x';
       textarea.dispatchEvent(new Event('input'));
       fixture.detectChanges();
 
-      // 3 rows at the real computed line-height (1.375) = 4.125px floor.
+      // 3 rows at the real computed line-height (22px) = 66px floor.
       expect(textarea.style.height).toBe(`${3 * MD_LINE_HEIGHT}px`);
       expect(textarea.style.overflowY).toBe('hidden');
     });
@@ -1065,7 +1068,7 @@ describe('AndesTextarea', () => {
       setScrollHeight(textarea, 0);
       fixture.detectChanges();
 
-      // 5 rows at the real computed line-height (1.375) = 6.875px floor.
+      // 5 rows at the real computed line-height (22px) = 110px floor.
       expect(textarea.style.height).toBe(`${5 * MD_LINE_HEIGHT}px`);
     });
 
@@ -1229,9 +1232,9 @@ describe('AndesTextarea', () => {
       const mdHeight = heightForSize('md', 4);
       const lgHeight = heightForSize('lg', 4);
 
-      expect(smHeight).toBe(`${4 * 1.375}px`);
-      expect(mdHeight).toBe(`${4 * 1.375}px`);
-      expect(lgHeight).toBe(`${4 * 1.5}px`);
+      expectLength(smHeight, 'calc(4 * 1.375rem)');
+      expectLength(mdHeight, 'calc(4 * 1.375rem)');
+      expectLength(lgHeight, 'calc(4 * 1.5rem)');
       expect(lgHeight).not.toBe(mdHeight);
       expect([smHeight, mdHeight, lgHeight]).not.toContain(`${4 * 20}px`);
     });

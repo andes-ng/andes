@@ -26,6 +26,7 @@ import {
   type AndesTooltipPlacement,
 } from './tooltip-placement';
 import { AndesTooltipTrigger } from './tooltip-trigger';
+import { expectLength } from '../../testing/computed-style';
 
 /**
  * jsdom reports zero geometry for every element, which makes CDK's flexible
@@ -173,8 +174,8 @@ describe('AndesTooltip', () => {
     fixture.detectChanges();
 
     const style = getComputedStyle(panel() as Element);
-    expect(style.fontSize).toBe('0.75rem');
-    expect(style.lineHeight).toBe('1.25rem');
+    expectLength(style.fontSize, '0.75rem');
+    expectLength(style.lineHeight, '1.25rem');
   });
 
   it('enters with a 150ms soft fade and a drift of at most 4px', () => {

@@ -30,6 +30,11 @@
   opacity: 0.5;
 }
 
+/* Read-only: the value shows as it is, but nothing on it invites a drag. */
+:host([data-readonly]) {
+  cursor: default;
+}
+
 .andes-color-slider__rail {
   position: absolute;
   inset-block: 0.25rem;

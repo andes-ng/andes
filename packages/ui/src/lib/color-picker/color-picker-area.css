@@ -21,6 +21,11 @@
   opacity: 0.5;
 }
 
+/* Read-only: the value shows as it is, but nothing on it invites a drag. */
+:host([data-readonly]) {
+  cursor: default;
+}
+
 /* Saturation runs white to the hue; brightness runs the hue to black. These are the colour
    space itself, not theme colours. */
 .andes-color-area__surface {

@@ -2,6 +2,7 @@ import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 
+import { expectLength } from '../../testing/computed-style';
 import { AndesSwitch, AndesSwitchChangeEvent, AndesSwitchSize } from './switch';
 
 @Component({
@@ -151,7 +152,7 @@ describe('AndesSwitch', () => {
     fixture.detectChanges();
     const inner = button.querySelector('.andes-switch__inner') as HTMLElement;
 
-    expect(getComputedStyle(inner).fontSize).toBe('0.75rem');
+    expectLength(getComputedStyle(inner).fontSize, '0.75rem');
   });
 
   describe('CSS custom property hooks', () => {

@@ -111,7 +111,7 @@ export * from './lib/input-number';
 
 // @slot segmented
 
-// @slot select
+export * from './lib/select';
 
 // @slot sheet
 

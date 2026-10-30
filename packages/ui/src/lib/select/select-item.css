@@ -1,0 +1,164 @@
+:host {
+  display: contents;
+}
+
+.andes-select__option {
+  display: flex;
+  width: 100%;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--andes-space-2);
+  /* 32px rows: 5px + a 22px line + 5px, 12px from the panel's inner edge. */
+  min-height: var(--andes-control-height-md, 2rem);
+  padding: 0.3125rem 0.75rem;
+  border: none;
+  border-radius: var(--andes-radius-sm, 0.25rem);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  transition: background-color var(--andes-motion-duration-fast, 0.1s)
+    var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1));
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+}
+
+/*
+  Option states, one look each:
+
+  - highlighted (`data-highlighted`): the row the pointer is over, or the keyboard cursor.
+    One attribute for both, set only once the pointer has moved over a row or a key has
+    moved the cursor, so a freshly opened list shows no highlight at all. A plain
+    `:hover` is deliberately not used: it would also light up whatever row happens to
+    appear under a pointer that never moved.
+  - selected (`data-selected`): the primary tint, a heavier weight and the check mark.
+  - selected and highlighted: a stronger mix of the same tint, so the cursor stays
+    visible on a selected row.
+  - disabled: faded, with no highlight.
+
+  The highlight mixes the accent hover tone into the popover surface: the plain accent
+  token equals the popover surface in the dark theme, where it would not show.
+*/
+.andes-select__option {
+  --andes-select-option-highlight: color-mix(
+    in srgb,
+    var(--andes-color-accent-hover) 70%,
+    var(--andes-color-popover)
+  );
+  --andes-select-option-selected: var(
+    --andes-color-selected-bg,
+    var(--andes-color-primary-subtle)
+  );
+  --andes-select-option-selected-highlight: color-mix(
+    in srgb,
+    var(--andes-color-primary) 18%,
+    var(--andes-select-option-selected)
+  );
+}
+
+.andes-select__option[data-highlighted] {
+  background-color: var(--andes-select-option-highlight);
+}
+
+/* The highlight above is the indicator: a ring drawn inside the row on top of it read as
+   a second border. Kept transparent for forced-colors mode, which paints it in a system
+   colour. */
+.andes-select__option:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+}
+
+.andes-select__option[data-selected] {
+  background-color: var(--andes-select-option-selected);
+  font-weight: var(--andes-font-weight-semibold);
+}
+
+.andes-select__option[data-selected][data-highlighted] {
+  background-color: var(--andes-select-option-selected-highlight);
+}
+
+/*
+  Consecutive selected options form one block: the corners between two of them go
+  square, so their tints run together with no seam. The select works out which options
+  touch (skipping options hidden by the search, stopping at group labels and
+  separators). Block-start/-end corners, so the block reads the same in either direction.
+*/
+.andes-select__option[data-joined-prev] {
+  border-start-start-radius: 0;
+  border-start-end-radius: 0;
+}
+
+.andes-select__option[data-joined-next] {
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
+}
+
+/* Muted secondary text in an option template drops below 4.5:1 on these tinted rows (4:1
+   on the selected tint). Re-scoping the token reaches consumer markup too; `currentColor`
+   resolves where a descendant uses it in `color`, i.e. to this row's own text color. */
+.andes-select__option:is([data-highlighted], [data-selected]) {
+  --andes-color-muted-foreground: color-mix(
+    in srgb,
+    currentcolor 70%,
+    transparent
+  );
+}
+
+.andes-select__option[data-disabled] {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.andes-select__option[data-disabled][data-highlighted]:not([data-selected]) {
+  background-color: transparent;
+}
+
+/* Forced colours drop backgrounds: the cursor becomes an outline and the selection takes
+   the system's own selected-item colours. */
+@media (forced-colors: active) {
+  .andes-select__option[data-highlighted] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+
+  .andes-select__option[data-selected] {
+    background-color: SelectedItem;
+    color: SelectedItemText;
+    forced-color-adjust: none;
+  }
+
+  .andes-select__option[data-selected][data-highlighted] {
+    outline-color: SelectedItemText;
+  }
+
+  .andes-select__option[data-selected] .andes-select__option-indicator {
+    color: inherit;
+  }
+}
+
+.andes-select__option-label {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.andes-select__option-indicator {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 1em;
+  height: 1em;
+  /* The text tone, not the fill: the fill only reaches 2.8:1 on the dark popover. */
+  color: var(--andes-color-primary-text);
+}
+
+.andes-select__option-indicator svg {
+  width: 1em;
+  height: 1em;
+}
+
+/* `display: flex` above would otherwise beat the user-agent `[hidden]` rule. */
+.andes-select__option[hidden] {
+  display: none;
+}

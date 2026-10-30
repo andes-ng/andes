@@ -21,6 +21,7 @@ import {
 import { AndesPopoverTrigger } from './popover-trigger';
 import { AndesPopover } from './popover';
 import type { AndesOverlayAlign, AndesOverlaySide } from '@andes-ng/primitives';
+import { expectLength } from '../../testing/computed-style';
 
 /**
  * jsdom reports zero geometry for every element, which makes CDK's
@@ -543,8 +544,8 @@ describe('AndesPopover - extended features', () => {
       const title = getComputedStyle(
         panel()?.querySelector('.andes-popover-title') as Element,
       );
-      expect(title.fontSize).toBe('1rem');
-      expect(title.lineHeight).toBe('1.5rem');
+      expectLength(title.fontSize, '1rem');
+      expectLength(title.lineHeight, '1.5rem');
       expect(title.fontWeight).toBe('600');
     });
 

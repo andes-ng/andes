@@ -539,6 +539,21 @@ describe('AndesSlider features', () => {
         expect(view.values()).toHaveLength(3);
       });
 
+      it('adds nothing next to a bound that leaves no room for the gap', () => {
+        const view = mount((host) => editable(host, [5, 60], 10));
+
+        // A click at 2 would need a slot below `min`: it moves the nearest handle instead.
+        view.drag(view.control, 2);
+
+        expect(view.values()).toEqual([2, 60]);
+        expect(view.values()).toHaveLength(2);
+
+        view.host.value.set([20, 60]);
+        view.detect();
+        view.drag(view.control, 98);
+        expect(view.values().every((v) => v >= 0 && v <= 100)).toBe(true);
+      });
+
       it('keeps the gap while the new handle is dragged', () => {
         const view = mount((host) => editable(host, [20, 80]));
 

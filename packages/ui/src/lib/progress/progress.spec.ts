@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
+import { expectLength } from '../../testing/computed-style';
 import {
   AndesProgress,
   AndesProgressSize,
@@ -191,8 +192,8 @@ describe('AndesProgress (extended options)', () => {
     const { el } = create({ size: 'small', percent: 40, showInfo: true });
     const meter = el.querySelector('.andes-progress--sm') as HTMLElement;
 
-    expect(getComputedStyle(meter).fontSize).toBe('0.75rem');
-    expect(getComputedStyle(meter).lineHeight).toBe('1.25rem');
+    expectLength(getComputedStyle(meter).fontSize, '0.75rem');
+    expectLength(getComputedStyle(meter).lineHeight, '1.25rem');
   });
 
   it('sets the ring percentage in a medium weight', () => {
@@ -207,9 +208,9 @@ describe('AndesProgress (extended options)', () => {
   it('keeps the line percentage in the regular body weight', () => {
     const { q } = create({ percent: 40, showInfo: true });
 
-    expect(
-      getComputedStyle(q('.andes-progress__info')!).fontWeight,
-    ).not.toContain('medium');
+    expect(getComputedStyle(q('.andes-progress__info')!).fontWeight).toMatch(
+      /^(400|normal)$/,
+    );
   });
 
   describe('inner label ink', () => {

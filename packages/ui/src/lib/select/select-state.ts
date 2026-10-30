@@ -157,6 +157,11 @@ export interface AndesSelectTagContext {
   readonly $implicit: AndesSelectTag;
   /** Removes this value, exactly as the built-in remove button does. */
   readonly onClose: () => void;
+  /**
+   * Whether the tag is rendered in the `+ N ...` popover rather than in the trigger. There,
+   * a remove button belongs in the Tab order; in the trigger, `Backspace` removes tags.
+   */
+  readonly inPopover: boolean;
 }
 
 /** Template context for `optionTemplate`. */
@@ -173,6 +178,14 @@ export interface AndesSelectLabelContext {
 /** Template context for a `maxTagPlaceholder` template. */
 export interface AndesSelectMaxTagPlaceholderContext {
   readonly $implicit: readonly AndesSelectTag[];
+}
+
+/** Template context for `maxTagPopoverTemplate`. */
+export interface AndesSelectMaxTagPopoverContext {
+  /** The tags hidden by `maxTagCount`. */
+  readonly $implicit: readonly AndesSelectTag[];
+  /** Removes a hidden value, exactly as a tag's own remove button does. */
+  readonly remove: (tag: AndesSelectTag) => void;
 }
 
 /** What stands in for the tags hidden by `maxTagCount`. */
@@ -309,6 +322,21 @@ export abstract class AndesSelectState {
   abstract readonly maxTagTextLength: Signal<number | undefined>;
   /** Text of the `+ N ...` tag for a given list of hidden tags. */
   abstract maxTagPlaceholderTextFor(omitted: readonly AndesSelectTag[]): string;
+  /** Whether the `+ N ...` tag opens a popover of the hidden tags. */
+  abstract readonly maxTagPopover: Signal<boolean>;
+  /** Custom content for that popover. */
+  abstract readonly maxTagPopoverTemplate: Signal<
+    TemplateRef<AndesSelectMaxTagPopoverContext> | undefined
+  >;
+  /** Accessible name of the `+ N ...` tag and its popover, for a number of hidden tags. */
+  abstract maxTagPopoverLabelFor(count: number): string;
+  /** Accessible name of a tag's remove button. */
+  abstract removeTagLabelFor(label: string): string;
+  /**
+   * Registers the open `+ N ...` popover's pane (or `null`), so focus moving into it is not
+   * taken for focus leaving the select.
+   */
+  abstract registerOverflowPanel(element: HTMLElement | null): void;
   /** Records how many tags fit in the trigger, for `maxTagCount="responsive"`. */
   abstract setResponsiveTagCount(count: number | null): void;
 

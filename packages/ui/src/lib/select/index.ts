@@ -20,6 +20,7 @@ export type {
   AndesSelectMaxTagCount,
   AndesSelectMaxTagPlaceholder,
   AndesSelectMaxTagPlaceholderContext,
+  AndesSelectMaxTagPopoverContext,
   AndesSelectMode,
   AndesSelectOption,
   AndesSelectOptionContext,

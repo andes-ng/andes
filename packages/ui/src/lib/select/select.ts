@@ -46,6 +46,7 @@ import {
   type AndesSelectLabelContext,
   type AndesSelectMaxTagCount,
   type AndesSelectMaxTagPlaceholder,
+  type AndesSelectMaxTagPopoverContext,
   type AndesSelectMode,
   type AndesSelectOption,
   type AndesSelectOptionContext,
@@ -64,6 +65,7 @@ import {
 } from './select-state';
 import { AndesSelectTrigger } from './select-trigger';
 import { AndesSelectValue } from './select-value';
+import { andesSelectScrolledOutOfView } from './select-visibility';
 
 let nextUniqueId = 0;
 
@@ -327,6 +329,32 @@ export class AndesSelect
   readonly maxTagPlaceholder = input<AndesSelectMaxTagPlaceholder | undefined>(
     undefined,
   );
+  /**
+   * Whether hovering, focusing or tapping the `+ N ...` tag opens a small popover listing the
+   * hidden tags, each with its remove button while the select is enabled. On by default: a
+   * native `title` only shows plain text after a long hover, never to keyboard or touch users,
+   * and offers no way to remove a hidden value without opening the option list. Turned off,
+   * the tag is plain text again and keeps that `title` as its fallback.
+   */
+  readonly maxTagPopover = input(true, { transform: booleanAttribute });
+  /**
+   * Replaces the default content of the `+ N ...` popover (the hidden tags, rendered as in
+   * the trigger). Context: the hidden tags as `$implicit`, and `remove(tag)`, which removes
+   * a value exactly as a tag's own remove button does.
+   */
+  readonly maxTagPopoverTemplate = input<
+    TemplateRef<AndesSelectMaxTagPopoverContext> | undefined
+  >(undefined);
+  /**
+   * Accessible name of the `+ N ...` tag and of the popover it opens; `{count}` stands for
+   * the number of hidden tags. Translate it with the rest of the form.
+   */
+  readonly maxTagPopoverLabel = input('{count} more selected');
+  /**
+   * Accessible name of each tag's remove button; `{label}` stands for the tag's label.
+   * Translate it with the rest of the form.
+   */
+  readonly removeTagLabel = input('Remove {label}');
   /** Maximum characters shown per tag; longer labels are truncated with `...`. */
   readonly maxTagTextLength = input<number | undefined, unknown>(undefined, {
     transform: optionalNumber,
@@ -475,6 +503,7 @@ export class AndesSelect
   private readonly _formDisabled = signal(false);
   private readonly _combobox = signal<HTMLElement | null>(null);
   private readonly _responsiveTagCount = signal<number | null>(null);
+  private readonly _overflowPanel = signal<HTMLElement | null>(null);
   private readonly _cursorVisible = signal(false);
   private readonly _panelDirection = signal<'ltr' | 'rtl' | null>(null);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -1334,6 +1363,18 @@ export class AndesSelect
     return `+ ${omitted.length} ...`;
   }
 
+  override maxTagPopoverLabelFor(count: number): string {
+    return this.maxTagPopoverLabel().split('{count}').join(String(count));
+  }
+
+  override removeTagLabelFor(label: string): string {
+    return this.removeTagLabel().split('{label}').join(label);
+  }
+
+  override registerOverflowPanel(element: HTMLElement | null): void {
+    this._overflowPanel.set(element);
+  }
+
   override setResponsiveTagCount(count: number | null): void {
     this._responsiveTagCount.set(count);
   }
@@ -1712,32 +1753,7 @@ export class AndesSelect
     const box =
       combobox?.closest<HTMLElement>('[data-slot="select-trigger"]') ??
       combobox;
-    if (!box) {
-      return false;
-    }
-    const rect = box.getBoundingClientRect();
-    if (rect.width === 0 && rect.height === 0) {
-      // Not laid out (or display: none): nothing to measure against.
-      return false;
-    }
-    if (rect.bottom <= 0 || rect.top >= view.innerHeight) {
-      return true;
-    }
-    for (
-      let parent = box.parentElement;
-      parent && parent !== this.document.body;
-      parent = parent.parentElement
-    ) {
-      const overflow = view.getComputedStyle(parent).overflowY;
-      if (overflow === 'visible' || overflow === '') {
-        continue;
-      }
-      const clip = parent.getBoundingClientRect();
-      if (rect.bottom <= clip.top || rect.top >= clip.bottom) {
-        return true;
-      }
-    }
-    return false;
+    return !!box && andesSelectScrolledOutOfView(box, view);
   }
 
   private ownsElement(target: EventTarget | null): boolean {
@@ -1745,9 +1761,11 @@ export class AndesSelect
       return false;
     }
     const panel = this.overlay.panelElement();
+    const overflow = this._overflowPanel();
     return (
       this.host.nativeElement.contains(target) ||
-      (panel !== null && panel.contains(target))
+      (panel !== null && panel.contains(target)) ||
+      (overflow !== null && overflow.contains(target))
     );
   }
 

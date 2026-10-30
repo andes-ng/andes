@@ -1,4 +1,7 @@
-import { AndesOverlayTriggerPrimitive } from '@andes-ng/primitives';
+import {
+  AndesOverlayContentPrimitive,
+  AndesOverlayTriggerPrimitive,
+} from '@andes-ng/primitives';
 import { NgTemplateOutlet } from '@angular/common';
 import {
   afterNextRender,
@@ -15,7 +18,12 @@ import {
 } from '@angular/core';
 import clsx from 'clsx';
 
-import { AndesSelectState, type AndesSelectTag } from './select-state';
+import { AndesSelectOverflow } from './select-overflow';
+import {
+  AndesSelectState,
+  type AndesSelectTag,
+  type AndesSelectTagContext,
+} from './select-state';
 
 /** Room kept free for the search input when tags are fitted to one row, in px. */
 const RESPONSIVE_SEARCH_RESERVE = 20;
@@ -34,7 +42,12 @@ const RESPONSIVE_SEARCH_RESERVE = 20;
  */
 @Component({
   selector: 'andes-select-trigger',
-  imports: [AndesOverlayTriggerPrimitive, NgTemplateOutlet],
+  imports: [
+    AndesOverlayContentPrimitive,
+    AndesOverlayTriggerPrimitive,
+    AndesSelectOverflow,
+    NgTemplateOutlet,
+  ],
   templateUrl: './select-trigger.html',
   styleUrl: './select-trigger.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -176,13 +189,21 @@ export class AndesSelectTrigger {
       : tag.label;
   }
 
-  /** Native tooltip of the `+ N ...` tag: the labels it stands for. */
+  /** Native tooltip of the `+ N ...` tag (with `maxTagPopover` off): the labels it stands for. */
   protected omittedTitle(omitted: readonly AndesSelectTag[]): string {
     return omitted.map((tag) => tag.label).join(', ');
   }
 
-  protected tagContext(tag: AndesSelectTag) {
-    return { $implicit: tag, onClose: () => this.removeTag(tag) };
+  /** Context of a `tagTemplate` tag; `remove` is the popover's own removal, when in it. */
+  protected tagContext(
+    tag: AndesSelectTag,
+    remove?: (tag: AndesSelectTag) => void,
+  ): AndesSelectTagContext {
+    return {
+      $implicit: tag,
+      onClose: () => (remove ? remove(tag) : this.removeTag(tag)),
+      inPopover: !!remove,
+    };
   }
 
   protected onBoxClick(event: MouseEvent): void {

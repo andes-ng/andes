@@ -34,12 +34,16 @@
   }
 
   <div #selection class="andes-select__selection">
-    <!-- One tag, shared by the visible row and the responsive measuring row. -->
-    <ng-template #tagSlot let-tag>
+    <!--
+      One tag, shared by the visible row, the responsive measuring row and the "+ N"
+      popover. `remove` is set in the popover only: there, removing keeps focus inside it,
+      and each remove button is a Tab stop of its own.
+    -->
+    <ng-template #tagSlot let-tag let-remove="remove">
       @if (select.tagTemplate(); as tagTemplate) {
       <ng-container
         [ngTemplateOutlet]="tagTemplate"
-        [ngTemplateOutletContext]="tagContext(tag)"
+        [ngTemplateOutletContext]="tagContext(tag, remove)"
       />
       } @else {
       <span
@@ -51,17 +55,17 @@
         <span class="andes-select__tag-label">{{ tagText(tag) }}</span>
         @if (tag.closable) {
         <!--
-          Out of the tab order on purpose: keyboard users remove tags with
+          In the trigger, out of the tab order on purpose: keyboard users remove tags with
           Backspace from the combobox, which is one tab stop instead of one per tag.
         -->
         <button
           type="button"
-          tabindex="-1"
           class="andes-select__tag-remove"
           data-slot="select-tag-remove"
-          [attr.aria-label]="'Remove ' + tag.label"
+          [attr.tabindex]="remove ? null : -1"
+          [attr.aria-label]="select.removeTagLabelFor(tag.label)"
           (mousedown)="$event.preventDefault()"
-          (click)="removeTag(tag, $event)"
+          (click)="remove ? remove(tag, $event) : removeTag(tag, $event)"
         >
           @if (select.removeIcon(); as removeIcon) {
           <ng-container [ngTemplateOutlet]="removeIcon" />
@@ -86,19 +90,14 @@
       }
     </ng-template>
 
-    <ng-template #restSlot let-omitted>
-      <span
-        class="andes-select__tag andes-select__tag--rest"
-        data-slot="select-tag-rest"
-        [attr.title]="omittedTitle(omitted)"
-      >
-        @if (select.maxTagPlaceholderTemplate(); as restTemplate) {
-        <ng-container
-          [ngTemplateOutlet]="restTemplate"
-          [ngTemplateOutletContext]="{ $implicit: omitted }"
-        />
-        } @else { {{ select.maxTagPlaceholderTextFor(omitted) }} }
-      </span>
+    <!-- What the "+ N" tag reads: `maxTagPlaceholder` text or template. -->
+    <ng-template #restLabel let-omitted>
+      @if (select.maxTagPlaceholderTemplate(); as restTemplate) {
+      <ng-container
+        [ngTemplateOutlet]="restTemplate"
+        [ngTemplateOutletContext]="{ $implicit: omitted }"
+      />
+      } @else { {{ select.maxTagPlaceholderTextFor(omitted) }} }
     </ng-template>
 
     @if (select.isMultiple()) { @for (tag of select.visibleTags(); track $index)
@@ -108,10 +107,63 @@
       [ngTemplateOutletContext]="{ $implicit: tag }"
     />
     } @if (select.omittedTags().length > 0) {
-    <ng-container
-      [ngTemplateOutlet]="restSlot"
-      [ngTemplateOutletContext]="{ $implicit: select.omittedTags() }"
-    />
+    <!--
+      The "+ N" tag: a button opening a popover of the hidden tags (see
+      `AndesSelectOverflow`), or, with `maxTagPopover` off, plain text with a native
+      tooltip. Its popover template lives inside it so that it shares the tag's overlay.
+    -->
+    <span
+      #overflow="andesSelectOverflow"
+      class="andes-select__tag andes-select__tag--rest"
+      data-slot="select-tag-rest"
+      [andesSelectOverflow]="overflowPanel"
+      [attr.title]="
+        select.maxTagPopover() ? null : omittedTitle(select.omittedTags())
+      "
+    >
+      <ng-container
+        [ngTemplateOutlet]="restLabel"
+        [ngTemplateOutletContext]="{ $implicit: select.omittedTags() }"
+      />
+      <ng-template #overflowPanel>
+        <div
+          andesOverlayContent
+          class="andes-select__overflow"
+          data-slot="select-overflow"
+          [attr.aria-label]="overflow.label()"
+          [attr.dir]="overflow.direction()"
+          [attr.data-size]="select.size()"
+          (pointerenter)="overflow.onPanelPointerEnter($event)"
+          (pointerleave)="overflow.onPanelPointerLeave($event)"
+          (focusin)="overflow.onPanelFocusIn($event)"
+          (focusout)="overflow.onPanelFocusOut($event)"
+          (keydown)="overflow.onPanelKeydown($event)"
+        >
+          <div class="andes-select__overflow-body">
+            @if (select.maxTagPopoverTemplate(); as popoverTemplate) {
+            <ng-container
+              [ngTemplateOutlet]="popoverTemplate"
+              [ngTemplateOutletContext]="overflow.context()"
+            />
+            } @else {
+            <ul class="andes-select__overflow-list" role="list">
+              @for (tag of select.omittedTags(); track tag.value) {
+              <li class="andes-select__overflow-item">
+                <ng-container
+                  [ngTemplateOutlet]="tagSlot"
+                  [ngTemplateOutletContext]="{
+                    $implicit: tag,
+                    remove: overflow.remove
+                  }"
+                />
+              </li>
+              }
+            </ul>
+            }
+          </div>
+        </div>
+      </ng-template>
+    </span>
     } @if (responsive()) {
     <!--
       Every tag, laid out on one invisible row, so the trigger can tell how many fit
@@ -133,10 +185,15 @@
       </span>
       }
       <span class="andes-select__measure-item" data-measure="rest">
-        <ng-container
-          [ngTemplateOutlet]="restSlot"
-          [ngTemplateOutletContext]="{ $implicit: select.tags() }"
-        />
+        <span
+          class="andes-select__tag andes-select__tag--rest"
+          data-slot="select-tag-rest"
+        >
+          <ng-container
+            [ngTemplateOutlet]="restLabel"
+            [ngTemplateOutletContext]="{ $implicit: select.tags() }"
+          />
+        </span>
       </span>
     </div>
     } }

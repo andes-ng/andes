@@ -189,8 +189,28 @@ describe('AndesColorPicker', () => {
       input.dispatchEvent(new Event('input', { bubbles: true }));
       fixture.detectChanges();
     };
+    // The number and text fields commit when they lose focus.
     const commit = (input: HTMLInputElement) => {
-      input.dispatchEvent(new Event('change', { bubbles: true }));
+      input.dispatchEvent(new Event('blur'));
+      fixture.detectChanges();
+    };
+    // The format switch is our select: its trigger opens a list, whose option is clicked.
+    const formatTrigger = () =>
+      q<HTMLButtonElement>(
+        '[data-slot="color-picker-format"] [role="combobox"]',
+      );
+    const formatOptions = () =>
+      Array.from(
+        document.querySelectorAll<HTMLElement>(
+          '[data-slot="select-content"] [role="option"]',
+        ),
+      );
+    const chooseFormat = (label: string) => {
+      formatTrigger()?.click();
+      fixture.detectChanges();
+      formatOptions()
+        .find((option) => option.textContent?.trim() === label)
+        ?.click();
       fixture.detectChanges();
     };
     const presetButtons = () =>
@@ -212,6 +232,9 @@ describe('AndesColorPicker', () => {
       hue,
       alpha,
       field,
+      formatTrigger,
+      formatOptions,
+      chooseFormat,
       type,
       commit,
       presetButtons,
@@ -946,10 +969,12 @@ describe('AndesColorPicker', () => {
       commit(field('Green'));
       expect(host.completes.length).toBe(1);
 
-      // Beyond the range: clamped, and the field shows the real value afterwards.
+      // Beyond the range: held back while typing, clamped once the field is left, and the
+      // field shows the real value afterwards.
       type(field('Blue'), '999');
-      expect(host.value()).toBe('rgb(16, 200, 255)');
+      expect(host.value()).toBe('rgb(16, 200, 48)');
       commit(field('Blue'));
+      expect(host.value()).toBe('rgb(16, 200, 255)');
       expect(field('Blue').value).toBe('255');
 
       // Emptying a field changes nothing and the field recovers on commit.
@@ -987,25 +1012,27 @@ describe('AndesColorPicker', () => {
     });
 
     it('lets the user pick a format, reporting it, and uses it for later values', async () => {
-      const { q, field, area, host, fixture } = await openedSetup((h) =>
-        h.value.set('#ff0000'),
-      );
-      const select = q<HTMLSelectElement>('select') as HTMLSelectElement;
-      expect(select.getAttribute('aria-label')).toBe('Color format');
-      expect(Array.from(select.options).map((o) => o.value)).toEqual([
-        'hex',
-        'rgb',
-        'hsb',
-        'hsl',
-        'oklch',
-      ]);
+      const { q, field, area, host, fixture, formatTrigger, formatOptions } =
+        await openedSetup((h) => h.value.set('#ff0000'));
+      const trigger = formatTrigger() as HTMLButtonElement;
+      expect(trigger.getAttribute('aria-label')).toBe('Color format');
+      expect(q('select')).toBeNull();
 
-      select.value = 'rgb';
-      select.dispatchEvent(new Event('change', { bubbles: true }));
+      trigger.click();
+      fixture.detectChanges();
+      expect(formatOptions().map((o) => o.textContent?.trim())).toEqual([
+        'HEX',
+        'RGB',
+        'HSB',
+        'HSL',
+        'OKLCH',
+      ]);
+      formatOptions()[1].click();
       fixture.detectChanges();
 
       expect(host.formatChanges).toEqual(['rgb']);
       expect(field('Red').value).toBe('255');
+      expect(trigger.textContent?.trim()).toBe('RGB');
       // The value itself is not rewritten by merely switching the view...
       expect(host.value()).toBe('#ff0000');
       // ...the next edit uses the new format.
@@ -1014,27 +1041,25 @@ describe('AndesColorPicker', () => {
     });
 
     it('treats a bound format as controlled: it reports the choice but shows what it is given', async () => {
-      const { q, field, host, fixture } = await openedSetup((h) =>
-        h.format.set('hex'),
-      );
-      const select = q<HTMLSelectElement>('select') as HTMLSelectElement;
+      const { field, host, fixture, chooseFormat, formatTrigger } =
+        await openedSetup((h) => h.format.set('hex'));
 
-      select.value = 'hsb';
-      select.dispatchEvent(new Event('change', { bubbles: true }));
-      fixture.detectChanges();
+      chooseFormat('HSB');
 
       expect(host.formatChanges).toEqual(['hsb']);
       expect(field('Hex color')).not.toBeNull();
+      expect(formatTrigger()?.textContent?.trim()).toBe('HEX');
 
       host.format.set('hsb');
       fixture.detectChanges();
       expect(field('Hue')).not.toBeNull();
+      expect(formatTrigger()?.textContent?.trim()).toBe('HSB');
     });
 
     it('can hide the format switch', async () => {
       const { q } = await openedSetup((h) => h.disabledFormat.set(true));
 
-      expect(q('select')).toBeNull();
+      expect(q('andes-select')).toBeNull();
       expect(q('input[aria-label="Hex color"]')).not.toBeNull();
     });
   });
@@ -1425,18 +1450,25 @@ describe('AndesColorPicker', () => {
       );
     });
 
-    it('draws the fields with the field spec (hover, one focus ring, danger)', () => {
+    it('sizes the compact fields to their content instead of stretching them', () => {
       const style = css('color-picker-panel.css');
+      expect(style).toMatch(/--_number-width: 3\.75rem/);
+      expect(style).toMatch(/\.andes-color-picker__format \{[^}]*width: auto/);
       expect(style).toMatch(
-        /\.andes-color-picker__field:focus-within \{[^}]*border-color: var\(--andes-color-primary/,
+        /\.andes-color-picker__values \{[^}]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/,
       );
-      expect(style).toMatch(
-        /\.andes-color-picker__field:focus-within \{[^}]*box-shadow: 0 0 0 2px/,
-      );
-      expect(style).toMatch(/\.andes-color-picker__input \{[^}]*outline: 0/);
-      expect(style).toMatch(
-        /\.andes-color-picker__field\[data-invalid\] \{[^}]*--andes-color-danger/,
-      );
+      expect(style).not.toMatch(/field-sizing/);
+      // The boxes themselves are the library's, not hand-drawn ones.
+      expect(style).not.toMatch(/\.andes-color-picker__(field|input)\b/);
+    });
+
+    it('uses no native select, number or text input in the panel', () => {
+      const template = read('color-picker-panel.html');
+      expect(template).not.toMatch(/<select\b/);
+      expect(template).not.toMatch(/<input\s+(#\w+\s+)?type="(number|text)"/);
+      expect(template).toMatch(/<andes-select\b/);
+      expect(template).toMatch(/<andes-input\b/);
+      expect(template).toMatch(/<andes-input-number\b/);
     });
 
     it('keeps the slider and area rails left-to-right in any page direction', () => {
@@ -1484,7 +1516,7 @@ describe('AndesColorPicker', () => {
       await openedPicker();
 
       expect(
-        document.querySelector('[data-slot="color-picker-eyedropper"]'),
+        document.querySelector('[data-slot="color-picker-eyedropper"] button'),
       ).toBeNull();
     });
 
@@ -1492,7 +1524,7 @@ describe('AndesColorPicker', () => {
       withEyeDropper(Promise.resolve({ sRGBHex: '#00ff00' }));
       const fixture = await openedPicker();
       const button = document.querySelector<HTMLButtonElement>(
-        '[data-slot="color-picker-eyedropper"]',
+        '[data-slot="color-picker-eyedropper"] button',
       ) as HTMLButtonElement;
       expect(button.getAttribute('aria-label')).toBe(
         'Pick a color from the screen',
@@ -1514,7 +1546,7 @@ describe('AndesColorPicker', () => {
 
       (
         document.querySelector(
-          '[data-slot="color-picker-eyedropper"]',
+          '[data-slot="color-picker-eyedropper"] button',
         ) as HTMLButtonElement
       ).click();
       await fixture.whenStable();

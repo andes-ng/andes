@@ -14,6 +14,9 @@
     transparent 75% 100%
   );
 
+  /* The compact number boxes (angle, stop position, opacity): three digits and a sign. */
+  --_number-width: 3.75rem;
+
   display: flex;
   box-sizing: content-box;
   flex-direction: column;
@@ -33,6 +36,10 @@
   border-radius: var(--andes-control-radius-lg, 0.5rem);
   background-color: var(--andes-color-card, #fff);
   color: var(--andes-color-card-foreground, #0f172a);
+}
+
+:host([data-control='md']) {
+  --_number-width: 4.25rem;
 }
 
 :host([data-size='sm']) {
@@ -90,14 +97,6 @@
   flex: 1 1 auto;
 }
 
-.andes-color-picker__field.andes-color-picker__field--angle {
-  flex: 0 0 4rem;
-}
-
-.andes-color-picker__field--angle .andes-color-picker__affix {
-  margin-inline-start: 0.125rem;
-}
-
 /* ----- Controls ------------------------------------------------------------------------- */
 
 .andes-color-picker__controls {
@@ -118,30 +117,6 @@
   width: 100%;
 }
 
-.andes-color-picker__tool {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  padding: 0;
-  border: 0;
-  border-radius: var(--andes-radius-md, 0.375rem);
-  background: transparent;
-  color: var(--andes-color-muted-foreground, #64748b);
-  cursor: pointer;
-  transition:
-    background-color 150ms ease,
-    color 150ms ease;
-}
-
-.andes-color-picker__tool:hover:not(:disabled) {
-  background-color: var(--andes-color-accent, #f1f5f9);
-  color: var(--andes-color-foreground, #0f172a);
-}
-
-.andes-color-picker__tool:focus-visible,
 .andes-color-picker__clear:focus-visible,
 .andes-color-picker__group-toggle:focus-visible,
 .andes-color-picker__preset:focus-visible {
@@ -149,15 +124,9 @@
   outline-offset: 2px;
 }
 
-.andes-color-picker__tool:disabled,
 .andes-color-picker__clear:disabled {
   cursor: not-allowed;
   opacity: 0.5;
-}
-
-.andes-color-picker__tool svg {
-  width: 1rem;
-  height: 1rem;
 }
 
 .andes-color-picker__preview,
@@ -216,154 +185,102 @@
   display: block;
 }
 
-/* ----- Fields: the field spec at the small (24px) size ---------------------------------- */
+/* ----- Fields: our own select, text and number fields ------------------------------------- */
 
-/* One row; where it cannot fit without cutting digits off (a narrow panel, a browser that
-   sizes the format switch to its longest option), the last boxes wrap instead. */
+/* Two rows, the same in every format: the format select with the copy button, then the
+   values: the hex field with the opacity box, or the channel boxes, one equal column each. */
 .andes-color-picker__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.andes-color-picker__fields-head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: 0.375rem 0.25rem;
 }
 
-.andes-color-picker__field {
-  position: relative;
-  display: flex;
-  box-sizing: border-box;
+.andes-color-picker__fields-head:empty {
+  display: none;
+}
+
+/* As wide as the chosen format, not stretched. */
+.andes-color-picker__format {
+  display: inline-block;
+  flex: none;
+  width: auto;
+}
+
+.andes-color-picker__copy {
+  flex: none;
+  margin-inline-start: auto;
+}
+
+/* One row of columns of the same width with one gap. Only the opacity column has a floor (its
+   box holds three digits and a percent sign), so a narrow panel gives it that and shares the
+   rest. */
+.andes-color-picker__values {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.25rem;
+}
+
+.andes-color-picker__values[data-alpha] {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(
+      var(--_number-width),
+      1fr
+    );
+}
+
+/* OKLCH: the chroma box shows four digits and a point, so it is a little wider than the
+   other two (L: 62.8, H: 138), and the panel's narrowest size still shows every digit. */
+.andes-color-picker__values[data-format='oklch'] {
+  grid-template-columns:
+    minmax(3rem, 1fr) minmax(3.5rem, 1.2fr)
+    minmax(2.75rem, 1fr);
+}
+
+.andes-color-picker__values[data-format='oklch'][data-alpha] {
+  grid-template-columns:
+    minmax(3rem, 1fr) minmax(3.5rem, 1.2fr) minmax(2.75rem, 1fr)
+    minmax(var(--_number-width), 1fr);
+}
+
+/* The hex field takes what the opacity box leaves. */
+.andes-color-picker__values[data-hex] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.andes-color-picker__values[data-hex][data-alpha] {
+  grid-template-columns: minmax(0, 1fr) var(--_number-width);
+}
+
+.andes-color-picker__hex {
+  display: block;
   min-width: 0;
-  flex: 1 1 0;
-  height: var(--andes-control-height-sm, 1.5rem);
-  align-items: center;
-  padding-inline: 0.4375rem;
-  border: 1px solid var(--andes-color-input, #e2e8f0);
-  border-radius: var(--andes-control-radius-sm, 0.25rem);
-  background-color: var(--andes-color-background, #fff);
-  color: var(--andes-color-foreground, #0f172a);
-  transition:
-    border-color 150ms ease,
-    box-shadow 150ms ease,
-    background-color 150ms ease;
 }
 
-.andes-color-picker__field:hover:not(:focus-within, :has(:disabled)) {
-  border-color: color-mix(
-    in srgb,
-    var(--andes-color-primary, #2563eb) 65%,
-    var(--andes-color-input, #e2e8f0)
-  );
-}
-
-.andes-color-picker__field:focus-within {
-  border-color: var(--andes-color-primary, #2563eb);
-  box-shadow: 0 0 0 2px
-    color-mix(in srgb, var(--andes-color-primary, #2563eb) 20%, transparent);
-}
-
-.andes-color-picker__field[data-invalid] {
-  border-color: var(--andes-color-danger, #dc2626);
-}
-
-.andes-color-picker__field[data-invalid]:focus-within {
-  box-shadow: 0 0 0 2px
-    color-mix(in srgb, var(--andes-color-danger, #dc2626) 20%, transparent);
-}
-
-.andes-color-picker__field:has(:disabled) {
-  background-color: var(--andes-color-muted, #f1f5f9);
-  color: var(--andes-color-muted-foreground, #64748b);
-  cursor: not-allowed;
-}
-
-.andes-color-picker__field--alpha {
-  flex: 0 0 3.25rem;
-  padding-inline: 0.3125rem;
-}
-
-.andes-color-picker__field--hex {
-  min-width: 4.5rem;
-}
-
-/* The three channel boxes are narrow (about 35px): 3px of inline padding leaves room for
-   three digits, and below 34px they wrap rather than cut a digit off. */
-.andes-color-picker__field[data-channel]:not(
-    .andes-color-picker__field--alpha
-  ) {
-  min-width: 2.125rem;
-  padding-inline: 0.1875rem;
-}
-
-.andes-color-picker__field--hex .andes-color-picker__input {
-  text-transform: uppercase;
-}
-
-.andes-color-picker__input {
-  width: 100%;
+.andes-color-picker__number {
   min-width: 0;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  box-shadow: none;
-  color: inherit;
-  font: inherit;
-  font-variant-numeric: tabular-nums;
-  text-overflow: ellipsis;
 }
 
-.andes-color-picker__input:disabled {
-  cursor: not-allowed;
-}
+/* The compact boxes (angle, stop position) are only as wide as their content. */
+.andes-color-picker__gradient-tools .andes-color-picker__number {
+  --andes-input-number-width: var(--_number-width);
 
-/* Plain numbers: the stepper arrows would eat the narrow fields. */
-.andes-color-picker__input[type='number'] {
-  appearance: textfield;
-  -moz-appearance: textfield;
-}
-
-.andes-color-picker__input[type='number']::-webkit-inner-spin-button,
-.andes-color-picker__input[type='number']::-webkit-outer-spin-button {
-  margin: 0;
-  -webkit-appearance: none;
+  flex: none;
 }
 
 .andes-color-picker__affix {
-  flex: none;
   color: var(--andes-color-muted-foreground, #64748b);
   user-select: none;
 }
 
-.andes-color-picker__field--hex .andes-color-picker__affix {
+.andes-color-picker__hex .andes-color-picker__affix {
   margin-inline-end: 0.125rem;
-}
-
-.andes-color-picker__field--alpha .andes-color-picker__affix {
-  margin-inline-start: 0.125rem;
-}
-
-.andes-color-picker__format {
-  flex: 0 0 auto;
-  padding-inline-end: 0;
-}
-
-.andes-color-picker__format .andes-color-picker__input {
-  width: auto;
-  padding-inline-end: 1.25rem;
-  appearance: none;
-  cursor: pointer;
-  /* As wide as the chosen format, not the longest one (OKLCH), where supported. */
-  field-sizing: content;
-}
-
-.andes-color-picker__chevron {
-  position: absolute;
-  inset-inline-end: 0.375rem;
-  width: 0.875rem;
-  height: 0.875rem;
-  color: var(--andes-color-muted-foreground, #64748b);
-  pointer-events: none;
 }
 
 /* ----- Presets -------------------------------------------------------------------------- */
@@ -475,8 +392,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .andes-color-picker__field,
-  .andes-color-picker__tool,
   .andes-color-picker__clear,
   .andes-color-picker__group-chevron,
   .andes-color-picker__preset {
@@ -486,54 +401,6 @@
   .andes-color-picker__preset:hover:not(:disabled, [aria-disabled='true']) {
     transform: none;
   }
-}
-
-/* ----- Copy ------------------------------------------------------------------------------ */
-
-.andes-color-picker__tool.andes-color-picker__tool--small,
-.andes-color-picker__tool.andes-color-picker__copy {
-  width: var(--andes-control-height-sm, 1.5rem);
-  height: var(--andes-control-height-sm, 1.5rem);
-}
-
-.andes-color-picker__tool--small svg,
-.andes-color-picker__copy svg {
-  width: 0.875rem;
-  height: 0.875rem;
-}
-
-.andes-color-picker__copy {
-  border: 1px solid var(--andes-color-input, #e2e8f0);
-  border-radius: var(--andes-control-radius-sm, 0.25rem);
-}
-
-.andes-color-picker__copy[data-copied] {
-  border-color: var(--andes-color-success, #16a34a);
-  color: var(--andes-color-success-text, #15803d);
-}
-
-/* OKLCH needs wider number boxes: they take a row of their own under the format switch,
-   after a full-width break (the `::after`, an empty line of its own: the rows are spaced
-   by the boxes' margin instead of the row gap, which would count that line twice), and
-   the opacity box fills the first row. */
-.andes-color-picker__fields[data-format='oklch'] {
-  row-gap: 0;
-}
-
-.andes-color-picker__fields[data-format='oklch']::after {
-  flex-basis: 100%;
-  order: 1;
-  content: '';
-}
-
-[data-format='oklch'] > [data-channel]:not([data-channel='a']) {
-  order: 2;
-  flex: 1 1 0;
-  margin-block-start: 0.375rem;
-}
-
-[data-format='oklch'] > [data-channel='a'] {
-  flex: 1 1 auto;
 }
 
 /* ----- Contrast ------------------------------------------------------------------------- */
@@ -651,57 +518,4 @@
   display: flex;
   gap: 0.5rem;
   margin-inline-start: auto;
-}
-
-.andes-color-picker__button {
-  display: inline-flex;
-  box-sizing: border-box;
-  height: var(--andes-control-height-sm, 1.5rem);
-  align-items: center;
-  padding-inline: var(--andes-control-padding-x-sm, 0.4375rem);
-  border: 1px solid var(--andes-color-input, #e2e8f0);
-  border-radius: var(--andes-control-radius-sm, 0.25rem);
-  background-color: var(--andes-color-background, #fff);
-  color: var(--andes-color-foreground, #0f172a);
-  font: inherit;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition:
-    border-color 150ms ease,
-    background-color 150ms ease;
-}
-
-.andes-color-picker__button:hover:not(:disabled) {
-  border-color: color-mix(
-    in srgb,
-    var(--andes-color-primary, #2563eb) 65%,
-    var(--andes-color-input, #e2e8f0)
-  );
-}
-
-.andes-color-picker__button--primary {
-  border-color: var(--andes-color-primary, #2563eb);
-  background-color: var(--andes-color-primary, #2563eb);
-  color: var(--andes-color-primary-foreground, #fff);
-}
-
-.andes-color-picker__button--primary:hover:not(:disabled) {
-  border-color: var(--andes-color-primary-hover, #1d4ed8);
-  background-color: var(--andes-color-primary-hover, #1d4ed8);
-}
-
-.andes-color-picker__button:focus-visible {
-  outline: 2px solid var(--andes-color-focus-ring, #2563eb);
-  outline-offset: 2px;
-}
-
-.andes-color-picker__button:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .andes-color-picker__button {
-    transition: none;
-  }
 }

@@ -1,9 +1,11 @@
+import { NgTemplateOutlet } from '@angular/common';
 import {
   booleanAttribute,
   ChangeDetectionStrategy,
   Component,
   computed,
   DOCUMENT,
+  effect,
   forwardRef,
   inject,
   input,
@@ -11,9 +13,19 @@ import {
   numberAttribute,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import { NG_VALUE_ACCESSOR, type ControlValueAccessor } from '@angular/forms';
 
+import { AndesButton, type AndesButtonSize } from '../button/button';
+import { AndesInput } from '../input/input';
+import {
+  AndesInputNumber,
+  type AndesInputNumberSize,
+  type AndesInputNumberValue,
+} from '../input-number/input-number';
+import { AndesSelect } from '../select/select';
+import type { AndesSelectSize } from '../select/select-state';
 import { clamp, type AndesColorFormat } from './color-math';
 import { AndesColorAngle } from './color-picker-angle';
 import { AndesColorArea, type AndesColorAreaChange } from './color-picker-area';
@@ -21,7 +33,6 @@ import { AndesColorGradientBar } from './color-picker-gradient';
 import {
   ANDES_COLOR_PANEL_HOST,
   AndesColorPanelController,
-  type AndesColorChannel,
   type AndesColorPresetGroup,
 } from './color-picker-panel-controller';
 import { AndesColorSlider } from './color-picker-slider';
@@ -57,10 +68,15 @@ let nextUniqueId = 0;
 @Component({
   selector: 'andes-color-picker-panel',
   imports: [
+    AndesButton,
     AndesColorAngle,
     AndesColorArea,
     AndesColorGradientBar,
     AndesColorSlider,
+    AndesInput,
+    AndesInputNumber,
+    AndesSelect,
+    NgTemplateOutlet,
   ],
   templateUrl: './color-picker-panel.html',
   styleUrl: './color-picker-panel.css',
@@ -80,6 +96,7 @@ let nextUniqueId = 0;
     '[attr.data-embedded]': 'embedded ? "" : null',
     '[attr.data-size]': 'embedded ? null : size()',
     '[attr.data-mode]': 'ctl.isGradient() ? "gradient" : null',
+    '[attr.data-control]': 'controlSize()',
     '[attr.data-disabled]': 'ctl.isDisabled() ? "" : null',
     '[attr.data-readonly]': 'ctl.isReadOnly() ? "" : null',
     '(keydown)': 'onHostKeydown($event)',
@@ -226,9 +243,30 @@ export class AndesColorPickerPanel implements ControlValueAccessor {
       },
     );
 
+  /**
+   * Size of the fields, select and buttons: the small (24px) control scale in the 14rem and
+   * 16rem panels and the popup, the medium (32px) one in a 20rem inline panel.
+   */
+  protected readonly controlSize = computed<
+    AndesSelectSize & AndesInputNumberSize
+  >(() => (!this.embedded && this.size() === 'lg' ? 'md' : 'sm'));
+  protected readonly buttonSize = computed<AndesButtonSize>(() =>
+    this.controlSize() === 'sm' ? 'icon-sm' : 'icon',
+  );
+
+  private readonly formatSelect = viewChild(AndesSelect);
+
   protected readonly uid = nextUniqueId++;
   protected readonly presetsId = `andes-color-picker-presets-${this.uid}`;
   protected readonly contrastId = `andes-color-picker-contrast-${this.uid}`;
+
+  constructor() {
+    effect(() => {
+      // The list opens from inside a popup (the picker's) or a dialog, whose layers are above
+      // the select's own: it stacks on the topmost layer that is not a toast.
+      this.formatSelect()?.overlay.configure({ layer: 'tooltip' });
+    });
+  }
 
   // ----- ControlValueAccessor --------------------------------------------------------
 
@@ -257,21 +295,39 @@ export class AndesColorPickerPanel implements ControlValueAccessor {
     this.ctl.onArea(change.saturation, change.brightness, complete);
   }
 
-  protected onHexKeydown(event: KeyboardEvent, field: HTMLInputElement): void {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      this.ctl.onHexCommit(field);
+  protected onHexEnter(event: KeyboardEvent): void {
+    event.preventDefault();
+    this.ctl.onHexCommit();
+  }
+
+  protected onFormatSelect(select: AndesSelect, format: unknown): void {
+    this.ctl.selectFormat(String(format));
+    // A controlled `format` may not follow the choice: the list shows what is really used.
+    select.value.set(this.ctl.currentFormat());
+  }
+
+  protected onAngleValue(value: AndesInputNumberValue): void {
+    if (typeof value === 'number') {
+      this.ctl.setAngle(value);
     }
   }
 
-  protected onAngleInput(field: HTMLInputElement, complete: boolean): void {
-    const parsed = field.value.trim() === '' ? NaN : Number(field.value);
-    if (Number.isFinite(parsed)) {
-      this.ctl.setAngle(parsed, complete);
+  protected onStopPositionValue(value: AndesInputNumberValue): void {
+    if (typeof value === 'number') {
+      this.ctl.moveStop(this.ctl.activeStop().id, value);
     }
-    if (complete) {
-      field.value = String(this.ctl.angle());
-    }
+  }
+
+  /**
+   * A number field lost focus: the gesture is over, and the box shows what the colour really
+   * holds (an emptied or clamped box included).
+   */
+  protected onNumberBlur(
+    field: AndesInputNumber,
+    value: AndesInputNumberValue,
+  ): void {
+    field.value.set(value);
+    this.ctl.completeEdit();
   }
 
   protected contrastHeading(): string {
@@ -285,15 +341,13 @@ export class AndesColorPickerPanel implements ControlValueAccessor {
     this.ctl.removeStop(this.ctl.activeStop().id);
   }
 
-  protected channelInputMode(channel: AndesColorChannel): string {
-    return this.ctl.channelStep(channel) < 1 ? 'decimal' : 'numeric';
-  }
-
   /** Escape in an inline confirm panel discards the staged edits. */
   protected onHostKeydown(event: KeyboardEvent): void {
     if (
       event.key === 'Escape' &&
+      !event.defaultPrevented &&
       !this.embedded &&
+      !this.ctl.nestedOverlayOpen() &&
       this.ctl.source.confirm() &&
       this.ctl.hasDraft()
     ) {

@@ -197,8 +197,9 @@ describe('AndesColorPicker features', () => {
       input.dispatchEvent(new Event('input', { bubbles: true }));
       fixture.detectChanges();
     };
+    // The number and text fields commit when they lose focus.
     const commit = (input: HTMLInputElement) => {
-      input.dispatchEvent(new Event('change', { bubbles: true }));
+      input.dispatchEvent(new Event('blur'));
       fixture.detectChanges();
     };
     const stops = () =>
@@ -562,7 +563,13 @@ describe('AndesColorPicker features', () => {
 
       expect(field('Hex color').readOnly).toBe(true);
       expect(field('Opacity').readOnly).toBe(true);
-      expect((q('select') as HTMLSelectElement).disabled).toBe(true);
+      expect(
+        (
+          q(
+            '[data-slot="color-picker-format"] [role="combobox"]',
+          ) as HTMLButtonElement
+        ).disabled,
+      ).toBe(true);
       expect(
         (q('[data-slot="color-picker-clear"]') as HTMLButtonElement).disabled,
       ).toBe(true);
@@ -578,11 +585,131 @@ describe('AndesColorPicker features', () => {
       const writeText = vi.fn().mockResolvedValue(undefined);
       mockClipboard({ writeText });
       const { q, fixture } = await readOnlySetup();
-      const copy = q<HTMLButtonElement>('[data-slot="color-picker-copy"]');
+      const copy = q<HTMLButtonElement>(
+        '[data-slot="color-picker-copy"] button',
+      );
       expect(copy?.disabled).toBe(false);
       copy?.click();
       await fixture.whenStable();
       expect(writeText).toHaveBeenCalledWith('#1677ff');
+    });
+  });
+
+  // ----- format select, a list inside the popup ----------------------------------------
+
+  describe('format select', () => {
+    async function openedList(configure?: (host: FeatureHost) => void) {
+      const ctx = setup(configure);
+      await ctx.open();
+      const combobox = ctx.q<HTMLButtonElement>(
+        '[data-slot="color-picker-format"] [role="combobox"]',
+      ) as HTMLButtonElement;
+      combobox.focus();
+      combobox.click();
+      ctx.detect();
+      await ctx.fixture.whenStable();
+      ctx.detect();
+      const list = () =>
+        document.querySelector<HTMLElement>('[data-slot="select-content"]');
+      const options = () =>
+        Array.from(
+          list()?.querySelectorAll<HTMLElement>('[role="option"]') ?? [],
+        );
+      return { ...ctx, combobox, list, options };
+    }
+
+    // The layer token of the overlay a node sits in (the nearest ancestor that carries one).
+    function layerOf(node: HTMLElement | null): string | null {
+      for (let el = node; el; el = el.parentElement) {
+        const match = /--andes-z-index-(\w+)/.exec(
+          el.getAttribute('style') ?? '',
+        );
+        if (match) {
+          return match[1];
+        }
+      }
+      return null;
+    }
+
+    it('opens its list above the popup', async () => {
+      const { list, panel, options } = await openedList();
+      expect(list()).not.toBeNull();
+      expect(options().map((o) => o.textContent?.trim())).toEqual([
+        'HEX',
+        'RGB',
+        'HSB',
+        'HSL',
+        'OKLCH',
+      ]);
+      expect(layerOf(panel())).toBe('popover');
+      expect(layerOf(list())).toBe('tooltip');
+    });
+
+    it('does not close the picker when its list is clicked or an option is chosen', async () => {
+      const { list, panel, options, host, detect, fixture, field, trigger } =
+        await openedList();
+      // A press on the list itself is inside the picker, not outside it.
+      const pane = list() as HTMLElement;
+      pane.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+      pane.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      detect();
+      expect(host.open()).toBe(true);
+      expect(list()).not.toBeNull();
+
+      for (const type of ['pointerdown', 'mousedown', 'mouseup', 'click']) {
+        options()[1].dispatchEvent(new MouseEvent(type, { bubbles: true }));
+      }
+      detect();
+      await fixture.whenStable();
+      detect();
+      expect(list()).toBeNull();
+      expect(host.open()).toBe(true);
+      expect(panel()).not.toBeNull();
+      expect(field('Red')).not.toBeNull();
+      expect(trigger().getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('closes only the list on Escape and hands focus back to the select trigger', async () => {
+      const { list, panel, options, host, detect, fixture, combobox } =
+        await openedList();
+      press(options()[0] ?? combobox, 'Escape');
+      await fixture.whenStable();
+      detect();
+      expect(list()).toBeNull();
+      expect(host.open()).toBe(true);
+      expect(panel()).not.toBeNull();
+      expect(document.activeElement).toBe(combobox);
+
+      // The next Escape closes the picker.
+      press(combobox, 'Escape');
+      await fixture.whenStable();
+      detect();
+      expect(host.open()).toBe(false);
+    });
+
+    it('closes both when the press lands outside the picker', async () => {
+      const { list, host, detect, fixture } = await openedList();
+      const outside = document.createElement('div');
+      document.body.appendChild(outside);
+      outside.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+      outside.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await fixture.whenStable();
+      detect();
+      outside.remove();
+      expect(list()).toBeNull();
+      expect(host.open()).toBe(false);
+    });
+
+    it('keeps a hover-opened picker open while its list is up', async () => {
+      const { combobox, trigger, host, detect, fixture } = await openedList(
+        (h) => h.trigger.set('hover'),
+      );
+      expect(combobox.getAttribute('aria-expanded')).toBe('true');
+      pointer(trigger(), 'pointerleave', { bubbles: false });
+      await wait(ANDES_COLOR_PICKER_HOVER_CLOSE_DELAY + 60);
+      detect();
+      await fixture.whenStable();
+      expect(host.open()).toBe(true);
     });
   });
 
@@ -597,7 +724,7 @@ describe('AndesColorPicker features', () => {
       );
       await open();
       const copy = q<HTMLButtonElement>(
-        '[data-slot="color-picker-copy"]',
+        '[data-slot="color-picker-copy"] button',
       ) as HTMLButtonElement;
       expect(copy.getAttribute('aria-label')).toBe('Copy color value');
       const status = q('[data-slot="color-picker-copy-status"]') as HTMLElement;
@@ -609,8 +736,11 @@ describe('AndesColorPicker features', () => {
       detect();
       expect(writeText).toHaveBeenCalledWith('rgb(22, 119, 255)');
       expect(host.copied).toEqual(['rgb(22, 119, 255)']);
-      expect(copy.hasAttribute('data-copied')).toBe(true);
-      expect(copy.getAttribute('title')).toBe('Copied');
+      const copyHost = copy.closest(
+        '[data-slot="color-picker-copy"]',
+      ) as HTMLElement;
+      expect(copyHost.hasAttribute('data-copied')).toBe(true);
+      expect(copyHost.getAttribute('title')).toBe('Copied');
       expect(status.textContent?.trim()).toBe('Copied');
     });
 
@@ -621,7 +751,7 @@ describe('AndesColorPicker features', () => {
         execCommand;
       const { q, open, host, fixture } = setup();
       await open();
-      q<HTMLButtonElement>('[data-slot="color-picker-copy"]')?.click();
+      q<HTMLButtonElement>('[data-slot="color-picker-copy"] button')?.click();
       await fixture.whenStable();
       expect(execCommand).toHaveBeenCalledWith('copy');
       expect(host.copied).toEqual(['#1677ff']);
@@ -641,7 +771,7 @@ describe('AndesColorPicker features', () => {
       );
       await open();
       const copy = q<HTMLButtonElement>(
-        '[data-slot="color-picker-copy"]',
+        '[data-slot="color-picker-copy"] button',
       ) as HTMLButtonElement;
       expect(copy.getAttribute('aria-label')).toBe('Copiar');
       copy.click();
@@ -651,7 +781,7 @@ describe('AndesColorPicker features', () => {
 
       const hiddenCopy = setup((h) => h.showCopy.set(false));
       await hiddenCopy.open();
-      expect(hiddenCopy.q('[data-slot="color-picker-copy"]')).toBeNull();
+      expect(hiddenCopy.q('[data-slot="color-picker-copy"] button')).toBeNull();
     });
   });
 
@@ -686,10 +816,15 @@ describe('AndesColorPicker features', () => {
       expect(field('Lightness').value).toBe('62.8');
       expect(field('Chroma').value).toBe('0.258');
       expect(field('Hue').value).toBe('29');
-      expect(field('Chroma').getAttribute('step')).toBe('0.001');
-      expect(field('Chroma').getAttribute('max')).toBe('0.4');
+      expect(field('Chroma').getAttribute('aria-valuemax')).toBe('0.4');
+      expect(field('Chroma').getAttribute('aria-valuemin')).toBe('0');
       expect(field('Chroma').getAttribute('inputmode')).toBe('decimal');
-      expect(field('Lightness').getAttribute('step')).toBe('0.1');
+      expect(field('Lightness').getAttribute('aria-valuemax')).toBe('100');
+      // The arrow keys step by the field's own step: 0.001 for chroma, 0.1 for lightness.
+      press(field('Chroma'), 'ArrowUp');
+      expect(field('Chroma').value).toBe('0.259');
+      press(field('Lightness'), 'ArrowDown');
+      expect(field('Lightness').value).toBe('62.7');
 
       // In the sRGB gamut the colour takes the numbers as they are...
       type(field('Chroma'), '0.1');
@@ -714,13 +849,13 @@ describe('AndesColorPicker features', () => {
       expect(field('Chroma').value).not.toBe('0.39');
     });
 
-    it('lays OKLCH number fields on their own row', () => {
-      const css = read('color-picker-panel.css');
+    it('lays the number fields on a row of equal columns under the format switch', () => {
+      const css = read('color-picker-panel.css').replace(/\s+/g, ' ');
       expect(css).toMatch(
-        /\.andes-color-picker__fields\[data-format='oklch'\]::after \{ flex-basis: 100%; order: 1;/,
+        /\.andes-color-picker__values \{[^}]*display: grid; grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/,
       );
       expect(css).toMatch(
-        /\[data-format='oklch'\] > \[data-channel\]:not\(\[data-channel='a'\]\) \{ order: 2;/,
+        /\.andes-color-picker__fields-head \{[^}]*flex-wrap: wrap/,
       );
     });
   });
@@ -962,7 +1097,7 @@ describe('AndesColorPicker features', () => {
       expect(trigger().getAttribute('aria-label')).toBe('Brand, #1677ff');
 
       const apply = q<HTMLButtonElement>(
-        '[data-slot="color-picker-apply"]',
+        '[data-slot="color-picker-apply"] button',
       ) as HTMLButtonElement;
       expect(apply.textContent?.trim()).toBe('Apply');
       apply.click();
@@ -980,7 +1115,7 @@ describe('AndesColorPicker features', () => {
       );
       await open();
       press(q('andes-color-area') as HTMLElement, 'ArrowLeft');
-      q<HTMLButtonElement>('[data-slot="color-picker-cancel"]')?.click();
+      q<HTMLButtonElement>('[data-slot="color-picker-cancel"] button')?.click();
       detect();
       expect(panel()).toBeNull();
       expect(host.value()).toBe('#1677ff');
@@ -1014,7 +1149,7 @@ describe('AndesColorPicker features', () => {
       detect();
       expect(host.value()).toBe('#1677ff');
       expect(host.clears).toBe(0);
-      q<HTMLButtonElement>('[data-slot="color-picker-apply"]')?.click();
+      q<HTMLButtonElement>('[data-slot="color-picker-apply"] button')?.click();
       detect();
       expect(host.value()).toBeNull();
       expect(host.clears).toBe(1);
@@ -1029,7 +1164,7 @@ describe('AndesColorPicker features', () => {
       await open();
       press(q('andes-color-area') as HTMLElement, 'ArrowLeft');
       expect(host.recent()).toEqual([]);
-      q<HTMLButtonElement>('[data-slot="color-picker-apply"]')?.click();
+      q<HTMLButtonElement>('[data-slot="color-picker-apply"] button')?.click();
       detect();
       expect(host.recent()).toEqual([host.value()]);
     });
@@ -1040,12 +1175,12 @@ describe('AndesColorPicker features', () => {
         h.labels.set({ apply: 'Aplicar', cancel: 'Cancelar' });
       });
       await open();
-      expect(q('[data-slot="color-picker-apply"]')?.textContent?.trim()).toBe(
-        'Aplicar',
-      );
-      expect(q('[data-slot="color-picker-cancel"]')?.textContent?.trim()).toBe(
-        'Cancelar',
-      );
+      expect(
+        q('[data-slot="color-picker-apply"] button')?.textContent?.trim(),
+      ).toBe('Aplicar');
+      expect(
+        q('[data-slot="color-picker-cancel"] button')?.textContent?.trim(),
+      ).toBe('Cancelar');
     });
   });
 
@@ -1060,7 +1195,7 @@ describe('AndesColorPicker features', () => {
       const footer = q('[data-slot="color-picker-footer"]') as HTMLElement;
       expect(footer.querySelector('.my-footer')).not.toBeNull();
       expect(
-        footer.querySelector('[data-slot="color-picker-apply"]'),
+        footer.querySelector('[data-slot="color-picker-apply"] button'),
       ).not.toBeNull();
     });
 
@@ -1207,14 +1342,16 @@ describe('AndesColorPicker features', () => {
     it('adds with + in the widest gap and removes with - or Delete, keeping two', async () => {
       const { q, stops, host, detect } = await gradientSetup();
       const remove = q<HTMLButtonElement>(
-        '[data-slot="color-picker-remove-stop"]',
+        '[data-slot="color-picker-remove-stop"] button',
       ) as HTMLButtonElement;
       expect(remove.disabled).toBe(true);
       expect(remove.getAttribute('aria-label')).toBe('Remove stop');
       press(stops()[0], 'Delete');
       expect(stops().length).toBe(2);
 
-      q<HTMLButtonElement>('[data-slot="color-picker-add-stop"]')?.click();
+      q<HTMLButtonElement>(
+        '[data-slot="color-picker-add-stop"] button',
+      )?.click();
       detect();
       expect(stops().length).toBe(3);
       expect(stops()[2].getAttribute('aria-valuenow')).toBe('50');
@@ -1255,6 +1392,31 @@ describe('AndesColorPicker features', () => {
       type(field('Angle'), '400');
       commit(field('Angle'));
       expect(field('Angle').value).toBe('360');
+
+      // The arrow keys step the field by one degree, a held Shift by ten.
+      press(field('Angle'), 'ArrowDown');
+      expect(field('Angle').value).toBe('359');
+      press(field('Angle'), 'ArrowDown', { shiftKey: true });
+      expect(field('Angle').value).toBe('349');
+      expect(dial.getAttribute('aria-valuenow')).toBe('349');
+    });
+
+    it('places the selected stop with its own number field', async () => {
+      const { host, field, type, commit } = await gradientSetup();
+      expect(field('Stop position').value).toBe('0');
+      press(field('Stop position'), 'ArrowUp');
+      expect(field('Stop position').value).toBe('1');
+      expect(host.value()).toBe(
+        'linear-gradient(90deg, #ff0000 1%, #0000ff 100%)',
+      );
+      type(field('Stop position'), '40');
+      commit(field('Stop position'));
+      expect(host.value()).toBe(
+        'linear-gradient(90deg, #ff0000 40%, #0000ff 100%)',
+      );
+      type(field('Stop position'), '250');
+      commit(field('Stop position'));
+      expect(field('Stop position').value).toBe('100');
     });
 
     it('points the dial at the pointer, snapping to 15 degrees with Shift', async () => {
@@ -1368,8 +1530,9 @@ describe('AndesColorPicker features', () => {
       press(locked.stops()[0], 'Delete');
       expect(locked.stops()[0].getAttribute('aria-readonly')).toBe('true');
       expect(
-        locked.q<HTMLButtonElement>('[data-slot="color-picker-add-stop"]')
-          ?.disabled,
+        locked.q<HTMLButtonElement>(
+          '[data-slot="color-picker-add-stop"] button',
+        )?.disabled,
       ).toBe(true);
       expect(locked.host.changes).toEqual([]);
     });

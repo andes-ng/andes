@@ -21,7 +21,9 @@ const caption = (text: string) =>
 /**
  * The five formats: HEX, RGB, HSB, HSL (read as `hsl(210 50% 40% / 0.5)` or with commas) and
  * OKLCH (`oklch(62.8% 0.2577 29.23)`, lightness / chroma / hue fields on a row of their own).
- * A bound `format` is controlled; `disabledFormat` hides the switch. The copy button copies
+ * The switch is the library's own select (its list opens over the popup), and every field is
+ * the library's text or number field, sized to its content. A bound `format` is controlled;
+ * `disabledFormat` hides the switch. The copy button copies
  * the value in the format shown, and the copied text is logged below.
  */
 export const Formats: Story = {

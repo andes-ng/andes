@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
@@ -18,6 +21,7 @@ import {
   AndesCardType,
   AndesCardVariant,
 } from './card';
+import { declaredValue } from '../../testing/computed-style';
 
 @Component({
   imports: [
@@ -1148,13 +1152,30 @@ describe('AndesCard edge padding', () => {
   })
   class CompositionsHost {}
 
-  function part(id: string, selector: string): CSSStyleDeclaration {
+  function partElement(id: string, selector: string): HTMLElement {
     const fixture = TestBed.createComponent(CompositionsHost);
     fixture.detectChanges();
-    const el = (fixture.nativeElement as HTMLElement).querySelector(
+    return (fixture.nativeElement as HTMLElement).querySelector(
       `#${id} > ${selector}`,
     ) as HTMLElement;
-    return getComputedStyle(el);
+  }
+
+  function part(id: string, selector: string): CSSStyleDeclaration {
+    return getComputedStyle(partElement(id, selector));
+  }
+
+  // The body pads itself with `padding: var(--andes-card-spacing, 1.5rem)`. jsdom does not
+  // expand a shorthand holding `var()`, so every longhand reads the initial `0`: assert the
+  // declaration on the `:host(...)` rule plus the class that makes that rule match.
+  const stylesheet = readFileSync(
+    join(process.cwd(), 'packages/ui/src/lib/card/card.css'),
+    'utf8',
+  );
+  function bodyPadding(id: string): string | undefined {
+    const body = partElement(id, 'andes-card-content');
+    expect(body.classList).toContain('andes-card__content');
+    expect(body.classList).not.toContain('andes-card__content--grid');
+    return declaredValue(stylesheet, ':host(.andes-card__content)', 'padding');
   }
 
   const padded = (value: string) =>
@@ -1180,15 +1201,14 @@ describe('AndesCard edge padding', () => {
   it('closes the head with a divider above the body, but not in a header-only card', () => {
     expect(divided(part('header-body', 'andes-card-header'))).toBe(true);
     expect(divided(part('header-only', 'andes-card-header'))).toBe(false);
-    const body = part('header-body', 'andes-card-content');
-    expect(top(body)).toBe(true);
-    expect(bottom(body)).toBe(true);
+    // A single `padding` value covers both block edges.
+    expect(bodyPadding('header-body')).toBe(
+      'var(--andes-card-spacing, 1.5rem)',
+    );
   });
 
   it('pads both edges of a body-only card', () => {
-    const body = part('body-only', 'andes-card-content');
-    expect(top(body)).toBe(true);
-    expect(bottom(body)).toBe(true);
+    expect(bodyPadding('body-only')).toBe('var(--andes-card-spacing, 1.5rem)');
   });
 
   it('pads the top of a footer that opens the card', () => {

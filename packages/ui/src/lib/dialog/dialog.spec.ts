@@ -3,6 +3,7 @@ import { Component, signal, viewChild } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { readFileSync } from 'node:fs';
 
+import { expectLength } from '../../testing/computed-style';
 import { ANDES_ALERT_DIALOG_IMPORTS, AndesAlertDialog } from './alert-dialog';
 import { ANDES_DIALOG_IMPORTS, AndesDialog } from './dialog';
 import type { AndesDialogSize } from './dialog-base';
@@ -538,8 +539,8 @@ describe('AndesDialog', () => {
       await openViaTrigger();
 
       const title = getComputedStyle(inDialog('title'));
-      expect(title.fontSize).toBe('1rem');
-      expect(title.lineHeight).toBe('1.5rem');
+      expectLength(title.fontSize, '1rem');
+      expectLength(title.lineHeight, '1.5rem');
       expect(title.fontWeight).toBe('600');
       const body = getComputedStyle(surface());
       expect(body.fontSize).toBe('var(--andes-text-font-size, 0.875rem)');

@@ -51,9 +51,6 @@ const COUNTRIES: readonly Country[] = [
 const CAPTION =
   'font-family: var(--andes-font-family), sans-serif; font-size: 0.75rem; line-height: 1.25rem; color: var(--andes-color-muted-foreground);';
 
-/** A column of labelled examples, e.g. one per size or variant. */
-const STACK = 'display: flex; flex-direction: column; gap: 1rem; width: 260px;';
-
 const meta: Meta<AndesCombobox> = {
   title: 'Data Entry/Combobox/Popup',
   component: AndesCombobox,
@@ -80,7 +77,11 @@ export default meta;
 
 type Story = StoryObj<AndesCombobox>;
 
-/** `placement` picks the preferred side and alignment; the popup still flips when it does not fit. */
+/**
+ * `placement` picks the preferred side and alignment; the popup still flips above or below
+ * when that side lacks room. The popups here are a fixed 260px, wider than their 200px
+ * fields, only so that the `start`/`end` alignment shows.
+ */
 export const Placement: Story = {
   render: () => ({
     props: { fruitOptions: FRUIT_OPTIONS },
@@ -95,22 +96,39 @@ export const Placement: Story = {
   }),
 };
 
-/** `true` (default) matches the input, a number fixes the width in px, `false` fits the content. */
+/**
+ * Popup width. By default the popup is exactly as wide as the field, its edges level with
+ * the field's (first box). A fixed width suits a narrow field whose options carry more
+ * than their label - here a capital next to each country, which a 200px popup would
+ * truncate (second box). `false` sizes the popup to its widest option (third box).
+ */
 export const PopupMatchSelectWidth: Story = {
   render: () => ({
-    props: { countries: COUNTRIES, caption: CAPTION, stack: STACK },
+    props: { countries: COUNTRIES, caption: CAPTION },
     template: `
-      <div [style]="stack">
-        <span [style]="caption">Fixed 360px</span>
-        <andes-combobox [options]="countries" [popupMatchSelectWidth]="360" placeholder="Search country..." aria-label="Fixed width" />
+      <div style="display: flex; flex-direction: column; gap: 1rem; width: 200px;">
+        <span [style]="caption">As wide as the field (default)</span>
+        <andes-combobox [options]="countries" placeholder="Search country..." aria-label="Field width" />
+        <span [style]="caption">Fixed 320px, for the capitals</span>
+        <andes-combobox [options]="countries" [popupMatchSelectWidth]="320" [optionTemplate]="withCapital" placeholder="Search country..." aria-label="Fixed width" />
         <span [style]="caption">Content width</span>
         <andes-combobox [options]="countries" [popupMatchSelectWidth]="false" placeholder="Search country..." aria-label="Content width" />
       </div>
+      <ng-template #withCapital let-option>
+        <span style="display: flex; justify-content: space-between; gap: 1rem;">
+          <span>{{ option.label }}</span>
+          <span [style]="caption">{{ option.capital }}</span>
+        </span>
+      </ng-template>
     `,
   }),
 };
 
-/** `[(open)]` two-way binds the popup. */
+/**
+ * Opening and closing: `[(open)]` two-way binds the popup (`(openChange)` reports every
+ * change, however it happened), and `defaultOpen` opens it once on render without the
+ * field taking focus.
+ */
 export const ControlledOpen: Story = {
   render: () => ({
     props: { fruitOptions: FRUIT_OPTIONS, popupOpen: false, caption: CAPTION },
@@ -124,7 +142,29 @@ export const ControlledOpen: Story = {
           <span [style]="caption">open: {{ popupOpen }}</span>
         </div>
         <andes-combobox [options]="fruitOptions" [(open)]="popupOpen" placeholder="Search fruit..." aria-label="Fruit" />
+        <div style="height: 15rem;"></div>
+        <span [style]="caption">defaultOpen</span>
+        <andes-combobox [options]="fruitOptions" defaultOpen placeholder="Open from the start" aria-label="Fruit, open on render" />
       </div>
+    `,
+  }),
+};
+
+/**
+ * `panelClass` adds classes to the popup. Its base look has no specificity of its own, so
+ * one class selector in page CSS restyles it - here a taller list with a tinted edge.
+ */
+export const PanelClass: Story = {
+  render: () => ({
+    props: { fruitOptions: FRUIT_OPTIONS },
+    template: `
+      <style>
+        .story-tall-popup {
+          max-height: 24rem;
+          border-color: var(--andes-color-primary);
+        }
+      </style>
+      <andes-combobox [options]="fruitOptions" panelClass="story-tall-popup" placeholder="Search fruit..." aria-label="Fruit" style="width: 260px; display: inline-block;" />
     `,
   }),
 };

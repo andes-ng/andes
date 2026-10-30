@@ -85,6 +85,13 @@ const PRODUCT_GROUPS: readonly ProductGroup[] = [
   },
 ];
 
+const DOMAINS = [
+  'andes.dev',
+  'angular.dev',
+  'docs.andes.dev',
+  'status.andes.dev',
+];
+
 const meta: Meta<AndesCombobox> = {
   title: 'Data Entry/Combobox/Custom content',
   component: AndesCombobox,
@@ -114,7 +121,9 @@ type Story = StoryObj<AndesCombobox>;
 /**
  * `[optionTemplate]` renders each option (its context carries the option and the query)
  * and `[groupLabelTemplate]` renders each group heading (its context is the group exactly
- * as passed - here with an extra `total` - the matching options and the query).
+ * as passed - here with an extra `total` - the matching options and the query). Both
+ * popups take the field's width, the standard case: the fields are simply wide enough for
+ * the richer rows.
  */
 export const OptionTemplates: Story = {
   render: () => ({
@@ -122,12 +131,11 @@ export const OptionTemplates: Story = {
       countries: COUNTRIES,
       productGroups: PRODUCT_GROUPS,
       caption: CAPTION,
-      stack: STACK,
     },
     template: `
-      <div [style]="stack">
-        <andes-combobox [options]="countries" placeholder="Search country..." aria-label="Country" [optionTemplate]="country" [popupMatchSelectWidth]="300" />
-        <andes-combobox [options]="productGroups" [groupLabelTemplate]="heading" placeholder="Search everything..." aria-label="Search" [popupMatchSelectWidth]="320" />
+      <div style="display: flex; flex-direction: column; gap: 1rem; width: 320px;">
+        <andes-combobox [options]="countries" placeholder="Search country..." aria-label="Country" [optionTemplate]="country" />
+        <andes-combobox [options]="productGroups" [groupLabelTemplate]="heading" placeholder="Search everything..." aria-label="Search" />
       </div>
       <ng-template #country let-option>
         <span style="display: flex; align-items: center; gap: 0.5rem;">
@@ -189,6 +197,43 @@ export const TextareaInput: Story = {
           }
         </div>
       </andes-combobox>
+    `,
+  }),
+};
+
+/**
+ * Field content: `prefix` and `suffixIcon` decorate the field itself; in the compound mode
+ * an element marked `andesComboboxField` is projected as the field, so the input can sit in
+ * an addon group of its own markup. The input keeps every combobox attribute and the
+ * popup lines up with the input.
+ */
+export const FieldContent: Story = {
+  render: () => ({
+    props: { countries: COUNTRIES, domains: DOMAINS, stack: STACK },
+    template: `
+      <div [style]="stack">
+        <andes-combobox [options]="countries" [prefix]="pin" [suffixIcon]="chevron" placeholder="Search country..." aria-label="Country" />
+        <andes-combobox [options]="countries" prefix="+" size="lg" placeholder="Calling code country" aria-label="Calling code country" />
+        <andes-combobox #site [items]="domains">
+          <div andesComboboxField style="display: flex; align-items: stretch;">
+            <span style="display: inline-flex; align-items: center; padding-inline: 0.6875rem; border: 1px solid var(--andes-color-input); border-inline-end: 0; border-start-start-radius: 0.375rem; border-end-start-radius: 0.375rem; background: var(--andes-color-muted); color: var(--andes-color-muted-foreground); font: 0.875rem/1.375rem var(--andes-font-family), sans-serif;">https://</span>
+            <input andesComboboxInput placeholder="site.example" aria-label="Website" style="border-start-start-radius: 0; border-end-start-radius: 0;" />
+          </div>
+          <div andesComboboxContent>
+            @for (item of site.filteredItems(); track item) {
+              <div andesComboboxItem [value]="item">{{ item }}</div>
+            } @empty {
+              <div andesComboboxEmpty>No sites found.</div>
+            }
+          </div>
+        </andes-combobox>
+      </div>
+      <ng-template #pin>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.6-7-11a7 7 0 0 1 14 0c0 5.4-7 11-7 11Z" /><circle cx="12" cy="10" r="2.5" /></svg>
+      </ng-template>
+      <ng-template #chevron>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+      </ng-template>
     `,
   }),
 };

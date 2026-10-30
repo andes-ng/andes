@@ -107,7 +107,9 @@ export const CustomFilter: Story = {
 
 /**
  * Server-side search: `filterOption="false"` shows whatever the server returned,
- * `(searchChange)` fires the request and `loading` shows a spinner meanwhile.
+ * `(searchChange)` fires the request - once per 300ms pause in typing, with
+ * `searchDebounce` - and `loading` shows a spinner meanwhile. The first result is
+ * highlighted as it arrives, so Enter picks it.
  */
 export const AsyncSearch: Story = {
   render: () => {
@@ -130,12 +132,12 @@ export const AsyncSearch: Story = {
           ),
         );
         fetching.set(false);
-      }, 800);
+      }, 500);
     };
     return {
       props: { results, fetching, search },
       template: `
-        <andes-combobox [options]="results()" [loading]="fetching()" filterOption="false" (searchChange)="search($event)" notFoundContent="No countries found." placeholder="Type to search countries..." aria-label="Country" style="width: 280px; display: inline-block;" />
+        <andes-combobox [options]="results()" [loading]="fetching()" filterOption="false" [searchDebounce]="300" (searchChange)="search($event)" notFoundContent="No countries found." placeholder="Type to search countries..." aria-label="Country" style="width: 280px; display: inline-block;" />
       `,
     };
   },
@@ -205,9 +207,12 @@ export const NotFoundContent: Story = {
 };
 
 /**
- * Highlighting: `backfill` previews the highlighted option in the input as the arrow keys
- * move (Enter or leaving keeps it, Escape reverts); `autoHighlight` off leaves nothing
- * highlighted until a key or the pointer picks an option, so Enter commits nothing.
+ * Highlighting. Opening the list highlights nothing; typing highlights the first match
+ * (`autoHighlight`, on by default) so Enter picks it; the pointer highlights an option
+ * only once it moves over it. `backfill` previews the highlighted option in the input as
+ * the arrow keys move (Enter or leaving keeps it, Escape reverts); `autoHighlight` off
+ * leaves nothing highlighted until a key or the pointer picks an option; `selectOnBlur`
+ * commits the highlighted option when the field loses focus (type "ma", then Tab).
  */
 export const Highlighting: Story = {
   render: () => ({
@@ -218,6 +223,8 @@ export const Highlighting: Story = {
         <andes-combobox [options]="fruitOptions" backfill placeholder="Type, then use the arrow keys" aria-label="Fruit, backfill" />
         <span [style]="caption">autoHighlight off</span>
         <andes-combobox [options]="fruitOptions" [autoHighlight]="false" placeholder="Search fruit..." aria-label="Fruit, no auto highlight" />
+        <span [style]="caption">selectOnBlur</span>
+        <andes-combobox [options]="fruitOptions" selectOnBlur placeholder="Type, then press Tab" aria-label="Fruit, select on blur" />
       </div>
     `,
   }),

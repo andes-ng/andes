@@ -334,3 +334,39 @@ export const InputEvents: Story = {
     };
   },
 };
+
+/**
+ * Native forms and labels: `id` lands on the input, so a `<label for>` names it; `required`
+ * sets the native constraint and `aria-required`; `name` submits the value through a
+ * hidden input (here the submitted entries are listed below the form).
+ */
+export const NativeForm: Story = {
+  render: () => {
+    const submitted = signal('');
+    const submit = (event: SubmitEvent) => {
+      event.preventDefault();
+      const data = new FormData(event.target as HTMLFormElement);
+      submitted.set(
+        [...data.entries()].map(([key, entry]) => `${key}=${entry}`).join('&'),
+      );
+    };
+    return {
+      props: {
+        fruitOptions: FRUIT_OPTIONS,
+        submitted,
+        submit,
+        caption: CAPTION,
+      },
+      template: `
+        <form style="display: flex; flex-direction: column; gap: 0.5rem; width: 260px; font-family: var(--andes-font-family), sans-serif;" (submit)="submit($event)">
+          <label for="story-fruit-field" style="font-size: 0.875rem;">Favourite fruit</label>
+          <andes-combobox id="story-fruit-field" name="fruit" required [options]="fruitOptions" placeholder="Search fruit..." />
+          <label for="story-fruits-field" style="font-size: 0.875rem;">Also likes</label>
+          <andes-combobox id="story-fruits-field" name="also" multiple [options]="fruitOptions" placeholder="Pick fruit..." />
+          <andes-button type="submit" size="sm">Submit</andes-button>
+          <span [style]="caption">Submitted: {{ submitted() || '(nothing yet)' }}</span>
+        </form>
+      `,
+    };
+  },
+};

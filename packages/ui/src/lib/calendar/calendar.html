@@ -18,7 +18,7 @@
     <div class="andes-calendar__panel" data-slot="calendar-panel">
       @if (!headerTemplate()) {
       <div class="andes-calendar__header">
-        @if (first) {
+        @if (first) { @if (showFastNav()) {
         <button
           type="button"
           class="andes-calendar__nav"
@@ -31,6 +31,7 @@
             [ngTemplateOutlet]="fastPreviousIcon() ?? doubleChevronLeft"
           />
         </button>
+        }
         <button
           type="button"
           class="andes-calendar__nav"
@@ -42,15 +43,22 @@
           <ng-container [ngTemplateOutlet]="previousIcon() ?? chevronLeft" />
         </button>
         } @else {
-        <span class="andes-calendar__nav-spacer" aria-hidden="true"></span>
-        }
-
+        <span
+          class="andes-calendar__nav-spacer"
+          [class.andes-calendar__nav-spacer--single]="!showFastNav()"
+          aria-hidden="true"
+        ></span>
+        } @if (captionLayout() === 'label') {
         <ng-container
           [ngTemplateOutlet]="caption"
           [ngTemplateOutletContext]="{ $implicit: panel.caption }"
         />
-
-        @if (last) {
+        } @else {
+        <ng-container
+          [ngTemplateOutlet]="captionDropdowns"
+          [ngTemplateOutletContext]="{ $implicit: panel.index }"
+        />
+        } @if (last) {
         <button
           type="button"
           class="andes-calendar__nav"
@@ -61,6 +69,7 @@
         >
           <ng-container [ngTemplateOutlet]="nextIcon() ?? chevronRight" />
         </button>
+        @if (showFastNav()) {
         <button
           type="button"
           class="andes-calendar__nav"
@@ -73,8 +82,12 @@
             [ngTemplateOutlet]="fastNextIcon() ?? doubleChevronRight"
           />
         </button>
-        } @else {
-        <span class="andes-calendar__nav-spacer" aria-hidden="true"></span>
+        } } @else {
+        <span
+          class="andes-calendar__nav-spacer"
+          [class.andes-calendar__nav-spacer--single]="!showFastNav()"
+          aria-hidden="true"
+        ></span>
         }
       </div>
       }
@@ -84,6 +97,7 @@
         data-slot="calendar-grid"
         role="grid"
         [attr.aria-label]="panel.gridLabel"
+        [attr.aria-multiselectable]="mode() === 'multiple' || null"
         (mouseleave)="clearHover()"
       >
         <div
@@ -152,10 +166,17 @@
         />
       </button>
 
+      @if (yearDropdown() && view() !== 'year') {
+      <ng-container
+        [ngTemplateOutlet]="captionDropdowns"
+        [ngTemplateOutletContext]="{ $implicit: 0 }"
+      />
+      } @else {
       <ng-container
         [ngTemplateOutlet]="caption"
         [ngTemplateOutletContext]="{ $implicit: periodCaption() }"
       />
+      }
 
       <button
         type="button"
@@ -177,6 +198,7 @@
       data-slot="calendar-grid"
       role="grid"
       [attr.aria-label]="periodGridLabel()"
+      [attr.aria-multiselectable]="mode() === 'multiple' || null"
       [attr.data-view]="view()"
       (mouseleave)="clearHover()"
     >
@@ -215,6 +237,60 @@
     </span>
     }
   </div>
+</ng-template>
+
+<!-- captionLayout: the library's own selects (small, borderless, not searchable, the
+     list as wide as the trigger). They bring their keyboard handling, labelling and
+     announcements, so the wrap is not a live region. In the month and quarter grids
+     only the year select applies. `index` is the panel's position, so each visible
+     month moves the view by its own offset. -->
+<ng-template #captionDropdowns let-index>
+  @if (captionSelects()[index]; as selects) {
+  <div
+    class="andes-calendar__caption-wrap andes-calendar__caption-wrap--dropdowns"
+    data-slot="calendar-caption-dropdowns"
+  >
+    @if (view() === 'date') { @if (monthDropdown()) {
+    <andes-select
+      class="andes-calendar__select andes-calendar__select--month"
+      data-slot="calendar-month-select"
+      size="sm"
+      variant="borderless"
+      placement="bottomLeft"
+      [showSearch]="false"
+      [matchTriggerWidth]="true"
+      [options]="selects.months"
+      [value]="selects.month"
+      [disabled]="isDisabled()"
+      [aria-label]="monthSelectLabel()"
+      (selectionChange)="onMonthSelect(index, $event)"
+    />
+    } @else {
+    <span class="andes-calendar__caption" data-slot="calendar-caption-month"
+      >{{ selects.monthText }}</span
+    >
+    } } @if (yearDropdown()) {
+    <andes-select
+      class="andes-calendar__select andes-calendar__select--year"
+      data-slot="calendar-year-select"
+      size="sm"
+      variant="borderless"
+      placement="bottomLeft"
+      [showSearch]="false"
+      [matchTriggerWidth]="true"
+      [options]="selects.years"
+      [value]="selects.year"
+      [disabled]="isDisabled()"
+      [aria-label]="yearSelectLabel()"
+      (selectionChange)="onYearSelect(index, $event)"
+    />
+    } @else {
+    <span class="andes-calendar__caption" data-slot="calendar-caption-year"
+      >{{ selects.yearText }}</span
+    >
+    }
+  </div>
+  }
 </ng-template>
 
 <ng-template #cellButton let-cell>

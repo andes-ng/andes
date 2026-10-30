@@ -6,6 +6,7 @@ import {
   ChangeDetectorRef,
   Component,
   computed,
+  effect,
   ElementRef,
   inject,
   input,
@@ -15,8 +16,12 @@ import {
   output,
   signal,
   TemplateRef,
+  untracked,
+  viewChildren,
 } from '@angular/core';
 import clsx from 'clsx';
+
+import { AndesSelect } from '../select/select';
 
 import {
   addDays,
@@ -33,6 +38,7 @@ import {
   endOfPeriod,
   formatDayLabel,
   formatMonthCaption,
+  isSameDay,
   isSamePeriod,
   isWithinBounds,
   normalizeRange,
@@ -41,13 +47,15 @@ import {
   startOfPeriod,
   startOfYear,
   toDateKey,
-  toDateRange,
+  toDateList,
+  toOpenDateRange,
   today,
   weekdayNames,
   weekOfYear,
   type AndesCalendarDay,
   type AndesCalendarView,
   type AndesDateRange,
+  type AndesOpenDateRange,
   type AndesPickerType,
   type AndesWeekday,
 } from './date-utils';
@@ -55,20 +63,42 @@ import {
 export type {
   AndesCalendarView,
   AndesDateRange,
+  AndesOpenDateRange,
   AndesPickerType,
   AndesWeekday,
 } from './date-utils';
 
-/** Whether the calendar selects one day or a span of days. */
-export type AndesCalendarMode = 'single' | 'range';
+/**
+ * Whether the calendar selects one day, a span of days, or any number of separate
+ * days (`multiple`, where each pick toggles a day in or out of the selection).
+ */
+export type AndesCalendarMode = 'single' | 'range' | 'multiple';
+
+/** One boundary of a range. */
+export type AndesCalendarRangeSide = 'start' | 'end';
+
+/**
+ * What the navigation header shows in place of the plain caption: `label` (the
+ * caption button that climbs to the coarser grid), `dropdown` (a month and a year
+ * select), or only one of the two as a select (`dropdown-months`,
+ * `dropdown-years`), the other staying plain text.
+ */
+export type AndesCalendarCaptionLayout =
+  'label' | 'dropdown' | 'dropdown-months' | 'dropdown-years';
 
 /**
  * What `AndesCalendar`'s `value` accepts. The tuple and `{ start, end }` shapes are
  * both accepted for a range so a consumer's existing form value does not have to be
- * reshaped; the calendar always writes back `{ start, end }`.
+ * reshaped; the calendar always writes back `{ start, end }` (with `start` empty only
+ * for an open-ended range). `multiple` mode reads and writes a `Date[]`.
  */
 export type AndesCalendarValue =
-  Date | AndesDateRange | readonly [Date, Date] | null;
+  | Date
+  | AndesDateRange
+  | AndesOpenDateRange
+  | readonly [Date | null, Date | null]
+  | readonly Date[]
+  | null;
 
 /** Extra information handed to a `dateDisabled` predicate. */
 export interface AndesDateDisabledInfo {
@@ -161,12 +191,54 @@ interface CellRow {
   readonly cells: readonly (AndesCalendarCell | null)[];
 }
 
+/** One `<option>` of a caption dropdown. */
+/** One option of a caption select, in the shape `AndesSelect`'s `options` reads. */
+interface CaptionOption {
+  readonly value: number;
+  readonly label: string;
+  readonly disabled: boolean;
+}
+
 interface MonthPanel {
   readonly key: string;
+  /** Position among the visible months, `0` for the first. */
+  readonly index: number;
   readonly month: Date;
   readonly caption: string;
   readonly gridLabel: string;
   readonly rows: readonly CellRow[];
+}
+
+/**
+ * `disabled` accepts a boolean or a per-side `[start, end]` pair. Each entry of a
+ * pair goes through `booleanAttribute`, so `['true', '']` reads as `[true, true]`.
+ */
+export function coerceDisabledSides(
+  value: unknown,
+): boolean | readonly [boolean, boolean] {
+  if (Array.isArray(value)) {
+    return [booleanAttribute(value[0]), booleanAttribute(value[1])];
+  }
+  return booleanAttribute(value);
+}
+
+/** A whole number from an attribute or binding, or `undefined` when unset or not a number. */
+function optionalWholeNumber(value: unknown): number | undefined {
+  if (value == null || value === '') {
+    return undefined;
+  }
+  const parsed = numberAttribute(value, Number.NaN);
+  return Number.isFinite(parsed) ? Math.floor(parsed) : undefined;
+}
+
+/** Years listed either side of the shown one when nothing else bounds the year select. */
+const UNBOUNDED_YEAR_SPAN = 100;
+
+/** The 1st of `month` in `year`, for any year (`new Date` reads 0-99 as 1900-1999). */
+function yearMonth(year: number, month: number): Date {
+  const date = new Date(2000, month, 1);
+  date.setFullYear(year);
+  return date;
 }
 
 /** Columns and paging steps of the three period grids, in months. */
@@ -250,7 +322,7 @@ const PARENT_VIEW: Readonly<
  */
 @Component({
   selector: 'andes-calendar',
-  imports: [NgTemplateOutlet],
+  imports: [AndesSelect, NgTemplateOutlet],
   templateUrl: './calendar.html',
   styleUrl: './calendar.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -259,7 +331,7 @@ const PARENT_VIEW: Readonly<
     '[attr.data-mode]': 'mode()',
     '[attr.data-picker]': 'picker()',
     '[attr.data-view]': 'view()',
-    '[attr.data-disabled]': 'disabled() || null',
+    '[attr.data-disabled]': 'isDisabled() || null',
     '[attr.data-fullscreen]': 'fullscreen() || null',
   },
 })
@@ -267,7 +339,11 @@ export class AndesCalendar {
   private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly changeDetectorRef = inject(ChangeDetectorRef);
 
-  /** One day or a span of days. */
+  /**
+   * One day, a span of days, or (`multiple`) any number of separate days: in
+   * `multiple` mode each pick toggles its day in or out and `value` is a `Date[]`,
+   * kept in chronological order.
+   */
   readonly mode = input<AndesCalendarMode>('single');
 
   /**
@@ -279,7 +355,8 @@ export class AndesCalendar {
 
   /**
    * The current selection. A `Date` in `single` mode; `{ start, end }` (or a
-   * `[start, end]` tuple, which is accepted and normalized) in `range` mode.
+   * `[start, end]` tuple, which is accepted and normalized) in `range` mode, where
+   * `start` may be empty for an open-ended range; a `Date[]` in `multiple` mode.
    */
   readonly value = model<AndesCalendarValue>(null);
 
@@ -335,8 +412,70 @@ export class AndesCalendar {
    */
   readonly fullscreen = input(false, { transform: booleanAttribute });
 
-  /** Disables the whole calendar. */
-  readonly disabled = input(false, { transform: booleanAttribute });
+  /**
+   * Disables the whole calendar (`true`), or, in `range` mode, one boundary of the
+   * range (`[true, false]` locks the start, `[false, true]` the end). A locked
+   * boundary never changes: every pick sets the other one, and the days that would
+   * put the range out of order (before a locked start, after a locked end) are
+   * disabled. Outside `range` mode a pair reads its first entry, the one boundary
+   * there is.
+   */
+  readonly disabled = input<boolean | readonly [boolean, boolean], unknown>(
+    false,
+    { transform: coerceDisabledSides },
+  );
+
+  /**
+   * In `range` mode, which boundary the next pick sets. `null` (the default) runs
+   * the usual two-step flow: with no range or a complete one a pick starts a new
+   * range, and the next pick closes it. `'end'` moves the end and keeps the start;
+   * `'start'` moves the start and keeps the end (either swaps the two into order
+   * when the pick lands on the far side). `AndesDatePicker` sets it from the input
+   * being edited, so a click after focusing the end input changes the end. A
+   * locked boundary (see `disabled`) overrides it.
+   */
+  readonly editingSide = input<AndesCalendarRangeSide | null>(null);
+
+  /**
+   * In `multiple` mode, the most days that can be selected. Once reached, the
+   * unselected days are disabled (the selected ones can still be toggled off).
+   * Unset, there is no cap.
+   */
+  readonly maxCount = input<number | undefined, unknown>(undefined, {
+    transform: optionalWholeNumber,
+  });
+
+  /**
+   * What the day grid's header shows: `label` (default) is the caption button that
+   * climbs to the month grid; `dropdown` swaps it for a month select and a year
+   * select, which jump straight to any month; `dropdown-months` and
+   * `dropdown-years` keep only one select beside the other part as plain text. In
+   * the month and quarter grids, the year select stands in for the caption when the
+   * layout has one. Each visible month (`numberOfMonths`) gets its own selects;
+   * months and years outside `min`/`max` are disabled.
+   *
+   * The selects are `AndesSelect`s (small, borderless, not searchable, the list as
+   * wide as the trigger) rather than native ones, so they look and behave like every
+   * other control of the library; their lists open on the popover layer, above a
+   * date picker's panel, and `containsPanelNode` lets that panel treat them as its own.
+   */
+  readonly captionLayout = input<AndesCalendarCaptionLayout>('label');
+
+  /**
+   * First year of the year select. Defaults to `min`'s year, or 100 years before
+   * the month the calendar opened on. The year on screen is always listed.
+   */
+  readonly startYear = input<number | undefined, unknown>(undefined, {
+    transform: optionalWholeNumber,
+  });
+
+  /**
+   * Last year of the year select. Defaults to `max`'s year, or 100 years after
+   * the month the calendar opened on.
+   */
+  readonly endYear = input<number | undefined, unknown>(undefined, {
+    transform: optionalWholeNumber,
+  });
 
   /**
    * Per-date veto, applied on top of `min`/`max` (weekends, holidays, booked days).
@@ -428,6 +567,12 @@ export class AndesCalendar {
   /** Header of the week-number column. */
   readonly weekNumberLabel = input('Week');
 
+  /** Accessible name of the caption's month select (`captionLayout`). */
+  readonly monthSelectLabel = input('Month');
+
+  /** Accessible name of the caption's year select (`captionLayout`). */
+  readonly yearSelectLabel = input('Year');
+
   /** Emits the first day of the month whenever the visible month changes. */
   readonly monthChange = output<Date>();
 
@@ -487,8 +632,57 @@ export class AndesCalendar {
   );
 
   private readonly selectedRange = computed(() =>
-    this.mode() === 'range' ? toDateRange(this.value()) : null,
+    this.mode() === 'range' ? toOpenDateRange(this.value()) : null,
   );
+
+  /** The `multiple` selection, one period start per entry, in order. */
+  private readonly selectedDates = computed<readonly Date[]>(() => {
+    if (this.mode() !== 'multiple') {
+      return [];
+    }
+    const picker = this.picker();
+    const weekStartsOn = this.weekStartsOn();
+    return toDateList(
+      toDateList(this.value()).map((date) =>
+        startOfPeriod(date, picker, weekStartsOn),
+      ),
+    );
+  });
+
+  /** `disabled` is `true`, or a pair locking both boundaries. */
+  protected readonly isDisabled = computed(() => {
+    const disabled = this.disabled();
+    if (typeof disabled === 'boolean') {
+      return disabled;
+    }
+    return this.mode() === 'range' ? disabled[0] && disabled[1] : disabled[0];
+  });
+
+  /** Which boundaries `disabled` locks, in `range` mode. */
+  private readonly lockedSides = computed<readonly [boolean, boolean]>(() => {
+    const disabled = this.disabled();
+    return this.mode() === 'range' && typeof disabled !== 'boolean'
+      ? disabled
+      : [false, false];
+  });
+
+  /** The boundary the next pick sets: a locked side forces the other one. */
+  private readonly rangeTarget = computed<AndesCalendarRangeSide | null>(() => {
+    const [startLocked, endLocked] = this.lockedSides();
+    if (startLocked) {
+      return 'end';
+    }
+    if (endLocked) {
+      return 'start';
+    }
+    return this.editingSide();
+  });
+
+  /** Whether `maxCount` is reached, so no further day can be added. */
+  private readonly atMaxCount = computed(() => {
+    const max = this.maxCount();
+    return max !== undefined && this.selectedDates().length >= max;
+  });
 
   /** The month a fresh calendar opens on. */
   private readonly anchorMonth = computed(() => {
@@ -496,12 +690,22 @@ export class AndesCalendar {
     if (explicit) {
       return startOfMonth(explicit);
     }
-    const selection = this.selectedDate() ?? this.selectedRange()?.start;
+    const selection = this.selectionAnchor();
     if (selection) {
       return startOfMonth(selection);
     }
     return startOfMonth(clampDate(today(), this.min(), this.max()));
   });
+
+  /** The first selected date of any mode, the one the calendar opens on. */
+  private readonly selectionAnchor = computed<Date | null>(
+    () =>
+      this.selectedDate() ??
+      this.selectedRange()?.start ??
+      this.selectedRange()?.end ??
+      this.selectedDates()[0] ??
+      null,
+  );
 
   protected readonly showWeekNumbers = computed(
     () => this.showWeek() || this.picker() === 'week',
@@ -558,7 +762,11 @@ export class AndesCalendar {
     if (inSpan(explicit)) {
       return startOfPeriod(explicit, unit);
     }
-    const selection = this.selectedDate() ?? this.selectedRange()?.start;
+    const selection =
+      this.selectedDate() ??
+      this.selectedRange()?.start ??
+      this.selectedRange()?.end ??
+      this.selectedDates().find((date) => inSpan(date));
     if (inSpan(selection)) {
       return startOfPeriod(selection, unit);
     }
@@ -569,14 +777,128 @@ export class AndesCalendar {
     weekdayNames(this.locale(), this.weekStartsOn()),
   );
 
-  /** The range as the user would see it if they picked the hovered cell now. */
+  /**
+   * The range as the user would see it if they picked the hovered cell now, while
+   * that pick would complete (or move a boundary of) a range.
+   */
   private readonly previewRange = computed(() => {
     const range = this.selectedRange();
     const hover = this.hoverDate();
-    if (!range || range.end || !hover) {
+    if (!range || !hover) {
       return null;
     }
-    return normalizeRange({ start: range.start, end: hover });
+    const next = this.nextRange(hover);
+    const unchanged =
+      isSameDay(next.start, range.start) && isSameDay(next.end, range.end);
+    return next.start && next.end && !unchanged ? next : null;
+  });
+
+  /** Whether the header shows a month select (`captionLayout`). */
+  protected readonly monthDropdown = computed(
+    () =>
+      this.captionLayout() === 'dropdown' ||
+      this.captionLayout() === 'dropdown-months',
+  );
+
+  /**
+   * Whether the day grid's header keeps its year-jump arrows. A year select does the
+   * same job, so they give way to it and leave the room to the two selects.
+   */
+  protected readonly showFastNav = computed(
+    () => !(this.view() === 'date' && this.yearDropdown()),
+  );
+
+  /** Whether the header shows a year select (`captionLayout`). */
+  protected readonly yearDropdown = computed(
+    () =>
+      this.captionLayout() === 'dropdown' ||
+      this.captionLayout() === 'dropdown-years',
+  );
+
+  /** First and last year of the year select, before the shown year is added. */
+  private readonly yearSpan = computed(() => {
+    const around = this.anchorMonth().getFullYear();
+    let first =
+      this.startYear() ??
+      this.min()?.getFullYear() ??
+      around - UNBOUNDED_YEAR_SPAN;
+    let last =
+      this.endYear() ??
+      this.max()?.getFullYear() ??
+      around + UNBOUNDED_YEAR_SPAN;
+    if (last < first) {
+      [first, last] = [last, first];
+    }
+    return { first, last };
+  });
+
+  /**
+   * The caption selects of each visible month: its month options (those wholly
+   * outside `min`/`max` disabled), its year options, and the plain text shown for
+   * whichever half has no select. Kept apart from `panels`, which re-renders on
+   * every hover, so the option lists are only rebuilt when the view moves.
+   */
+  protected readonly captionSelects = computed<
+    readonly {
+      readonly months: readonly CaptionOption[];
+      readonly years: readonly CaptionOption[];
+      /** The shown month (0-11) and year, the two selects' values. */
+      readonly month: number;
+      readonly year: number;
+      readonly monthText: string;
+      readonly yearText: string;
+    }[]
+  >(() => {
+    if (this.captionLayout() === 'label') {
+      return [];
+    }
+    const locale = this.locale();
+    const monthFormat = new Intl.DateTimeFormat(locale, { month: 'long' });
+    // The select lists short names: its list is as wide as its trigger, and two
+    // triggers share the header with the arrows.
+    const shortMonth = new Intl.DateTimeFormat(locale, { month: 'short' });
+    const yearFormat = new Intl.DateTimeFormat(locale, { year: 'numeric' });
+    const min = this.min();
+    const max = this.max();
+    const { first, last } = this.yearSpan();
+    const count = this.view() === 'date' ? this.monthCount() : 1;
+
+    return Array.from({ length: count }, (_, index) => {
+      const shown = addMonths(this.visibleMonth(), index);
+      const year = shown.getFullYear();
+      const months = Array.from({ length: 12 }, (_, month) => {
+        const date = yearMonth(year, month);
+        return {
+          value: month,
+          label: shortMonth.format(date),
+          disabled:
+            (!!min && compareDays(endOfMonth(date), min) < 0) ||
+            (!!max && compareDays(date, max) > 0),
+        };
+      });
+      const years: CaptionOption[] = [];
+      for (
+        let option = Math.min(first, year);
+        option <= Math.max(last, year);
+        option++
+      ) {
+        years.push({
+          value: option,
+          label: yearFormat.format(yearMonth(option, 0)),
+          disabled:
+            (!!min && option < min.getFullYear()) ||
+            (!!max && option > max.getFullYear()),
+        });
+      }
+      return {
+        months,
+        years,
+        month: shown.getMonth(),
+        year,
+        monthText: monthFormat.format(shown),
+        yearText: yearFormat.format(shown),
+      };
+    });
   });
 
   /** The day grid, one entry per visible month. */
@@ -594,6 +916,7 @@ export class AndesCalendar {
       const caption = formatMonthCaption(month, locale);
       return {
         key: toDateKey(month),
+        index,
         month,
         caption,
         gridLabel: this.ariaLabel() ?? caption,
@@ -715,7 +1038,7 @@ export class AndesCalendar {
 
   /** Whether the caption climbs to a coarser grid. */
   protected readonly canClimb = computed(
-    () => !this.disabled() && PARENT_VIEW[this.view()] !== null,
+    () => !this.isDisabled() && PARENT_VIEW[this.view()] !== null,
   );
 
   /** The single-step shift of the current grid, in months. */
@@ -780,11 +1103,26 @@ export class AndesCalendar {
     ),
   );
 
+  /** The caption selects (`captionLayout`), one or two per visible month. */
+  private readonly captionSelectRefs = viewChildren(AndesSelect);
+
   constructor() {
     afterNextRender(() => {
       if (this.autoFocus()) {
         this.focusActiveDay();
       }
+    });
+
+    // The caption selects open on the popover layer rather than the select's usual
+    // dropdown layer, so their lists stack above the date picker's own panel (also a
+    // popover, opened earlier) instead of disappearing behind it.
+    effect(() => {
+      const selects = this.captionSelectRefs();
+      untracked(() =>
+        selects.forEach((select) =>
+          select.overlay.configure({ layer: 'popover' }),
+        ),
+      );
     });
   }
 
@@ -794,7 +1132,7 @@ export class AndesCalendar {
    * navigation targets, so only the bounds apply to them.
    */
   isSelectable(date: Date, view: AndesCalendarView = this.view()): boolean {
-    if (this.disabled()) {
+    if (this.isDisabled()) {
       return false;
     }
     const unit = view === 'date' ? 'date' : view;
@@ -809,16 +1147,53 @@ export class AndesCalendar {
     if (view !== baseViewFor(this.picker())) {
       return true;
     }
+    if (!this.withinCaps(date)) {
+      return false;
+    }
     const veto = this.dateDisabled();
     if (!veto) {
       return true;
     }
     const range = this.selectedRange();
+    const from =
+      range?.start && (!range.end || this.rangeTarget() === 'end')
+        ? range.start
+        : null;
     return !veto(
       date,
-      range && !range.end
-        ? { type: this.picker(), from: range.start }
-        : { type: this.picker() },
+      from ? { type: this.picker(), from } : { type: this.picker() },
+    );
+  }
+
+  /**
+   * The mode's own limits on a pick: `maxCount` in `multiple` mode (a selected day
+   * can always be toggled off), and in `range` mode the order a locked boundary
+   * imposes (nothing before a locked start, nothing after a locked end).
+   */
+  private withinCaps(date: Date): boolean {
+    const picker = this.picker();
+    const weekStartsOn = this.weekStartsOn();
+    if (this.mode() === 'multiple') {
+      return (
+        !this.atMaxCount() ||
+        this.selectedDates().some((selected) =>
+          isSamePeriod(date, selected, picker, weekStartsOn),
+        )
+      );
+    }
+    const range = this.selectedRange();
+    const [startLocked, endLocked] = this.lockedSides();
+    if (
+      startLocked &&
+      range?.start &&
+      comparePeriods(date, range.start, picker, weekStartsOn) < 0
+    ) {
+      return false;
+    }
+    return !(
+      endLocked &&
+      range?.end &&
+      comparePeriods(date, range.end, picker, weekStartsOn) > 0
     );
   }
 
@@ -842,6 +1217,58 @@ export class AndesCalendar {
     this.focusedDate.set(null);
     this.monthChange.emit(month);
     this.panelChange.emit({ date: month, view: this.view() });
+  }
+
+  /** Caption month select: show the picked month in the panel it was picked in. */
+  protected onMonthSelect(index: number, value: unknown): void {
+    const shown = addMonths(this.visibleMonth(), index);
+    const picked = yearMonth(shown.getFullYear(), Number(value));
+    this.navigateTo(addMonths(picked, -index));
+  }
+
+  /**
+   * Caption year select: the same month in the picked year, clamped into
+   * `min`/`max` when that month falls outside them.
+   */
+  protected onYearSelect(index: number, value: unknown): void {
+    const shown = addMonths(this.visibleMonth(), index);
+    let target = yearMonth(Number(value), shown.getMonth());
+    const min = this.min();
+    const max = this.max();
+    if (min && compareDays(endOfMonth(target), min) < 0) {
+      target = startOfMonth(min);
+    }
+    if (max && compareDays(target, max) > 0) {
+      target = startOfMonth(max);
+    }
+    this.navigateTo(addMonths(target, -index));
+  }
+
+  /**
+   * Whether `node` is inside a panel this calendar opened - a caption select's option
+   * list, which renders in the overlay container, outside the calendar. A calendar
+   * hosted in an overlay of its own (`AndesDatePicker`) treats focus and clicks there
+   * as its own.
+   */
+  containsPanelNode(node: EventTarget | null): boolean {
+    return (
+      node instanceof Node &&
+      this.captionSelectRefs().some(
+        (select) => !!select.overlay.panelElement()?.contains(node),
+      )
+    );
+  }
+
+  /** Shows the month starting `month` first, reporting the move like the arrows do. */
+  private navigateTo(month: Date): void {
+    const next = startOfMonth(month);
+    if (toDateKey(next) === toDateKey(this.visibleMonth())) {
+      return;
+    }
+    this.visibleMonth.set(next);
+    this.focusedDate.set(null);
+    this.monthChange.emit(next);
+    this.panelChange.emit({ date: next, view: this.view() });
   }
 
   /** Switches the visible grid. */
@@ -886,7 +1313,7 @@ export class AndesCalendar {
   /** Caption click: climb to the coarser grid and focus its active cell. */
   protected climb(): void {
     const parent = PARENT_VIEW[this.view()];
-    if (!parent || this.disabled()) {
+    if (!parent || this.isDisabled()) {
       return;
     }
     this.setView(parent);
@@ -942,6 +1369,8 @@ export class AndesCalendar {
     if (this.mode() === 'range') {
       this.value.set(this.nextRange(date));
       this.hoverDate.set(null);
+    } else if (this.mode() === 'multiple') {
+      this.value.set(this.toggled(date));
     } else {
       this.value.set(date);
     }
@@ -980,19 +1409,62 @@ export class AndesCalendar {
    * reads as the calendar second-guessing the user: having picked Mar 10-20, a
    * click on Mar 5 could equally mean "start over at Mar 5" or "widen to Mar 5-20",
    * and guessing wrong silently produces a range nobody asked for. Restarting is
-   * always one further click away from any range the user wants, and it is what
-   * react-day-picker does.
+   * always one further click away from any range the user wants.
    *
    * A click on the second day of a half-open range closes it, swapped into order if
    * the user picked backwards. Clicking the same day twice yields a valid one-day
-   * range.
+   * range. An open-ended range with only an end takes the click as its start.
+   *
+   * `editingSide` (or a boundary locked through `disabled`) replaces that flow with
+   * a direct edit of one boundary, keeping the other.
    */
-  private nextRange(date: Date): AndesDateRange {
+  private nextRange(date: Date): AndesOpenDateRange {
     const current = this.selectedRange();
-    if (!current || current.end) {
-      return { start: date, end: null };
+    const start = current?.start ?? null;
+    const end = current?.end ?? null;
+    const [startLocked, endLocked] = this.lockedSides();
+
+    switch (this.rangeTarget()) {
+      case 'end':
+        if (!start) {
+          return { start: null, end: date };
+        }
+        if (compareDays(date, start) < 0) {
+          return startLocked ? { start, end } : { start: date, end: start };
+        }
+        return { start, end: date };
+      case 'start':
+        if (!end) {
+          return { start: date, end: null };
+        }
+        if (compareDays(date, end) > 0) {
+          return endLocked ? { start, end } : { start: end, end: date };
+        }
+        return { start: date, end };
+      default:
+        if (start && !end) {
+          return normalizeRange({ start, end: date });
+        }
+        if (!start && end) {
+          // An open-ended range (`[null, end]`): the pick supplies the start.
+          return normalizeRange({ start: date, end });
+        }
+        return { start: date, end: null };
     }
-    return normalizeRange({ start: current.start, end: date });
+  }
+
+  /** `multiple` mode: the selection with `date`'s period toggled in or out. */
+  private toggled(date: Date): readonly Date[] {
+    const picker = this.picker();
+    const weekStartsOn = this.weekStartsOn();
+    const current = this.selectedDates();
+    const kept = current.filter(
+      (selected) => !isSamePeriod(selected, date, picker, weekStartsOn),
+    );
+    if (kept.length !== current.length) {
+      return kept;
+    }
+    return this.atMaxCount() ? current : toDateList([...current, date]);
   }
 
   /**
@@ -1001,7 +1473,7 @@ export class AndesCalendar {
    * moves the roving tabindex.
    */
   protected onCellKeydown(event: KeyboardEvent, cell: AndesCalendarCell): void {
-    if (this.disabled()) {
+    if (this.isDisabled()) {
       return;
     }
 
@@ -1138,7 +1610,7 @@ export class AndesCalendar {
 
   /** Whether moving the visible anchor by `amount` months still shows something in bounds. */
   private canShift(amount: number): boolean {
-    if (this.disabled()) {
+    if (this.isDisabled()) {
       return false;
     }
     const min = this.min();
@@ -1183,16 +1655,27 @@ export class AndesCalendar {
     const range = this.selectedRange();
     const isRangeStart = same(range?.start);
     const isRangeEnd = same(range?.end);
-    const isSelected =
-      this.mode() === 'range'
-        ? isRangeStart || isRangeEnd
-        : same(this.selectedDate());
+    let isSelected: boolean;
+    switch (this.mode()) {
+      case 'range':
+        isSelected = isRangeStart || isRangeEnd;
+        break;
+      case 'multiple':
+        isSelected = this.selectedDates().some((date) => same(date));
+        break;
+      default:
+        isSelected = same(this.selectedDate());
+    }
     const inRange =
-      !!range?.end && compare(range.start) > 0 && compare(range.end) < 0;
+      !!range?.start &&
+      !!range.end &&
+      compare(range.start) > 0 &&
+      compare(range.end) < 0;
 
     const preview = this.previewRange();
     const inPreview =
-      !!preview?.end &&
+      !!preview?.start &&
+      !!preview.end &&
       !isSelected &&
       compare(preview.start) >= 0 &&
       compare(preview.end) <= 0;

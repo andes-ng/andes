@@ -1,10 +1,12 @@
 export { AndesCalendar } from './calendar';
 export type {
+  AndesCalendarCaptionLayout,
   AndesCalendarCell,
   AndesCalendarCellContext,
   AndesCalendarHeaderContext,
   AndesCalendarMode,
   AndesCalendarPanelChange,
+  AndesCalendarRangeSide,
   AndesCalendarSelectInfo,
   AndesCalendarValue,
   AndesDateDisabledFn,
@@ -15,6 +17,7 @@ export type {
   AndesCalendarView,
   AndesCalendarWeek,
   AndesDateRange,
+  AndesOpenDateRange,
   AndesPickerType,
   AndesTimeOfDay,
   AndesWeekday,

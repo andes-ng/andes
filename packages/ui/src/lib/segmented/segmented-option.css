@@ -36,11 +36,13 @@
     background-color 150ms ease;
 }
 
+/* The selected label color follows the group's variant (white on the filled thumb). */
 :host([data-state='checked']) .andes-segmented-option__button {
-  color: var(--andes-color-foreground, #0f172a);
+  color: var(--_thumb-fg, var(--andes-color-foreground, #0f172a));
 }
 
-:host([data-state='unchecked']:not([data-disabled]))
+/* A read-only group will not select, so it does not light up on hover either. */
+:host([data-state='unchecked']:not([data-disabled]):not([data-readonly]))
   .andes-segmented-option__button:hover {
   color: var(--andes-color-foreground, #0f172a);
   background-color: color-mix(
@@ -51,8 +53,13 @@
 }
 
 .andes-segmented-option__button:focus-visible {
-  outline: 2px solid var(--andes-color-focus-ring, #2563eb);
-  outline-offset: 1px;
+  outline: 2px solid var(--_focus, var(--andes-color-focus-ring, #2563eb));
+  outline-offset: var(--_focus-offset, 1px);
+}
+
+/* Read-only: a normal, focusable control that just will not select. */
+:host([data-readonly]) .andes-segmented-option__button {
+  cursor: default;
 }
 
 .andes-segmented-option__button:disabled {
@@ -82,8 +89,46 @@
   text-overflow: ellipsis;
 }
 
+/* Tall segments: when any option of the group has a description every segment grows to fit
+   a second line. The icon and label stay on the first line, the description takes the second,
+   and options without one are centered in the same height. */
+:host([data-described]) .andes-segmented-option__button {
+  flex-wrap: wrap;
+  align-content: center;
+  height: auto;
+  min-height: var(--_h, 1.75rem);
+  padding-block: 0.25rem;
+  row-gap: 0;
+  line-height: 1.25rem;
+}
+
+.andes-segmented-option__description {
+  flex: 0 0 100%;
+  min-width: 0;
+  overflow: hidden;
+  color: color-mix(in srgb, currentColor 70%, transparent);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  text-align: center;
+  text-overflow: ellipsis;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .andes-segmented-option__button {
     transition: none;
+  }
+}
+
+/* Forced colors: the thumb is Highlight, so the selected label must be HighlightText; the
+   author color would be replaced by ButtonText and vanish on it. */
+@media (forced-colors: active) {
+  :host([data-state='checked']) .andes-segmented-option__button {
+    forced-color-adjust: none;
+    color: HighlightText;
+  }
+
+  .andes-segmented-option__button:disabled {
+    forced-color-adjust: none;
+    color: GrayText;
   }
 }

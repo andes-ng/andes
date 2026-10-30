@@ -12,6 +12,8 @@ import {
 
 import { ANDES_SEGMENTED } from './segmented-types';
 
+let nextOptionId = 0;
+
 /**
  * One choice of an `AndesSegmented`. Projected children are the label; an icon goes in a
  * `[slot=icon]` element or the `icon` template input.
@@ -19,6 +21,9 @@ import { ANDES_SEGMENTED } from './segmented-types';
  * ```html
  * <andes-segmented-option value="map"><svg slot="icon" ... /> Map</andes-segmented-option>
  * ```
+ *
+ * `description` adds a muted second line, linked to the radio with `aria-describedby`; when any
+ * option of the group has one, every segment grows to fit it.
  *
  * The rendered `<button role="radio">` is the only focusable part. The host itself is
  * presentational (`role="none"`) so the radiogroup owns its radios directly.
@@ -35,10 +40,13 @@ import { ANDES_SEGMENTED } from './segmented-types';
     '[attr.data-state]': "checked() ? 'checked' : 'unchecked'",
     '[attr.data-disabled]': "isDisabled() ? '' : null",
     '[attr.data-size]': 'group.size()',
+    '[attr.data-readonly]': "group.readOnly() ? '' : null",
+    '[attr.data-described]': "group.hasDescription() ? '' : null",
   },
 })
 export class AndesSegmentedOption<T = unknown> {
   protected readonly group = inject(ANDES_SEGMENTED);
+  protected readonly descriptionId = `andes-segmented-option-${++nextOptionId}-description`;
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   /** The option's value. Required; typed optional only because a group can read an option
@@ -47,6 +55,8 @@ export class AndesSegmentedOption<T = unknown> {
   readonly disabled = input(false, { transform: booleanAttribute });
   /** Rendered before the label (an alternative to a projected `[slot=icon]`). */
   readonly icon = input<TemplateRef<unknown> | undefined>(undefined);
+  /** Optional second line under the label (muted, and linked with `aria-describedby`). */
+  readonly description = input<string | undefined>(undefined);
   /** Native tooltip (`title`). */
   readonly tooltip = input<string | undefined>(undefined);
   /** Accessible name; required for an icon-only option. */

@@ -2,7 +2,9 @@
   display: none;
 }
 
-.andes-select__panel {
+/* `:where()` keeps this base look at zero specificity, so a `panelClass` rule from page CSS
+   restyles the panel without having to outweigh it. */
+:where(.andes-select__panel) {
   display: flex;
   box-sizing: border-box;
   flex-direction: column;

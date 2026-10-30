@@ -262,7 +262,8 @@ export class AndesSelect
   readonly autoFocus = input(false, { transform: booleanAttribute });
   /**
    * Extra classes on the panel element, for styling a single select's panel - which
-   * renders in the overlay container, outside the select's own DOM - from page CSS.
+   * renders in the overlay container, outside the select's own DOM - from page CSS. The
+   * panel's own base look has zero specificity, so a plain class rule overrides it.
    */
   readonly panelClass = input<AndesSelectPanelClass>(null);
 

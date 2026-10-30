@@ -195,11 +195,10 @@ export const PanelWidth: Story = {
         </div>
       </div>
     `,
-    // The panel is not part of this story's view, so the rule has to reach out of it,
-    // and it pairs the class with the panel's own to outweigh the panel's border rule.
+    // The panel is not part of this story's view, so the rule has to reach out of it.
     styles: [
       `
-      ::ng-deep .andes-select__panel.story-outlined-panel {
+      ::ng-deep .story-outlined-panel {
         border-color: var(--andes-color-primary);
       }
       `,

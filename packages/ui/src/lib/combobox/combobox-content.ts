@@ -11,6 +11,9 @@ import { ANDES_COMBOBOX } from './combobox-token';
  * back so the overlay can measure and portal it correctly. Carries `aria-busy` while the
  * root's `loading` is set, so assistive tech knows the suggestions are still arriving.
  *
+ * It also carries the root's `panelClass`, `aria-multiselectable` in the `multiple` mode
+ * and the field's text direction, and drops a hover highlight when the pointer leaves.
+ *
  * Pressing anywhere in the popup - padding, a group heading, a button in a header or
  * footer - leaves focus on the input, so the popup does not close underneath the pointer
  * and a button's `click` still lands. (So the popup cannot host a text field of its own:
@@ -31,10 +34,14 @@ import { ANDES_COMBOBOX } from './combobox-token';
   hostDirectives: [AndesOverlayContentPrimitive],
   host: {
     class: 'andes-combobox-content',
+    '[class]': 'combobox.panelClass() ?? ""',
     '[attr.aria-busy]': 'combobox.loading() ? "true" : null',
+    '[attr.aria-multiselectable]': 'combobox.multiple() ? "true" : null',
+    '[attr.dir]': 'combobox.panelDirection()',
     // The configured side, for the entrance and exit animations' direction.
     '[attr.data-side]': 'combobox.placement().split("-")[0]',
     '(mousedown)': 'onMouseDown($event)',
+    '(pointerleave)': 'combobox.onListPointerLeave()',
   },
 })
 export class AndesComboboxContent {

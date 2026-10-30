@@ -41,8 +41,14 @@ let nextItemId = 0;
  * and the accessibility contract - focus never leaves the input while navigating or
  * choosing a suggestion - holds for mouse users too, not only keyboard ones.
  *
+ * `create` turns the row into the `allowCreate` action: choosing it emits the root's
+ * `(optionCreate)` with the typed text instead of selecting `value`.
+ *
  * ```html
  * <div andesComboboxItem [value]="fruit" [disabled]="fruit.outOfStock">{{ fruit.name }}</div>
+ * @if (combobox.createCandidate(); as text) {
+ *   <div andesComboboxItem create [value]="text">Create "{{ text }}"</div>
+ * }
  * ```
  */
 @Directive({
@@ -52,13 +58,13 @@ let nextItemId = 0;
     role: 'option',
     '[attr.id]': 'itemId',
     '[attr.aria-selected]': 'selected()',
-    '[attr.aria-disabled]': 'disabled() ? "true" : null',
+    '[attr.aria-disabled]': 'isDisabled() ? "true" : null',
     '[attr.data-active]': 'active() ? "" : null',
     '[attr.data-selected]': 'isSelected() ? "" : null',
-    '[attr.data-disabled]': 'disabled() ? "" : null',
+    '[attr.data-disabled]': 'isDisabled() ? "" : null',
+    '[attr.data-create]': 'create() ? "" : null',
     '(mousedown)': 'onMouseDown($event)',
-    '(mouseenter)': 'onPointerOver()',
-    '(mousemove)': 'onPointerOver()',
+    '(pointermove)': 'onPointerMove($event)',
   },
 })
 export class AndesComboboxItem<T = string>
@@ -70,10 +76,21 @@ export class AndesComboboxItem<T = string>
   /** Excludes this suggestion from keyboard navigation and pointer selection. */
   readonly disabled = input(false, { transform: booleanAttribute });
 
-  /** `AndesListNavigationItemRef`'s contract; a plain alias for {@link disabled}. */
-  readonly isDisabled: Signal<boolean> = this.disabled;
+  /** Makes this row the `allowCreate` action rather than a suggestion - see the class doc. */
+  readonly create = input(false, { transform: booleanAttribute });
 
   private readonly combobox = inject(ANDES_COMBOBOX) as AndesCombobox<T>;
+
+  /**
+   * `AndesListNavigationItemRef`'s contract: {@link disabled}, or blocked because the
+   * root's `maxCount` is reached and this suggestion is not one of the chosen values.
+   */
+  readonly isDisabled: Signal<boolean> = computed(
+    () =>
+      this.disabled() ||
+      (!this.create() && this.combobox.isBlocked(this.value())),
+  );
+
   private readonly navigation = inject(AndesListNavigation);
   private readonly renderer = inject(Renderer2);
 
@@ -88,8 +105,8 @@ export class AndesComboboxItem<T = string>
   );
 
   /** Whether this suggestion is the committed value, per the root's `compareWith`. */
-  protected readonly isSelected = computed(() =>
-    this.combobox.isSelected(this.value()),
+  readonly isSelected = computed(
+    () => !this.create() && this.combobox.isSelected(this.value()),
   );
 
   protected readonly selected = computed(() =>
@@ -153,31 +170,25 @@ export class AndesComboboxItem<T = string>
   protected onMouseDown(event: MouseEvent): void {
     // Keeps real focus on the <input> - see the class doc comment.
     event.preventDefault();
-    if (this.disabled()) {
+    if (event.button !== 0) {
       return;
     }
-    this.combobox.selectValue(this.value());
+    this.combobox.chooseItem(this);
   }
 
   /**
    * Follows the pointer with the same "active item" the arrow keys move, so hovering a
-   * suggestion highlights it and Enter commits whatever the mouse is over - the behaviour
-   * every other listbox-shaped component here gets for free from `:hover` plus real focus.
-   * This list cannot: focus never leaves the `<input>`, so the highlight is *only* ever
-   * `aria-activedescendant`, and nothing but this moves it.
+   * suggestion highlights it and Enter commits whatever the mouse is over. This list has
+   * no `:hover` styling to lean on: focus never leaves the `<input>`, so the highlight is
+   * *only* ever `aria-activedescendant`, and the root decides when a pointer event really
+   * is the user pointing (see `AndesCombobox.onItemPointerMove`).
    *
-   * `setActiveItemSilently` rather than `focusItem` because the pointer is already on the
-   * row - scrolling it "into view" underneath a stationary mouse would yank the list.
-   *
-   * `mousemove` as well as `mouseenter`: once an arrow key has moved the highlight off a
-   * row the pointer never left, `mouseenter` will not fire for that row again, so the next
-   * twitch of the mouse has to be what takes the highlight back.
+   * `pointermove`, not `mouseenter`: a row that appears or re-filters under a resting
+   * pointer gets a `mouseenter` without the user doing anything, which used to light up
+   * whatever happened to land under the cursor.
    */
-  protected onPointerOver(): void {
-    if (this.disabled() || this.navigation.activeItem() === this) {
-      return;
-    }
-    this.navigation.setActiveItemSilently(this);
+  protected onPointerMove(event: PointerEvent): void {
+    this.combobox.onItemPointerMove(this, event);
   }
 
   private createIndicator(): HTMLElement {

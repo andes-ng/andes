@@ -1,6 +1,7 @@
 export { AndesCombobox } from './combobox';
 export type {
   AndesComboboxCompareWith,
+  AndesComboboxCreateContext,
   AndesComboboxFilterOption,
   AndesComboboxFilterPredicate,
   AndesComboboxGroupContext,
@@ -9,6 +10,7 @@ export type {
   AndesComboboxOptionContext,
   AndesComboboxOptionEntry,
   AndesComboboxOptionGroup,
+  AndesComboboxPanelClass,
   AndesComboboxPlacement,
   AndesComboboxPopupContext,
   AndesComboboxSelectEvent,

@@ -1,9 +1,66 @@
-<div class="andes-combobox-field">
-  @if (usesOptions()) {
-  <input andesComboboxInput type="text" [attr.id]="inputId() ?? null" />
-  } @else {
-  <ng-content select="[andesComboboxInput]" />
-  } @if (hasSuffix()) {
+<!-- The field. In the single mode the input draws the box itself and the prefix and suffix
+     sit over its edges; in the `multiple` mode this element is the box, laying out the
+     prefix, the chips with the input after them, and the suffix in a row. -->
+<div
+  #field
+  class="andes-combobox-field"
+  [attr.data-multiple]="multiple() ? '' : null"
+  [attr.data-size]="size()"
+  [attr.data-variant]="variant()"
+  [attr.data-status]="status() ?? null"
+  [attr.data-invalid]="invalid() ? '' : null"
+  [attr.data-disabled]="isDisabled() ? '' : null"
+  [attr.data-readonly]="readOnly() ? '' : null"
+  (mousedown)="onFieldMouseDown($event)"
+>
+  @if (prefix() !== undefined) {
+  <span #prefixSlot class="andes-combobox-prefix" aria-hidden="true">
+    @if (prefixTemplate(); as template) {
+    <ng-container *ngTemplateOutlet="template" />
+    } @else { {{ prefix() }} }
+  </span>
+  }
+  <div class="andes-combobox-selection">
+    @for (tag of visibleTags(); track $index) {
+    <span
+      class="andes-combobox-tag"
+      data-slot="combobox-tag"
+      [attr.data-disabled]="tag.removable ? null : ''"
+      [attr.title]="tag.label"
+    >
+      <span class="andes-combobox-tag__label">{{ tag.label }}</span>
+      @if (tag.removable && editable()) {
+      <!-- Not a Tab stop: Backspace in the input removes chips from the keyboard, and a
+           mouse press is cancelled so the input keeps focus. -->
+      <button
+        type="button"
+        class="andes-combobox-tag__remove"
+        data-slot="combobox-tag-remove"
+        tabindex="-1"
+        [attr.aria-label]="removeLabelFor(tag.label)"
+        (mousedown)="$event.preventDefault()"
+        (click)="removeValue(tag.value)"
+      >
+        <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+          <path d="M4.5 4.5l7 7m0-7-7 7" />
+        </svg>
+      </button>
+      }
+    </span>
+    } @if (hiddenTags().length > 0) {
+    <span
+      class="andes-combobox-tag andes-combobox-tag--rest"
+      data-slot="combobox-tag-rest"
+      [attr.title]="hiddenTagsSummary()"
+      >+ {{ hiddenTags().length }}</span
+    >
+    } @if (usesOptions()) {
+    <input andesComboboxInput type="text" />
+    } @else {
+    <ng-content select="[andesComboboxInput], [andesComboboxField]" />
+    }
+  </div>
+  @if (hasSuffix()) {
   <span class="andes-combobox-suffix">
     @if (loading()) {
     <span class="andes-combobox-spinner" aria-hidden="true"></span>
@@ -33,8 +90,19 @@
       </svg>
       }
     </button>
+    } @if (suffixIcon(); as icon) {
+    <span class="andes-combobox-suffix__icon" aria-hidden="true">
+      <ng-container *ngTemplateOutlet="icon" />
+    </span>
     }
   </span>
+  } @for (formValue of formValues(); track $index) {
+  <input
+    type="hidden"
+    data-slot="combobox-form-value"
+    [attr.name]="name()"
+    [value]="formValue"
+  />
   }
 </div>
 
@@ -95,13 +163,31 @@
   <ng-container
     *ngTemplateOutlet="optionRow; context: { $implicit: entry.option }"
   />
-  } } @empty { @if (notFoundContent() !== null) {
+  } } @empty { @if (notFoundContent() !== null && createCandidate() === null) {
   <div andesComboboxEmpty>
     @if (notFoundTemplate(); as template) {
     <ng-container *ngTemplateOutlet="template" />
     } @else { {{ notFoundContent() }} }
   </div>
-  } } }
+  } } @if (createCandidate(); as text) {
+  <div andesComboboxItem create [value]="$any(text)">
+    <span class="andes-combobox-item__label">
+      <svg
+        class="andes-combobox-item__create-icon"
+        viewBox="0 0 16 16"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path d="M8 3v10M3 8h10" />
+      </svg>
+      @if (createTemplate(); as template) {
+      <ng-container
+        *ngTemplateOutlet="template; context: { $implicit: text }"
+      />
+      } @else { {{ createText() }} }
+    </span>
+  </div>
+  } }
 </ng-template>
 
 <ng-template #optionRow let-option>

@@ -19,6 +19,8 @@
   [attr.aria-selected]="selected()"
   [attr.aria-disabled]="unavailable() || null"
   [attr.data-selected]="selected() ? '' : null"
+  [attr.data-highlighted]="highlighted() ? '' : null"
+  (pointermove)="onPointerMove($event)"
   (mousedown)="onMousedown($event)"
   (click)="onClick()"
 >

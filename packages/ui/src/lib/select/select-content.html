@@ -4,6 +4,8 @@
     data-slot="select-panel"
     class="andes-select__panel"
     [id]="select.panelId"
+    [attr.dir]="select.panelDirection()"
+    [attr.data-cursor]="select.cursorVisible() ? '' : null"
     [attr.data-size]="select.size()"
     [attr.data-side]="side() ?? select.placementSide()"
     [attr.data-match-trigger-width]="matchesTrigger() ? '' : null"
@@ -25,6 +27,7 @@
       data-slot="select-viewport"
       [style.max-height.px]="select.listHeight()"
       (scroll)="select.onPanelScroll($event)"
+      (pointerleave)="select.onListPointerLeave()"
     >
       <div
         role="listbox"

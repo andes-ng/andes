@@ -7,6 +7,7 @@ import {
   type AndesOverlayAlign,
   type AndesOverlaySide,
 } from '@andes-ng/primitives';
+import { Directionality } from '@angular/cdk/bidi';
 import {
   afterRenderEffect,
   booleanAttribute,
@@ -15,6 +16,7 @@ import {
   computed,
   contentChild,
   DestroyRef,
+  DOCUMENT,
   effect,
   ElementRef,
   forwardRef,
@@ -447,9 +449,24 @@ export class AndesSelect
   private readonly _formDisabled = signal(false);
   private readonly _combobox = signal<HTMLElement | null>(null);
   private readonly _responsiveTagCount = signal<number | null>(null);
+  private readonly _cursorVisible = signal(false);
+  private readonly _panelDirection = signal<'ltr' | 'rtl' | null>(null);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly document = inject(DOCUMENT);
+  private readonly directionality = inject(Directionality, { optional: true });
   private hasFocus = false;
   private destroyed = false;
+  /**
+   * Where the pointer last was, in screen coordinates: at the click that opened the
+   * panel, then at every move over the options. A `pointermove` at the same spot is not
+   * a move - browsers may dispatch one when the list appears or scrolls under a
+   * stationary pointer - so it must not highlight the option that happens to be there.
+   */
+  private lastPointer: { readonly x: number; readonly y: number } | null = null;
+  private stopWatchingScroll: (() => void) | null = null;
+
+  readonly cursorVisible = this._cursorVisible.asReadonly();
+  readonly panelDirection = this._panelDirection.asReadonly();
 
   /**
    * Labels of every option that has ever registered, keyed by value, so the trigger keeps
@@ -818,6 +835,8 @@ export class AndesSelect
         if (search) {
           if (this.defaultActiveFirstOption()) {
             this.navigation.focusFirst();
+            // The first match is what Enter picks now, so it has to look like it.
+            this._cursorVisible.set(true);
           } else {
             this.navigation.clearActive();
           }
@@ -829,6 +848,7 @@ export class AndesSelect
 
     this.overlay.opened.pipe(takeUntilDestroyed()).subscribe(() => {
       this.openState.set(true);
+      this.watchScroll();
     });
 
     this.overlay.closed.pipe(takeUntilDestroyed()).subscribe(() => {
@@ -836,8 +856,12 @@ export class AndesSelect
       this.navigation.cancelTypeahead();
       this.searchValue.set('');
       this.openState.set(false);
+      this._cursorVisible.set(false);
+      this.lastPointer = null;
+      this.unwatchScroll();
       this.onTouched();
     });
+    inject(DestroyRef).onDestroy(() => this.unwatchScroll());
 
     this.overlay.keydownEvents
       .pipe(takeUntilDestroyed())
@@ -854,7 +878,39 @@ export class AndesSelect
     this._combobox()?.blur();
   }
 
+  /**
+   * Opens the panel. The selected option (or the first one) becomes active and is
+   * scrolled into view, but is not drawn highlighted: nothing has pointed at it yet.
+   */
   override open(): void {
+    this.openFrom('program');
+  }
+
+  override togglePointer(event: MouseEvent): void {
+    if (this.overlay.isOpen()) {
+      this.close();
+      return;
+    }
+    // A click with no pointer behind it (`detail` 0) comes from a keyboard or from
+    // assistive technology activating the control: that user needs the cursor.
+    if (event.detail === 0) {
+      this.openFrom('keyboard');
+      return;
+    }
+    this.lastPointer = { x: event.screenX, y: event.screenY };
+    this.openFrom('pointer');
+  }
+
+  /**
+   * Opens the panel. From the keyboard, the active option is the keyboard cursor and is
+   * highlighted at once; from the pointer or from code it only becomes highlighted once
+   * the pointer moves over an option or a navigation key is pressed. `last` makes the
+   * last option active rather than the first when nothing is selected (`ArrowUp`).
+   */
+  private openFrom(
+    origin: 'keyboard' | 'pointer' | 'program',
+    initial: 'first' | 'last' = 'first',
+  ): void {
     if (this.isDisabled() || this.overlay.isOpen()) {
       return;
     }
@@ -866,12 +922,52 @@ export class AndesSelect
       );
     }
 
+    this._panelDirection.set(this.fieldDirection());
+    content.applyPositioning();
+    this._cursorVisible.set(origin === 'keyboard');
+    if (origin !== 'pointer') {
+      this.lastPointer = null;
+    }
+
     this.overlay.open(content.panelTemplate(), {
       // The anchor is the whole trigger box, which is not focusable; focus belongs on
       // the combobox inside it.
       restoreFocusTo: this._combobox(),
     });
-    this.activateSelectedOption();
+    this.activateSelectedOption(initial);
+  }
+
+  /**
+   * The pointer moving over an option makes it the active one - so the keyboard carries
+   * on from where the pointer is - and shows the highlight. Only a real move counts: see
+   * {@link lastPointer}. Touch input never hovers.
+   */
+  override onOptionPointerMove(
+    item: AndesSelectItemRef,
+    event: PointerEvent,
+  ): void {
+    if (event.pointerType === 'touch') {
+      return;
+    }
+    const last = this.lastPointer;
+    if (last && last.x === event.screenX && last.y === event.screenY) {
+      return;
+    }
+    this.lastPointer = { x: event.screenX, y: event.screenY };
+
+    if (item.disabled() || this.isBlocked(item)) {
+      this._cursorVisible.set(false);
+      return;
+    }
+    const navItem = this.navItemFor(item);
+    if (navItem && this.navigation.activeItem() !== navItem) {
+      this.navigation.setActiveItemSilently(navItem);
+    }
+    this._cursorVisible.set(true);
+  }
+
+  override onListPointerLeave(): void {
+    this._cursorVisible.set(false);
   }
 
   override repositionPanel(): void {
@@ -1091,7 +1187,7 @@ export class AndesSelect
 
     this.searchValue.set(text);
     if (!this.overlay.isOpen()) {
-      this.open();
+      this.openFrom('keyboard');
     }
   }
 
@@ -1175,20 +1271,23 @@ export class AndesSelect
 
     switch (event.key) {
       case 'ArrowDown':
-      case 'ArrowUp':
       case 'Enter':
       case ' ':
         event.preventDefault();
-        this.open();
+        this.openFrom('keyboard');
+        return;
+      case 'ArrowUp':
+        event.preventDefault();
+        this.openFrom('keyboard', 'last');
         return;
       case 'Home':
         event.preventDefault();
-        this.open();
+        this.openFrom('keyboard');
         this.navigation.focusFirst();
         return;
       case 'End':
         event.preventDefault();
-        this.open();
+        this.openFrom('keyboard');
         this.navigation.focusLast();
         return;
       case 'Backspace':
@@ -1209,7 +1308,7 @@ export class AndesSelect
     // do the same: open, then hand the keystroke to the typeahead.
     if (this.typeahead() && isPrintableCharacter(event)) {
       event.preventDefault();
-      this.open();
+      this.openFrom('keyboard');
       this.navigation.onKeydown(event);
     }
   }
@@ -1244,22 +1343,25 @@ export class AndesSelect
       case 'ArrowUp':
         event.preventDefault();
         if (!open) {
-          this.open();
+          this.openFrom('keyboard', event.key === 'ArrowUp' ? 'last' : 'first');
+        } else if (this.revealCursor()) {
+          return;
         } else if (event.key === 'ArrowDown') {
           this.navigation.focusNext();
         } else {
           this.navigation.focusPrevious();
         }
+        this._cursorVisible.set(true);
         return;
       case 'Enter':
         if (event.isComposing) {
           return;
         }
         event.preventDefault();
-        if (open) {
+        if (!open) {
+          this.openFrom('keyboard');
+        } else if (!this.revealCursor()) {
           this.commitActiveOption();
-        } else {
-          this.open();
         }
         return;
       case 'Backspace':
@@ -1302,7 +1404,9 @@ export class AndesSelect
         return;
       case 'Enter':
         event.preventDefault();
-        this.commitActiveOption();
+        if (!this.revealCursor()) {
+          this.commitActiveOption();
+        }
         return;
       case ' ':
         // Space extends a typeahead query in progress and only otherwise selects.
@@ -1310,8 +1414,17 @@ export class AndesSelect
           break;
         }
         event.preventDefault();
-        this.commitActiveOption();
+        if (!this.revealCursor()) {
+          this.commitActiveOption();
+        }
         return;
+      case 'ArrowDown':
+      case 'ArrowUp':
+        if (this.revealCursor()) {
+          event.preventDefault();
+          return;
+        }
+        break;
       case 'Tab':
         // Closing returns focus to the trigger, from where a second Tab leaves the
         // field. Letting Tab through instead would move focus off an option that is
@@ -1324,6 +1437,23 @@ export class AndesSelect
     }
 
     this.navigation.onKeydown(event);
+    if (event.defaultPrevented || isPrintableCharacter(event)) {
+      // A navigation key or a typeahead character moved the keyboard cursor.
+      this._cursorVisible.set(true);
+    }
+  }
+
+  /**
+   * The first navigation key after a pointer (or programmatic) open shows the keyboard
+   * cursor where it already is - on the selected option, or the first one - instead of
+   * moving it past an option the user could not see was active. Returns whether it did.
+   */
+  private revealCursor(): boolean {
+    if (this._cursorVisible() || !this.navigation.activeItem()) {
+      return false;
+    }
+    this._cursorVisible.set(true);
+    return true;
   }
 
   private commitActiveOption(): void {
@@ -1360,7 +1490,7 @@ export class AndesSelect
    * panel opens with the current selection under the keyboard cursor. Falls back to the
    * first enabled option when nothing is selected yet.
    */
-  private activateSelectedOption(): void {
+  private activateSelectedOption(initial: 'first' | 'last' = 'first'): void {
     const selected = this.selectedItem();
     const target = selected ? this.navItemFor(selected) : undefined;
 
@@ -1372,7 +1502,96 @@ export class AndesSelect
       this.navigation.clearActive();
       return;
     }
-    this.navigation.focusFirst();
+    if (initial === 'last') {
+      this.navigation.focusLast();
+    } else {
+      this.navigation.focusFirst();
+    }
+  }
+
+  /** The text direction the field is laid out in, whatever set it. */
+  private fieldDirection(): 'ltr' | 'rtl' {
+    const element = this._combobox() ?? this.host.nativeElement;
+    const direction =
+      this.document.defaultView?.getComputedStyle(element).direction;
+    if (direction === 'rtl' || direction === 'ltr') {
+      return direction;
+    }
+    return this.directionality?.value === 'rtl' ? 'rtl' : 'ltr';
+  }
+
+  /**
+   * While open, closes the panel once the trigger has scrolled completely out of sight -
+   * off the viewport, or out of a scrolling container it sits in. Until then the panel
+   * follows the trigger (and flips above or below it as the room changes): a list left
+   * floating over the page after its field has gone reads as belonging to nothing.
+   */
+  private watchScroll(): void {
+    this.unwatchScroll();
+    const view = this.document.defaultView;
+    if (!view) {
+      return;
+    }
+    const onScroll = (event: Event) => {
+      const panel = this.overlay.panelElement();
+      if (
+        !this.overlay.isOpen() ||
+        (event.target instanceof Node && panel?.contains(event.target))
+      ) {
+        return;
+      }
+      if (this.triggerScrolledOutOfView(view)) {
+        // Focus goes back to the combobox without scrolling it into view: the user is
+        // scrolling away from the field on purpose, and the overlay's own focus
+        // restoration would jump the page straight back to it.
+        if (panel?.contains(this.document.activeElement)) {
+          this._combobox()?.focus({ preventScroll: true });
+        }
+        this.close();
+      }
+    };
+    const options: AddEventListenerOptions = { capture: true, passive: true };
+    this.document.addEventListener('scroll', onScroll, options);
+    this.stopWatchingScroll = () =>
+      this.document.removeEventListener('scroll', onScroll, options);
+  }
+
+  private unwatchScroll(): void {
+    this.stopWatchingScroll?.();
+    this.stopWatchingScroll = null;
+  }
+
+  private triggerScrolledOutOfView(view: Window): boolean {
+    const combobox = this._combobox();
+    const box =
+      combobox?.closest<HTMLElement>('[data-slot="select-trigger"]') ??
+      combobox;
+    if (!box) {
+      return false;
+    }
+    const rect = box.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) {
+      // Not laid out (or display: none): nothing to measure against.
+      return false;
+    }
+    if (rect.bottom <= 0 || rect.top >= view.innerHeight) {
+      return true;
+    }
+    for (
+      let parent = box.parentElement;
+      parent && parent !== this.document.body;
+      parent = parent.parentElement
+    ) {
+      const overflow = view.getComputedStyle(parent).overflowY;
+      if (overflow === 'visible' || overflow === '') {
+        continue;
+      }
+      const clip = parent.getBoundingClientRect();
+      if (rect.bottom <= clip.top || rect.top >= clip.bottom) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private ownsElement(target: EventTarget | null): boolean {

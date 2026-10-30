@@ -195,7 +195,7 @@ export class AndesSelectTrigger {
     ) {
       return;
     }
-    this.select.toggle();
+    this.select.togglePointer(event);
   }
 
   /**

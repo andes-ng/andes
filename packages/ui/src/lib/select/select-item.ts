@@ -79,6 +79,19 @@ export class AndesSelectItem
   protected readonly skipped = computed(
     () => this.unavailable() || this.filteredOut(),
   );
+  /**
+   * Drawn highlighted: the active option, while the select shows its cursor. The active
+   * option alone is not enough - the panel makes one active as soon as it opens, before
+   * the pointer has pointed at anything (see `AndesSelectState.cursorVisible`). The host
+   * is compared rather than the option element, which the query only yields later; the
+   * option element is the host's own child.
+   */
+  protected readonly highlighted = computed(
+    () =>
+      this.select.cursorVisible() &&
+      this.select.navigation.activeItem()?.element.parentElement ===
+        this.host.nativeElement,
+  );
 
   constructor() {
     this.group?.registerItem(this);
@@ -108,6 +121,10 @@ export class AndesSelectItem
       return;
     }
     this.select.selectItem(this);
+  }
+
+  protected onPointerMove(event: PointerEvent): void {
+    this.select.onOptionPointerMove(this, event);
   }
 
   /** Keeps focus in the search input while an option is pressed. */

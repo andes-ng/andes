@@ -25,15 +25,41 @@
   outline: none;
 }
 
-.andes-select__option:hover:not([data-disabled]) {
-  background-color: var(--andes-color-accent);
+/*
+  Option states, one look each:
+
+  - highlighted (`data-highlighted`): the row the pointer is over, or the keyboard cursor.
+    One attribute for both, set only once the pointer has moved over a row or a key has
+    moved the cursor, so a freshly opened list shows no highlight at all. A plain
+    `:hover` is deliberately not used: it would also light up whatever row happens to
+    appear under a pointer that never moved.
+  - selected (`data-selected`): the primary tint, a heavier weight and the check mark.
+  - selected and highlighted: a stronger mix of the same tint, so the cursor stays
+    visible on a selected row.
+  - disabled: faded, with no highlight.
+
+  The highlight mixes the accent hover tone into the popover surface: the plain accent
+  token equals the popover surface in the dark theme, where it would not show.
+*/
+.andes-select__option {
+  --andes-select-option-highlight: color-mix(
+    in srgb,
+    var(--andes-color-accent-hover) 70%,
+    var(--andes-color-popover)
+  );
+  --andes-select-option-selected: var(
+    --andes-color-selected-bg,
+    var(--andes-color-primary-subtle)
+  );
+  --andes-select-option-selected-highlight: color-mix(
+    in srgb,
+    var(--andes-color-primary) 18%,
+    var(--andes-select-option-selected)
+  );
 }
 
-/* The keyboard cursor. In roving-tabindex mode the option also holds real focus, so
-   both hooks are styled the same way and the two can never disagree. */
-.andes-select__option[data-active],
-.andes-select__option:focus-visible {
-  background-color: var(--andes-color-accent-hover);
+.andes-select__option[data-highlighted] {
+  background-color: var(--andes-select-option-highlight);
 }
 
 /* The highlight above is the indicator: a ring drawn inside the row on top of it read as
@@ -44,37 +70,22 @@
   outline-offset: -2px;
 }
 
-/* andes-ng has no dedicated "selected option" colour yet, so the chosen option is
-   tinted from the primary colour; the custom
-   property is honoured if a token is ever added. */
 .andes-select__option[data-selected] {
-  background-color: var(
-    --andes-color-selected-bg,
-    color-mix(in srgb, var(--andes-color-primary) 12%, transparent)
-  );
-  font-weight: var(--andes-font-weight-medium);
+  background-color: var(--andes-select-option-selected);
+  font-weight: var(--andes-font-weight-semibold);
+}
+
+.andes-select__option[data-selected][data-highlighted] {
+  background-color: var(--andes-select-option-selected-highlight);
 }
 
 /* Muted secondary text in an option template drops below 4.5:1 on these tinted rows (4:1
    on the selected tint). Re-scoping the token reaches consumer markup too; `currentColor`
    resolves where a descendant uses it in `color`, i.e. to this row's own text color. */
-.andes-select__option:is([data-active], [data-selected], :focus-visible) {
+.andes-select__option:is([data-highlighted], [data-selected]) {
   --andes-color-muted-foreground: color-mix(
     in srgb,
     currentcolor 70%,
-    transparent
-  );
-}
-
-/* A selected option under the keyboard cursor or the pointer still has to show it: the
-   selected tint above would otherwise paint over the cursor, leaving it invisible on every
-   selected row of a multiple select. A stronger mix of the same tint marks both at once. */
-.andes-select__option[data-selected][data-active],
-.andes-select__option[data-selected]:focus-visible,
-.andes-select__option[data-selected]:hover:not([data-disabled]) {
-  background-color: color-mix(
-    in srgb,
-    var(--andes-color-primary) 22%,
     transparent
   );
 }
@@ -84,8 +95,31 @@
   opacity: 0.5;
 }
 
-.andes-select__option[data-disabled]:hover {
+.andes-select__option[data-disabled][data-highlighted]:not([data-selected]) {
   background-color: transparent;
+}
+
+/* Forced colours drop backgrounds: the cursor becomes an outline and the selection takes
+   the system's own selected-item colours. */
+@media (forced-colors: active) {
+  .andes-select__option[data-highlighted] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+
+  .andes-select__option[data-selected] {
+    background-color: SelectedItem;
+    color: SelectedItemText;
+    forced-color-adjust: none;
+  }
+
+  .andes-select__option[data-selected][data-highlighted] {
+    outline-color: SelectedItemText;
+  }
+
+  .andes-select__option[data-selected] .andes-select__option-indicator {
+    color: inherit;
+  }
 }
 
 .andes-select__option-label {

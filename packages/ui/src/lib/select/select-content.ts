@@ -4,6 +4,7 @@ import {
   type AndesOverlayAlign,
   type AndesOverlaySide,
 } from '@andes-ng/primitives';
+import { Directionality } from '@angular/cdk/bidi';
 import { NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -50,6 +51,7 @@ import { AndesSelectState, matchTriggerWidthAttribute } from './select-state';
 export class AndesSelectContent {
   protected readonly select = inject(AndesSelectState);
   private readonly overlay = inject(AndesOverlayPrimitive);
+  private readonly directionality = inject(Directionality, { optional: true });
 
   /** Preferred side of the trigger to render on. Flips when it does not fit. Defaults to the select's `placement`. */
   readonly side = input<AndesOverlaySide | undefined>(undefined);
@@ -91,21 +93,46 @@ export class AndesSelectContent {
   });
 
   constructor() {
-    effect(() => {
-      this.overlay.configure({
-        positioning: {
-          kind: 'anchored',
-          side: this.side() ?? this.select.placementSide(),
-          align: this.align() ?? this.select.placementAlign(),
-          sideOffset: this.sideOffset(),
-          matchAnchorWidth: this.matchesTrigger(),
-          // The list belongs above or below its field, never beside it: when neither side
-          // has room for all of it, the panel shrinks to the larger one and its options
-          // scroll (the `size.minHeight` set by `AndesSelect` lets CDK shrink the pane).
-          crossSideFallback: false,
-          flexibleDimensions: true,
-        },
-      });
+    effect(() => this.applyPositioning());
+  }
+
+  /**
+   * Hands the panel's positioning to the overlay. `AndesSelect` also calls it right
+   * before opening, so a direction it has just measured applies to the first frame.
+   *
+   * The panel prefers the side from `placement` (below, by default) and flips to the
+   * other one when that side lacks room for the whole list; where neither has room, it
+   * takes the larger one and is shortened to fit, its options scrolling inside. It
+   * follows the field as the page or a container around it scrolls, flipping again as
+   * the room changes.
+   *
+   * `start`/`end` alignment is the field's own: the overlay resolves them against the
+   * document direction, so they are swapped for a field laid out the other way round
+   * (inside a `dir="rtl"` container on a left-to-right page, say).
+   */
+  applyPositioning(): void {
+    const align = this.align() ?? this.select.placementAlign();
+    const fieldRtl = this.select.panelDirection() === 'rtl';
+    const overlayRtl = this.directionality?.value === 'rtl';
+    this.overlay.configure({
+      positioning: {
+        kind: 'anchored',
+        side: this.side() ?? this.select.placementSide(),
+        align: fieldRtl === overlayRtl ? align : MIRRORED_ALIGN[align],
+        sideOffset: this.sideOffset(),
+        matchAnchorWidth: this.matchesTrigger(),
+        // The list belongs above or below its field, never beside it: when neither side
+        // has room for all of it, the panel shrinks to the larger one and its options
+        // scroll (the `size.minHeight` set by `AndesSelect` lets CDK shrink the pane).
+        crossSideFallback: false,
+        flexibleDimensions: true,
+      },
     });
   }
 }
+
+const MIRRORED_ALIGN: Readonly<Record<AndesOverlayAlign, AndesOverlayAlign>> = {
+  start: 'end',
+  center: 'center',
+  end: 'start',
+};

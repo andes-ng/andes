@@ -354,6 +354,25 @@ export abstract class AndesSelectState {
   abstract readonly placementSide: Signal<AndesOverlaySide>;
   abstract readonly placementAlign: Signal<AndesOverlayAlign>;
 
+  /**
+   * Whether the active option is drawn highlighted. Off while the panel was opened with
+   * the pointer (or programmatically) and the pointer has not moved over an option yet,
+   * so no option looks hovered before the user points at one; on after any keyboard
+   * navigation or a keyboard open, where the highlight is the keyboard cursor.
+   */
+  abstract readonly cursorVisible: Signal<boolean>;
+  /** Text direction of the field, mirrored onto the panel, which lives outside it. */
+  abstract readonly panelDirection: Signal<'ltr' | 'rtl' | null>;
+  /** Handles the pointer moving over an option: it becomes the highlighted one. */
+  abstract onOptionPointerMove(
+    item: AndesSelectItemRef,
+    event: PointerEvent,
+  ): void;
+  /** Handles the pointer leaving the option list: the highlight goes with it. */
+  abstract onListPointerLeave(): void;
+  /** Opens or closes the panel from a click on the trigger box. */
+  abstract togglePointer(event: MouseEvent): void;
+
   /** Adds an option to the registry. Called by `AndesSelectItem` after its view inits. */
   abstract registerItem(item: AndesSelectItemRef): void;
   /** Removes an option from the registry. Called by `AndesSelectItem` on destroy. */

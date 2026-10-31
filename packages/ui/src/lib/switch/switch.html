@@ -15,6 +15,7 @@
     [attr.data-readonly]="readonly() ? '' : null"
     [attr.data-required]="required() ? '' : null"
     [attr.data-loading]="isBusy() ? '' : null"
+    [attr.data-motion]="motion()"
     [attr.aria-checked]="isChecked()"
     [attr.aria-required]="required() || null"
     [attr.aria-readonly]="readonly() || null"
@@ -28,6 +29,7 @@
     (click)="onClick($event)"
     (focus)="onFocus($event)"
     (blur)="onBlur($event)"
+    (animationend)="onMotionEnd($event)"
   >
     <span class="andes-switch__thumb" data-slot="switch-thumb">
       @if (isBusy()) {

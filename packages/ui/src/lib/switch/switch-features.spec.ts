@@ -1123,6 +1123,280 @@ describe('AndesSwitch features', () => {
     });
   });
 
+  describe('click ripple hook', () => {
+    /** Waits past the post-render tick that arms the motion hook. */
+    const settle = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+    /** An `animationend` as the browser fires it: the framework scopes the keyframes name. */
+    const animationEnd = (target: HTMLElement, animationName: string) =>
+      target.dispatchEvent(
+        Object.assign(new Event('animationend', { bubbles: true }), {
+          animationName,
+        }),
+      );
+
+    it('adds no data-motion to the default markup', () => {
+      const { button } = mount('<andes-switch />');
+
+      expect(button().hasAttribute('data-motion')).toBe(false);
+    });
+
+    it('does not ripple for the initial checked state', async () => {
+      const { fixture, button } = mount('<andes-switch [checked]="true" />');
+      await settle();
+      fixture.detectChanges();
+
+      expect(button().hasAttribute('data-motion')).toBe(false);
+    });
+
+    it('ignores a change made before the hook is armed', () => {
+      const { fixture, button } = mount('<andes-switch />');
+      button().click();
+      fixture.detectChanges();
+
+      expect(button().getAttribute('aria-checked')).toBe('true');
+      expect(button().hasAttribute('data-motion')).toBe(false);
+    });
+
+    it('is set on every later change: check and uncheck', async () => {
+      const { fixture, button } = mount('<andes-switch />');
+      await settle();
+
+      button().click();
+      fixture.detectChanges();
+      expect(button().getAttribute('data-motion')).toBe('change');
+
+      animationEnd(button(), 'scope_andes-switch-ripple');
+      fixture.detectChanges();
+      expect(button().hasAttribute('data-motion')).toBe(false);
+
+      button().click();
+      fixture.detectChanges();
+      expect(button().getAttribute('aria-checked')).toBe('false');
+      expect(button().getAttribute('data-motion')).toBe('change');
+    });
+
+    it('is also set by a binding or form write, whatever caused the change', async () => {
+      const { fixture, host, button } = mount(
+        '<andes-switch [checked]="on()" />',
+        { on: signal(false) },
+      );
+      await settle();
+
+      host.on.set(true);
+      fixture.detectChanges();
+
+      expect(button().getAttribute('data-motion')).toBe('change');
+    });
+
+    it('is kept until the ripple itself ends, and ignores any other animation', async () => {
+      const { fixture, button } = mount('<andes-switch />');
+      await settle();
+      button().click();
+      fixture.detectChanges();
+
+      animationEnd(button(), 'scope_andes-switch-spin');
+      fixture.detectChanges();
+      expect(button().getAttribute('data-motion')).toBe('change');
+
+      // The ripple name coming from a descendant (a bubbled event) is not the track's ripple.
+      animationEnd(
+        button().querySelector('.andes-switch__thumb') as HTMLElement,
+        'scope_andes-switch-ripple',
+      );
+      fixture.detectChanges();
+      expect(button().getAttribute('data-motion')).toBe('change');
+
+      animationEnd(button(), 'scope_andes-switch-ripple');
+      fixture.detectChanges();
+      expect(button().hasAttribute('data-motion')).toBe(false);
+    });
+  });
+
+  describe('motion stylesheet contract', () => {
+    const MOTION_MEDIA =
+      '@media (prefers-reduced-motion: no-preference) and (forced-colors: none) {';
+    const NOT_BUSY_FIELD =
+      ':not(.andes-switch-field--disabled):not(.andes-switch-field--readonly):not(.andes-switch-field--loading)';
+    const NOT_BUSY_TRACK =
+      ':not(:disabled):not([data-disabled]):not([data-readonly]):not([data-loading])';
+
+    /** The stylesheet with whitespace runs collapsed, so a wrapped value reads on one line. */
+    const flat = () =>
+      css()
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/\s+/g, ' ');
+
+    /** Everything from the motion media query on (it is the last block of the file). */
+    const motionBlock = () => {
+      const sheet = flat();
+      return sheet.slice(sheet.indexOf(MOTION_MEDIA));
+    };
+    const beforeMotionBlock = () => {
+      const sheet = flat();
+      return sheet.slice(0, sheet.indexOf(MOTION_MEDIA));
+    };
+
+    it('moves the track color and the thumb on the same 200ms ease', () => {
+      const sheet = css();
+      const track = declaredValue(sheet, '.andes-switch', 'transition');
+      const thumb = declaredValue(sheet, '.andes-switch__thumb', 'transition');
+
+      expect(track).toContain(
+        'background-color var(--andes-motion-duration-slow, 0.2s)',
+      );
+      expect(track).toContain(
+        'border-color var(--andes-motion-duration-slow, 0.2s)',
+      );
+      expect(thumb).toContain(
+        'inset-inline-start var(--andes-motion-duration-slow, 0.2s)',
+      );
+      expect(thumb).toContain('width var(--andes-motion-duration-slow, 0.2s)');
+      expect(thumb).toContain('var(--andes-motion-ease-in-out');
+      expect(
+        declaredValue(sheet, '.andes-switch__content', 'transition'),
+      ).toContain('inset-inline-start var(--andes-motion-duration-slow, 0.2s)');
+    });
+
+    it('rests the track text at an explicit 0 offset, because an auto offset cannot transition', () => {
+      expect(
+        declaredValue(css(), '.andes-switch__content', 'inset-inline-start'),
+      ).toBe('0');
+      expect(declaredValue(css(), '.andes-switch__content', 'position')).toBe(
+        'relative',
+      );
+    });
+
+    it('defines the ripple as a track-colored ring, 0 to 6px, 35% to 0%', () => {
+      const sheet = flat();
+      const keyframes = sheet.slice(
+        sheet.indexOf('@keyframes andes-switch-ripple'),
+        sheet.indexOf(MOTION_MEDIA),
+      );
+
+      expect(keyframes).toContain(
+        'from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--_andes-switch-ripple-color) 35%, transparent); }',
+      );
+      expect(keyframes).toContain(
+        'to { box-shadow: 0 0 0 6px color-mix(in srgb, var(--_andes-switch-ripple-color) 0%, transparent); }',
+      );
+    });
+
+    it('colors the ring with primary, or the status color', () => {
+      const sheet = css();
+
+      expect(
+        declaredValue(sheet, '.andes-switch', '--_andes-switch-ripple-color'),
+      ).toBe(
+        'var( --andes-switch-track-checked-color, var(--andes-color-primary) )',
+      );
+      expect(
+        declaredValue(
+          sheet,
+          '.andes-switch--invalid',
+          '--_andes-switch-ripple-color',
+        ),
+      ).toBe('var(--andes-color-danger)');
+      expect(
+        declaredValue(
+          sheet,
+          '.andes-switch--warning',
+          '--_andes-switch-ripple-color',
+        ),
+      ).toBe('var(--andes-color-warning-hover)');
+    });
+
+    it('plays the ripple for 0.4s on the hook, never on a disabled, read-only or loading switch', () => {
+      const motion = motionBlock();
+
+      expect(motion).toContain(
+        `.andes-switch[data-motion]${NOT_BUSY_TRACK} { animation: andes-switch-ripple 0.4s cubic-bezier(0.08, 0.82, 0.17, 1); }`,
+      );
+      expect(motion.match(/animation:/g)).toHaveLength(1);
+    });
+
+    it('stretches the thumb 30% on press, and only for a switch that can change', () => {
+      const motion = motionBlock();
+      const press = `.andes-switch-field:active${NOT_BUSY_FIELD} > .andes-switch`;
+
+      expect(motion).toContain(
+        `${press} .andes-switch__thumb { --_andes-switch-thumb-width: min( calc(var(--andes-switch-resolved-thumb-size) * 1.3),`,
+      );
+      // Capped at the room inside the track, so the thumb never leaves it.
+      expect(motion).toContain(
+        'calc(100% - 2 * var(--andes-switch-resolved-track-padding) + 2px) );',
+      );
+    });
+
+    it('grows the thumb toward the travel side: width and offset read one variable', () => {
+      const sheet = css();
+
+      expect(declaredValue(sheet, '.andes-switch__thumb', 'width')).toBe(
+        'var(--_andes-switch-thumb-width)',
+      );
+      expect(
+        declaredValue(
+          sheet,
+          '.andes-switch__thumb',
+          '--_andes-switch-thumb-width',
+        ),
+      ).toBe('var(--andes-switch-resolved-thumb-size)');
+      // Checked, the offset is measured from the far edge using the SAME width, so the outer
+      // edge stays anchored at the track edge while the stretch grows toward the start.
+      expect(
+        declaredValue(
+          sheet,
+          '.andes-switch[data-checked] .andes-switch__thumb',
+          'inset-inline-start',
+        ),
+      ).toBe(
+        'calc( 100% - var(--_andes-switch-thumb-width) - var(--andes-switch-resolved-track-padding) + 1px )',
+      );
+    });
+
+    it('slides the track text 2x the padding away from the thumb while pressed', () => {
+      const motion = motionBlock();
+      const press = `.andes-switch-field:active${NOT_BUSY_FIELD} > .andes-switch`;
+
+      expect(motion).toContain(
+        `${press}:not([data-checked]) .andes-switch__content--unchecked { inset-inline-start: calc(2 * var(--andes-switch-resolved-track-padding)); }`,
+      );
+      expect(motion).toContain(
+        `${press}[data-checked] .andes-switch__content--checked { inset-inline-start: calc(-2 * var(--andes-switch-resolved-track-padding)); }`,
+      );
+    });
+
+    it('keeps every press and ripple rule inside the motion media query', () => {
+      const before = beforeMotionBlock();
+
+      expect(before).not.toContain(':active');
+      expect(before).not.toContain('[data-motion]');
+      expect(before).not.toContain('animation: andes-switch-ripple');
+      expect(before).not.toContain('* 1.3');
+    });
+
+    it('never gives the card its own press rule: the field carries the press for the inner switch', () => {
+      const motion = motionBlock();
+
+      expect(motion).not.toContain('.andes-switch-field--card:active');
+      expect(motion).toContain('.andes-switch-field:active');
+    });
+
+    it('leaves reduced motion with instant changes: transitions none, no stretch, no ripple', () => {
+      const sheet = flat();
+      const start = sheet.indexOf('@media (prefers-reduced-motion: reduce) {');
+      const reduced = sheet.slice(start, sheet.indexOf('@keyframes', start));
+
+      expect(reduced).toContain(
+        '.andes-switch, .andes-switch__thumb, .andes-switch__content, .andes-switch-field--card { transition: none; }',
+      );
+      // The only rules that stretch or ring live in the media query that excludes reduced
+      // motion (and forced colors), so nothing else needs undoing.
+      expect(reduced).not.toContain('animation: andes-switch-ripple');
+      expect(motionBlock().startsWith(MOTION_MEDIA)).toBe(true);
+    });
+  });
+
   describe('RTL and stylesheet contract', () => {
     it('uses logical properties only: no physical left / right anywhere', () => {
       const withoutComments = css().replace(/\/\*[\s\S]*?\*\//g, '');

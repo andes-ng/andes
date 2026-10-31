@@ -13,6 +13,7 @@ import {
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
+import { AndesInput } from '../input/input';
 import { AndesUpload } from './upload';
 import { andesUploadSettled } from './upload-forms';
 import type {
@@ -178,55 +179,25 @@ export const StatusAndDisabled: Story = {
   }),
 };
 
-/**
- * Story-only text box styled with the text field's tokens (height, border, radius, focus ring),
- * standing in for `andes-input` to show the alignment of the two in one form row.
- */
+/** A form row with `andes-input` next to the upload field, to show the alignment of the two. */
 @Component({
   selector: 'andes-story-file-field-form',
-  imports: [AndesUpload, AndesButton, ReactiveFormsModule],
+  imports: [AndesUpload, AndesButton, AndesInput, ReactiveFormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styles: `
-    .text-field {
-      box-sizing: border-box;
-      inline-size: 100%;
-      block-size: var(--andes-control-height-md);
-      padding-inline: var(--andes-space-3);
-      border: 1px solid var(--andes-color-input);
-      border-radius: var(--andes-control-radius-md);
-      background: var(--andes-color-background);
-      color: var(--andes-color-foreground);
-      font: inherit;
-      font-size: var(--andes-control-font-size-md);
-      outline: none;
-    }
-    .text-field:hover {
-      border-color: color-mix(
-        in srgb,
-        var(--andes-color-primary) 65%,
-        var(--andes-color-input)
-      );
-    }
-    .text-field:focus {
-      border-color: var(--andes-color-primary);
-      box-shadow: 0 0 0 2px
-        color-mix(in srgb, var(--andes-color-primary) 20%, transparent);
-    }
-  `,
   template: `
     <form
       [formGroup]="form"
       style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; align-items: end; max-width: 40rem;"
       (ngSubmit)="saved.set(true)"
     >
-      <label style="display: grid; gap: 0.25rem;">
-        <span style="font-weight: 500;">Reference</span>
-        <input
-          class="text-field"
+      <div style="display: grid; gap: 0.25rem;">
+        <label for="story-reference" style="font-weight: 500;">Reference</label>
+        <andes-input
+          id="story-reference"
           formControlName="reference"
           placeholder="INV-0001"
         />
-      </label>
+      </div>
       <div style="display: grid; gap: 0.25rem;">
         <span id="invoice-label" style="font-weight: 500;">Invoice</span>
         <andes-upload

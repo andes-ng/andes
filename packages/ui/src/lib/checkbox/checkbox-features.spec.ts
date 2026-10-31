@@ -1,6 +1,11 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
+import { declaredValue } from '../../testing/computed-style';
 import { AndesCheckbox } from './checkbox';
 import type {
   AndesCheckboxSize,
@@ -246,15 +251,122 @@ describe('AndesCheckbox features', () => {
       expect(label.getAttribute('data-motion')).toBe('uncheck');
     });
 
-    it('drops the hook once the animation ends, so a re-shown box does not replay it', async () => {
+    it('drops the hook once the ripple ends, so a re-shown box does not replay it', async () => {
       const { fixture, label, input } = render();
       await settle();
 
       input.click();
       fixture.detectChanges();
-      label.dispatchEvent(new Event('animationend', { bubbles: true }));
-      fixture.detectChanges();
+      const end = (animationName: string) =>
+        label.dispatchEvent(
+          Object.assign(new Event('animationend', { bubbles: true }), {
+            animationName,
+          }),
+        );
 
+      // The tick and the pop finish first: the ring is still running, so the hook stays.
+      end('andes-checkbox-draw');
+      fixture.detectChanges();
+      expect(label.hasAttribute('data-motion')).toBe(true);
+
+      end('andes-checkbox-ripple');
+      fixture.detectChanges();
+      expect(label.hasAttribute('data-motion')).toBe(false);
+    });
+
+    it('rings the box on every change, not only when it becomes checked', () => {
+      const css = readFileSync(
+        join(dirname(fileURLToPath(import.meta.url)), 'checkbox.css'),
+        'utf-8',
+      );
+
+      expect(css).toContain('@keyframes andes-checkbox-ripple');
+      expect(css).toContain("[data-motion='uncheck'] .andes-checkbox__box");
+      expect(css).toContain(
+        "[data-motion='indeterminate'] .andes-checkbox__box",
+      );
+    });
+
+    it('sets the hook for every size and for the card and button variants', async () => {
+      const sizes: AndesCheckboxSize[] = ['sm', 'md', 'lg'];
+      const variants: (AndesCheckboxVariant | undefined)[] = [
+        undefined,
+        'card',
+        'button',
+      ];
+
+      for (const size of sizes) {
+        for (const variant of variants) {
+          const { fixture, host, label, input } = render();
+          host.size.set(size);
+          host.variant.set(variant);
+          fixture.detectChanges();
+          await settle();
+
+          input.click();
+          fixture.detectChanges();
+          expect(label.getAttribute('data-motion')).toBe('check');
+
+          input.click();
+          fixture.detectChanges();
+          expect(label.getAttribute('data-motion')).toBe('uncheck');
+          fixture.destroy();
+        }
+      }
+    });
+
+    it('grows the ring with the box: 4px on sm, 6px on md and 8px on lg', () => {
+      const css = readFileSync(
+        join(dirname(fileURLToPath(import.meta.url)), 'checkbox.css'),
+        'utf-8',
+      );
+
+      expect(
+        declaredValue(css, '.andes-checkbox', '--_andes-checkbox-ring'),
+      ).toBe('0.375rem');
+      expect(
+        declaredValue(css, '.andes-checkbox--sm', '--_andes-checkbox-ring'),
+      ).toBe('0.25rem');
+      expect(
+        declaredValue(css, '.andes-checkbox--lg', '--_andes-checkbox-ring'),
+      ).toBe('0.5rem');
+      // Both ring keyframes read the variable, so no size is left with a fixed spread.
+      expect(css).not.toContain('0 0 0 6px');
+      expect(css).toContain('var(--_andes-checkbox-ring)');
+    });
+
+    it('rings the face itself when no box is drawn (a button, or a card without an indicator)', () => {
+      const css = readFileSync(
+        join(dirname(fileURLToPath(import.meta.url)), 'checkbox.css'),
+        'utf-8',
+      );
+
+      expect(css).toContain(
+        ".andes-checkbox--no-indicator[data-motion='check']",
+      );
+      expect(css).toContain(
+        ".andes-checkbox--no-indicator[data-motion='uncheck']",
+      );
+    });
+
+    it('restarts the ring on a change that follows another one within its second', async () => {
+      const css = readFileSync(
+        join(dirname(fileURLToPath(import.meta.url)), 'checkbox.css'),
+        'utf-8',
+      );
+      // Checking and unchecking play the ring under two names, so back-to-back clicks differ.
+      expect(css).toContain('@keyframes andes-checkbox-ripple-alt');
+
+      const { fixture, label, input } = render();
+      await settle();
+      input.click();
+      fixture.detectChanges();
+      label.dispatchEvent(
+        Object.assign(new Event('animationend', { bubbles: true }), {
+          animationName: 'andes-checkbox-ripple-alt',
+        }),
+      );
+      fixture.detectChanges();
       expect(label.hasAttribute('data-motion')).toBe(false);
     });
 

@@ -147,9 +147,11 @@ export const CustomIcons: Story = {
 
 /**
  * Click to watch: checking draws the tick and pops the box, a mixed state scales its dash in,
- * unchecking fades the mark out. The box that starts checked does NOT animate on load, the
- * buttons show that programmatic changes animate too, and nothing moves under
- * `prefers-reduced-motion` or in forced-colors mode.
+ * unchecking fades the mark out, and every change sends a soft ring out of the box (4 / 6 / 8px
+ * for the small / medium / large box, fading over a second; a button or a card without an
+ * indicator rings its whole face). Hover a checked or mixed box and it LIGHTENS. The box that
+ * starts checked does NOT animate on load, the buttons show that programmatic changes animate
+ * too, and nothing moves under `prefers-reduced-motion` or in forced-colors mode.
  */
 export const Animation: Story = {
   render: () => ({

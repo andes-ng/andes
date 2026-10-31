@@ -1173,7 +1173,8 @@ describe('AndesSwitch features', () => {
       button().click();
       fixture.detectChanges();
       expect(button().getAttribute('aria-checked')).toBe('false');
-      expect(button().getAttribute('data-motion')).toBe('change');
+      // The twin keyframes alternate, so a change that lands while a ring runs restarts it.
+      expect(button().getAttribute('data-motion')).toBe('change-alt');
     });
 
     it('is also set by a binding or form write, whatever caused the change', async () => {
@@ -1319,7 +1320,7 @@ describe('AndesSwitch features', () => {
       );
     });
 
-    it('defines the ripple as a track-colored ring, 0 to 6px, 35% to 0%', () => {
+    it('defines the ripple as a soft track-colored ring that grows fast and fades slowly', () => {
       const sheet = flat();
       const keyframes = sheet.slice(
         sheet.indexOf('@keyframes andes-switch-ripple'),
@@ -1327,11 +1328,23 @@ describe('AndesSwitch features', () => {
       );
 
       expect(keyframes).toContain(
-        'from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--_andes-switch-ripple-color) 35%, transparent); }',
+        '0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--_andes-switch-ripple-color) 20%, transparent); }',
       );
       expect(keyframes).toContain(
-        'to { box-shadow: 0 0 0 6px color-mix(in srgb, var(--_andes-switch-ripple-color) 0%, transparent); }',
+        '100% { box-shadow: 0 0 0 var(--_andes-switch-ring, 6px) color-mix(in srgb, var(--_andes-switch-ripple-color) 0%, transparent); }',
       );
+      expect(keyframes).toContain('@keyframes andes-switch-ripple-alt');
+    });
+
+    it('scales the ring with the size of the switch', () => {
+      const sheet = css();
+
+      expect(
+        declaredValue(sheet, '.andes-switch--sm', '--_andes-switch-ring'),
+      ).toBe('4px');
+      expect(
+        declaredValue(sheet, '.andes-switch--lg', '--_andes-switch-ring'),
+      ).toBe('8px');
     });
 
     it('colors the ring with primary, or the status color', () => {
@@ -1358,13 +1371,16 @@ describe('AndesSwitch features', () => {
       ).toBe('var(--andes-color-warning-hover)');
     });
 
-    it('plays the ripple for 0.4s on the hook, never on a disabled, read-only or loading switch', () => {
+    it('plays the ripple for a second on the hook, never on a disabled, read-only or loading switch', () => {
       const motion = motionBlock();
 
       expect(motion).toContain(
-        `.andes-switch[data-motion]${NOT_BUSY_TRACK} { animation: andes-switch-ripple 0.4s cubic-bezier(0.08, 0.82, 0.17, 1); }`,
+        `.andes-switch[data-motion='change']${NOT_BUSY_TRACK} { animation: andes-switch-ripple 1s linear; }`,
       );
-      expect(motion.match(/animation:/g)).toHaveLength(1);
+      expect(motion).toContain(
+        `.andes-switch[data-motion='change-alt']${NOT_BUSY_TRACK} { animation: andes-switch-ripple-alt 1s linear; }`,
+      );
+      expect(motion.match(/animation:/g)).toHaveLength(2);
     });
 
     it('stretches the thumb 30% on press, and only for a switch that can change', () => {

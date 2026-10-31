@@ -74,40 +74,10 @@
   border-radius: var(--andes-radius-full, 9999px);
 }
 
+/* The stand-in trigger is an `andes-button`, which draws the sizes and the disabled and invalid
+   states; the file input behind it (not the button) is the keyboard stop. */
 .andes-upload__default {
   display: inline-flex;
-  align-items: center;
-  gap: var(--andes-space-2, 0.5rem);
-  box-sizing: border-box;
-  block-size: var(--andes-control-height-md, 2rem);
-  padding-inline: var(--andes-control-padding-x-md, 0.75rem);
-  border: 1px solid var(--andes-color-input, #d1d5db);
-  border-radius: var(--andes-radius-md, 0.375rem);
-  background-color: var(--andes-color-background, #ffffff);
-  transition: border-color var(--_andes-upload-duration) ease;
-}
-
-.andes-upload--sm .andes-upload__default {
-  block-size: var(--andes-control-height-sm, 1.5rem);
-  padding-inline: var(--andes-control-padding-x-sm, 0.5rem);
-}
-
-.andes-upload--lg .andes-upload__default {
-  block-size: var(--andes-control-height-lg, 2.5rem);
-  padding-inline: var(--andes-control-padding-x-lg, 1rem);
-}
-
-.andes-upload__select:not([data-disabled]):hover .andes-upload__default {
-  border-color: color-mix(
-    in srgb,
-    var(--andes-color-primary, #2563eb) 65%,
-    var(--andes-color-input, #d1d5db)
-  );
-}
-
-.andes-upload__select[data-disabled] .andes-upload__default {
-  background-color: var(--andes-color-muted, #f1f5f9);
-  color: var(--andes-color-muted-foreground, #64748b);
 }
 
 /* --------------------------------------------------------------- dragger */
@@ -1052,7 +1022,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .andes-upload__default,
   .andes-upload__select--drag,
   .andes-upload__select--card,
   .andes-upload__row,

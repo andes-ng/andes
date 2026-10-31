@@ -20,6 +20,7 @@ import {
 import { ControlValueAccessor } from '@angular/forms';
 import clsx from 'clsx';
 
+import type { AndesButtonContext } from '../button/button-context';
 import type { AndesUploadIconName } from './upload-icon';
 import {
   formatFileSize,
@@ -204,6 +205,9 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
   private readonly fileInput =
     viewChild<ElementRef<HTMLInputElement>>('fileInput');
   private readonly projected = viewChild<ElementRef<HTMLElement>>('projected');
+  private readonly defaultTrigger = viewChild('defaultTrigger', {
+    read: ElementRef<HTMLElement>,
+  });
 
   /** The drag-and-drop variant sets this; it only changes what the trigger area looks like. */
   protected readonly dragMode: boolean = false;
@@ -368,6 +372,12 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
     () => this.disabled() || this.disabledByForm(),
   );
 
+  /**
+   * Provided to the buttons in the control (the projected trigger and the default one) as
+   * `ANDES_BUTTON_CONTEXT`, so a disabled upload disables them without a second `[disabled]`.
+   */
+  readonly buttonContext: AndesButtonContext = { disabled: this.isDisabled };
+
   /** The field row (never for the drag-and-drop variant, whose trigger is the drop area). */
   protected readonly isField = computed(
     () => !this.dragMode && this.variant() === 'field',
@@ -518,32 +528,39 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
       ),
     );
 
-    // Keeps the projected trigger out of the tab order (the file input is the one stop) and
-    // notices an empty slot so a default button can stand in.
+    // Keeps the trigger (projected, or the default button) out of the tab order - the file input
+    // is the one stop - and notices an empty slot so a default button can stand in.
     effect((onCleanup) => {
       const slot = this.projected()?.nativeElement;
       if (!slot) {
         return;
       }
+      const roots = [slot, this.defaultTrigger()?.nativeElement].filter(
+        (root): root is HTMLElement => !!root,
+      );
       const sync = () => {
         this.hasContent.set(hasProjectedContent(slot));
-        slot.querySelectorAll(FOCUSABLE_SELECTOR).forEach((element) => {
-          if (element.getAttribute('tabindex') !== '-1') {
-            element.setAttribute('tabindex', '-1');
-          }
-        });
+        for (const root of roots) {
+          root.querySelectorAll(FOCUSABLE_SELECTOR).forEach((element) => {
+            if (element.getAttribute('tabindex') !== '-1') {
+              element.setAttribute('tabindex', '-1');
+            }
+          });
+        }
       };
       sync();
       if (typeof MutationObserver === 'undefined') {
         return;
       }
       const observer = new MutationObserver(sync);
-      observer.observe(slot, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ['tabindex', 'disabled'],
-      });
+      for (const root of roots) {
+        observer.observe(root, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          attributeFilter: ['tabindex', 'disabled'],
+        });
+      }
       onCleanup(() => observer.disconnect());
     });
 

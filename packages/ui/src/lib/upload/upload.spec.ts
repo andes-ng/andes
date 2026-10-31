@@ -6,6 +6,7 @@ import { TestBed } from '@angular/core/testing';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { declaredValue } from '../../testing/computed-style';
+import { AndesButton } from '../button/button';
 import { AndesUpload, AndesUploadDragger } from './upload';
 import { andesUploadMaxFiles, andesUploadSettled } from './upload-forms';
 import {
@@ -213,6 +214,20 @@ class ProgressFormHost {
   };
 }
 
+@Component({
+  imports: [AndesUpload, AndesUploadDragger, AndesButton],
+  template: `<andes-upload class="plain" [disabled]="disabled()" [maxCount]="1">
+      <andes-button class="projected-button">Pick</andes-button>
+    </andes-upload>
+    <andes-upload-dragger class="drag" [disabled]="disabled()">
+      <andes-button class="dragger-button">Pick</andes-button>
+    </andes-upload-dragger>
+    <andes-button class="outside-button">Outside</andes-button>`,
+})
+class ButtonsHost {
+  readonly disabled = signal(false);
+}
+
 /* ------------------------------------------------------------------- helpers */
 
 const png = (name = 'photo.png', size = 100) =>
@@ -415,6 +430,68 @@ describe('AndesUpload', () => {
       expect(
         root.querySelector('.andes-upload__default')?.textContent,
       ).toContain('Select files');
+    });
+
+    describe('default trigger', () => {
+      async function withDefault() {
+        const ctx = setup();
+        ctx.host.withContent.set(false);
+        ctx.fixture.detectChanges();
+        await ctx.flush();
+        const button = () =>
+          ctx.root.querySelector('andes-button') as HTMLElement;
+        const inner = () =>
+          button().querySelector('button') as HTMLButtonElement;
+        return { ...ctx, button, inner };
+      }
+
+      it('is an outline andes-button with the upload icon and the label', async () => {
+        const { button, inner } = await withDefault();
+        expect(button().classList).toContain('andes-upload__default');
+        expect(inner().classList).toContain('andes-button--outline');
+        expect(inner().classList).toContain('andes-button--md');
+        expect(inner().textContent).toContain('Select files');
+        expect(inner().querySelector('andes-upload-icon')).not.toBeNull();
+      });
+
+      it('keeps the file input as the one tab stop', async () => {
+        const { inner, fixture, flush } = await withDefault();
+        await flush();
+        fixture.detectChanges();
+        expect(inner().getAttribute('tabindex')).toBe('-1');
+      });
+
+      it('follows the size, the language and aria-invalid', async () => {
+        const { host, fixture, inner } = await withDefault();
+        host.messages.set({ selectFiles: 'Elegir' });
+        host.invalid.set(true);
+        fixture.detectChanges();
+        expect(inner().textContent).toContain('Elegir');
+        expect(inner().classList).toContain('andes-button--invalid');
+        expect(inner().getAttribute('aria-invalid')).toBe('true');
+      });
+
+      it('is disabled with the upload, and while a full list refuses files', async () => {
+        const { host, fixture, inner, flush } = await withDefault();
+        expect(inner().disabled).toBe(false);
+        host.disabled.set(true);
+        fixture.detectChanges();
+        expect(inner().disabled).toBe(true);
+
+        host.disabled.set(false);
+        host.maxCount.set(1);
+        host.multiple.set(true);
+        fixture.detectChanges();
+        expect(inner().disabled).toBe(false);
+        host.maxCount.set(2);
+        host.files.set([
+          { uid: 'a', name: 'a.pdf', status: 'done' },
+          { uid: 'b', name: 'b.pdf', status: 'done' },
+        ]);
+        fixture.detectChanges();
+        await flush();
+        expect(inner().disabled).toBe(true);
+      });
     });
 
     it('turns the input into a folder picker with `directory`', () => {
@@ -2335,5 +2412,56 @@ describe('upload validators', () => {
     expect(andesUploadSettled()(new FormControl(null))).toBeNull();
     expect(andesUploadSettled()(new FormControl([]))).toBeNull();
     expect(andesUploadMaxFiles(1)(new FormControl(null))).toBeNull();
+  });
+});
+
+@Component({
+  imports: [AndesUpload, AndesButton, ReactiveFormsModule],
+  template: `<andes-upload [formControl]="control"
+    ><andes-button>Pick</andes-button></andes-upload
+  >`,
+})
+class FormButtonHost {
+  readonly control = new FormControl<AndesUploadFile[]>([]);
+}
+
+describe('AndesUpload button context', () => {
+  function create() {
+    const fixture = TestBed.createComponent(ButtonsHost);
+    fixture.detectChanges();
+    const isDisabled = (selector: string) =>
+      (
+        fixture.nativeElement.querySelector(
+          `${selector} button`,
+        ) as HTMLButtonElement
+      ).disabled;
+    return { fixture, host: fixture.componentInstance, isDisabled };
+  }
+
+  it('disables the buttons projected into a disabled upload', () => {
+    const { fixture, host, isDisabled } = create();
+    expect(isDisabled('.projected-button')).toBe(false);
+    expect(isDisabled('.dragger-button')).toBe(false);
+
+    host.disabled.set(true);
+    fixture.detectChanges();
+    expect(isDisabled('.projected-button')).toBe(true);
+    expect(isDisabled('.dragger-button')).toBe(true);
+    expect(isDisabled('.outside-button')).toBe(false);
+
+    host.disabled.set(false);
+    fixture.detectChanges();
+    expect(isDisabled('.projected-button')).toBe(false);
+  });
+
+  it('follows the disabled state a form control sets', () => {
+    const fixture = TestBed.createComponent(FormButtonHost);
+    fixture.detectChanges();
+    const button = () =>
+      fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+    expect(button().disabled).toBe(false);
+    fixture.componentInstance.control.disable();
+    fixture.detectChanges();
+    expect(button().disabled).toBe(true);
   });
 });

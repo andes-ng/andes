@@ -64,10 +64,17 @@
     }
     <div class="andes-upload__projected" #projected><ng-content /></div>
     @if (!dragMode && !hasContent()) {
-    <span class="andes-upload__default">
-      <andes-upload-icon name="upload" />
+    <andes-button
+      #defaultTrigger
+      class="andes-upload__default"
+      variant="outline"
+      [size]="size()"
+      [disabled]="triggerBlocked()"
+      [aria-invalid]="ariaInvalid()"
+    >
+      <andes-upload-icon slot="icon-start" name="upload" />
       {{ text().selectFiles }}
-    </span>
+    </andes-button>
     }
   </div>
 </ng-template>

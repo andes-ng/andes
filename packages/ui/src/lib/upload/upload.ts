@@ -1,13 +1,22 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, forwardRef } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  forwardRef,
+  inject,
+} from '@angular/core';
 import { NG_VALUE_ACCESSOR } from '@angular/forms';
 
+import { ANDES_BUTTON_CONTEXT } from '../button/button-context';
+import { AndesButton } from '../button/button';
 import { AndesUploadBase } from './upload-base';
 import { AndesUploadIcon } from './upload-icon';
 
 /**
- * Click-to-select upload. Project the trigger (a button, an icon...) as content; the real,
- * visually hidden file input stays focusable behind it and is the control's single tab stop.
+ * Click-to-select upload. Project the trigger (a button, an icon...) as content, or leave it
+ * empty for a default `andes-button`; the real, visually hidden file input stays focusable
+ * behind it and is the control's single tab stop. A disabled upload also disables the
+ * `andes-button`s inside it (through `ANDES_BUTTON_CONTEXT`).
  * Works with Forms (the value is the file list) and inside `andes-form-field`.
  *
  * `variant="field"` draws it instead as one row the height of `andes-input` (sizes sm/md/lg):
@@ -20,7 +29,7 @@ import { AndesUploadIcon } from './upload-icon';
 @Component({
   selector: 'andes-upload',
   exportAs: 'andesUpload',
-  imports: [NgTemplateOutlet, AndesUploadIcon],
+  imports: [NgTemplateOutlet, AndesButton, AndesUploadIcon],
   templateUrl: './upload.html',
   styleUrl: './upload.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -29,6 +38,10 @@ import { AndesUploadIcon } from './upload-icon';
       provide: NG_VALUE_ACCESSOR,
       useExisting: forwardRef(() => AndesUpload),
       multi: true,
+    },
+    {
+      provide: ANDES_BUTTON_CONTEXT,
+      useFactory: () => inject(AndesUpload).buttonContext,
     },
   ],
 })
@@ -42,7 +55,7 @@ export class AndesUpload extends AndesUploadBase {}
 @Component({
   selector: 'andes-upload-dragger',
   exportAs: 'andesUploadDragger',
-  imports: [NgTemplateOutlet, AndesUploadIcon],
+  imports: [NgTemplateOutlet, AndesButton, AndesUploadIcon],
   templateUrl: './upload.html',
   styleUrl: './upload.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -51,6 +64,10 @@ export class AndesUpload extends AndesUploadBase {}
       provide: NG_VALUE_ACCESSOR,
       useExisting: forwardRef(() => AndesUploadDragger),
       multi: true,
+    },
+    {
+      provide: ANDES_BUTTON_CONTEXT,
+      useFactory: () => inject(AndesUploadDragger).buttonContext,
     },
   ],
 })

@@ -136,6 +136,10 @@ export interface AndesCalendarCell extends AndesCalendarDay {
   readonly inRange: boolean;
   /** Inside the range the pointer (or keyboard focus) would close if picked now. */
   readonly inPreview: boolean;
+  /** The first day of that previewed range (a half band runs from it, inwards). */
+  readonly previewStart: boolean;
+  /** The last day of that previewed range (a half band runs to it, from inside). */
+  readonly previewEnd: boolean;
   /** Today — or, in the period views, the current month/quarter/year. */
   readonly isToday: boolean;
   /** Out of `min`/`max` bounds, rejected by `dateDisabled`, or the whole calendar is disabled. */
@@ -1679,6 +1683,14 @@ export class AndesCalendar {
       !isSelected &&
       compare(preview.start) >= 0 &&
       compare(preview.end) <= 0;
+    // Its two boundaries, selected or not: they carry half a band towards the inside, so the
+    // band meets the chips instead of stopping a few pixels short of them.
+    const previewSpans =
+      !!preview?.start &&
+      !!preview.end &&
+      !isSamePeriod(preview.start, preview.end, unit, weekStartsOn);
+    const isPreviewStart = previewSpans && same(preview?.start);
+    const isPreviewEnd = previewSpans && same(preview?.end);
 
     const isToday = isSamePeriod(
       day.date,
@@ -1697,6 +1709,8 @@ export class AndesCalendar {
       rangeEnd: isRangeEnd,
       inRange,
       inPreview,
+      previewStart: isPreviewStart,
+      previewEnd: isPreviewEnd,
       isToday,
       disabled: isDisabled,
       active,
@@ -1709,6 +1723,8 @@ export class AndesCalendar {
         isRangeEnd && 'andes-calendar__day--range-end',
         inRange && 'andes-calendar__day--in-range',
         inPreview && 'andes-calendar__day--in-preview',
+        isPreviewStart && 'andes-calendar__day--preview-start',
+        isPreviewEnd && 'andes-calendar__day--preview-end',
         isToday && 'andes-calendar__day--today',
         isDisabled && 'andes-calendar__day--disabled',
       ),

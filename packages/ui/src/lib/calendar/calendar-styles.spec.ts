@@ -37,4 +37,41 @@ describe('AndesCalendar styles', () => {
       expect(css.includes('0.215, 0.61, 0.355')).toBe(false);
     });
   });
+
+  describe('range preview', () => {
+    const dashed =
+      '1px dashed var(--andes-color-primary-text, var(--andes-color-primary))';
+
+    it('runs the dashed band from chip to chip: half a band at each boundary', () => {
+      for (const selector of [
+        '.andes-calendar__day--in-preview::before',
+        '.andes-calendar__day--preview-start::before',
+        '.andes-calendar__day--preview-end::before',
+      ]) {
+        expect(declaredValue(source, selector, 'border-block')).toBe(dashed);
+      }
+      expect(
+        declaredValue(
+          source,
+          '.andes-calendar__day--preview-start::before',
+          'inset-inline-start',
+        ),
+      ).toBe('50%');
+      expect(
+        declaredValue(
+          source,
+          '.andes-calendar__day--preview-end::before',
+          'inset-inline-end',
+        ),
+      ).toBe('50%');
+    });
+
+    it('declares the half bands after the full-width band they override', () => {
+      expect(
+        source.indexOf('.andes-calendar__day--preview-end::before {'),
+      ).toBeGreaterThan(
+        source.indexOf('.andes-calendar__day--in-preview::before {'),
+      );
+    });
+  });
 });

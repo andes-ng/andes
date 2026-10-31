@@ -1582,6 +1582,67 @@ describe('AndesCalendar', () => {
 
         expect(root.querySelectorAll('[data-in-preview]')).toHaveLength(0);
       });
+
+      it("marks the previewed range's two boundaries, the picked start included", () => {
+        const { root, click, cell, fixture } = createFeatures((host) =>
+          host.mode.set('range'),
+        );
+        const dates = (modifier: string) =>
+          Array.from(
+            root.querySelectorAll(`.andes-calendar__day--${modifier}`),
+          ).map((c) => c.getAttribute('data-date'));
+        click(cell(d(2024, 2, 10)));
+        expect(dates('preview-start')).toEqual([]);
+
+        cell(d(2024, 2, 14)).dispatchEvent(new MouseEvent('mouseenter'));
+        fixture.detectChanges();
+
+        // The start is picked, so it is not "in" the preview; it still carries its half band.
+        expect(dates('preview-start')).toEqual(['2024-02-10']);
+        expect(dates('preview-end')).toEqual(['2024-02-14']);
+        expect(cell(d(2024, 2, 10)).getAttribute('data-in-preview')).toBeNull();
+        expect(cell(d(2024, 2, 12)).className).not.toContain('preview-s');
+        expect(cell(d(2024, 2, 12)).className).not.toContain('preview-e');
+      });
+
+      it('puts the hovered day first when the preview runs backwards', () => {
+        const { root, click, cell, press } = createFeatures((host) =>
+          host.mode.set('range'),
+        );
+        click(cell(d(2024, 2, 10)));
+        press('ArrowLeft');
+        press('ArrowLeft');
+
+        const dates = (modifier: string) =>
+          Array.from(
+            root.querySelectorAll(`.andes-calendar__day--${modifier}`),
+          ).map((c) => c.getAttribute('data-date'));
+        expect(dates('preview-start')).toEqual(['2024-02-08']);
+        expect(dates('preview-end')).toEqual(['2024-02-10']);
+      });
+
+      it('marks no boundary for a hovered day that changes nothing, or once the range is complete', () => {
+        const { root, click, cell, fixture } = createFeatures((host) =>
+          host.mode.set('range'),
+        );
+        click(cell(d(2024, 2, 10)));
+        cell(d(2024, 2, 10)).dispatchEvent(new MouseEvent('mouseenter'));
+        fixture.detectChanges();
+        expect(
+          root.querySelectorAll(
+            '.andes-calendar__day--preview-start, .andes-calendar__day--preview-end',
+          ),
+        ).toHaveLength(0);
+
+        click(cell(d(2024, 2, 12)));
+        cell(d(2024, 2, 20)).dispatchEvent(new MouseEvent('mouseenter'));
+        fixture.detectChanges();
+        expect(
+          root.querySelectorAll(
+            '.andes-calendar__day--preview-start, .andes-calendar__day--preview-end',
+          ),
+        ).toHaveLength(0);
+      });
     });
 
     describe('templates', () => {

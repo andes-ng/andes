@@ -372,6 +372,23 @@
     var(--andes-color-primary-text, var(--andes-color-primary));
 }
 
+/* The previewed range's first and last day carry half a band towards the inside, the picked
+   start and the hovered end alike: the dashes then run from chip to chip, with no gap of a
+   few pixels beside the start and no tail past the end. */
+.andes-calendar__day--preview-start::before,
+.andes-calendar__day--preview-end::before {
+  border-block: 1px dashed
+    var(--andes-color-primary-text, var(--andes-color-primary));
+}
+
+.andes-calendar__day--preview-start::before {
+  inset-inline-start: 50%;
+}
+
+.andes-calendar__day--preview-end::before {
+  inset-inline-end: 50%;
+}
+
 .andes-calendar__day--in-range:hover:not([aria-disabled='true']) > * {
   background-color: color-mix(
     in srgb,

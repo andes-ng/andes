@@ -132,7 +132,7 @@
         [src]="item.thumb"
         alt=""
       />
-      @if (item.status === 'error') {
+      @if (item.status === 'error' && isCardList()) {
       <andes-upload-icon class="andes-upload__thumb-alert" name="alert" />
       } } @else {
       <andes-upload-icon [name]="item.icon" />

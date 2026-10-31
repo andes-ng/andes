@@ -1412,6 +1412,27 @@ describe('AndesUpload', () => {
         expect(root.querySelector('.andes-upload__thumb-alert')).toBeNull();
       });
 
+      it('draws the alert over the picture of a card only, not of a picture row', () => {
+        const { host, root, fixture } = setup();
+        host.listType.set('picture');
+        host.files.set([
+          {
+            uid: '1',
+            name: 'photo.png',
+            status: 'error',
+            errorMessage: 'Too big',
+            thumbUrl: 'https://cdn.test/t.png',
+          },
+        ]);
+        fixture.detectChanges();
+        expect(root.querySelector('.andes-upload__thumb-alert')).toBeNull();
+        expect(root.querySelector('.andes-upload__meta--over')).toBeNull();
+
+        host.listType.set('picture-card');
+        fixture.detectChanges();
+        expect(root.querySelector('.andes-upload__thumb-alert')).not.toBeNull();
+      });
+
       it('relies on the alert icon of a failed card that has no picture', () => {
         const { host, root, fixture } = setup();
         host.listType.set('picture-card');
@@ -1885,6 +1906,41 @@ describe('AndesUpload', () => {
       expect(
         declaredValue(css, '.andes-upload--card .andes-upload__error', 'flex'),
       ).toBe('none');
+    });
+
+    it('lets the meta wrap in rows and keeps it a column in pictures and cards', () => {
+      expect(declaredValue(css, '.andes-upload__meta', 'flex-wrap')).toBe(
+        'wrap',
+      );
+      expect(
+        declaredValue(
+          css,
+          '.andes-upload--picture .andes-upload__meta',
+          'flex-wrap',
+        ),
+      ).toBe('nowrap');
+      expect(
+        declaredValue(
+          css,
+          '.andes-upload--card .andes-upload__meta',
+          'flex-wrap',
+        ),
+      ).toBe('nowrap');
+      // A long unbroken name must stay inside its box in every layout.
+      expect(declaredValue(css, '.andes-upload__name', 'max-inline-size')).toBe(
+        '100%',
+      );
+    });
+
+    it('keeps the actions of a failed card in a strip that leaves the message readable', () => {
+      const strip =
+        ".andes-upload--card .andes-upload__item[data-status='error'] .andes-upload__actions";
+      expect(declaredValue(css, strip, 'opacity')).toBe('1');
+      expect(declaredValue(css, strip, 'background-color')).toBe('transparent');
+      expect(declaredValue(css, strip, 'block-size')).toBe('1.75rem');
+      expect(
+        declaredValue(css, '.andes-upload__thumb-alert', 'inset-inline-start'),
+      ).toBe('0.5rem');
     });
 
     it('clamps the message of a failed card to two lines', () => {

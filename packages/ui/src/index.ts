@@ -101,7 +101,7 @@ export * from './lib/progress';
 
 export * from './lib/qr-code';
 
-// @slot radio-group
+export * from './lib/radio-group';
 
 export * from './lib/rate';
 

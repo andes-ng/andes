@@ -156,6 +156,11 @@ export class AndesTree {
   private readonly directionality = inject(Directionality);
 
   private readonly treeId = `andes-tree-${nextTreeId++}`;
+  /**
+   * `id` of the element that carries `role="tree"`, for a field that names the tree in
+   * `aria-controls`. The element exists only while {@link hasRows} is `true`.
+   */
+  readonly listId = `${this.treeId}-list`;
 
   /** The nodes. A two-way model so a drop (or a keyboard move) can reorder them in place. */
   readonly nodes = model<AndesTreeNode[]>([]);
@@ -407,7 +412,8 @@ export class AndesTree {
     this.visibleRows().forEach((row, i) => map.set(row.key, i));
     return map;
   });
-  protected readonly hasRows = computed(() => this.allRows().length > 0);
+  /** Whether the tree has any row to show; without one there is no `role="tree"` element. */
+  readonly hasRows = computed(() => this.allRows().length > 0);
 
   /** The one row in the tab order: the focused one, else the selected one, else the first. */
   protected readonly tabbableKey = computed<AndesTreeKey | null>(() => {

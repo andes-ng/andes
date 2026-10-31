@@ -238,6 +238,21 @@ describe('AndesTree', () => {
       );
     });
 
+    it('gives the role=tree element an id a field can name in aria-controls, only while it has rows', () => {
+      const fixture = setup();
+      const instance = fixture.componentInstance.tree();
+      const list = fixture.nativeElement.querySelector(
+        '[role="tree"]',
+      ) as HTMLElement;
+      expect(list.id).toBe(instance.listId);
+      expect(instance.hasRows()).toBe(true);
+
+      fixture.componentInstance.nodes.set([]);
+      fixture.detectChanges();
+      expect(instance.hasRows()).toBe(false);
+      expect(fixture.nativeElement.querySelector('[role="tree"]')).toBeNull();
+    });
+
     it('does not set aria-label on the host element', () => {
       const fixture = setup();
       expect(

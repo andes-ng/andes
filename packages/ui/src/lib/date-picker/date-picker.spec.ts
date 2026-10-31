@@ -1529,7 +1529,7 @@ describe('AndesDatePicker', () => {
         expect([value.getHours(), value.getMinutes()]).toEqual([14, 30]);
         expect(view.host.oks).toBe(1);
         expect(view.panel()).toBeFalsy();
-        expect(view.trigger().value).toBe('Feb 15, 2024, 2:30 PM');
+        expect(view.trigger().value).toBe('Feb 15, 2024, 14:30');
       });
 
       it('discards pending picks when the panel closes without OK', () => {
@@ -1539,10 +1539,10 @@ describe('AndesDatePicker', () => {
         view.openPanel();
 
         view.clickDay(d(2024, 2, 20));
-        expect(view.trigger().value).toBe('Feb 20, 2024, 9:00 AM');
+        expect(view.trigger().value).toBe('Feb 20, 2024, 09:00');
         view.pressEscape();
 
-        expect(view.trigger().value).toBe('Feb 15, 2024, 9:00 AM');
+        expect(view.trigger().value).toBe('Feb 15, 2024, 09:00');
         expect(toDateKey(view.host.control.value as Date)).toBe('2024-02-15');
       });
 
@@ -2013,7 +2013,7 @@ describe('AndesDatePicker', () => {
         const value = view.host.value() as Date;
         expect(hm(value)).toEqual([14, 30]);
         expect(toDateKey(value)).toBe(toDateKey(new Date()));
-        expect(view.trigger().value).toBe('02:30 PM');
+        expect(view.trigger().value).toBe('14:30');
       });
 
       it('parses a typed time onto the day it already holds', () => {
@@ -2062,8 +2062,8 @@ describe('AndesDatePicker', () => {
           host.value.set([night(22), night(6)]);
         });
         expect(view.inputs().map((input) => input.value)).toEqual([
-          '10:00 PM',
-          '06:00 AM',
+          '22:00',
+          '06:00',
         ]);
 
         view.typeInto(view.inputs()[1], '05:00');
@@ -2086,8 +2086,8 @@ describe('AndesDatePicker', () => {
         });
 
         expect(view.inputs().map((input) => input.value)).toEqual([
-          '06:00 AM',
-          '10:00 PM',
+          '06:00',
+          '22:00',
         ]);
       });
     });

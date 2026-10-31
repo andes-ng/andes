@@ -985,7 +985,8 @@
 }
 
 /* `height: 0` + `min-height: 100%` makes each column exactly as tall as the
-   calendar beside it (the stretched flex row), however many options it holds. */
+   calendar beside it (the stretched flex row), however many options it holds.
+   That height is also the column's own size container, which the closing spacer reads. */
 .andes-date-picker__time-column {
   position: relative;
   box-sizing: border-box;
@@ -995,7 +996,16 @@
   margin: 0;
   padding: var(--andes-space-1);
   overflow-y: auto;
+  container-type: size;
   scrollbar-width: thin;
+}
+
+/* Room after the last option so that every option, the last one included, can scroll up
+   to the top: the column's height less one option. */
+.andes-date-picker__time-column::after {
+  display: block;
+  height: calc(100cqh - 1.75rem);
+  content: '';
 }
 
 .andes-date-picker__time-column + .andes-date-picker__time-column {

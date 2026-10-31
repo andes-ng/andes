@@ -257,6 +257,25 @@ describe('AndesDatePicker styles', () => {
     });
   });
 
+  describe('time columns', () => {
+    const column = '.andes-date-picker__time-column';
+
+    it('leaves room after the last option so any option can scroll to the top', () => {
+      // The column's own height is the size container the spacer is measured against.
+      expect(declaredValue(source, column, 'container-type')).toBe('size');
+      const spacer = `${column}::after`;
+      expect(declaredValue(source, spacer, 'content')).toBe("''");
+      expect(declaredValue(source, spacer, 'display')).toBe('block');
+      // The column's height less one 1.75rem option.
+      expect(declaredValue(source, spacer, 'height')).toBe(
+        'calc(100cqh - 1.75rem)',
+      );
+      expect(
+        declaredValue(source, '.andes-date-picker__time-option', 'height'),
+      ).toBe('1.75rem');
+    });
+  });
+
   describe('panel chrome', () => {
     const panel = '::ng-deep .andes-date-picker__panel';
 

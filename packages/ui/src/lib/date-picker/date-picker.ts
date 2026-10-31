@@ -147,7 +147,9 @@ export interface AndesTimeOptions {
   readonly showSecond?: boolean;
   /**
    * A 12-hour clock: hours run 12, 1-11 with an AM/PM column beside them, and
-   * the displayed value uses the locale's 12-hour form. Default `false`.
+   * the displayed value uses the locale's 12-hour form. Default `false`: hours run
+   * 00-23 and the displayed value is a 24-hour time, whatever the locale's own
+   * habit, so the field and the columns always agree.
    */
   readonly use12Hours?: boolean;
   /**
@@ -303,6 +305,12 @@ const PLACEHOLDER_NOUNS: Readonly<Record<AndesDatePickerType, string>> = {
   year: 'year',
   time: 'time',
 };
+
+/** How many options PageUp and PageDown jump in a time column. */
+const TIME_PAGE = 5;
+
+/** How long a time column eases to a newly picked option, as the `mid` motion token. */
+const TIME_SCROLL_MS = 150;
 
 /** How far the panel arrow sits inside the active input's start edge, in pixels. */
 const ARROW_INSET = 20;
@@ -1021,6 +1029,12 @@ export class AndesDatePicker implements ControlValueAccessor {
   /** The window whose scroll and resize re-measure the open panel; `null` while closed. */
   private trackedView: Window | null = null;
 
+  /** The pane whose time columns have had their first, instant alignment. */
+  private alignedPane: HTMLElement | null = null;
+
+  /** The animation frame of each time column's scroll under way. */
+  private readonly columnScrolls = new Map<HTMLElement, number>();
+
   /**
    * Set when focus leaving the picker closes the panel, and read once the close
    * completes. The overlay reports the close only after its exit animation, so a
@@ -1217,7 +1231,11 @@ export class AndesDatePicker implements ControlValueAccessor {
     if (!time) {
       return base;
     }
-    const clock = time.use12Hours ? { hour12: true } : {};
+    // The field follows the columns, never the locale's own clock: `hourCycle: 'h23'` rather
+    // than `hour12: false`, which some engines print as 24:30 after midnight.
+    const clock: Intl.DateTimeFormatOptions = time.use12Hours
+      ? { hour12: true, hourCycle: undefined }
+      : { hour12: undefined, hourCycle: 'h23' };
     if (base.dateStyle) {
       return {
         ...base,
@@ -1589,7 +1607,10 @@ export class AndesDatePicker implements ControlValueAccessor {
       }
       this.startPanelTracking();
     });
-    this.destroyRef.onDestroy(() => this.stopPanelTracking());
+    this.destroyRef.onDestroy(() => {
+      this.stopPanelTracking();
+      this.cancelColumnScrolls();
+    });
 
     // `[open]` / `[(open)]`: follow the requested state once the view exists.
     afterRenderEffect(() => {
@@ -1638,21 +1659,12 @@ export class AndesDatePicker implements ControlValueAccessor {
       }
     });
 
-    // Keep each time column scrolled to its selected option.
+    // Keep each time column scrolled to its selected option: at once when the panel opens, so
+    // it never shows scrolling, and smoothly for every change after that.
     afterRenderEffect(() => {
       this.timeColumns();
       const pane = this.overlay.panelElement();
-      pane
-        ?.querySelectorAll<HTMLElement>('.andes-date-picker__time-column')
-        .forEach((column) => {
-          const selected = column.querySelector<HTMLElement>(
-            '[aria-selected="true"]',
-          );
-          const first = column.firstElementChild as HTMLElement | null;
-          if (selected && first) {
-            column.scrollTop = selected.offsetTop - first.offsetTop;
-          }
-        });
+      untracked(() => this.alignTimeColumns(pane));
     });
 
     // A range's active bar and panel arrow follow the active input. They appear in place and
@@ -1825,6 +1837,92 @@ export class AndesDatePicker implements ControlValueAccessor {
       this.measurePanel();
     });
   };
+
+  // --- Time columns -----------------------------------------------------
+
+  /**
+   * Brings the selected option of each time column to the top. The first pass of an
+   * opening is instant; passes after it (a pick, a key, the other side of a range) ease.
+   */
+  private alignTimeColumns(pane: HTMLElement | null): void {
+    if (!pane) {
+      this.alignedPane = null;
+      return;
+    }
+    const animate = this.alignedPane === pane;
+    let found = false;
+    pane
+      .querySelectorAll<HTMLElement>('.andes-date-picker__time-column')
+      .forEach((column) => {
+        found = true;
+        const selected = column.querySelector<HTMLElement>(
+          '[aria-selected="true"]',
+        );
+        const first = column.firstElementChild as HTMLElement | null;
+        if (selected && first) {
+          this.scrollColumnTo(
+            column,
+            selected.offsetTop - first.offsetTop,
+            animate,
+          );
+        }
+      });
+    // Columns that have not rendered yet leave the next pass as the first one.
+    this.alignedPane = found ? pane : null;
+  }
+
+  /**
+   * Scrolls a column to `top`, easing out over TIME_SCROLL_MS. A new target replaces one
+   * still under way, starting from where the column is. Instant when `animate` is off,
+   * under reduced motion, when there is nowhere to move, or without animation frames.
+   */
+  private scrollColumnTo(
+    column: HTMLElement,
+    top: number,
+    animate: boolean,
+  ): void {
+    const view = column.ownerDocument.defaultView;
+    this.cancelColumnScroll(column);
+    const from = column.scrollTop;
+    if (
+      !animate ||
+      !view ||
+      typeof view.requestAnimationFrame !== 'function' ||
+      Math.abs(top - from) < 1 ||
+      (typeof view.matchMedia === 'function' &&
+        view.matchMedia('(prefers-reduced-motion: reduce)').matches)
+    ) {
+      column.scrollTop = top;
+      return;
+    }
+    let startedAt: number | null = null;
+    const step = (now: number): void => {
+      startedAt ??= now;
+      const progress = Math.min(1, (now - startedAt) / TIME_SCROLL_MS);
+      column.scrollTop = from + (top - from) * (1 - (1 - progress) ** 3);
+      if (progress < 1) {
+        this.columnScrolls.set(column, view.requestAnimationFrame(step));
+      } else {
+        this.columnScrolls.delete(column);
+      }
+    };
+    this.columnScrolls.set(column, view.requestAnimationFrame(step));
+  }
+
+  private cancelColumnScroll(column: HTMLElement): void {
+    const frame = this.columnScrolls.get(column);
+    if (frame !== undefined) {
+      column.ownerDocument.defaultView?.cancelAnimationFrame(frame);
+      this.columnScrolls.delete(column);
+    }
+  }
+
+  private cancelColumnScrolls(): void {
+    for (const column of [...this.columnScrolls.keys()]) {
+      this.cancelColumnScroll(column);
+    }
+    this.alignedPane = null;
+  }
 
   /** Where the active input sits inside the field, or `null` when there is none to point at. */
   private measureActiveBar(side: Side): { left: number; width: number } | null {
@@ -2372,7 +2470,11 @@ export class AndesDatePicker implements ControlValueAccessor {
     }
   }
 
-  /** Arrow keys walk the enabled options; disabled ones are skipped. */
+  /**
+   * A column's keys. Up/Down walk the enabled options (disabled ones are skipped), Home/End
+   * go to the first and last, PageUp/PageDown jump TIME_PAGE options, Left/Right move to
+   * the neighbouring column and Enter confirms.
+   */
   protected onTimeKeydown(event: KeyboardEvent, column: TimeColumn): void {
     const options = column.options;
     const index = options.findIndex((option) => option.selected);
@@ -2380,6 +2482,17 @@ export class AndesDatePicker implements ControlValueAccessor {
       for (let at = from; at >= 0 && at < options.length; at += step) {
         if (!options[at].disabled) {
           return at;
+        }
+      }
+      return -1;
+    };
+    // The enabled option closest to `target`, trying the one it points at first.
+    const nearest = (target: number): number => {
+      for (let distance = 0; distance < options.length; distance++) {
+        for (const at of [target - distance, target + distance]) {
+          if (at >= 0 && at < options.length && !options[at].disabled) {
+            return at;
+          }
         }
       }
       return -1;
@@ -2392,6 +2505,26 @@ export class AndesDatePicker implements ControlValueAccessor {
       case 'ArrowDown':
         next = scan(index + 1, 1);
         break;
+      case 'PageUp':
+        next = index > 0 ? nearest(Math.max(index - TIME_PAGE, 0)) : -1;
+        break;
+      case 'PageDown':
+        next =
+          index < options.length - 1
+            ? nearest(Math.min(index + TIME_PAGE, options.length - 1))
+            : -1;
+        break;
+      case 'ArrowLeft':
+      case 'ArrowRight':
+        event.preventDefault();
+        this.focusNeighbourColumn(
+          event.currentTarget as HTMLElement,
+          // A row of columns reads right to left in an RTL panel.
+          (event.key === 'ArrowRight') !== (this.panelDirection() === 'rtl')
+            ? 1
+            : -1,
+        );
+        return;
       case 'Home':
         next = scan(0, 1);
         break;
@@ -2408,9 +2541,19 @@ export class AndesDatePicker implements ControlValueAccessor {
         return;
     }
     event.preventDefault();
-    if (next >= 0) {
+    if (next >= 0 && next !== index) {
       this.setTimePart(column.unit, options[next].value);
     }
+  }
+
+  /** Moves focus to the column `step` places along the row, if there is one. */
+  private focusNeighbourColumn(from: HTMLElement, step: 1 | -1): void {
+    const columns = Array.from(
+      from.parentElement?.querySelectorAll<HTMLElement>(
+        '.andes-date-picker__time-column',
+      ) ?? [],
+    );
+    columns[columns.indexOf(from) + step]?.focus();
   }
 
   protected selectNow(): void {
@@ -2470,6 +2613,7 @@ export class AndesDatePicker implements ControlValueAccessor {
     }
     this.hoverText.set(null);
     this.stopPanelTracking();
+    this.cancelColumnScrolls();
     // Text kept by `preserveInvalidOnBlur` outlives a close caused by leaving.
     if (!(this.closingForBlur && this.preserveInvalidOnBlur())) {
       this.startDraft.set(null);

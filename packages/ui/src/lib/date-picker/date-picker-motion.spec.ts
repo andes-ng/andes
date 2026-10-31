@@ -140,6 +140,7 @@ async function resizeAndSettle(view: Awaited<ReturnType<typeof create>>) {
 describe('AndesDatePicker motion and layout', () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
     document
       .querySelectorAll('.cdk-overlay-container')
       .forEach((container) => (container.innerHTML = ''));
@@ -424,6 +425,269 @@ describe('AndesDatePicker motion and layout', () => {
       await resizeAndSettle(view);
       // A 6px input leaves 3px: the arrow keeps 16px from the edge.
       expect(view.arrow()?.style.left).toBe('16px');
+    });
+  });
+
+  describe('time columns', () => {
+    const FEB_15_0930 = new Date(2024, 1, 15, 9, 30);
+
+    const column = (view: Awaited<ReturnType<typeof create>>, unit: string) =>
+      document.querySelector<HTMLElement>(
+        `[data-slot="date-picker-time"] [data-unit="${unit}"]`,
+      ) as HTMLElement;
+    const texts = (view: Awaited<ReturnType<typeof create>>, unit: string) =>
+      Array.from(column(view, unit).querySelectorAll('[role="option"]')).map(
+        (option) => option.textContent?.trim(),
+      );
+    const selected = (view: Awaited<ReturnType<typeof create>>, unit: string) =>
+      column(view, unit)
+        .querySelector('[aria-selected="true"]')
+        ?.textContent?.trim();
+    const press = (
+      view: Awaited<ReturnType<typeof create>>,
+      unit: string,
+      key: string,
+    ) => {
+      column(view, unit).dispatchEvent(
+        new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }),
+      );
+      view.detect();
+    };
+    const withTime = (options: AndesTimeOptions | boolean = true) =>
+      create((host) => {
+        host.showTime.set(options);
+        host.value.set(FEB_15_0930);
+      });
+
+    describe('one clock for the field and the columns', () => {
+      it('shows a 24-hour time in the field when the columns run 00-23', async () => {
+        const view = await withTime();
+        expect(view.input()?.value).toBe('Feb 15, 2024, 09:30');
+        await view.open();
+        expect(texts(view, 'hours')).toHaveLength(24);
+        expect(texts(view, 'hours')[0]).toBe('00');
+        expect(selected(view, 'hours')).toBe('09');
+      });
+
+      it('never prints 24:xx just after midnight', async () => {
+        const view = await create((host) => {
+          host.showTime.set(true);
+          host.value.set(new Date(2024, 1, 15, 0, 30));
+        });
+        expect(view.input()?.value).toBe('Feb 15, 2024, 00:30');
+      });
+
+      it('shows the locale 12-hour form when use12Hours asks for it', async () => {
+        const view = await withTime({ use12Hours: true });
+        expect(view.input()?.value).toBe('Feb 15, 2024, 9:30 AM');
+        await view.open();
+        expect(texts(view, 'hours')).toHaveLength(12);
+        expect(texts(view, 'meridiem')).toEqual(['AM', 'PM']);
+      });
+
+      it('parses typed 24-hour text back', async () => {
+        const view = await withTime();
+        const input = view.input() as HTMLInputElement;
+        input.value = 'Feb 20, 2024, 18:45';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
+        );
+        view.detect();
+        await view.fixture.whenStable();
+        const value = view.host.value() as Date;
+        expect([value.getDate(), value.getHours(), value.getMinutes()]).toEqual(
+          [20, 18, 45],
+        );
+      });
+    });
+
+    describe('keyboard', () => {
+      it('jumps five options with PageDown and PageUp', async () => {
+        const view = await withTime();
+        await view.open();
+        press(view, 'hours', 'PageDown');
+        expect(selected(view, 'hours')).toBe('14');
+        press(view, 'hours', 'PageUp');
+        press(view, 'hours', 'PageUp');
+        expect(selected(view, 'hours')).toBe('04');
+      });
+
+      it('stops at the ends of the column', async () => {
+        const view = await create((host) => {
+          host.showTime.set(true);
+          host.value.set(new Date(2024, 1, 15, 22, 30));
+        });
+        await view.open();
+        press(view, 'hours', 'PageDown');
+        expect(selected(view, 'hours')).toBe('23');
+        press(view, 'hours', 'PageDown');
+        expect(selected(view, 'hours')).toBe('23');
+        press(view, 'hours', 'Home');
+        press(view, 'hours', 'PageUp');
+        expect(selected(view, 'hours')).toBe('00');
+      });
+
+      it('moves to the neighbouring column with ArrowRight and ArrowLeft', async () => {
+        const view = await withTime();
+        await view.open();
+        column(view, 'hours').focus();
+        press(view, 'hours', 'ArrowRight');
+        expect(document.activeElement).toBe(column(view, 'minutes'));
+        press(view, 'minutes', 'ArrowLeft');
+        expect(document.activeElement).toBe(column(view, 'hours'));
+        // Nowhere to go past the first column; the value is left alone.
+        press(view, 'hours', 'ArrowLeft');
+        expect(document.activeElement).toBe(column(view, 'hours'));
+        expect(selected(view, 'hours')).toBe('09');
+        expect(selected(view, 'minutes')).toBe('30');
+      });
+
+      it('reads the row of columns the other way round in an RTL panel', async () => {
+        const view = await create((host) => {
+          host.dir.set('rtl');
+          host.showTime.set(true);
+          host.value.set(FEB_15_0930);
+        });
+        await view.open();
+        column(view, 'hours').focus();
+        press(view, 'hours', 'ArrowLeft');
+        expect(document.activeElement).toBe(column(view, 'minutes'));
+        press(view, 'minutes', 'ArrowRight');
+        expect(document.activeElement).toBe(column(view, 'hours'));
+      });
+    });
+
+    describe('scrolling to the picked option', () => {
+      /** Frames the test runs by hand, so the easing can be sampled. */
+      let frames: Map<number, FrameRequestCallback>;
+      let nextFrame: number;
+
+      const run = (now: number) => {
+        const due = [...frames.entries()];
+        frames.clear();
+        due.forEach(([, callback]) => callback(now));
+      };
+
+      beforeEach(() => {
+        frames = new Map();
+        nextFrame = 1;
+        // The nth option of a column sits 28px lower than the one before, after 4px of padding.
+        vi.spyOn(HTMLElement.prototype, 'offsetTop', 'get').mockImplementation(
+          function (this: HTMLElement) {
+            const index = Number(this.id.split('-').pop());
+            return this.getAttribute('role') === 'option' ? 4 + index * 28 : 0;
+          },
+        );
+      });
+
+      const manualFrames = () => {
+        vi.spyOn(window, 'requestAnimationFrame').mockImplementation(
+          (callback) => {
+            frames.set(nextFrame, callback);
+            return nextFrame++;
+          },
+        );
+        vi.spyOn(window, 'cancelAnimationFrame').mockImplementation((id) => {
+          frames.delete(id);
+        });
+      };
+
+      it('puts the selected option at the top at once when the panel opens', async () => {
+        const view = await withTime();
+        await view.open();
+        expect(column(view, 'hours').scrollTop).toBe(9 * 28);
+        expect(column(view, 'minutes').scrollTop).toBe(30 * 28);
+      });
+
+      it('eases to an option picked afterwards, ending exactly on it', async () => {
+        const view = await withTime();
+        await view.open();
+        manualFrames();
+
+        column(view, 'hours')
+          .querySelector<HTMLElement>('[id$="-hours-14"]')
+          ?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+        view.detect();
+        await view.fixture.whenStable();
+        view.detect();
+        // Not there yet: the first frame only starts the clock.
+        expect(column(view, 'hours').scrollTop).toBe(9 * 28);
+
+        run(1000);
+        run(1075);
+        const midway = column(view, 'hours').scrollTop;
+        expect(midway).toBeGreaterThan(9 * 28);
+        expect(midway).toBeLessThan(14 * 28);
+        // Eased out: past the half-way point after half the time.
+        expect(midway).toBeGreaterThan((9 * 28 + 14 * 28) / 2);
+
+        run(1150);
+        expect(column(view, 'hours').scrollTop).toBe(14 * 28);
+        expect(frames.size).toBe(0);
+      });
+
+      it('retargets from where it is when another option is picked mid-flight', async () => {
+        const view = await withTime();
+        await view.open();
+        manualFrames();
+
+        press(view, 'hours', 'PageDown');
+        await view.fixture.whenStable();
+        view.detect();
+        run(1000);
+        run(1060);
+        const partway = column(view, 'hours').scrollTop;
+        press(view, 'hours', 'PageUp');
+        await view.fixture.whenStable();
+        view.detect();
+        // The earlier flight is gone, only the new one is pending.
+        expect(frames.size).toBe(1);
+        run(2000);
+        run(2150);
+        expect(column(view, 'hours').scrollTop).toBe(9 * 28);
+        expect(partway).toBeGreaterThan(9 * 28);
+      });
+
+      it('moves at once under reduced motion', async () => {
+        const view = await withTime();
+        await view.open();
+        manualFrames();
+        // jsdom has no matchMedia of its own.
+        vi.stubGlobal('matchMedia', (query: string) => ({
+          matches: query.includes('prefers-reduced-motion: reduce'),
+          media: query,
+          addEventListener: () => undefined,
+          removeEventListener: () => undefined,
+        }));
+
+        press(view, 'hours', 'PageDown');
+        await view.fixture.whenStable();
+        view.detect();
+        expect(column(view, 'hours').scrollTop).toBe(14 * 28);
+        expect(frames.size).toBe(0);
+      });
+
+      it('drops a flight still under way when the panel closes', async () => {
+        const view = await withTime();
+        await view.open();
+        manualFrames();
+        press(view, 'hours', 'PageDown');
+        await view.fixture.whenStable();
+        view.detect();
+        expect(frames.size).toBe(1);
+
+        document.body.dispatchEvent(
+          new KeyboardEvent('keydown', {
+            key: 'Escape',
+            keyCode: 27,
+            bubbles: true,
+          }),
+        );
+        view.detect();
+        await view.fixture.whenStable();
+        expect(frames.size).toBe(0);
+      });
     });
   });
 });

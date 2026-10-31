@@ -756,8 +756,8 @@ describe('segmented features stylesheet contract', () => {
     );
   });
 
-  it('keeps the original 180ms ease-out slide behind overridable properties', () => {
-    expect(group).toContain('--andes-segmented-duration, 180ms');
+  it('keeps the 300ms ease-in-out slide behind overridable properties', () => {
+    expect(group).toContain('--andes-segmented-duration, 300ms');
     expect(group).toContain('--andes-segmented-easing, cubic-bezier(');
   });
 

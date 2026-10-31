@@ -21,8 +21,8 @@ export type AndesSegmentedVariant =
   'default' | 'outlined' | 'filled' | 'borderless';
 
 /**
- * Timing of the sliding thumb. Both parts are optional and fall back to 180ms and the
- * library's ease-out curve. `prefers-reduced-motion: reduce` still wins and removes the slide.
+ * Timing of the sliding thumb. Both parts are optional and fall back to 300ms and the
+ * an ease-in-out curve. `prefers-reduced-motion: reduce` still wins and removes the slide.
  */
 export interface AndesSegmentedMotion {
   /** Milliseconds (a number) or any CSS time such as `'0.3s'`. `0` snaps without sliding. */

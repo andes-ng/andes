@@ -101,7 +101,7 @@ export const Motion: Story = {
     },
     template: `
       <div style="${column}">
-        <div><p style="${caption}">Default (180ms)</p><andes-segmented aria-label="Default motion" [options]="periods" value="Daily" /></div>
+        <div><p style="${caption}">Default (300ms)</p><andes-segmented aria-label="Default motion" [options]="periods" value="Daily" /></div>
         <div><p style="${caption}">600ms ease-in-out</p><andes-segmented aria-label="Slow motion" [motion]="slow" [options]="periods" value="Daily" /></div>
         <div><p style="${caption}">Instant (0)</p><andes-segmented aria-label="Instant motion" [motion]="instant" [options]="periods" value="Daily" /></div>
       </div>

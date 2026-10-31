@@ -81,7 +81,7 @@ const REVEAL_MARGIN = 20;
  *
  * Options come from the `options` input, from projected `<andes-segmented-option>` elements, or
  * both (generated ones first). The thumb is placed by measuring the selected segment, so it
- * follows any label width, font or `block`/`vertical` layout; it slides over 180ms and snaps
+ * follows any label width, font or `block`/`vertical` layout; it slides over 300ms and snaps
  * instantly under `prefers-reduced-motion`.
  *
  * Integrates with Angular forms (`[(ngModel)]`, `formControl`) and with `[(value)]`.

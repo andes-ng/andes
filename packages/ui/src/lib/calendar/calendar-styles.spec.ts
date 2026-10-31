@@ -78,7 +78,11 @@ describe('AndesCalendar styles', () => {
   describe('right-to-left', () => {
     it('mirrors the default chevrons under dir="rtl"', () => {
       expect(
-        declaredValue(source, "[dir='rtl'] .andes-calendar__nav svg", 'scale'),
+        declaredValue(
+          source,
+          ":host-context([dir='rtl']) .andes-calendar__nav svg",
+          'scale',
+        ),
       ).toBe('-1 1');
     });
 

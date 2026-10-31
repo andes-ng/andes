@@ -577,6 +577,13 @@
   color: var(--andes-color-muted-foreground);
 }
 
+/* The default arrow points from the start input to the end input, so it turns round in a
+   right-to-left field, where the end input lies to the left. A separator of the consumer's
+   own is left as written. */
+:host-context([dir='rtl']) .andes-date-picker__separator[data-arrow] {
+  scale: -1 1;
+}
+
 .andes-date-picker__prefix {
   display: inline-flex;
   flex-shrink: 0;
@@ -880,6 +887,10 @@
   width: var(--_date-picker-arrow-size);
   height: var(--_date-picker-arrow-size);
   border: 1px solid transparent;
+  /* The two edges facing away from the panel get a hairline, so the diamond reads as an arrow
+     even where the panel's own soft shadow is faint. */
+  border-top-color: var(--andes-color-border);
+  border-left-color: var(--andes-color-border);
   background-color: var(--andes-color-popover);
   box-shadow: -2px -2px 5px -1px rgb(0 0 0 / 8%);
   pointer-events: none;
@@ -894,6 +905,9 @@
 .andes-date-picker__arrow[data-side='top'] {
   top: auto;
   bottom: calc(var(--_date-picker-arrow-size) / -2);
+  border-color: transparent;
+  border-right-color: var(--andes-color-border);
+  border-bottom-color: var(--andes-color-border);
   box-shadow: 2px 2px 5px -1px rgb(0 0 0 / 8%);
 }
 

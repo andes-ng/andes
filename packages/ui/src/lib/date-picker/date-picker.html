@@ -161,7 +161,10 @@
     </ng-template>
 
     @if (isRange()) {
-    <span class="andes-date-picker__separator" aria-hidden="true"
+    <span
+      class="andes-date-picker__separator"
+      aria-hidden="true"
+      [attr.data-arrow]="rangeSeparator() === '→' || null"
       >{{ rangeSeparator() }}</span
     >
     <input

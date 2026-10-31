@@ -367,6 +367,29 @@ describe('AndesDatePicker styles', () => {
     });
   });
 
+  describe('right-to-left', () => {
+    it('turns the default range arrow round and the panel arrow edges follow the sides', () => {
+      expect(
+        declaredValue(
+          source,
+          ":host-context([dir='rtl']) .andes-date-picker__separator[data-arrow]",
+          'scale',
+        ),
+      ).toBe('-1 1');
+      const arrow = '.andes-date-picker__arrow';
+      expect(declaredValue(source, arrow, 'border-top-color')).toBe(
+        'var(--andes-color-border)',
+      );
+      expect(
+        declaredValue(
+          source,
+          `${arrow}[data-side='top']`,
+          'border-bottom-color',
+        ),
+      ).toBe('var(--andes-color-border)');
+    });
+  });
+
   describe('panel chrome', () => {
     const panel = '::ng-deep .andes-date-picker__panel';
 

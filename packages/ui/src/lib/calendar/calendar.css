@@ -145,7 +145,9 @@
 /* The default chevrons point left for "previous" and right for "next", which is backwards in a
    right-to-left grid, where the previous period lies to the right. A custom icon is the
    consumer's own and is left alone. */
-[dir='rtl'] .andes-calendar__nav svg {
+/* `:host-context` rather than a plain ancestor selector: the emulated encapsulation tags every
+   part of a selector, and the element carrying `dir` is not one of this component's. */
+:host-context([dir='rtl']) .andes-calendar__nav svg {
   scale: -1 1;
 }
 

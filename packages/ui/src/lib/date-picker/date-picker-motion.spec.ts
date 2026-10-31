@@ -690,4 +690,14 @@ describe('AndesDatePicker motion and layout', () => {
       });
     });
   });
+
+  describe('range separator', () => {
+    it('marks the default arrow, so a right-to-left field can turn it round', async () => {
+      const view = await create((host) => host.mode.set('range'));
+      const separator = view.root.querySelector(
+        '.andes-date-picker__separator',
+      );
+      expect(separator?.hasAttribute('data-arrow')).toBe(true);
+    });
+  });
 });

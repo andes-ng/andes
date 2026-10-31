@@ -84,10 +84,45 @@ export interface AndesCascaderDisplayContext {
   selectedOptions: AndesCascaderOption[];
 }
 
-/** Context of the `optionTemplate`. */
+/**
+ * Context of the `optionTemplate`. It renders the options in the columns and, in a search,
+ * the results: there `$implicit` and `label` are those of the last option of the matching
+ * path, `path` holds the whole path and `searchValue` the text typed.
+ */
 export interface AndesCascaderOptionContext {
   $implicit: AndesCascaderOption;
   label: string;
+  /** The options from the first level down to this one. */
+  path: AndesCascaderOption[];
+  /** The text typed into the search while the option is a search result, otherwise `null`. */
+  searchValue: string | null;
+}
+
+/** One selected path as the field shows it in `multiple` mode. */
+export interface AndesCascaderTag {
+  /** The values from the first level down. */
+  path: AndesCascaderValue[];
+  /** The labels of the path. */
+  labels: string[];
+  /** The option objects of the path (empty for a value that is not in `options`). */
+  selectedOptions: AndesCascaderOption[];
+  /** `false` while the cascader is disabled. */
+  closable: boolean;
+}
+
+/** Context of the `tagTemplate`. */
+export interface AndesCascaderTagContext {
+  $implicit: AndesCascaderTag;
+  /** Removes this path, exactly as the built-in remove button does. */
+  onClose: () => void;
+}
+
+/** Context of the `panelHeader` and `panelFooter` templates. */
+export interface AndesCascaderPanelContext {
+  /** The text typed into the search. */
+  $implicit: string;
+  /** Closes the panel. */
+  close: () => void;
 }
 
 /** What `loadData` receives: the options from the first level down to the one expanding. */

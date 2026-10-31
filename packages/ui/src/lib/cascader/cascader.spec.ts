@@ -6,6 +6,7 @@ import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 
+import { declaredValue } from '../../testing/computed-style';
 import { AndesCascader, type AndesCascaderModel } from './cascader';
 import type {
   AndesCascaderChange,
@@ -17,10 +18,53 @@ import type {
   AndesCascaderSearch,
 } from './cascader-types';
 
+/** A stylesheet of this folder, as written. */
+const stylesheet = (file: string) =>
+  readFileSync(join(dirname(fileURLToPath(import.meta.url)), file), 'utf-8');
+
+/** The same, without comments and with whitespace collapsed, for plain text checks. */
 const css = (file: string) =>
-  readFileSync(join(dirname(fileURLToPath(import.meta.url)), file), 'utf-8')
+  stylesheet(file)
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/\s+/g, ' ');
+
+/** The text between the braces of every at-rule whose prelude is exactly `header`. */
+function atRuleBodies(source: string, header: string): string[] {
+  const bodies: string[] = [];
+  let from = source.indexOf(header);
+  while (from !== -1) {
+    const open = source.indexOf('{', from);
+    let depth = 0;
+    let close = -1;
+    for (let i = open; i < source.length && close === -1; i++) {
+      if (source[i] === '{') {
+        depth++;
+      } else if (source[i] === '}' && --depth === 0) {
+        close = i;
+      }
+    }
+    if (open === -1 || close === -1) {
+      break;
+    }
+    bodies.push(source.slice(open + 1, close));
+    from = source.indexOf(header, close);
+  }
+  return bodies;
+}
+
+/** `declaredValue` for a rule that lives inside an at-rule such as `@media (...)`. */
+function declaredInAtRule(
+  source: string,
+  header: string,
+  selector: string,
+  property: string,
+): string | undefined {
+  let found: string | undefined;
+  for (const body of atRuleBodies(source, header)) {
+    found = declaredValue(body, selector, property) ?? found;
+  }
+  return found;
+}
 
 const KEY_CODES: Record<string, number> = { Escape: 27, Tab: 9, Enter: 13 };
 
@@ -387,8 +431,11 @@ describe('AndesCascader', () => {
       open();
 
       expect(combobox().getAttribute('aria-expanded')).toBe('true');
-      expect(combobox().getAttribute('aria-controls')).toBe(panel()?.id);
-      expect(document.querySelector('[role="tree"]')).not.toBeNull();
+      // It controls the tree, which is what its popup role names; the panel only wraps it.
+      const tree = document.querySelector('[role="tree"]');
+      expect(tree).not.toBeNull();
+      expect(combobox().getAttribute('aria-controls')).toBe(tree?.id);
+      expect(tree?.id).not.toBe(panel()?.id);
       expect(columns().length).toBe(1);
       expect(columns()[0].getAttribute('role')).toBe('group');
       expect(columns()[0].getAttribute('aria-label')).toBe('Level 1');
@@ -1736,54 +1783,198 @@ describe('AndesCascader', () => {
   });
 
   describe('styles', () => {
+    const source = stylesheet('cascader.css');
     const style = css('cascader.css');
+    const noPreference = '@media (prefers-reduced-motion: no-preference)';
 
     it('draws the field box with the single-ring spec', () => {
-      expect(style).toMatch(
-        /\.andes-cascader__trigger \{[^}]*border: 1px solid var\(--_status-border, var\(--andes-color-input\)\)/,
+      expect(declaredValue(source, '.andes-cascader__trigger', 'border')).toBe(
+        '1px solid var(--_status-border, var(--andes-color-input))',
       );
-      expect(style).toMatch(/\.andes-cascader__trigger \{[^}]*outline: none/);
-      expect(style).toMatch(
-        /\.andes-cascader__trigger:focus-within, \.andes-cascader__trigger\[data-state='open'\] \{[^}]*box-shadow: 0 0 0 2px var\(--_ring\)/,
+      expect(declaredValue(source, '.andes-cascader__trigger', 'outline')).toBe(
+        'none',
       );
-      expect(style).toMatch(/\.andes-cascader__combobox \{[^}]*outline: none/);
+      for (const selector of [
+        '.andes-cascader__trigger:focus-within',
+        ".andes-cascader__trigger[data-state='open']",
+      ]) {
+        expect(declaredValue(source, selector, 'box-shadow')).toBe(
+          '0 0 0 2px var(--_ring)',
+        );
+      }
+      expect(
+        declaredValue(source, '.andes-cascader__combobox', 'outline'),
+      ).toBe('none');
     });
 
     it('sizes the field 24 / 32 / 40 from the control height tokens', () => {
-      expect(style).toContain(
-        "[data-size='sm'] { --_padding-x: var(--andes-control-padding-x-sm, 0.4375rem); min-height: var(--andes-control-height-sm, 1.5rem)",
-      );
-      expect(style).toContain(
-        'min-height: var(--andes-control-height-md, 2rem)',
-      );
-      expect(style).toContain(
-        'min-height: var(--andes-control-height-lg, 2.5rem)',
-      );
+      expect(
+        declaredValue(
+          source,
+          ".andes-cascader__trigger[data-size='sm']",
+          'min-height',
+        ),
+      ).toBe('var(--andes-control-height-sm, 1.5rem)');
+      expect(
+        declaredValue(
+          source,
+          ".andes-cascader__trigger[data-size='md']",
+          'min-height',
+        ),
+      ).toBe('var(--andes-control-height-md, 2rem)');
+      expect(
+        declaredValue(
+          source,
+          ".andes-cascader__trigger[data-size='lg']",
+          'min-height',
+        ),
+      ).toBe('var(--andes-control-height-lg, 2.5rem)');
     });
 
     it('plays the exit animation on the panel root and honours reduced motion', () => {
-      expect(style).toMatch(
-        /@media \(prefers-reduced-motion: no-preference\) \{[^@]*\.andes-cascader__panel\[data-andes-closing\] \{[^}]*animation: andes-cascader-panel-exit[^}]*forwards/,
+      const closing = '.andes-cascader__panel[data-andes-closing]';
+      expect(declaredInAtRule(source, noPreference, closing, 'animation')).toBe(
+        'andes-cascader-panel-exit var(--andes-motion-duration-fast, 120ms) var(--andes-motion-ease-in, ease-in) forwards',
       );
       // The enter and exit animations live only inside the no-preference query.
-      const outside = style.replace(
-        /@media \(prefers-reduced-motion: no-preference\) \{.*?\} \} /,
-        '',
-      );
-      expect(outside).not.toMatch(
-        /\.andes-cascader__panel\[data-andes-closing\] \{/,
-      );
-      expect(style).toMatch(
-        /\.andes-cascader__panel \{[^}]*font-family: var\(--andes-font-family\), sans-serif/,
-      );
+      expect(declaredValue(source, closing, 'animation')).toBeUndefined();
+      expect(
+        declaredValue(
+          source,
+          ".andes-cascader__panel[data-state='open']",
+          'animation',
+        ),
+      ).toBeUndefined();
+      expect(
+        declaredValue(source, '.andes-cascader__panel', 'font-family'),
+      ).toBe('var(--andes-font-family), sans-serif');
+    });
+
+    it('ignores the pointer while the panel is closing', () => {
+      expect(
+        declaredValue(
+          source,
+          '.andes-cascader__panel[data-andes-closing]',
+          'pointer-events',
+        ),
+      ).toBe('none');
     });
 
     it('lays options out with logical properties for right-to-left pages', () => {
-      expect(style).toContain(
-        'border-inline-start: 1px solid var(--andes-color-border)',
+      expect(
+        declaredValue(
+          source,
+          '.andes-cascader__column + .andes-cascader__column',
+          'border-inline-start',
+        ),
+      ).toBe('1px solid var(--andes-color-border)');
+      for (const physical of [
+        'margin-left',
+        'margin-right',
+        'padding-left',
+        'padding-right',
+      ]) {
+        expect(style).not.toContain(physical);
+      }
+    });
+
+    it('mirrors the expand chevron with :dir(), which crosses view encapsulation', () => {
+      expect(
+        declaredValue(source, '.andes-cascader__expand:dir(rtl)', 'transform'),
+      ).toBe('scaleX(-1)');
+      // `[dir='rtl'] .x` would compile to an ancestor that carries the encapsulation attribute.
+      expect(style).not.toContain("[dir='rtl']");
+    });
+
+    it('highlights with a tone that shows in the dark theme, where accent equals the popover', () => {
+      const option = '.andes-cascader__option';
+      const tone = declaredValue(
+        source,
+        option,
+        '--andes-cascader-option-highlight',
       );
-      expect(style).not.toMatch(/\b(margin|padding)-(left|right)\b/);
-      expect(style).toContain("[dir='rtl'] .andes-cascader__expand");
+      expect(tone).toContain(
+        'var(--andes-color-accent-hover) 70%, var(--andes-color-popover)',
+      );
+      for (const selector of [
+        `${option}[data-highlighted]:not([data-disabled])`,
+        `${option}[data-active]`,
+      ]) {
+        expect(declaredValue(source, selector, 'background-color')).toBe(
+          'var(--andes-cascader-option-highlight)',
+        );
+      }
+      // A plain :hover would light up whatever appears under a pointer that never moved.
+      expect(style).not.toContain(`${option}:hover`);
+      expect(style).not.toContain('var(--andes-color-accent)');
+    });
+
+    it('keeps the checkbox edge above 3:1 by mixing the input colour towards the foreground', () => {
+      expect(declaredValue(source, '.andes-cascader__check', 'border')).toBe(
+        '1px solid color-mix( in srgb, var(--andes-color-input), var(--andes-color-foreground) 35% )',
+      );
+    });
+
+    it('isolates the "+ N ..." tag from the surrounding direction', () => {
+      expect(
+        declaredValue(source, '.andes-cascader__tag--rest', 'unicode-bidi'),
+      ).toBe('isolate');
+    });
+
+    it('keeps every state readable in forced-colors mode', () => {
+      const forced = '@media (forced-colors: active)';
+      const option = '.andes-cascader__option';
+      expect(
+        declaredInAtRule(source, forced, `${option}[data-active]`, 'outline'),
+      ).toBe('2px solid Highlight');
+      expect(
+        declaredInAtRule(
+          source,
+          forced,
+          `${option}[data-highlighted]:not([data-disabled])`,
+          'outline',
+        ),
+      ).toBe('2px solid Highlight');
+      expect(
+        declaredInAtRule(source, forced, `${option}[data-expanded]`, 'outline'),
+      ).toBe('1px solid CanvasText');
+      expect(
+        declaredInAtRule(
+          source,
+          forced,
+          `${option}[data-selected]`,
+          'background-color',
+        ),
+      ).toBe('SelectedItem');
+      expect(
+        declaredInAtRule(source, forced, `${option}[data-selected]`, 'color'),
+      ).toBe('SelectedItemText');
+      const checked = ".andes-cascader__check[data-state='checked']";
+      expect(
+        declaredInAtRule(source, forced, checked, 'background-color'),
+      ).toBe('Highlight');
+      expect(
+        declaredInAtRule(source, forced, `${checked}::after`, 'border-color'),
+      ).toBe('HighlightText');
+      expect(
+        declaredInAtRule(
+          source,
+          forced,
+          ".andes-cascader__check[data-state='indeterminate']::after",
+          'background-color',
+        ),
+      ).toBe('HighlightText');
+    });
+
+    it('slows the spinner instead of freezing it under reduced motion', () => {
+      expect(
+        declaredInAtRule(
+          source,
+          '@media (prefers-reduced-motion: reduce)',
+          '.andes-cascader__spinner',
+          'animation-duration',
+        ),
+      ).toBe('2.4s');
     });
   });
 });

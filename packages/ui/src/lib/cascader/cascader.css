@@ -190,6 +190,19 @@
   padding-inline-start: 0.1875rem;
 }
 
+/* Content in front of the selection. In a multiple box the tags sit 3px from the border, so
+   the prefix is pushed in to the size's padding. */
+.andes-cascader__prefix {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  color: var(--andes-color-muted-foreground);
+}
+
+.andes-cascader__trigger[data-multiple] .andes-cascader__prefix {
+  margin-inline-start: calc(var(--_padding-x) - 0.1875rem);
+}
+
 .andes-cascader__selection {
   display: flex;
   flex: 1 1 auto;
@@ -318,6 +331,9 @@ button.andes-cascader__combobox {
 .andes-cascader__tag--rest {
   padding-inline-end: var(--andes-space-2);
   color: var(--andes-color-muted-foreground);
+  /* "+ 2 ..." is a fixed run of Latin punctuation: isolated, so a right-to-left page does not
+     reorder the plus and the dots around the number. */
+  unicode-bidi: isolate;
 }
 
 .andes-cascader__trigger[data-size='sm'] .andes-cascader__tag {
@@ -475,6 +491,12 @@ button.andes-cascader__combobox {
   }
 }
 
+.andes-cascader__loading-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+}
+
 .andes-cascader__spinner {
   display: inline-block;
   flex: 0 0 auto;
@@ -563,6 +585,12 @@ button.andes-cascader__combobox {
   }
 }
 
+/* The overlay keeps the panel in the page until its exit animation ends (and a little after):
+   nothing under it should be clickable meanwhile. */
+.andes-cascader__panel[data-andes-closing] {
+  pointer-events: none;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .andes-cascader__panel[data-state='open'] {
     transform-origin: top center;
@@ -619,7 +647,29 @@ button.andes-cascader__combobox {
   max-height: var(--andes-cascader-column-height, 11.25rem);
 }
 
+/* `panelHeader` / `panelFooter` content, separated from the options by a rule. */
+.andes-cascader__panel-extra {
+  flex: 0 0 auto;
+  padding: var(--andes-space-2);
+}
+
+.andes-cascader__panel-extra--header {
+  border-block-end: 1px solid var(--andes-color-border);
+}
+
+.andes-cascader__panel-extra--footer {
+  border-block-start: 1px solid var(--andes-color-border);
+}
+
 .andes-cascader__option {
+  /* The highlight mixes the accent hover tone into the popover surface: the plain accent
+     token equals the popover surface in the dark theme, where it would not show. */
+  --andes-cascader-option-highlight: color-mix(
+    in srgb,
+    var(--andes-color-accent-hover) 70%,
+    var(--andes-color-popover)
+  );
+
   display: flex;
   box-sizing: border-box;
   align-items: center;
@@ -644,8 +694,10 @@ button.andes-cascader__combobox {
   white-space: nowrap;
 }
 
-/* An expanded option stays tinted while its column is open; the cursor and the pointer use
-   the neutral hover tint. A picked path is semibold. */
+/* An expanded option stays tinted while its column is open; the keyboard cursor
+   (`data-active`) and the pointer (`data-highlighted`, set by a real pointer move, never by a
+   plain `:hover`, so a panel opening under a resting pointer shows nothing) use the neutral
+   highlight. A picked path is semibold. */
 .andes-cascader__option[data-expanded] {
   background-color: var(
     --andes-color-primary-subtle,
@@ -653,9 +705,9 @@ button.andes-cascader__combobox {
   );
 }
 
-.andes-cascader__option:hover:not([data-disabled]),
+.andes-cascader__option[data-highlighted]:not([data-disabled]),
 .andes-cascader__option[data-active] {
-  background-color: var(--andes-color-accent);
+  background-color: var(--andes-cascader-option-highlight);
 }
 
 .andes-cascader__option[data-in-path],
@@ -669,10 +721,30 @@ button.andes-cascader__combobox {
   opacity: 0.6;
 }
 
+/* Forced colours drop backgrounds and font colours: the cursor and the pointer become an
+   outline, an open column's option gets a thinner one, the picked option takes the system's
+   selected-item colours, and a picked path stays semibold. */
 @media (forced-colors: active) {
-  .andes-cascader__option[data-active] {
-    outline: 2px solid transparent;
+  .andes-cascader__option[data-active],
+  .andes-cascader__option[data-highlighted]:not([data-disabled]) {
+    outline: 2px solid Highlight;
     outline-offset: -2px;
+  }
+
+  .andes-cascader__option[data-expanded] {
+    outline: 1px solid CanvasText;
+    outline-offset: -1px;
+  }
+
+  .andes-cascader__option[data-selected] {
+    background-color: SelectedItem;
+    color: SelectedItemText;
+    forced-color-adjust: none;
+  }
+
+  .andes-cascader__option[data-selected][data-active],
+  .andes-cascader__option[data-selected][data-highlighted] {
+    outline-color: SelectedItemText;
   }
 }
 
@@ -683,7 +755,9 @@ button.andes-cascader__combobox {
   color: var(--andes-color-muted-foreground);
 }
 
-[dir='rtl'] .andes-cascader__expand {
+/* The panel carries the field's `dir`; `:dir()` is read at the element, so it works through
+   the view encapsulation that a `[dir='rtl'] ...` ancestor selector cannot cross. */
+.andes-cascader__expand:dir(rtl) {
   transform: scaleX(-1);
 }
 
@@ -711,7 +785,15 @@ button.andes-cascader__combobox {
   box-sizing: border-box;
   width: 1rem;
   height: 1rem;
-  border: 1px solid var(--andes-color-input);
+  /* The input colour alone is about 1.5:1 against the surface; mixed 35% towards the
+     foreground it clears the 3:1 minimum for a control's edge, light and dark, as the
+     checkbox's own box does. */
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--andes-color-input),
+      var(--andes-color-foreground) 35%
+    );
   border-radius: var(--andes-radius-sm);
   background-color: var(--andes-color-background);
   transition:
@@ -719,7 +801,7 @@ button.andes-cascader__combobox {
     border-color 150ms ease;
 }
 
-.andes-cascader__option:hover:not([data-disabled])
+.andes-cascader__option[data-highlighted]:not([data-disabled])
   .andes-cascader__check[data-state='unchecked'] {
   border-color: var(--andes-color-primary);
 }
@@ -749,6 +831,30 @@ button.andes-cascader__combobox {
   inset-inline: 3px;
   height: 2px;
   background-color: var(--andes-color-primary-foreground);
+}
+
+/* System colours paint the box, the fill and the mark by state: backgrounds are replaced in
+   forced-colors mode, so the mark's own colours are set to be read there. */
+@media (forced-colors: active) {
+  .andes-cascader__check {
+    border-color: ButtonText;
+    background-color: Canvas;
+    forced-color-adjust: none;
+  }
+
+  .andes-cascader__check[data-state='checked'],
+  .andes-cascader__check[data-state='indeterminate'] {
+    border-color: Highlight;
+    background-color: Highlight;
+  }
+
+  .andes-cascader__check[data-state='checked']::after {
+    border-color: HighlightText;
+  }
+
+  .andes-cascader__check[data-state='indeterminate']::after {
+    background-color: HighlightText;
+  }
 }
 
 .andes-cascader__status {

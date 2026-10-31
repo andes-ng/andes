@@ -9,11 +9,13 @@ import {
 } from '@andes-ng/primitives';
 import { NgTemplateOutlet } from '@angular/common';
 import {
+  afterNextRender,
   afterRenderEffect,
   booleanAttribute,
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   DOCUMENT,
   effect,
   ElementRef,
@@ -55,10 +57,13 @@ import {
   type AndesCascaderNotFound,
   type AndesCascaderOption,
   type AndesCascaderOptionContext,
+  type AndesCascaderPanelContext,
   type AndesCascaderPlacement,
   type AndesCascaderSearch,
   type AndesCascaderSize,
   type AndesCascaderStatus,
+  type AndesCascaderTag,
+  type AndesCascaderTagContext,
   type AndesCascaderValue,
   type AndesCascaderVariant,
 } from './cascader-types';
@@ -73,6 +78,16 @@ export type AndesCascaderModel =
   | undefined;
 
 type CheckState = 'checked' | 'indeterminate' | 'unchecked';
+
+const NAVIGATION_KEYS: ReadonlySet<string> = new Set([
+  'ArrowDown',
+  'ArrowUp',
+  'ArrowLeft',
+  'ArrowRight',
+  'Home',
+  'End',
+  'Enter',
+]);
 
 const PLACEMENTS: Readonly<
   Record<
@@ -127,6 +142,20 @@ interface Column {
  * With `showSearch`, typing filters every path into one list that `ArrowDown`/`ArrowUp` and
  * `Enter` work on. Arrows swap sides in right-to-left pages.
  *
+ * ## Pointer
+ *
+ * An option under the pointer is drawn highlighted (`data-highlighted`) only once the pointer
+ * has moved over it, so a panel that opens beneath a pointer at rest shows no highlight. The
+ * keyboard cursor (`data-active`) is separate and always visible; the next key press clears
+ * the pointer highlight.
+ *
+ * ## Header, footer and scrolling
+ *
+ * `panelHeader` and `panelFooter` put content above and below the columns, inside the panel.
+ * `panelScroll` fires when a column (or the list of search results) scrolls: the "panel
+ * scroll" of a cascader is the scrolling of its columns, and `event.target` is the column
+ * that moved, so a `loadData` pager can watch the active one.
+ *
  * ## Loading options on demand
  *
  * With `loadData`, an option that has no `children` field (and is not `isLeaf`) is
@@ -156,6 +185,7 @@ interface Column {
     // Forwarded to the real combobox instead: a screen reader never sees this wrapper, and a
     // static `id` left here would be a duplicate that a `<label for>` resolves to first.
     '[attr.id]': 'null',
+    '[attr.name]': 'null',
     '[attr.aria-label]': 'null',
     '[attr.aria-labelledby]': 'null',
     '[attr.aria-describedby]': 'null',
@@ -167,6 +197,7 @@ interface Column {
 export class AndesCascader implements ControlValueAccessor {
   private readonly overlay = inject(AndesOverlayPrimitive);
   private readonly document = inject(DOCUMENT);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   private readonly panelTemplate =
     viewChild.required<TemplateRef<unknown>>('panel');
@@ -228,6 +259,62 @@ export class AndesCascader implements ControlValueAccessor {
   readonly placement = input<AndesCascaderPlacement>('bottomLeft');
   /** Extra classes on the overlay pane - the hook for scoping custom properties. */
   readonly panelClass = input<string | readonly string[] | null>(null);
+  /**
+   * Opens the panel once, right after the first render, as though the field had been
+   * clicked. Later opening and closing are up to the user or `[(open)]`.
+   */
+  readonly defaultOpen = input(false, { transform: booleanAttribute });
+  /** Marks the field required; surfaces as `aria-required` on the combobox. */
+  readonly required = input(false, { transform: booleanAttribute });
+  /**
+   * Posts the value with a native `<form>` submission: one hidden input per selected path,
+   * carrying this `name` and the value of the path's last option. Not needed with Angular
+   * forms, which read the value through the control instead.
+   */
+  readonly name = input<string | undefined>(undefined);
+  /** Focuses the combobox once the cascader has rendered, like a native `autofocus`. */
+  readonly autoFocus = input(false, { transform: booleanAttribute });
+  /**
+   * The text typed into the search. Two-way bindable as `[(searchValue)]`; the cascader empties
+   * it when the panel closes. `searchInput` fires only for text the user typed.
+   */
+  readonly searchValue = model('');
+  /** With `multiple`, empties the search text after each pick. Turn it off to keep the results. */
+  readonly autoClearSearchValue = input(true, { transform: booleanAttribute });
+  /** Renders each tag in `multiple` mode, in place of the built-in one. */
+  readonly tagTemplate = input<
+    TemplateRef<AndesCascaderTagContext> | undefined
+  >(undefined);
+  /** Content rendered before the selection, inside the field box. */
+  readonly prefix = input<TemplateRef<unknown> | undefined>(undefined);
+  /** Replaces the chevron. `null` removes it. */
+  readonly suffixIcon = input<TemplateRef<unknown> | null | undefined>(
+    undefined,
+  );
+  /** Replaces the clear button's icon. */
+  readonly clearIcon = input<TemplateRef<unknown> | undefined>(undefined);
+  /** Replaces each tag's remove icon. */
+  readonly removeIcon = input<TemplateRef<unknown> | undefined>(undefined);
+  /**
+   * Replaces the spinner: the field's while `loading`, and the one on an option while its
+   * children load.
+   */
+  readonly loadingIcon = input<TemplateRef<unknown> | undefined>(undefined);
+  /**
+   * Content rendered above the columns, inside the panel - a hint, or filters. Context: the
+   * search text as `$implicit`, and a `close` callback.
+   */
+  readonly panelHeader = input<
+    TemplateRef<AndesCascaderPanelContext> | undefined
+  >(undefined);
+  /**
+   * Content rendered below the columns, inside the panel - an "Add" form, or a link to manage
+   * the options. Context as for {@link panelHeader}. A press on a text field in here keeps the
+   * focus it gives it, and keys typed there are not read as option navigation.
+   */
+  readonly panelFooter = input<
+    TemplateRef<AndesCascaderPanelContext> | undefined
+  >(undefined);
   /** Overrides any of the cascader's strings, for translation. */
   readonly labels = input<Partial<AndesCascaderLabels>>({});
 
@@ -264,6 +351,18 @@ export class AndesCascader implements ControlValueAccessor {
     option: AndesCascaderOption;
     error: unknown;
   }>();
+  /** Focus entered the cascader from outside it. */
+  readonly focused = output<FocusEvent>();
+  /**
+   * Focus left the cascader altogether. Moving between the field and the panel's header or
+   * footer does not count.
+   */
+  readonly blurred = output<FocusEvent>();
+  /**
+   * A column (or the list of search results) scrolled; `event.target` is the one that did. The
+   * hook for loading more options at the end of the column the user is in.
+   */
+  readonly panelScroll = output<Event>();
 
   private readonly uid = nextUniqueId++;
   protected readonly panelId = this.overlay.contentId;
@@ -483,8 +582,53 @@ export class AndesCascader implements ControlValueAccessor {
   );
 
   protected optionContext(node: AndesCascaderNode): AndesCascaderOptionContext {
-    return { $implicit: node.option, label: node.label };
+    return {
+      $implicit: node.option,
+      label: node.label,
+      path: nodePath(node).map((entry) => entry.option),
+      searchValue: null,
+    };
   }
+
+  /** The `optionTemplate` context of a search result: the last option of the matching path. */
+  protected resultContext(
+    result: AndesCascaderSearchResult,
+  ): AndesCascaderOptionContext {
+    const node = result.nodes[result.nodes.length - 1];
+    return {
+      $implicit: node.option,
+      label: node.label,
+      path: result.nodes.map((entry) => entry.option),
+      searchValue: this.searchValue(),
+    };
+  }
+
+  protected tagContext(entry: SelectedEntry): AndesCascaderTagContext {
+    const tag: AndesCascaderTag = {
+      path: [...entry.path],
+      labels: entry.labels,
+      selectedOptions: entry.options,
+      closable: !this.isDisabled(),
+    };
+    return {
+      $implicit: tag,
+      onClose: () => {
+        if (!this.isDisabled()) {
+          this.removeEntry(entry);
+        }
+      },
+    };
+  }
+
+  /** What a native form posts for each selected path: the value of its last option. */
+  protected readonly formValues = computed(() =>
+    this.entries().map((entry) => String(entry.path[entry.path.length - 1])),
+  );
+
+  protected readonly panelContext = computed<AndesCascaderPanelContext>(() => ({
+    $implicit: this.searchValue(),
+    close: () => this.close(),
+  }));
 
   // ----- Search -------------------------------------------------------------------------
 
@@ -495,9 +639,8 @@ export class AndesCascader implements ControlValueAccessor {
     const search = this.showSearch();
     return typeof search === 'object' ? search : undefined;
   });
-  protected readonly searchText = signal('');
   protected readonly searching = computed(
-    () => this.searchEnabled() && this.searchText().trim() !== '',
+    () => this.searchEnabled() && this.searchValue().trim() !== '',
   );
 
   protected readonly results = computed<readonly AndesCascaderSearchResult[]>(
@@ -505,7 +648,7 @@ export class AndesCascader implements ControlValueAccessor {
       if (!this.searching()) {
         return [];
       }
-      return searchPaths(this.tree(), this.searchText(), {
+      return searchPaths(this.tree(), this.searchValue(), {
         search: this.searchConfig(),
         isCandidate: (node) =>
           this.multiple()
@@ -518,7 +661,7 @@ export class AndesCascader implements ControlValueAccessor {
   protected readonly activeResultIndex = signal(-1);
 
   protected resultParts(result: AndesCascaderSearchResult) {
-    const text = this.searchText();
+    const text = this.searchValue();
     return result.labels.map((label) => highlightParts(label, text));
   }
 
@@ -577,6 +720,10 @@ export class AndesCascader implements ControlValueAccessor {
     return node.key === this.activeKey();
   }
 
+  protected isHighlighted(node: AndesCascaderNode): boolean {
+    return node.key === this.highlightedKey();
+  }
+
   protected isLoadingNode(node: AndesCascaderNode): boolean {
     return this.loadingKeys().has(node.key);
   }
@@ -629,9 +776,44 @@ export class AndesCascader implements ControlValueAccessor {
     return content instanceof TemplateRef ? content : null;
   });
 
+  /**
+   * What the combobox controls: the tree itself, which is what its popup role names. With no
+   * tree on show (an empty panel) the panel stands in, so the reference never dangles.
+   */
+  protected readonly controlsId = computed(() => {
+    if (!this.isOpen()) {
+      return null;
+    }
+    const hasTree = this.searching()
+      ? this.results().length > 0
+      : this.tree().roots.length > 0;
+    return hasTree ? this.treeId : this.panelId;
+  });
+
   protected readonly side = computed(() => PLACEMENTS[this.placement()].side);
   /** Width of the field, so the search results list is as wide as it. */
   protected readonly anchorWidth = signal(0);
+  /**
+   * The text direction the field is laid out in, set on the panel: the panel renders in the
+   * overlay container, outside the field's own `dir`, and the columns and chevrons follow it.
+   */
+  protected readonly panelDirection = signal<'ltr' | 'rtl' | null>(null);
+
+  // ----- Pointer highlight --------------------------------------------------------------
+
+  /** The option the pointer is on (`data-highlighted`), set by a real pointer move only. */
+  protected readonly highlightedKey = signal<string | null>(null);
+  /** The same for a search result, by index. */
+  protected readonly highlightedResult = signal(-1);
+  /**
+   * Where the pointer last was, in screen coordinates: at the click that opened the panel,
+   * then at every move over the options. A `pointermove` at the same spot is not a move -
+   * browsers may dispatch one when the panel appears or a column scrolls under a stationary
+   * pointer - so it must not highlight the option that happens to be there.
+   */
+  private lastPointer: { readonly x: number; readonly y: number } | null = null;
+  private hasFocus = false;
+  private destroyed = false;
 
   private onChange: (value: AndesCascaderModel) => void = () => undefined;
   private onTouched: () => void = () => undefined;
@@ -721,9 +903,24 @@ export class AndesCascader implements ControlValueAccessor {
     this.overlay.closed.pipe(takeUntilDestroyed()).subscribe(() => {
       this.activeKey.set(null);
       this.pendingExpand = null;
-      this.searchText.set('');
+      this.clearPointerHighlight();
+      this.lastPointer = null;
+      if (this.searchValue() !== '') {
+        this.searchValue.set('');
+      }
       this.openState.set(false);
       this.onTouched();
+    });
+
+    inject(DestroyRef).onDestroy(() => (this.destroyed = true));
+
+    afterNextRender(() => {
+      if (this.autoFocus()) {
+        this.focus();
+      }
+      if (this.defaultOpen() && !this.overlay.isOpen()) {
+        this.open();
+      }
     });
   }
 
@@ -737,6 +934,7 @@ export class AndesCascader implements ControlValueAccessor {
     this.anchorWidth.set(
       this.box()?.nativeElement.getBoundingClientRect().width ?? 0,
     );
+    this.panelDirection.set(this.isRtl() ? 'rtl' : 'ltr');
     this.overlay.open(this.panelTemplate(), {
       // The anchor is the whole field box, which is not focusable; focus belongs on the
       // combobox inside it.
@@ -822,12 +1020,59 @@ export class AndesCascader implements ControlValueAccessor {
     if (target.closest('.andes-cascader__clear, .andes-cascader__tag-remove')) {
       return;
     }
+    // A click with no pointer behind it (`detail` 0) comes from a keyboard or from assistive
+    // technology; otherwise remember where the pointer is, so the panel opening beneath it
+    // does not count as a move.
+    this.lastPointer =
+      event.detail === 0 ? null : { x: event.screenX, y: event.screenY };
     if (this.searchEnabled()) {
       this.open();
       this.focus({ preventScroll: true });
     } else {
       this.toggle();
     }
+  }
+
+  /**
+   * A press inside the panel never takes focus from the combobox - the options are reached
+   * through `aria-activedescendant` - except on a text field of the header or footer, which
+   * must be able to take it.
+   */
+  protected onPanelMousedown(event: MouseEvent): void {
+    const target = event.target as Element | null;
+    if (
+      target?.closest(
+        'input, textarea, select, [contenteditable=""], [contenteditable="true"]',
+      )
+    ) {
+      return;
+    }
+    event.preventDefault();
+  }
+
+  protected onPanelKeydown(event: KeyboardEvent): void {
+    if (event.key !== 'Tab') {
+      return;
+    }
+    // Tab off the first or last control of the header or footer goes on from the field.
+    const tabbables = Array.from(
+      this.overlay
+        .panelElement()
+        ?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+    );
+    const edge = event.shiftKey
+      ? tabbables[0]
+      : tabbables[tabbables.length - 1];
+    if (!edge || event.target === edge) {
+      this.focus({ preventScroll: true });
+      this.close();
+    }
+  }
+
+  protected onPanelScroll(event: Event): void {
+    this.panelScroll.emit(event);
   }
 
   protected onClearClick(event: MouseEvent): void {
@@ -866,9 +1111,20 @@ export class AndesCascader implements ControlValueAccessor {
     this.toggleChecked(node);
   }
 
+  /** The pointer resting on an option opens its column, with `expandTrigger="hover"`. */
   protected onItemEnter(node: AndesCascaderNode): void {
     if (this.expandTrigger() === 'hover' && !node.disabled) {
       this.setActive(node);
+    }
+  }
+
+  /** A real pointer move over an option highlights it; it never moves the keyboard cursor. */
+  protected onItemPointerMove(
+    node: AndesCascaderNode,
+    event: PointerEvent,
+  ): void {
+    if (this.pointerMoved(event)) {
+      this.highlightedKey.set(node.disabled ? null : node.key);
     }
   }
 
@@ -876,10 +1132,81 @@ export class AndesCascader implements ControlValueAccessor {
     this.pickResult(index);
   }
 
-  protected onResultEnter(index: number): void {
-    if (!this.results()[index]?.disabled) {
-      this.activeResultIndex.set(index);
+  /** The pointer on a result highlights it and carries the cursor there, so Enter picks it. */
+  protected onResultPointerMove(index: number, event: PointerEvent): void {
+    if (!this.pointerMoved(event)) {
+      return;
     }
+    if (this.results()[index]?.disabled) {
+      this.highlightedResult.set(-1);
+      return;
+    }
+    this.highlightedResult.set(index);
+    this.activeResultIndex.set(index);
+  }
+
+  protected onPanelPointerLeave(): void {
+    this.clearPointerHighlight();
+  }
+
+  /** Whether a `pointermove` is a move of a mouse or pen, not touch or a repeat of a spot. */
+  private pointerMoved(event: PointerEvent): boolean {
+    if (event.pointerType === 'touch') {
+      return false;
+    }
+    const last = this.lastPointer;
+    if (last && last.x === event.screenX && last.y === event.screenY) {
+      return false;
+    }
+    this.lastPointer = { x: event.screenX, y: event.screenY };
+    return true;
+  }
+
+  private clearPointerHighlight(): void {
+    this.highlightedKey.set(null);
+    this.highlightedResult.set(-1);
+  }
+
+  // ----- Focus --------------------------------------------------------------------------
+
+  protected onFocusIn(event: FocusEvent): void {
+    if (!this.hasFocus) {
+      this.hasFocus = true;
+      this.focused.emit(event);
+    }
+  }
+
+  /**
+   * Focus moving between the field and the panel's header or footer is not a blur. When the
+   * new target is unknown (focus going nowhere, or an element being removed), the check
+   * waits a task for focus to settle.
+   */
+  protected onFocusOut(event: FocusEvent): void {
+    if (!this.hasFocus || this.ownsElement(event.relatedTarget)) {
+      return;
+    }
+    setTimeout(() => {
+      if (
+        this.destroyed ||
+        !this.hasFocus ||
+        this.ownsElement(this.document.activeElement)
+      ) {
+        return;
+      }
+      this.hasFocus = false;
+      this.blurred.emit(event);
+    });
+  }
+
+  private ownsElement(target: EventTarget | null): boolean {
+    if (!(target instanceof Node)) {
+      return false;
+    }
+    const panel = this.overlay.panelElement();
+    return (
+      this.host.nativeElement.contains(target) ||
+      (panel !== null && panel.contains(target))
+    );
   }
 
   // ----- Keyboard -----------------------------------------------------------------------
@@ -890,6 +1217,11 @@ export class AndesCascader implements ControlValueAccessor {
     }
     const open = this.overlay.isOpen();
     const key = event.key;
+
+    // The keyboard cursor takes over from the pointer highlight, so one row is lit at a time.
+    if (NAVIGATION_KEYS.has(key)) {
+      this.clearPointerHighlight();
+    }
 
     if (key === 'Tab') {
       if (open) {
@@ -902,7 +1234,7 @@ export class AndesCascader implements ControlValueAccessor {
     if (
       key === 'Backspace' &&
       this.multiple() &&
-      this.searchText() === '' &&
+      this.searchValue() === '' &&
       this.entries().length > 0
     ) {
       event.preventDefault();
@@ -1010,7 +1342,7 @@ export class AndesCascader implements ControlValueAccessor {
   }
 
   protected onSearchInput(text: string): void {
-    this.searchText.set(text);
+    this.searchValue.set(text);
     this.searchInput.emit(text);
     if (!this.overlay.isOpen()) {
       this.open();
@@ -1173,7 +1505,9 @@ export class AndesCascader implements ControlValueAccessor {
     const node = result.nodes[result.nodes.length - 1];
     if (this.multiple()) {
       this.toggleChecked(node);
-      this.searchText.set('');
+      if (this.autoClearSearchValue()) {
+        this.searchValue.set('');
+      }
       return;
     }
     const values = result.nodes.map((entry) => entry.value);

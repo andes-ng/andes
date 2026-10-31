@@ -2,10 +2,22 @@ import { JsonPipe } from '@angular/common';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import type { Meta, StoryObj } from '@storybook/angular';
 
+import { AndesButton } from '../button/button';
+import { AndesInput } from '../input/input';
 import { AndesCascader } from './cascader';
 import type { AndesCascaderOption } from './cascader-types';
 
 const IMPORTS = [AndesCascader, JsonPipe, ReactiveFormsModule];
+
+/** Thirty departments, so a column is taller than the panel and scrolls. */
+const LONG_LIST: AndesCascaderOption[] = Array.from({ length: 30 }, (_, i) => ({
+  value: `dept-${i + 1}`,
+  label: `Department ${i + 1}`,
+  children: [
+    { value: `dept-${i + 1}-a`, label: 'North' },
+    { value: `dept-${i + 1}-b`, label: 'South' },
+  ],
+}));
 
 /** Departments, provinces and districts: a realistic three-level tree. */
 const PLACES: AndesCascaderOption[] = [
@@ -191,17 +203,23 @@ export const States: Story = {
 };
 
 /**
- * Three ways to hold the value: `[(value)]` with `allowClear` and the `selectionChange`
- * event (the last change is shown under the field), and a reactive `FormControl` driven
- * from outside - set a value, toggle `disabled` - with a `<label for>` naming the field.
+ * Ways to hold the value and the panel. `[(value)]` with `allowClear` and the
+ * `selectionChange` event (the last change is shown under the field); a reactive `FormControl`
+ * driven from outside, with a `<label for>` naming the field; `[(open)]`, which follows the
+ * panel whoever opens or closes it (the button, a click, Escape); `focused` / `blurred`, which
+ * fire when focus enters or leaves the field (moving into the panel's own controls is not
+ * leaving). `name` posts the last value of each selected path with a native `<form>`, and
+ * `autoFocus` focuses the field on render.
  */
 export const Binding: Story = {
   render: () => ({
-    moduleMetadata: { imports: IMPORTS },
+    moduleMetadata: { imports: [...IMPORTS, AndesButton] },
     props: {
       places: PLACES,
       picked: ['cusco', 'urubamba', 'machu-picchu'],
       last: null,
+      panelOpen: false,
+      focusLog: [] as string[],
       control: new FormControl<string[] | null>([
         'arequipa',
         'arequipa-province',
@@ -222,10 +240,24 @@ export const Binding: Story = {
         <label for="story-place" style="font-size: 0.875rem; margin-top: 0.75rem;">Delivery place</label>
         <andes-cascader id="story-place" [options]="places" [formControl]="control" allowClear />
         <div style="display: flex; gap: 0.5rem;">
-          <button type="button" (click)="control.setValue(['cusco', 'cusco-province', 'wanchaq'])">Set Wanchaq</button>
-          <button type="button" (click)="control.disabled ? control.enable() : control.disable()">Toggle disabled</button>
+          <andes-button size="sm" variant="secondary" (click)="control.setValue(['cusco', 'cusco-province', 'wanchaq'])">Set Wanchaq</andes-button>
+          <andes-button size="sm" variant="secondary" (click)="control.disabled ? control.enable() : control.disable()">Toggle disabled</andes-button>
         </div>
         <code style="font-size: 0.75rem;">{{ control.value | json }} · {{ control.status }}</code>
+
+        <span style="font-size: 0.875rem; margin-top: 0.75rem;">Panel and focus</span>
+        <andes-cascader
+          aria-label="Place with a controlled panel"
+          [options]="places"
+          [(open)]="panelOpen"
+          placeholder="Controlled panel"
+          (focused)="focusLog = ['focused', ...focusLog].slice(0, 3)"
+          (blurred)="focusLog = ['blurred', ...focusLog].slice(0, 3)"
+        />
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <andes-button size="sm" variant="secondary" (click)="panelOpen = !panelOpen">{{ panelOpen ? 'Close' : 'Open' }} the panel</andes-button>
+          <code style="font-size: 0.75rem;">open: {{ panelOpen }} · {{ focusLog.join(', ') || 'no focus events' }}</code>
+        </div>
       </div>
     `,
   }),
@@ -288,14 +320,19 @@ export const Multiple: Story = {
  * `showSearch` filters every path: single, `multiple`, and with a custom `filter`/`sort`/
  * `limit` object (the third field matches only the last label, lists the shortest labels
  * first and caps the list at five).
+ *
+ * An `optionTemplate` also renders the results (see Display render): it receives the matching
+ * path and the text typed, so it can highlight on its own.
  */
 export const Search: Story = {
   render: () => ({
-    moduleMetadata: { imports: IMPORTS },
+    moduleMetadata: { imports: [...IMPORTS, AndesInput] },
     props: {
       places: PLACES,
       picked: null,
+      typed: '',
       many: [['cusco', 'urubamba', 'machu-picchu']],
+      keepText: [['lima', 'lima-province', 'miraflores']],
       search: {
         // Matches only the last label, and lists the shortest labels first.
         filter: (text: string, path: AndesCascaderOption[]) =>
@@ -314,22 +351,92 @@ export const Search: Story = {
         <code style="font-size: 0.75rem;">value: {{ picked | json }}</code>
         <andes-cascader aria-label="Places" multiple showSearch [options]="places" [(value)]="many" placeholder="Search places" />
         <andes-cascader aria-label="Place, starts with" [showSearch]="search" [options]="places" placeholder="Starts with..." />
+        <span style="font-size: 0.875rem; margin-top: 0.75rem;">The search text is a two-way <code>searchValue</code>, and <code>autoClearSearchValue</code> off keeps it after a pick, to tick several results</span>
+        <andes-cascader aria-label="Places, keeping the text" multiple showSearch [autoClearSearchValue]="false" [(searchValue)]="typed" [options]="places" [(value)]="keepText" placeholder="Search places" />
+        <andes-input aria-label="Search text" size="sm" [(value)]="typed" placeholder="Edit the search text from outside" />
       </div>
     `,
   }),
 };
 
+/**
+ * What the cascader renders. `displayRender` shapes the selection in the field and
+ * `optionTemplate` every option, in the columns and in search results (where it also gets the
+ * whole `path` and the `searchValue`). `tagTemplate` replaces a tag in `multiple` mode - its
+ * context carries `onClose` - and `prefix`, `suffixIcon` (`null` removes the chevron),
+ * `clearIcon`, `removeIcon` and `loadingIcon` swap the field's icons. `panelHeader` and
+ * `panelFooter` add content inside the panel - the footer here adds a department, and its field
+ * takes focus like any other - and `panelScroll` fires when a column scrolls (the last field
+ * counts those events).
+ */
 export const DisplayRender: Story = {
   render: () => ({
-    moduleMetadata: { imports: IMPORTS },
-    props: { places: PLACES, picked: ['lima', 'lima-province', 'surco'] },
+    moduleMetadata: { imports: [...IMPORTS, AndesButton, AndesInput] },
+    props: {
+      places: PLACES,
+      choices: [...PLACES],
+      longList: LONG_LIST,
+      picked: ['lima', 'lima-province', 'surco'],
+      many: [['cusco', 'cusco-province', 'wanchaq'], ['callao']],
+      added: null,
+      draft: '',
+      scrolls: 0,
+      add(this: { choices: AndesCascaderOption[]; draft: string }) {
+        const label = this.draft.trim();
+        if (label) {
+          this.choices = [
+            ...this.choices,
+            { value: label.toLowerCase().replace(/\s+/g, '-'), label },
+          ];
+          this.draft = '';
+        }
+      },
+    },
     template: `
       <ng-template #last let-labels let-options="selectedOptions">
         <span>{{ labels[labels.length - 1] }} <span style="opacity: 0.6;">({{ options[0].label }})</span></span>
       </ng-template>
-      <div style="display: flex; flex-direction: column; gap: 1rem; width: 300px;">
+      <ng-template #option let-option let-path="path" let-search="searchValue">
+        <span>{{ option.label }} <span style="opacity: 0.6;">{{ path.length === 1 ? 'department' : search ? path.length + ' levels' : '' }}</span></span>
+      </ng-template>
+      <ng-template #tag let-tag let-onClose="onClose">
+        <span style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0 0.5rem; border-radius: var(--andes-radius-full); background: var(--andes-color-primary-subtle); color: var(--andes-color-primary);">
+          {{ tag.labels[tag.labels.length - 1] }}
+          <andes-button variant="ghost" size="icon-xs" aria-label="Drop" (click)="onClose()">×</andes-button>
+        </span>
+      </ng-template>
+      <ng-template #pin>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+      </ng-template>
+      <ng-template #caret>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></svg>
+      </ng-template>
+      <ng-template #erase>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg>
+      </ng-template>
+      <ng-template #hourglass>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 2h12M6 22h12M7 2c0 6 10 6 10 10S7 16 7 22M17 2c0 6-10 6-10 10s10 4 10 10"/></svg>
+      </ng-template>
+      <ng-template #header let-search>
+        <span style="font-size: 0.75rem; color: var(--andes-color-muted-foreground);">{{ search ? 'Results for "' + search + '"' : 'Pick a department, then narrow it down' }}</span>
+      </ng-template>
+      <ng-template #footer let-close="close">
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <andes-input aria-label="New department" size="sm" placeholder="New department" [(value)]="draft" (keydown.enter)="add()" />
+          <andes-button size="sm" (click)="add(); close()">Add</andes-button>
+        </div>
+      </ng-template>
+      <div style="display: flex; flex-direction: column; gap: 1rem; width: 340px;">
         <andes-cascader aria-label="Last level only" [displayRender]="last" [options]="places" [(value)]="picked" />
         <andes-cascader aria-label="Custom separator" separator=" › " [options]="places" [(value)]="picked" />
+        <andes-cascader aria-label="Option template, columns and search" showSearch [optionTemplate]="option" [options]="places" placeholder="Search to see the path in each result" />
+        <andes-cascader aria-label="Places as pills" multiple [tagTemplate]="tag" [options]="places" [(value)]="many" />
+        <andes-cascader aria-label="Place with custom icons" allowClear [prefix]="pin" [suffixIcon]="caret" [clearIcon]="erase" [loadingIcon]="hourglass" [options]="places" [(value)]="picked" />
+        <andes-cascader aria-label="Places, custom remove icon" multiple [removeIcon]="erase" [options]="places" [(value)]="many" />
+        <andes-cascader aria-label="Loading, custom spinner" loading [loadingIcon]="hourglass" [suffixIcon]="null" [options]="places" placeholder="Loading" />
+        <andes-cascader aria-label="Place with header and footer" [panelHeader]="header" [panelFooter]="footer" showSearch [options]="choices" [(value)]="added" placeholder="Add a department from the footer" />
+        <andes-cascader aria-label="Long list" [options]="longList" (panelScroll)="scrolls = scrolls + 1" placeholder="Scroll the first column" />
+        <code style="font-size: 0.75rem;">column scroll events: {{ scrolls }}</code>
       </div>
     `,
   }),
@@ -404,6 +511,10 @@ export const OptionsData: Story = {
   }),
 };
 
+/**
+ * The panel opens above (`topLeft`, `topRight`) or below the field. The first field has
+ * `defaultOpen`, which opens the panel once on render (click away to dismiss it).
+ */
 export const Placement: Story = {
   parameters: { layout: 'fullscreen' },
   render: () => ({
@@ -411,7 +522,7 @@ export const Placement: Story = {
     props: { places: PLACES },
     template: `
       <div style="display: flex; justify-content: space-between; align-items: flex-end; height: 22rem; padding: 1rem;">
-        <andes-cascader aria-label="Opens upwards" placement="topLeft" style="width: 220px;" [options]="places" placeholder="Opens upwards" />
+        <andes-cascader aria-label="Opens upwards" placement="topLeft" defaultOpen style="width: 220px;" [options]="places" placeholder="Opens upwards" />
         <andes-cascader aria-label="Opens upwards, end" placement="topRight" style="width: 220px;" [options]="places" placeholder="Aligned to the end" />
       </div>
     `,

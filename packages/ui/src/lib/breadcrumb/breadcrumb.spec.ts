@@ -1955,6 +1955,9 @@ describe('Breadcrumb', () => {
       expect(declaredValue(css, trigger, 'margin-inline')).toBe(
         'calc(var(--andes-space-1) * -1)',
       );
+      expect(declaredValue(css, trigger, 'min-block-size')).toBe(
+        'var(--andes-text-line-height, 1.375rem)',
+      );
       expect(declaredValue(css, trigger, 'border-radius')).toBe(
         'var(--andes-radius-sm)',
       );

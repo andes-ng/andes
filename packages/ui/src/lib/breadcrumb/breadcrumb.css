@@ -232,6 +232,8 @@
   display: inline-flex;
   align-items: center;
   gap: var(--andes-space-1);
+  /* One body line tall even for the caret-only button, whose only visible content is the icon. */
+  min-block-size: var(--andes-text-line-height, 1.375rem);
   padding-block: 0;
   padding-inline: var(--andes-space-1);
   margin-inline: calc(var(--andes-space-1) * -1);

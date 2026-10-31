@@ -210,8 +210,9 @@ describe('date-format', () => {
     );
 
     it('keeps an era in the pattern as text', () => {
-      expect(patternFromIntl('en-US-u-ca-buddhist', { dateStyle: 'medium' }))
-        .toBe('MMMM[ ]D[, ]BBBB[ ][BE]');
+      expect(
+        patternFromIntl('en-US-u-ca-buddhist', { dateStyle: 'medium' }),
+      ).toBe('MMMM[ ]D[, ]BBBB[ ][BE]');
     });
   });
 

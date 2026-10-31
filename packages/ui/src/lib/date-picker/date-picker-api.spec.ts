@@ -6,6 +6,7 @@ import {
   AndesDatePicker,
   type AndesDatePickerMode,
   type AndesDatePickerValue,
+  type AndesTimeOptions,
 } from './date-picker';
 
 function d(year: number, month1: number, day: number): Date {
@@ -178,5 +179,88 @@ describe('AndesDatePicker Buddhist era', () => {
     view.type('01/03/2567');
 
     expect(toDateKey(view.host.value() as Date)).toBe('2024-03-01');
+  });
+});
+
+@Component({
+  imports: [AndesDatePicker],
+  template: `<andes-date-picker
+    picker="time"
+    locale="en-GB"
+    [format]="format()"
+    [showTime]="showTime()"
+    [open]="true"
+    [(value)]="value"
+  />`,
+})
+class TimeFormatHost {
+  readonly format = signal<string | null>(null);
+  readonly showTime = signal<AndesTimeOptions | null>(null);
+  readonly value = signal<AndesDatePickerValue | undefined>(
+    new Date(2024, 1, 15, 14, 5, 9),
+  );
+}
+
+describe('AndesDatePicker time columns from the format', () => {
+  function create(setup: (host: TimeFormatHost) => void) {
+    const fixture = TestBed.createComponent(TimeFormatHost);
+    setup(fixture.componentInstance);
+    fixture.detectChanges();
+    fixture.detectChanges();
+    return {
+      input: (fixture.nativeElement as HTMLElement).querySelector(
+        'input',
+      ) as HTMLInputElement,
+      units: () =>
+        Array.from(
+          document.querySelectorAll('.andes-date-picker__time-column'),
+          (column) => column.getAttribute('data-unit'),
+        ),
+      texts: (unit: string) =>
+        Array.from(
+          document.querySelectorAll(
+            `.andes-date-picker__time-column[data-unit="${unit}"] [role="option"]`,
+          ),
+          (option) => option.textContent?.trim(),
+        ),
+    };
+  }
+
+  it('shows hours and minutes for HH:mm', () => {
+    const view = create((host) => host.format.set('HH:mm'));
+    expect(view.units()).toEqual(['hours', 'minutes']);
+    expect(view.input.value).toBe('14:05');
+  });
+
+  it('shows the hours alone for HH', () => {
+    const view = create((host) => host.format.set('HH'));
+    expect(view.units()).toEqual(['hours']);
+  });
+
+  it('shows seconds when the format has them', () => {
+    const view = create((host) => host.format.set('HH:mm:ss'));
+    expect(view.units()).toEqual(['hours', 'minutes', 'seconds']);
+  });
+
+  it('runs a 12-hour clock with AM/PM for h:mm a', () => {
+    const view = create((host) => host.format.set('h:mm a'));
+    expect(view.units()).toEqual(['hours', 'minutes', 'meridiem']);
+    expect(view.texts('hours').slice(0, 2)).toEqual(['12', '01']);
+    expect(view.input.value).toBe('2:05 pm');
+  });
+
+  it('lets the format win over showTime options', () => {
+    const view = create((host) => {
+      host.format.set('HH:mm');
+      host.showTime.set({ showSecond: true, use12Hours: true });
+    });
+    expect(view.units()).toEqual(['hours', 'minutes']);
+  });
+
+  it('hides columns through showHour and showMinute without a format', () => {
+    const view = create((host) =>
+      host.showTime.set({ showHour: false, showSecond: true }),
+    );
+    expect(view.units()).toEqual(['minutes', 'seconds']);
   });
 });

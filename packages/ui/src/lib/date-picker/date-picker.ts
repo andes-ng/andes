@@ -49,6 +49,7 @@ import {
   formatWithIntl,
   formatWithPattern,
   parseWithPatterns,
+  patternFields,
   patternFromIntl,
   type AndesDateFormat,
 } from '../calendar/date-format';
@@ -137,19 +138,27 @@ export type AndesDatePickerType = AndesPickerType | 'time';
 
 /** `showTime` options. */
 export interface AndesTimeOptions {
+  /**
+   * Show the hours column. Default `true`. A token `format` with time tokens decides the
+   * columns instead: `HH:mm` shows hours and minutes, `HH` hours alone.
+   */
+  readonly showHour?: boolean;
+  /** Show the minutes column. Default `true`; a token `format` decides instead. */
+  readonly showMinute?: boolean;
   /** Interval between hour options. Default `1`. */
   readonly hourStep?: number;
   /** Interval between minute options. Default `1`. */
   readonly minuteStep?: number;
   /** Interval between second options. Default `1`. */
   readonly secondStep?: number;
-  /** Add a seconds column. Default `false`. */
+  /** Add a seconds column. Default `false`; a token `format` decides instead. */
   readonly showSecond?: boolean;
   /**
    * A 12-hour clock: hours run 12, 1-11 with an AM/PM column beside them, and
    * the displayed value uses the locale's 12-hour form. Default `false`: hours run
    * 00-23 and the displayed value is a 24-hour time, whatever the locale's own
-   * habit, so the field and the columns always agree.
+   * habit, so the field and the columns always agree. A token `format` decides
+   * instead: `h` or `a`/`A` in it is a 12-hour clock.
    */
   readonly use12Hours?: boolean;
   /**
@@ -216,6 +225,14 @@ export interface AndesDatePickerPreset {
 }
 
 type Side = 'start' | 'end';
+
+/** The time columns on show and their clock. */
+interface TimeUnits {
+  readonly hour: boolean;
+  readonly minute: boolean;
+  readonly second: boolean;
+  readonly twelve: boolean;
+}
 type TimeUnit = 'hours' | 'minutes' | 'seconds' | 'meridiem';
 
 interface TimeColumn {
@@ -1218,6 +1235,36 @@ export class AndesDatePicker implements ControlValueAccessor {
     return [MIDNIGHT, MIDNIGHT];
   });
 
+  /**
+   * Which time columns show, on which clock: from a token `format` that holds time tokens
+   * (`HH:mm` drops the seconds and `HH` the minutes too, `h` or `a` asks for 12 hours), else
+   * from `showTime`'s own options.
+   */
+  private readonly timeUnits = computed<TimeUnits | null>(() => {
+    const options = this.timeOptions();
+    if (!options) {
+      return null;
+    }
+    const pattern = this.patterns()?.[0];
+    const fields = pattern ? patternFields(pattern) : [];
+    const has = (...tokens: string[]) =>
+      fields.some((field) => tokens.includes(field));
+    if (has('H', 'HH', 'h', 'hh', 'm', 'mm', 's', 'ss')) {
+      return {
+        hour: has('H', 'HH', 'h', 'hh'),
+        minute: has('m', 'mm'),
+        second: has('s', 'ss'),
+        twelve: has('h', 'hh', 'a', 'A'),
+      };
+    }
+    return {
+      hour: options.showHour ?? true,
+      minute: options.showMinute ?? true,
+      second: !!options.showSecond,
+      twelve: !!options.use12Hours,
+    };
+  });
+
   protected readonly confirmRequired = computed(
     () => this.needConfirm() ?? this.timeOptions() !== null,
   );
@@ -1257,27 +1304,27 @@ export class AndesDatePicker implements ControlValueAccessor {
   private readonly intlOptions = computed<Intl.DateTimeFormatOptions>(() => {
     const base = this.displayFormat() ??
       DEFAULT_INTL[this.picker()] ?? { dateStyle: 'medium' };
-    const time = this.timeOptions();
-    if (!time) {
+    const units = this.timeUnits();
+    if (!units) {
       return base;
     }
     // The field follows the columns, never the locale's own clock: `hourCycle: 'h23'` rather
     // than `hour12: false`, which some engines print as 24:30 after midnight.
-    const clock: Intl.DateTimeFormatOptions = time.use12Hours
+    const clock: Intl.DateTimeFormatOptions = units.twelve
       ? { hour12: true, hourCycle: undefined }
       : { hour12: undefined, hourCycle: 'h23' };
     if (base.dateStyle) {
       return {
         ...base,
-        timeStyle: time.showSecond ? 'medium' : 'short',
+        timeStyle: units.second ? 'medium' : 'short',
         ...clock,
       };
     }
     return {
       ...base,
-      hour: '2-digit',
-      minute: '2-digit',
-      ...(time.showSecond ? { second: '2-digit' } : {}),
+      ...(units.hour ? { hour: '2-digit' } : {}),
+      ...(units.minute ? { minute: '2-digit' } : {}),
+      ...(units.second ? { second: '2-digit' } : {}),
       ...clock,
     };
   });
@@ -1490,13 +1537,14 @@ export class AndesDatePicker implements ControlValueAccessor {
 
   protected readonly timeColumns = computed<readonly TimeColumn[]>(() => {
     const options = this.timeOptions();
-    if (!options) {
+    const units = this.timeUnits();
+    if (!options || !units) {
       return [];
     }
     const side = this.editedSide();
     const time = this.timeFor(side)();
     const rules = this.timeRules(side);
-    const twelve = !!options.use12Hours;
+    const twelve = units.twelve;
     const afternoon = time.hours >= 12 ? 12 : 0;
 
     const steps = (count: number, step: number | undefined): number[] => {
@@ -1556,20 +1604,25 @@ export class AndesDatePicker implements ControlValueAccessor {
           disabled: disabledHours.has(value),
         }));
 
-    const columns: TimeColumn[] = [
-      column('hours', this.hoursLabel(), time.hours, hours),
-      column(
-        'minutes',
-        this.minutesLabel(),
-        time.minutes,
-        steps(60, options.minuteStep).map((value) => ({
-          value,
-          text: pad(value),
-          disabled: disabledMinutes.has(value),
-        })),
-      ),
-    ];
-    if (options.showSecond) {
+    const columns: TimeColumn[] = [];
+    if (units.hour) {
+      columns.push(column('hours', this.hoursLabel(), time.hours, hours));
+    }
+    if (units.minute) {
+      columns.push(
+        column(
+          'minutes',
+          this.minutesLabel(),
+          time.minutes,
+          steps(60, options.minuteStep).map((value) => ({
+            value,
+            text: pad(value),
+            disabled: disabledMinutes.has(value),
+          })),
+        ),
+      );
+    }
+    if (units.second) {
       columns.push(
         column(
           'seconds',
@@ -1583,7 +1636,7 @@ export class AndesDatePicker implements ControlValueAccessor {
         ),
       );
     }
-    if (twelve) {
+    if (twelve && units.hour) {
       const locale = this.locale();
       const halfDisabled = (offset: number) =>
         Array.from({ length: 12 }, (_, hour) => hour + offset).every((hour) =>
@@ -2778,7 +2831,7 @@ export class AndesDatePicker implements ControlValueAccessor {
       return false;
     }
     return !(
-      this.timeOptions()?.showSecond &&
+      this.timeUnits()?.second &&
       rules.disabledSeconds?.(time.hours, time.minutes).includes(time.seconds)
     );
   }

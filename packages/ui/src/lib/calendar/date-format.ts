@@ -78,6 +78,13 @@ function tokenize(pattern: string): Token[] {
   return tokens;
 }
 
+/** The field tokens of a pattern, in order, without its literal text. */
+export function patternFields(pattern: string): string[] {
+  return tokenize(pattern).flatMap((token) =>
+    token.kind === 'field' ? [token.token] : [],
+  );
+}
+
 const pad = (value: number, length = 2) => String(value).padStart(length, '0');
 
 /** Years between the Gregorian calendar and the Buddhist era (`BBBB`). */

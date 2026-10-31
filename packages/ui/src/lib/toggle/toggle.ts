@@ -5,6 +5,8 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
+  effect,
   ElementRef,
   forwardRef,
   inject,
@@ -35,6 +37,14 @@ export type {
 
 function noop(): void {
   /* replaced by registerOnChange/registerOnTouched */
+}
+
+/** Whether a (framework-scoped) keyframes name is the click ring or its twin. */
+function isRing(animationName: string): boolean {
+  return (
+    animationName.endsWith('andes-toggle-ripple') ||
+    animationName.endsWith('andes-toggle-ripple-alt')
+  );
 }
 
 /**
@@ -86,6 +96,7 @@ function noop(): void {
 export class AndesToggle<T = unknown> implements ControlValueAccessor {
   protected readonly group = inject(ANDES_TOGGLE_GROUP, { optional: true });
   private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly destroyRef = inject(DestroyRef);
 
   /** Pressed state when used on its own. Ignored inside a group (the group's value rules). */
   readonly pressed = model(false);
@@ -149,9 +160,48 @@ export class AndesToggle<T = unknown> implements ControlValueAccessor {
     !this.group || this.group.tabbable() === this ? 0 : -1,
   );
 
+  /**
+   * The one-shot ring hook, exposed as the button's `data-motion` attribute: `press` (or its
+   * twin `press-alt`) from the moment `pressed` changes, either way, until the ring animation
+   * ends. Absent on the first render and afterwards, so a toggle that starts out pressed never
+   * rings. The twin names alternate so a change that lands while a ring runs restarts it.
+   */
+  protected readonly motion = signal<'press' | 'press-alt' | null>(null);
+  private motionFlip = false;
+
+  /**
+   * Off until a moment after the first render, so the initial state - including a value a
+   * form or the group writes in a microtask after that render - never animates.
+   */
+  private motionReady = false;
+  private lastPressed: boolean | null = null;
+
   constructor() {
     // After the first render only, so it is browser-only (SSR-safe) and runs once per toggle.
-    afterNextRender(() => this.warnWithoutName());
+    afterNextRender(() => {
+      this.warnWithoutName();
+      const timer = setTimeout(() => (this.motionReady = true));
+      this.destroyRef.onDestroy(() => clearTimeout(timer));
+    });
+
+    // Turns a change of the RENDERED state (a click, the group's value, a form write) into the
+    // one-shot `data-motion` hook the stylesheet animates. A toggle that cannot change takes no
+    // hook: with no animation to run it would never be cleared and would ring later, stale.
+    effect(() => {
+      const pressed = this.isPressed();
+      const previous = this.lastPressed;
+      this.lastPressed = pressed;
+      if (
+        this.motionReady &&
+        previous !== null &&
+        previous !== pressed &&
+        !this.isDisabled() &&
+        !this.isReadOnly()
+      ) {
+        this.motionFlip = !this.motionFlip;
+        this.motion.set(this.motionFlip ? 'press' : 'press-alt');
+      }
+    });
   }
 
   /** Moves focus to the button. */
@@ -174,6 +224,32 @@ export class AndesToggle<T = unknown> implements ControlValueAccessor {
     const next = !this.pressed();
     this.pressed.set(next);
     this.onChange(next);
+  }
+
+  /**
+   * The ring finished: drop the hook so the next change can replay it. Only the ring counts -
+   * the stylesheet's keyframes names are scoped by the framework (hence the suffix match) and
+   * any other animation, or one bubbling up from the label, must not clear it.
+   */
+  protected onMotionEnd(event: AnimationEvent): void {
+    if (event.target === event.currentTarget && isRing(event.animationName)) {
+      this.motion.set(null);
+    }
+  }
+
+  /**
+   * A ring that is cut short (the toggle was disabled or went read-only mid-way) never ends, so
+   * it would replay when the toggle is enabled again. Restarting under the twin name cancels the
+   * old ring too, so only the cancel of the ring that is current clears the hook.
+   */
+  protected onMotionCancel(event: AnimationEvent): void {
+    if (
+      event.target === event.currentTarget &&
+      isRing(event.animationName) &&
+      event.animationName.endsWith('-alt') === (this.motion() === 'press-alt')
+    ) {
+      this.motion.set(null);
+    }
   }
 
   protected onBlur(): void {

@@ -31,7 +31,10 @@ export default meta;
 
 type Story = StoryObj<AndesToggle>;
 
-/** Playground: every input is a control. */
+/**
+ * Playground: every input is a control. Pressing or releasing a toggle sends out a soft ring in
+ * its color and holding it down shrinks it slightly; neither plays under reduced motion.
+ */
 export const Default: Story = {};
 
 /** The default and outline variants, each unpressed, pressed and disabled. */

@@ -322,9 +322,9 @@
 }
 
 .andes-slider__thumb:focus-visible {
-  outline: 2px solid var(--andes-color-focus-ring);
-  /* Clears the grown knob, its ring and the 6px halo (12px from the centre) with a gap. */
-  outline-offset: 6px;
+  /* The grown knob, its ring and the soft halo mark focus; a second outline around the halo
+     would double the indicator. Forced colors, which drop the halo, restore a real outline. */
+  outline: none;
 }
 
 .andes-slider__thumb[data-dragging] {
@@ -567,6 +567,11 @@
   .andes-slider__thumb[data-dragging]::after {
     box-shadow: 0 0 0 2.5px Highlight;
     outline: 0 solid transparent;
+  }
+
+  .andes-slider__thumb:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 4px;
   }
 
   :host([data-disabled]) .andes-slider__indicator {

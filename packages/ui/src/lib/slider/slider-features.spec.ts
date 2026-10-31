@@ -849,7 +849,7 @@ describe('AndesSlider features', () => {
           'touch-action',
         ),
       ).toBe('auto');
-      // The hover growth is scoped to the editable, enabled slider; focus-visible keeps its ring.
+      // The hover growth is scoped to the editable, enabled slider; focus-visible shows the halo.
       expect(CSS).toContain(
         ':host(:not([data-readonly]):not([data-disabled]))\n  .andes-slider__thumb:not([data-disabled]):hover::after',
       );
@@ -880,14 +880,17 @@ describe('AndesSlider features', () => {
       expect(CSS).toContain('.andes-slider__thumb[data-dragging]::after');
     });
 
-    it('clears the halo with the keyboard focus outline', () => {
+    it('marks keyboard focus with the halo alone, without a second outline', () => {
+      expect(
+        declaredValue(CSS, '.andes-slider__thumb:focus-visible', 'outline'),
+      ).toBe('none');
       expect(
         declaredValue(
           CSS,
           '.andes-slider__thumb:focus-visible',
           'outline-offset',
         ),
-      ).toBe('6px');
+      ).toBeUndefined();
     });
 
     it('gives a disabled thumb no halo and no hover growth', () => {
@@ -903,6 +906,9 @@ describe('AndesSlider features', () => {
       const forced = CSS.slice(CSS.indexOf('@media (forced-colors: active)'));
       expect(forced).toContain('outline: 0 solid transparent');
       expect(forced).not.toContain('outline: 6px solid');
+      expect(forced).toContain(
+        '.andes-slider__thumb:focus-visible {\n    outline: 2px solid Highlight;',
+      );
     });
   });
 

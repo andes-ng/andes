@@ -224,7 +224,7 @@ describe('AndesRadioGroup / AndesRadio', () => {
     expectLength(getComputedStyle(control).width, '1rem');
   });
 
-  it('starts the dot at half size and transparent, so selecting settles in softly', () => {
+  it('starts the dot collapsed and transparent, so selecting grows it from the center', () => {
     const { fixture } = createPlainHost();
     const dot = fixture.nativeElement.querySelector(
       'andes-radio:not([data-checked]) .andes-radio__dot',
@@ -232,7 +232,7 @@ describe('AndesRadioGroup / AndesRadio', () => {
     const style = getComputedStyle(dot);
 
     expect(style.opacity).toBe('0');
-    expect(style.transform).toBe('scale(0.5)');
+    expect(style.transform).toBe('scale(0)');
   });
 
   it('gives each group instance its own isolated name via DI-scoped state', () => {

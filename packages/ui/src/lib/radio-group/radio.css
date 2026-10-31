@@ -83,14 +83,22 @@
     );
   background-color: var(--andes-color-background);
   transition:
-    border-color var(--andes-motion-duration-fast, 0.1s)
-      var(--andes-motion-ease-in-out, cubic-bezier(0.645, 0.045, 0.355, 1)),
-    background-color var(--andes-motion-duration-fast, 0.1s)
-      var(--andes-motion-ease-in-out, cubic-bezier(0.645, 0.045, 0.355, 1));
+    border-color 0.2s cubic-bezier(0.78, 0.14, 0.15, 0.86),
+    background-color 0.2s cubic-bezier(0.78, 0.14, 0.15, 0.86);
 }
 
 :host(.andes-radio--checked) .andes-radio__control {
+  /* Selected: a solid primary disc with a light dot, the same filled look as a checked
+     checkbox, so the two controls read as one family and a selected radio is unmistakable
+     from a distance (a thin ring with a small dot is easy to miss). */
   border-color: var(--andes-color-primary);
+  background-color: var(--andes-color-primary);
+}
+
+/* prettier-ignore */
+:host(.andes-radio--checked:not(.andes-radio--disabled):not(.andes-radio--readonly)) .andes-radio__label:hover .andes-radio__control {
+  border-color: var(--andes-color-primary-hover);
+  background-color: var(--andes-color-primary-hover);
 }
 
 /* A read-only radio will not select, so it does not light up on hover either. */
@@ -100,14 +108,19 @@
 }
 
 .andes-radio__dot {
-  /* 8px inside the 14px content box leaves a whole 3px on each side, so the dot sits on the
+  /* 6px inside the 14px content box leaves a whole 4px on each side, so the dot sits on the
      pixel grid, dead center, instead of blurring across a half-pixel offset. */
-  width: 0.5rem;
-  height: 0.5rem;
+  width: 0.375rem;
+  height: 0.375rem;
   border-radius: var(--andes-radius-full);
-  background-color: var(--andes-color-primary);
+  background-color: var(--andes-color-primary-foreground);
   opacity: 0;
-  transform: scale(0.5);
+  transform: scale(0);
+  /* The dot grows out of the center when the radio is selected and shrinks back when it is
+     not, as a transition: it only runs on a change, never on the first render. */
+  transition:
+    transform 0.3s cubic-bezier(0.78, 0.14, 0.15, 0.86),
+    opacity 0.3s cubic-bezier(0.78, 0.14, 0.15, 0.86);
 }
 
 /* A `indicator` template: the consumer's glyph fills the dot's area, in the primary color. */
@@ -121,7 +134,7 @@
   justify-content: center;
   border-radius: 0;
   background-color: transparent;
-  color: var(--andes-color-primary);
+  color: var(--andes-color-primary-foreground);
   font-size: 0.75rem;
   line-height: 1;
 }
@@ -137,28 +150,28 @@
   transform: none;
 }
 
-/* Motion: a one-shot animation keyed off `data-motion`, which the component sets only when a
-   radio BECOMES checked after the first render - so one that starts out checked never
-   animates. The dot scales in while the ring's border color fills (the transition on the
-   circle). Only with motion allowed, and not in forced-colors mode, where the system palette
-   already redraws the circle. */
+/* Motion: the dot and the disc colors are transitions (above). On top of that, a soft ripple
+   leaves the disc when a radio BECOMES selected: a one-shot animation keyed off `data-motion`,
+   which the component sets only after the first render, so a radio that starts out selected
+   never animates. Only with motion allowed, and not in forced-colors mode, where the system
+   palette already redraws the circle. */
 
-@keyframes andes-radio-dot {
+@keyframes andes-radio-ripple {
   from {
-    opacity: 0;
-    transform: scale(0);
+    box-shadow: 0 0 0 0
+      color-mix(in srgb, var(--andes-color-primary) 35%, transparent);
   }
 
   to {
-    opacity: 1;
-    transform: scale(1);
+    box-shadow: 0 0 0 6px
+      color-mix(in srgb, var(--andes-color-primary) 0%, transparent);
   }
 }
 
 @media (prefers-reduced-motion: no-preference) and (forced-colors: none) {
   /* prettier-ignore */
-  .andes-radio__label[data-motion='check'] .andes-radio__dot {
-    animation: andes-radio-dot var(--andes-motion-duration-mid, 0.15s) var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1));
+  .andes-radio__label[data-motion='check'] .andes-radio__control {
+    animation: andes-radio-ripple 0.4s cubic-bezier(0.08, 0.82, 0.17, 1);
   }
 }
 
@@ -175,6 +188,11 @@
 }
 
 /* prettier-ignore */
+:host(.andes-radio--invalid.andes-radio--checked) .andes-radio__control, :host(.andes-radio--invalid.andes-radio--checked) .andes-radio__label:hover .andes-radio__control {
+  background-color: var(--andes-color-danger);
+}
+
+/* prettier-ignore */
 :host(.andes-radio--invalid) .andes-radio__input:focus-visible ~ .andes-radio__control {
   outline-color: var(--andes-color-danger);
 }
@@ -185,6 +203,11 @@
 /* prettier-ignore */
 :host(.andes-radio--warning) .andes-radio__control, :host(.andes-radio--warning) .andes-radio__label:hover .andes-radio__control {
   border-color: var(--andes-color-warning-hover);
+}
+
+/* prettier-ignore */
+:host(.andes-radio--warning.andes-radio--checked) .andes-radio__control, :host(.andes-radio--warning.andes-radio--checked) .andes-radio__label:hover .andes-radio__control {
+  background-color: var(--andes-color-warning-hover);
 }
 
 /* prettier-ignore */
@@ -556,6 +579,7 @@
    above lose to it. */
 @media (prefers-reduced-motion: reduce) {
   .andes-radio__control,
+  .andes-radio__dot,
   :host(.andes-radio--card) .andes-radio__label,
   :host(.andes-radio--button) .andes-radio__text {
     transition: none;
@@ -574,15 +598,16 @@
 
   :host(.andes-radio--checked) .andes-radio__control {
     border-color: Highlight;
+    background-color: Highlight;
   }
 
   .andes-radio__dot {
-    background-color: Highlight;
+    background-color: HighlightText;
   }
 
   .andes-radio__dot--custom {
     background-color: transparent;
-    color: Highlight;
+    color: HighlightText;
   }
 
   :host(.andes-radio--disabled) .andes-radio__control {

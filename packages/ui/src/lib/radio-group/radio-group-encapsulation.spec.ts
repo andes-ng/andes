@@ -96,7 +96,7 @@ describe('radio stylesheet contract', () => {
       expect(inside).toBe(everywhere);
     });
 
-    it('keys the animation off the one-shot data-motion hook', () => {
+    it('keys the ripple off the one-shot data-motion hook', () => {
       const motion = withoutComments(atRuleBody(radioCss(), MOTION_QUERY));
       const selectors = motion
         .split('}')
@@ -106,27 +106,32 @@ describe('radio stylesheet contract', () => {
       expect(selectors.length).toBeGreaterThan(0);
       for (const selector of selectors) {
         expect(selector).toContain("[data-motion='check']");
-        expect(selector).toContain('.andes-radio__dot');
+        expect(selector).toContain('.andes-radio__control');
       }
     });
 
-    it('scales the dot in with the shared motion tokens (mid duration, ease-out)', () => {
+    it('fades a soft ring out of the selected disc', () => {
       const css = radioCss();
       const motion = atRuleBody(css, MOTION_QUERY);
-      const keyframes = atRuleBody(css, '@keyframes andes-radio-dot');
+      const keyframes = atRuleBody(css, '@keyframes andes-radio-ripple');
 
-      expect(keyframes).toContain('scale(0)');
-      expect(keyframes).toContain('scale(1)');
-      expect(motion).toContain('var(--andes-motion-duration-mid');
-      expect(motion).toContain('var(--andes-motion-ease-out');
+      expect(keyframes).toContain('box-shadow: 0 0 0 0');
+      expect(keyframes).toContain('box-shadow: 0 0 0 6px');
+      expect(motion).toContain('andes-radio-ripple 0.4s');
     });
 
-    it('draws the checked dot with no transition, so nothing animates without the hook', () => {
+    it('grows the dot with a transition on transform and opacity, never on the first render', () => {
       const css = withoutComments(radioCss());
       const start = css.indexOf('.andes-radio__dot {');
       const dotRule = css.slice(start, css.indexOf('}', start));
 
-      expect(dotRule).not.toContain('transition');
+      expect(dotRule).toContain('transform: scale(0)');
+      expect(dotRule).toContain(
+        'transform 0.3s cubic-bezier(0.78, 0.14, 0.15, 0.86)',
+      );
+      expect(dotRule).toContain(
+        'opacity 0.3s cubic-bezier(0.78, 0.14, 0.15, 0.86)',
+      );
       expect(dotRule).not.toContain('animation');
     });
 
@@ -137,6 +142,7 @@ describe('radio stylesheet contract', () => {
       );
 
       expect(reduced).toContain('.andes-radio__control');
+      expect(reduced).toContain('.andes-radio__dot');
       expect(reduced).toContain('.andes-radio__label');
       expect(reduced).toContain('.andes-radio__text');
       expect(reduced).toContain('transition: none');

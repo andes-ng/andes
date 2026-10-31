@@ -1395,16 +1395,31 @@ describe('AndesCalendar', () => {
         // The decade view is the top: its caption is not a button.
         expect(caption()?.tagName).toBe('SPAN');
 
+        // A year goes straight back to the days, on the month the user was on.
         click(cell(d(2026, 1, 1)));
-        expect(host.calendar().view()).toBe('month');
-        expect(caption()?.textContent?.trim()).toBe('2026');
+        expect(host.calendar().view()).toBe('date');
+        expect(caption()?.textContent?.trim()).toBe('February 2026');
         // Drilling down navigates; it never selects.
         expect(host.value()).toBeNull();
 
+        click(caption());
+        expect(host.calendar().view()).toBe('month');
         click(cell(d(2026, 8, 1)));
         expect(host.calendar().view()).toBe('date');
         expect(caption()?.textContent?.trim()).toBe('August 2026');
         expect(root.querySelector('[data-date="2026-08-15"]')).toBeTruthy();
+      });
+
+      it('drills from the year grid of a month picker back to its months', () => {
+        const { host, caption, click, cell } = createFeatures((features) =>
+          features.picker.set('month'),
+        );
+
+        click(caption());
+        expect(host.calendar().view()).toBe('year');
+        click(cell(d(2026, 1, 1)));
+        expect(host.calendar().view()).toBe('month');
+        expect(caption()?.textContent?.trim()).toBe('2026');
       });
 
       it('moves focus into the new grid', () => {
@@ -1747,10 +1762,15 @@ describe('AndesCalendar', () => {
     });
 
     it('reports every pick with the grid it came from', () => {
-      const { host, click, view } = createHooks((h) => h.panelView.set('year'));
+      const { host, click, view, fixture } = createHooks((h) =>
+        h.panelView.set('year'),
+      );
 
+      // A year goes straight back to the days, on the month shown before.
       click('2027-01-01');
-      expect(view()).toBe('month');
+      expect(view()).toBe('date');
+      host.panelView.set('month');
+      fixture.detectChanges();
       click('2027-05-01');
       expect(view()).toBe('date');
       click('2027-05-12');

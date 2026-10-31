@@ -1427,7 +1427,12 @@ export class AndesCalendar {
     this.cellSelect.emit({ date, source: cell.view });
   }
 
-  /** A click in a coarser grid than `picker`: open the next finer grid on it. */
+  /**
+   * A click in a coarser grid than `picker`: go back to the picker's own grid on it. A
+   * year picked on the way to a day opens that year's days straight away, on the month the
+   * user was on, rather than stopping at the month grid: the caption climbs again if the
+   * month should change too.
+   */
   private drillDown(cell: AndesCalendarCell): void {
     const base = baseViewFor(this.picker());
     let month = cell.date;
@@ -1441,8 +1446,7 @@ export class AndesCalendar {
     }
     this.visibleMonth.set(startOfMonth(month));
     this.monthChange.emit(startOfMonth(month));
-    const next: AndesCalendarView =
-      cell.view === 'year' && base === 'date' ? 'month' : base;
+    const next: AndesCalendarView = base;
     this.view.set(next);
     this.focusedDate.set(null);
     this.panelChange.emit({ date: startOfMonth(month), view: next });

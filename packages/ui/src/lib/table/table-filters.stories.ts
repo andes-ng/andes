@@ -10,6 +10,7 @@ import type { Meta, StoryObj } from '@storybook/angular';
 import { moduleMetadata } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
+import { AndesInput } from '../input/input';
 import { AndesTable, type AndesTableChange } from './table';
 import { AndesTableBody } from './table-body';
 import { AndesTableCell } from './table-cell';
@@ -304,7 +305,7 @@ class FilterTreeDemo {
  */
 @Component({
   selector: 'andes-filter-panel-demo',
-  imports: [...TABLE_PARTS, AndesButton],
+  imports: [...TABLE_PARTS, AndesButton, AndesInput],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <andes-table #table [(filters)]="filters" [(sort)]="sort">
@@ -361,14 +362,14 @@ class FilterTreeDemo {
       let-close="close"
     >
       <div class="search-panel">
-        <input
+        <andes-input
           class="search-panel__input"
           type="search"
           placeholder="Search"
           aria-label="Search text"
           [value]="selected[0] ?? ''"
-          (input)="setSelected(textValues($any($event.target).value))"
-          (keydown.enter)="confirm()"
+          (valueChange)="setSelected(textValues($event))"
+          (pressEnter)="confirm()"
         />
         <div class="search-panel__actions">
           <andes-button size="sm" (click)="confirm()">Search</andes-button>
@@ -406,27 +407,6 @@ class FilterTreeDemo {
         display: grid;
         gap: var(--andes-space-2);
         padding: var(--andes-space-2);
-      }
-      .search-panel__input {
-        box-sizing: border-box;
-        width: 100%;
-        height: var(--andes-control-height-md, 2rem);
-        padding-inline: var(--andes-control-padding-x-md, 0.6875rem);
-        border: 1px solid var(--andes-color-input);
-        border-radius: var(--andes-control-radius-md, 0.375rem);
-        background-color: var(--andes-color-background);
-        color: var(--andes-color-foreground);
-        font: inherit;
-      }
-      .search-panel__input:focus-visible {
-        outline: 2px solid transparent;
-        outline-offset: 2px;
-        border-color: var(--andes-color-focus-ring);
-        box-shadow: var(
-          --andes-focus-halo,
-          0 0 0 3px
-            color-mix(in srgb, var(--andes-color-focus-ring) 20%, transparent)
-        );
       }
       .search-panel__actions {
         display: flex;
@@ -531,7 +511,7 @@ class FilterPanelDemo {
   protected focusSearch(): void {
     requestAnimationFrame(() =>
       document
-        .querySelector<HTMLInputElement>('.search-panel__input')
+        .querySelector<HTMLInputElement>('.search-panel__input input')
         ?.select(),
     );
   }

@@ -16,6 +16,8 @@ import type { Meta, StoryObj } from '@storybook/angular';
 import { moduleMetadata } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
+import { AndesInput } from '../input/input';
+import { AndesInputNumber } from '../input-number/input-number';
 import {
   AndesTable,
   type AndesTableRowSelectEvent,
@@ -520,7 +522,7 @@ const METHOD_OPTIONS: readonly AndesTableFilterOption[] = [
  */
 @Component({
   selector: 'andes-table-filter-demo',
-  imports: [...TABLE_PARTS, AndesButton],
+  imports: [...TABLE_PARTS, AndesButton, AndesInput],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <andes-table [(filters)]="filters" [(sort)]="sort">
@@ -595,14 +597,13 @@ const METHOD_OPTIONS: readonly AndesTableFilterOption[] = [
       let-clear="clear"
     >
       <div class="client-search">
-        <input
+        <andes-input
           type="search"
-          class="client-search__input"
           aria-label="Client name contains"
           placeholder="Client name contains…"
           [value]="selected[0] ?? ''"
-          (input)="setSelected(textValues($any($event.target).value))"
-          (keydown.enter)="confirm()"
+          (valueChange)="setSelected(textValues($event))"
+          (pressEnter)="confirm()"
         />
         <div class="client-search__actions">
           <andes-button variant="link" size="sm" (click)="clear()"
@@ -620,32 +621,6 @@ const METHOD_OPTIONS: readonly AndesTableFilterOption[] = [
         display: grid;
         gap: var(--andes-space-2);
         padding: var(--andes-space-2);
-      }
-      .client-search__input {
-        box-sizing: border-box;
-        height: 2rem;
-        padding-inline: 0.6875rem;
-        border: 1px solid var(--andes-color-input);
-        border-radius: var(--andes-radius-md);
-        background-color: var(--andes-color-background);
-        color: var(--andes-color-foreground);
-        font: inherit;
-        transition:
-          border-color 150ms ease,
-          box-shadow 150ms ease;
-      }
-      .client-search__input:hover {
-        border-color: color-mix(
-          in srgb,
-          var(--andes-color-primary) 65%,
-          var(--andes-color-input)
-        );
-      }
-      .client-search__input:focus {
-        border-color: var(--andes-color-primary);
-        box-shadow: 0 0 0 2px
-          color-mix(in srgb, var(--andes-color-primary) 20%, transparent);
-        outline: none;
       }
       .client-search__actions {
         display: flex;
@@ -949,38 +924,7 @@ export class AndesTablePaginationDemo {
   }
 }
 
-const FIELD_STYLES = `
-  .demo-input {
-    box-sizing: border-box;
-    height: 2rem;
-    padding-inline: 0.6875rem;
-    border: 1px solid var(--andes-color-input);
-    border-radius: var(--andes-radius-md);
-    background-color: var(--andes-color-background);
-    color: var(--andes-color-foreground);
-    font-family: inherit;
-    font-size: 0.875rem;
-    line-height: 1.375rem;
-    transition:
-      border-color 150ms ease,
-      box-shadow 150ms ease;
-  }
-  .demo-input:hover {
-    border-color: color-mix(in srgb, var(--andes-color-primary) 65%, var(--andes-color-input));
-  }
-  .demo-input:focus {
-    border-color: var(--andes-color-primary);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--andes-color-primary) 20%, transparent);
-    outline: none;
-  }
-  .demo-input::placeholder {
-    color: var(--andes-color-muted-foreground);
-  }
-  .demo-cell-input {
-    width: 100%;
-    height: 1.5rem;
-    padding-inline: 0.4375rem;
-  }
+const CHECKS_STYLES = `
   .demo-checks {
     display: flex;
     flex-wrap: wrap;
@@ -1354,7 +1298,7 @@ const LEDGER: readonly LedgerLine[] = Array.from(
  */
 @Component({
   selector: 'andes-table-virtual-demo',
-  imports: [...TABLE_PARTS, AndesButton],
+  imports: [...TABLE_PARTS, AndesButton, AndesInputNumber],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <andes-table
@@ -1369,14 +1313,14 @@ const LEDGER: readonly LedgerLine[] = Array.from(
         <h3>General ledger · {{ lines.length }} lines</h3>
         <span class="demo-pager">
           <label for="jump-row">Row</label>
-          <input
+          <andes-input-number
             id="jump-row"
             class="demo-input"
-            type="number"
-            min="1"
+            size="sm"
+            [min]="1"
             [max]="lines.length"
             [value]="jump()"
-            (input)="jump.set(+$any($event.target).value)"
+            (valueChange)="jump.set(+($event ?? 1))"
           />
           <andes-button
             variant="outline"
@@ -1415,7 +1359,7 @@ const LEDGER: readonly LedgerLine[] = Array.from(
     </andes-table>
     <p class="demo-state">{{ selected().length }} lines selected</p>
   `,
-  styles: [DEMO_STYLES, FIELD_STYLES, '.demo-input { width: 6rem; }'],
+  styles: [DEMO_STYLES, '.demo-input { display: inline-block; width: 6rem; }'],
 })
 export class AndesTableVirtualDemo {
   protected readonly lines = LEDGER;
@@ -1544,7 +1488,7 @@ export class AndesTableResizeDemo {
   `,
   styles: [
     DEMO_STYLES,
-    FIELD_STYLES,
+    CHECKS_STYLES,
     'fieldset { margin: 0; padding-inline: 0; border: 0; }',
   ],
 })
@@ -1692,7 +1636,7 @@ export class AndesTableServerDemo {
  */
 @Component({
   selector: 'andes-table-editable-demo',
-  imports: [...TABLE_PARTS, AndesButton],
+  imports: [...TABLE_PARTS, AndesButton, AndesInput, AndesInputNumber],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <andes-table tableLayout="fixed">
@@ -1712,21 +1656,22 @@ export class AndesTableServerDemo {
             <td andesTableCell>{{ order.id }}</td>
             @if (editing() === order.id) {
               <td andesTableCell>
-                <input
-                  class="demo-input demo-cell-input"
-                  [attr.aria-label]="'Client of ' + order.id"
+                <andes-input
+                  class="demo-cell-input"
+                  size="sm"
+                  [aria-label]="'Client of ' + order.id"
                   [value]="draft().client"
-                  (input)="patch({ client: $any($event.target).value })"
+                  (valueChange)="patch({ client: $event })"
                 />
               </td>
               <td andesTableCell align="end">
-                <input
-                  class="demo-input demo-cell-input"
-                  type="number"
-                  style="text-align: end"
-                  [attr.aria-label]="'Total of ' + order.id"
+                <andes-input-number
+                  class="demo-cell-input"
+                  size="sm"
+                  [controls]="false"
+                  [aria-label]="'Total of ' + order.id"
                   [value]="draft().total"
-                  (input)="patch({ total: +$any($event.target).value })"
+                  (valueChange)="patch({ total: +($event ?? 0) })"
                 />
               </td>
               <td andesTableCell>
@@ -1758,7 +1703,7 @@ export class AndesTableServerDemo {
       </tbody>
     </andes-table>
   `,
-  styles: [DEMO_STYLES, FIELD_STYLES],
+  styles: [DEMO_STYLES, '.demo-cell-input { display: block; }'],
 })
 export class AndesTableEditableDemo {
   readonly orders = signal<readonly Order[]>(ORDERS.slice(0, 4));

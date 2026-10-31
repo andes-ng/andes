@@ -167,11 +167,37 @@ export interface AndesTimeOptions {
    */
   readonly hideDisabledOptions?: boolean;
   /**
+   * Let the value follow the columns as they scroll: when a scrolled column comes to rest,
+   * the option at its top is picked. Best paired with `needConfirm` (on by default with a
+   * time), so scrolling through is not a commit. Default `false`.
+   */
+  readonly changeOnScroll?: boolean;
+  /**
    * Time of day a freshly picked date starts at, instead of midnight. Only the
    * time part of the `Date` is read; a `[start, end]` pair sets each side of a
    * range (e.g. 09:00 to 18:00).
    */
   readonly defaultTime?: Date | readonly [Date, Date];
+}
+
+/** A time column, as `timeCellTemplate` names it. */
+export type AndesTimeUnit = 'hour' | 'minute' | 'second' | 'meridiem';
+
+/** Template context for `timeCellTemplate`. */
+export interface AndesTimeCellContext {
+  /**
+   * The option's number as shown: the hour (1-12 on a 12-hour clock), minute or second;
+   * in the AM/PM column, `0` for the morning and `12` for the afternoon.
+   */
+  readonly $implicit: number;
+  /** The column the option belongs to. */
+  readonly unit: AndesTimeUnit;
+  /** The option's own text (`09`, `PM`), what the cell shows without a template. */
+  readonly text: string;
+  /** The option holds the current time. */
+  readonly selected: boolean;
+  /** `timeDisabled` rules the option out. */
+  readonly disabled: boolean;
 }
 
 /** Which time options to rule out, returned by a `timeDisabled` function. */
@@ -235,18 +261,30 @@ interface TimeUnits {
 }
 type TimeUnit = 'hours' | 'minutes' | 'seconds' | 'meridiem';
 
+interface TimeOption {
+  readonly value: number;
+  readonly text: string;
+  readonly id: string;
+  readonly selected: boolean;
+  readonly disabled: boolean;
+  /** The context handed to `timeCellTemplate`. */
+  readonly context: AndesTimeCellContext;
+}
+
 interface TimeColumn {
   readonly unit: TimeUnit;
   readonly label: string;
   readonly activeId: string;
-  readonly options: readonly {
-    readonly value: number;
-    readonly text: string;
-    readonly id: string;
-    readonly selected: boolean;
-    readonly disabled: boolean;
-  }[];
+  readonly options: readonly TimeOption[];
 }
+
+/** `timeCellTemplate`'s name for each column. */
+const TIME_CELL_UNITS: Readonly<Record<TimeUnit, AndesTimeUnit>> = {
+  hours: 'hour',
+  minutes: 'minute',
+  seconds: 'second',
+  meridiem: 'meridiem',
+};
 
 /**
  * The panel opens above or below the field, never beside it: when it fits on neither
@@ -328,6 +366,9 @@ const TIME_PAGE = 5;
 
 /** How long a time column eases to a newly picked option, as the `mid` motion token. */
 const TIME_SCROLL_MS = 150;
+
+/** How long a scrolled time column must rest before `changeOnScroll` picks its top option. */
+const TIME_SCROLL_SETTLE_MS = 100;
 
 /** How far the panel arrow sits inside the active input's start edge, in pixels. */
 const ARROW_INSET = 20;
@@ -608,6 +649,15 @@ export class AndesDatePicker implements ControlValueAccessor {
 
   /** Custom cell content, passed to the calendar. */
   readonly cellTemplate = input<TemplateRef<AndesCalendarCellContext> | null>(
+    null,
+  );
+
+  /**
+   * Custom content of each time option (hours, minutes, seconds and AM/PM), rendered
+   * inside the option in place of its text; the context says which column it is in and
+   * whether it is selected or ruled out. It must not contain interactive elements.
+   */
+  readonly timeCellTemplate = input<TemplateRef<AndesTimeCellContext> | null>(
     null,
   );
 
@@ -1081,6 +1131,12 @@ export class AndesDatePicker implements ControlValueAccessor {
 
   /** The animation frame of each time column's scroll under way. */
   private readonly columnScrolls = new Map<HTMLElement, number>();
+
+  /** Where each time column was last scrolled to by the picker itself, not by the user. */
+  private readonly columnTargets = new Map<HTMLElement, number>();
+
+  /** The pending `changeOnScroll` pick of each time column, waiting for it to rest. */
+  private readonly columnSettles = new Map<HTMLElement, number>();
 
   /**
    * Set when focus leaving the picker closes the panel, and read once the close
@@ -1578,11 +1634,24 @@ export class AndesDatePicker implements ControlValueAccessor {
             !entry.disabled ||
             entry.value === current,
         )
-        .map((entry) => ({
-          ...entry,
-          id: `${this.idPrefix}-${unit}-${entry.value}`,
-          selected: entry.value === current,
-        })),
+        .map((entry) => {
+          const selected = entry.value === current;
+          return {
+            ...entry,
+            id: `${this.idPrefix}-${unit}-${entry.value}`,
+            selected,
+            context: {
+              $implicit:
+                unit === 'hours' && twelve
+                  ? entry.value % 12 || 12
+                  : entry.value,
+              unit: TIME_CELL_UNITS[unit],
+              text: entry.text,
+              selected,
+              disabled: entry.disabled,
+            },
+          };
+        }),
     });
 
     const pad = (value: number) => String(value).padStart(2, '0');
@@ -1966,6 +2035,7 @@ export class AndesDatePicker implements ControlValueAccessor {
   ): void {
     const view = column.ownerDocument.defaultView;
     this.cancelColumnScroll(column);
+    this.columnTargets.set(column, top);
     const from = column.scrollTop;
     if (
       !animate ||
@@ -2004,7 +2074,101 @@ export class AndesDatePicker implements ControlValueAccessor {
     for (const column of [...this.columnScrolls.keys()]) {
       this.cancelColumnScroll(column);
     }
+    for (const [column, timer] of this.columnSettles) {
+      column.ownerDocument.defaultView?.clearTimeout(timer);
+    }
+    this.columnSettles.clear();
+    this.columnTargets.clear();
     this.alignedPane = null;
+  }
+
+  /**
+   * `changeOnScroll`: a column the user scrolls picks the option at its top once it rests.
+   * The picker's own scrolling (aligning the selected option) is told apart by its target.
+   */
+  protected onTimeColumnScroll(event: Event, unit: TimeUnit): void {
+    const column = event.currentTarget as HTMLElement;
+    const view = column.ownerDocument.defaultView;
+    if (
+      !this.timeOptions()?.changeOnScroll ||
+      !view ||
+      this.columnScrolls.has(column) ||
+      Math.abs(column.scrollTop - (this.columnTargets.get(column) ?? -2)) < 1
+    ) {
+      return;
+    }
+    view.clearTimeout(this.columnSettles.get(column));
+    this.columnSettles.set(
+      column,
+      view.setTimeout(() => {
+        this.columnSettles.delete(column);
+        this.pickScrolledOption(column, unit);
+      }, TIME_SCROLL_SETTLE_MS),
+    );
+  }
+
+  /** Picks the enabled option nearest the top of a scrolled column, then aligns it there. */
+  private pickScrolledOption(column: HTMLElement, unit: TimeUnit): void {
+    const options = this.timeColumns().find(
+      (candidate) => candidate.unit === unit,
+    )?.options;
+    const elements = Array.from(
+      column.querySelectorAll<HTMLElement>('[role="option"]'),
+    );
+    if (!options?.length || elements.length !== options.length) {
+      return;
+    }
+    const first = elements[0].offsetTop;
+    let best = -1;
+    let distance = Number.POSITIVE_INFINITY;
+    elements.forEach((element, index) => {
+      const gap = Math.abs(element.offsetTop - first - column.scrollTop);
+      if (!options[index].disabled && gap < distance) {
+        best = index;
+        distance = gap;
+      }
+    });
+    if (best < 0) {
+      return;
+    }
+    if (options[best].selected) {
+      // Nothing changes, so no render re-aligns it: put the option back at the top here.
+      this.scrollColumnTo(
+        column,
+        elements[best].offsetTop - first,
+        this.alignedPane !== null,
+      );
+      return;
+    }
+    this.setTimePart(unit, options[best].value);
+  }
+
+  /** A time option under the pointer, previewed in the input it would change. */
+  protected onTimeOptionHover(unit: TimeUnit, option: TimeOption | null): void {
+    if (
+      this.previewValue() !== 'hover' ||
+      !option ||
+      option.disabled ||
+      !this.pointerMoved
+    ) {
+      this.hoverText.set(null);
+      return;
+    }
+    const side = this.editedSide();
+    const day =
+      (side === 'end' ? this.endDate() : this.startDate()) ??
+      (this.isTimeOnly() ? this.baseDay(side) : null);
+    if (!day) {
+      this.hoverText.set(null);
+      return;
+    }
+    const time = this.timeFor(side)();
+    const hovered: AndesTimeOfDay =
+      unit === 'meridiem'
+        ? { ...time, hours: (time.hours % 12) + option.value }
+        : { ...time, [unit]: option.value };
+    const text = this.formatValue(withTime(day, hovered));
+    this.hoverText.set(side === 'end' ? [null, text] : [text, null]);
   }
 
   /** Where the active input sits inside the field, or `null` when there is none to point at. */

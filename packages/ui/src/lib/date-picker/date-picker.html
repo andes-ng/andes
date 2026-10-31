@@ -410,6 +410,8 @@
             [attr.aria-label]="column.label"
             [attr.aria-activedescendant]="column.activeId"
             (keydown)="onTimeKeydown($event, column)"
+            (scroll)="onTimeColumnScroll($event, column.unit)"
+            (mouseleave)="onTimeOptionHover(column.unit, null)"
           >
             @for (option of column.options; track option.value) {
             <div
@@ -425,8 +427,16 @@
               [attr.aria-selected]="option.selected"
               [attr.aria-disabled]="option.disabled || null"
               (mousedown)="onTimeOptionMousedown($event, column.unit, option)"
+              (mouseenter)="onTimeOptionHover(column.unit, option)"
             >
+              @if (timeCellTemplate(); as cellTemplate) {
+              <ng-container
+                [ngTemplateOutlet]="cellTemplate"
+                [ngTemplateOutletContext]="option.context"
+              />
+              } @else {
               {{ option.text }}
+              }
             </div>
             }
           </div>

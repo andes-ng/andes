@@ -6,6 +6,7 @@ import {
   AndesDatePicker,
   type AndesDatePickerMode,
   type AndesDatePickerValue,
+  type AndesTimeDisabledFn,
   type AndesTimeOptions,
 } from './date-picker';
 
@@ -262,5 +263,168 @@ describe('AndesDatePicker time columns from the format', () => {
       host.showTime.set({ showHour: false, showSecond: true }),
     );
     expect(view.units()).toEqual(['minutes', 'seconds']);
+  });
+});
+
+@Component({
+  imports: [AndesDatePicker],
+  template: `
+    <ng-template #cell let-shown let-unit="unit" let-selected="selected">
+      <b class="time-cell" [attr.data-unit]="unit" [attr.data-selected]="selected"
+        >{{ unit }}:{{ shown }}</b
+      >
+    </ng-template>
+    <andes-date-picker
+      picker="time"
+      locale="en-GB"
+      [showTime]="showTime()"
+      [timeCellTemplate]="useTemplate() ? cell : null"
+      [timeDisabled]="rules()"
+      [open]="true"
+      [(value)]="value"
+    />
+  `,
+})
+class TimeCellHost {
+  readonly showTime = signal<AndesTimeOptions>({ use12Hours: true });
+  readonly useTemplate = signal(true);
+  readonly rules = signal<AndesTimeDisabledFn | null>(null);
+  readonly value = signal<AndesDatePickerValue | undefined>(
+    new Date(2024, 1, 15, 14, 5),
+  );
+}
+
+describe('AndesDatePicker time options', () => {
+  function create(setup: (host: TimeCellHost) => void = () => undefined) {
+    const fixture = TestBed.createComponent(TimeCellHost);
+    setup(fixture.componentInstance);
+    fixture.detectChanges();
+    fixture.detectChanges();
+    const column = (unit: string) =>
+      document.querySelector<HTMLElement>(
+        `.andes-date-picker__time-column[data-unit="${unit}"]`,
+      ) as HTMLElement;
+    const options = (unit: string) =>
+      Array.from(column(unit).querySelectorAll<HTMLElement>('[role="option"]'));
+    return {
+      fixture,
+      host: fixture.componentInstance,
+      input: (fixture.nativeElement as HTMLElement).querySelector(
+        'input',
+      ) as HTMLInputElement,
+      column,
+      options,
+      detect: () => fixture.detectChanges(),
+    };
+  }
+
+  describe('timeCellTemplate', () => {
+    it('renders each option through the template with its column and number', () => {
+      const view = create();
+
+      const hours = view.options('hours');
+      expect(hours[0].textContent?.trim()).toBe('hour:12');
+      expect(hours[2].textContent?.trim()).toBe('hour:2');
+      expect(
+        hours[2].querySelector('.time-cell')?.getAttribute('data-selected'),
+      ).toBe('true');
+      expect(view.options('minutes')[5].textContent?.trim()).toBe('minute:5');
+      expect(
+        view.options('meridiem').map((option) => option.textContent?.trim()),
+      ).toEqual(['meridiem:0', 'meridiem:12']);
+    });
+
+    it('keeps the option itself, its role and selection, around the template', () => {
+      const view = create();
+      const selected = view
+        .options('hours')
+        .find((option) => option.getAttribute('aria-selected') === 'true');
+      expect(selected?.querySelector('.time-cell')).toBeTruthy();
+    });
+  });
+
+  describe('hover preview', () => {
+    function hover(view: ReturnType<typeof create>, option: HTMLElement) {
+      option.dispatchEvent(
+        new MouseEvent('pointermove', { bubbles: true, screenX: 9, screenY: 9 }),
+      );
+      option.dispatchEvent(new MouseEvent('mouseenter'));
+      view.detect();
+    }
+
+    it('shows the time under the pointer in the input, then the value again', () => {
+      const view = create((host) => {
+        host.useTemplate.set(false);
+        host.showTime.set({});
+      });
+      expect(view.input.value).toBe('14:05');
+
+      hover(view, view.options('hours')[9]);
+      expect(view.input.value).toBe('09:05');
+
+      view.column('hours').dispatchEvent(new MouseEvent('mouseleave'));
+      view.detect();
+      expect(view.input.value).toBe('14:05');
+    });
+
+    it('does not preview a ruled-out option', () => {
+      const view = create((host) => {
+        host.useTemplate.set(false);
+        host.showTime.set({});
+        host.rules.set(() => ({ disabledHours: () => [9] }));
+      });
+      hover(view, view.options('hours')[9]);
+      expect(view.input.value).toBe('14:05');
+      hover(view, view.options('minutes')[30]);
+      expect(view.input.value).toBe('14:30');
+    });
+  });
+
+  describe('changeOnScroll', () => {
+    /** Lays the options of a column out 28px apart, as the stylesheet does. */
+    function layOut(column: HTMLElement): void {
+      Array.from(column.querySelectorAll('[role="option"]')).forEach(
+        (option, index) =>
+          Object.defineProperty(option, 'offsetTop', {
+            configurable: true,
+            value: index * 28,
+          }),
+      );
+    }
+
+    async function scroll(column: HTMLElement, top: number) {
+      column.scrollTop = top;
+      column.dispatchEvent(new Event('scroll'));
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+
+    it('picks the option a scrolled column rests on', async () => {
+      const view = create((host) => {
+        host.useTemplate.set(false);
+        host.showTime.set({ changeOnScroll: true });
+      });
+      layOut(view.column('minutes'));
+
+      await scroll(view.column('minutes'), 20 * 28 + 6);
+      view.detect();
+
+      expect(view.input.value).toBe('14:20');
+      expect(
+        view.options('minutes')[20].getAttribute('aria-selected'),
+      ).toBe('true');
+    });
+
+    it('leaves the value alone without changeOnScroll', async () => {
+      const view = create((host) => {
+        host.useTemplate.set(false);
+        host.showTime.set({});
+      });
+      layOut(view.column('minutes'));
+
+      await scroll(view.column('minutes'), 20 * 28);
+      view.detect();
+
+      expect(view.input.value).toBe('14:05');
+    });
   });
 });

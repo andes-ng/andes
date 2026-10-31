@@ -16,7 +16,9 @@ export type {
   AndesDatePickerValue,
   AndesDatePickerVariant,
   AndesDisabledTime,
+  AndesTimeCellContext,
   AndesTimeDisabledFn,
   AndesTimeDisabledInfo,
   AndesTimeOptions,
+  AndesTimeUnit,
 } from './date-picker';

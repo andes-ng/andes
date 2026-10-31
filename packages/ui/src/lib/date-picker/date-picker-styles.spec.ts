@@ -183,6 +183,80 @@ describe('AndesDatePicker styles', () => {
     });
   });
 
+  describe('range active bar and arrow', () => {
+    const bar = '.andes-date-picker__active-bar';
+    const arrow = '.andes-date-picker__arrow';
+    const ease = 'var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1))';
+    const slide = `calc(var(--andes-motion-duration-slow, 200ms) * 1.5) ${ease}`;
+
+    it('is one 2px bar over the field bottom edge, in the accent colour, hidden until shown', () => {
+      expect(declaredValue(source, bar, 'position')).toBe('absolute');
+      expect(declaredValue(source, bar, 'bottom')).toBe('-1px');
+      expect(declaredValue(source, bar, 'height')).toBe('2px');
+      expect(declaredValue(source, bar, 'background-color')).toBe(
+        'var(--_date-picker-accent)',
+      );
+      expect(declaredValue(source, bar, 'opacity')).toBe('0');
+      expect(declaredValue(source, `${bar}[data-visible]`, 'opacity')).toBe(
+        '1',
+      );
+    });
+
+    it('no longer marks the active input with a per-input shadow', () => {
+      expect(
+        declaredValue(
+          source,
+          '.andes-date-picker__input[data-active]',
+          'box-shadow',
+        ),
+      ).toBeUndefined();
+      expect(
+        declaredValue(source, '.andes-date-picker__input', 'transition'),
+      ).toBeUndefined();
+    });
+
+    it('slides in 300ms, from the slow token, only between the inputs and only with motion allowed', () => {
+      expect(declaredValue(source, bar, 'transition')).toBeUndefined();
+      expect(
+        declaredValue(source, `${bar}[data-animated]`, 'transition'),
+      ).toBeUndefined();
+      expect(declaredValue(motion, `${bar}[data-animated]`, 'transition')).toBe(
+        `opacity var(--andes-motion-duration-fast, 120ms) ${ease}, left ${slide}, width ${slide}`,
+      );
+      expect(
+        declaredValue(motion, `${arrow}[data-animated]`, 'transition'),
+      ).toBe(`left ${slide}`);
+    });
+
+    it('draws the arrow as a small diamond on the panel edge facing the field, hidden until measured', () => {
+      expect(declaredValue(source, arrow, 'transform')).toBe(
+        'translateX(-50%) rotate(45deg)',
+      );
+      expect(declaredValue(source, arrow, 'top')).toBe(
+        'calc(var(--_date-picker-arrow-size) / -2)',
+      );
+      expect(declaredValue(source, `${arrow}[data-side='top']`, 'top')).toBe(
+        'auto',
+      );
+      expect(declaredValue(source, `${arrow}[data-side='top']`, 'bottom')).toBe(
+        'calc(var(--_date-picker-arrow-size) / -2)',
+      );
+      expect(
+        declaredValue(source, `${arrow}:not([data-ready])`, 'visibility'),
+      ).toBe('hidden');
+      expect(declaredValue(source, arrow, 'pointer-events')).toBe('none');
+    });
+
+    it('fades with the panel when it opens and closes', () => {
+      expect(declaredValue(motion, arrow, 'animation')).toBe(
+        'andes-date-picker-arrow-enter var(--andes-motion-duration-mid, 150ms) var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1))',
+      );
+      expect(
+        declaredValue(motion, `${arrow}[data-andes-closing]`, 'animation'),
+      ).toContain('andes-date-picker-arrow-exit');
+    });
+  });
+
   describe('panel chrome', () => {
     const panel = '::ng-deep .andes-date-picker__panel';
 

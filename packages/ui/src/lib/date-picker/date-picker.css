@@ -188,19 +188,42 @@
   color: var(--andes-color-muted-foreground);
 }
 
-.andes-date-picker__input {
-  transition: box-shadow 150ms ease;
+/*
+  In a range, one bar marks the input the next pick fills: 2px tall on the field's bottom edge,
+  one pixel inside the field and one over its own border, so it reads as that border thickening
+  under the input rather than as a second line above it. Its `left` and `width` are measured
+  from the active input; it fades in with the panel and slides between the two inputs. The
+  panel's arrow slides with it.
+*/
+.andes-date-picker__active-bar {
+  position: absolute;
+  bottom: -1px;
+  height: 2px;
+  background-color: var(--_date-picker-accent);
+  opacity: 0;
+  pointer-events: none;
 }
 
-/*
-  In a range, the input the next pick fills is marked by a 2px bar on the field's bottom
-  edge: one pixel inside the input and one over the field's own border, so it reads as
-  that border thickening under the input rather than as a second line above it.
-*/
-.andes-date-picker__input[data-active] {
-  box-shadow:
-    inset 0 -1px 0 var(--_date-picker-accent),
-    0 1px 0 var(--_date-picker-accent);
+.andes-date-picker__active-bar[data-visible] {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .andes-date-picker__active-bar {
+    transition: opacity var(--andes-motion-duration-fast, 120ms)
+      var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1));
+  }
+
+  /* One and a half times the slow token: 300ms. */
+  .andes-date-picker__active-bar[data-animated] {
+    transition:
+      opacity var(--andes-motion-duration-fast, 120ms)
+        var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1)),
+      left calc(var(--andes-motion-duration-slow, 200ms) * 1.5)
+        var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1)),
+      width calc(var(--andes-motion-duration-slow, 200ms) * 1.5)
+        var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1));
+  }
 }
 
 /* A range side locked through `disabled`: the date stays readable, in the muted color,
@@ -842,6 +865,72 @@
 
 .andes-date-picker__panel-body {
   display: flex;
+}
+
+/*
+  A range's arrow: a small diamond on the panel's edge facing the field, pointing at the active
+  input (`left` is measured). It is the panel's sibling, so the panel's clipping leaves it be;
+  half of it lies over the panel, in the panel's own colour. Hidden until it has been measured.
+*/
+.andes-date-picker__arrow {
+  --_date-picker-arrow-size: 0.4375rem;
+  position: absolute;
+  top: calc(var(--_date-picker-arrow-size) / -2);
+  box-sizing: border-box;
+  width: var(--_date-picker-arrow-size);
+  height: var(--_date-picker-arrow-size);
+  border: 1px solid transparent;
+  background-color: var(--andes-color-popover);
+  box-shadow: -2px -2px 5px -1px rgb(0 0 0 / 8%);
+  pointer-events: none;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.andes-date-picker__arrow:not([data-ready]) {
+  visibility: hidden;
+}
+
+/* Under the field the other way up: on the panel's bottom edge, pointing down. */
+.andes-date-picker__arrow[data-side='top'] {
+  top: auto;
+  bottom: calc(var(--_date-picker-arrow-size) / -2);
+  box-shadow: 2px 2px 5px -1px rgb(0 0 0 / 8%);
+}
+
+@keyframes andes-date-picker-arrow-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes andes-date-picker-arrow-exit {
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .andes-date-picker__arrow {
+    animation: andes-date-picker-arrow-enter
+      var(--andes-motion-duration-mid, 150ms)
+      var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1));
+  }
+
+  .andes-date-picker__arrow[data-andes-closing] {
+    animation: andes-date-picker-arrow-exit
+      var(--andes-motion-duration-fast, 120ms)
+      var(--andes-motion-ease-in, cubic-bezier(0.4, 0, 1, 1)) forwards;
+  }
+
+  /* Slides with the active bar: 300ms. */
+  .andes-date-picker__arrow[data-animated] {
+    transition: left calc(var(--andes-motion-duration-slow, 200ms) * 1.5)
+      var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1));
+  }
 }
 
 /* Presets: a side list of one-click values. */

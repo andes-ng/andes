@@ -304,6 +304,12 @@ const PLACEHOLDER_NOUNS: Readonly<Record<AndesDatePickerType, string>> = {
   time: 'time',
 };
 
+/** How far the panel arrow sits inside the active input's start edge, in pixels. */
+const ARROW_INSET = 20;
+
+/** The closest the panel arrow gets to the panel's own corners, in pixels. */
+const ARROW_EDGE_MARGIN = 16;
+
 /** Room kept free for typing beside responsive tags, when the input has no min-width. */
 const RESPONSIVE_INPUT_RESERVE = 48;
 
@@ -992,6 +998,23 @@ export class AndesDatePicker implements ControlValueAccessor {
    */
   protected readonly panelAlign = signal<'start' | 'end'>('start');
 
+  /**
+   * A range's active bar: the 2px line under the input the next pick fills, one element that
+   * slides between the two inputs instead of each input drawing its own. `box` is where it
+   * was last measured (kept while it fades out, so it does not jump), `visible` whether the
+   * panel is open on a range, and `animated` whether a move may slide: only from one input to
+   * the other within one opening, never on appearing or when the field is resized.
+   */
+  protected readonly activeBarBox = signal({ left: 0, width: 0 });
+  protected readonly activeBarVisible = signal(false);
+  protected readonly activeBarAnimated = signal(false);
+
+  /**
+   * Where the range panel's arrow points, in pixels from the pane's left edge: just inside
+   * the active input's start. `null` until the open panel has been measured.
+   */
+  protected readonly arrowLeft = signal<number | null>(null);
+
   /** The animation frame of a pending re-measure of the open panel, if any. */
   private panelFrame: number | null = null;
 
@@ -1632,6 +1655,28 @@ export class AndesDatePicker implements ControlValueAccessor {
         });
     });
 
+    // A range's active bar and panel arrow follow the active input. They appear in place and
+    // slide only between the two inputs of one opening.
+    afterRenderEffect(() => {
+      const show = this.isRange() && this.overlay.isOpen();
+      const side = this.activeSide();
+      untracked(() => {
+        if (!show) {
+          this.activeBarVisible.set(false);
+          this.activeBarAnimated.set(false);
+          return;
+        }
+        const box = this.measureActiveBar(side);
+        if (!box) {
+          return;
+        }
+        this.activeBarAnimated.set(this.activeBarVisible());
+        this.activeBarBox.set(box);
+        this.activeBarVisible.set(true);
+        this.measurePanel();
+      });
+    });
+
     // `autoFocus` / `defaultOpen`: once, in the browser, after the first render.
     afterNextRender(() => {
       if (this.autoFocus()) {
@@ -1703,6 +1748,7 @@ export class AndesDatePicker implements ControlValueAccessor {
           this.overlay.updatePosition();
         }
         this.fitTags();
+        this.refreshActiveBar();
       });
       observer.observe(this.field().nativeElement);
       this.destroyRef.onDestroy(() => observer.disconnect());
@@ -1780,6 +1826,25 @@ export class AndesDatePicker implements ControlValueAccessor {
     });
   };
 
+  /** Where the active input sits inside the field, or `null` when there is none to point at. */
+  private measureActiveBar(side: Side): { left: number; width: number } | null {
+    const input = this.inputFor(side);
+    return input ? { left: input.offsetLeft, width: input.offsetWidth } : null;
+  }
+
+  /** Re-fits the bar after the field changed size, in place rather than sliding there. */
+  private refreshActiveBar(): void {
+    if (!this.activeBarVisible()) {
+      return;
+    }
+    const box = this.measureActiveBar(this.activeSide());
+    if (box) {
+      this.activeBarAnimated.set(false);
+      this.activeBarBox.set(box);
+      this.measurePanel();
+    }
+  }
+
   /**
    * Reads the side and edge the open panel really took, which differ from the placement
    * once the overlay has flipped or shifted it. The pane is measured rather than the
@@ -1805,6 +1870,27 @@ export class AndesDatePicker implements ControlValueAccessor {
       Math.abs(panel.left - field.left) <= Math.abs(panel.right - field.right);
     const rtl = this.panelDirection() === 'rtl';
     this.panelAlign.set(leftAligned !== rtl ? 'start' : 'end');
+    this.measureArrow(panel, rtl);
+  }
+
+  /**
+   * Points the range panel's arrow at the active input: ARROW_INSET pixels in from its start
+   * edge (less on a narrow input), kept inside the panel's own edges. The arrow is a child of
+   * the pane, so its offset is measured from the pane's left edge whatever the direction.
+   */
+  private measureArrow(pane: DOMRect, rtl: boolean): void {
+    const input = this.isRange() ? this.inputFor(this.activeSide()) : undefined;
+    if (!input) {
+      this.arrowLeft.set(null);
+      return;
+    }
+    const box = input.getBoundingClientRect();
+    const inset = Math.min(ARROW_INSET, box.width / 2);
+    const target = rtl ? box.right - inset : box.left + inset;
+    const margin = Math.min(ARROW_EDGE_MARGIN, pane.width / 2);
+    this.arrowLeft.set(
+      Math.min(Math.max(target - pane.left, margin), pane.width - margin),
+    );
   }
 
   /** Focuses the input being edited (the start one, unless the end is active). */

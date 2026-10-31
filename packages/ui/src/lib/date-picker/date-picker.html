@@ -197,6 +197,17 @@
       (input)="onInput('end', $event)"
       (keydown)="onInputKeydown('end', $event)"
     />
+    } @if (isRange()) {
+    <!-- One bar for the whole range: it slides to the input the next pick fills. -->
+    <span
+      class="andes-date-picker__active-bar"
+      data-slot="date-picker-active-bar"
+      aria-hidden="true"
+      [attr.data-visible]="activeBarVisible() || null"
+      [attr.data-animated]="activeBarAnimated() || null"
+      [style.left.px]="activeBarBox().left"
+      [style.width.px]="activeBarBox().width"
+    ></span>
     }
 
     <span class="andes-date-picker__suffix">
@@ -274,6 +285,19 @@
     <ng-container [ngTemplateOutlet]="panelContent" />
     }
   </div>
+  @if (isRange()) {
+  <!-- Beside the panel rather than inside it, which clips what pokes out of its edge.
+       The overlay animates the pane's element children, so it fades with the panel. -->
+  <span
+    class="andes-date-picker__arrow"
+    data-slot="date-picker-arrow"
+    aria-hidden="true"
+    [attr.data-side]="panelSide()"
+    [attr.data-ready]="arrowLeft() !== null || null"
+    [attr.data-animated]="activeBarAnimated() || null"
+    [style.left.px]="arrowLeft()"
+  ></span>
+  }
 </ng-template>
 
 <!-- A date tag of `multiple` mode, shared by the field, the measuring row and the

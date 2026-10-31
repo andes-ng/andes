@@ -13,6 +13,14 @@ import type {
   AndesCheckboxVariant,
 } from './checkbox-types';
 
+/** The checkbox's styles: its own sheet and the shared check motion holding its keyframes. */
+function checkboxStyles(): string {
+  const dir = dirname(fileURLToPath(import.meta.url));
+  return ['checkbox.css', 'check-motion.css']
+    .map((file) => readFileSync(join(dir, file), 'utf-8'))
+    .join('\n');
+}
+
 @Component({
   imports: [AndesCheckbox],
   template: `<andes-checkbox
@@ -275,10 +283,7 @@ describe('AndesCheckbox features', () => {
     });
 
     it('rings the box on every change, not only when it becomes checked', () => {
-      const css = readFileSync(
-        join(dirname(fileURLToPath(import.meta.url)), 'checkbox.css'),
-        'utf-8',
-      );
+      const css = checkboxStyles();
 
       expect(css).toContain('@keyframes andes-checkbox-ripple');
       expect(css).toContain("[data-motion='uncheck'] .andes-checkbox__box");
@@ -316,10 +321,7 @@ describe('AndesCheckbox features', () => {
     });
 
     it('grows the ring with the box: 4px on sm, 6px on md and 8px on lg', () => {
-      const css = readFileSync(
-        join(dirname(fileURLToPath(import.meta.url)), 'checkbox.css'),
-        'utf-8',
-      );
+      const css = checkboxStyles();
 
       expect(
         declaredValue(css, '.andes-checkbox', '--_andes-checkbox-ring'),
@@ -336,10 +338,7 @@ describe('AndesCheckbox features', () => {
     });
 
     it('rings the face itself when no box is drawn (a button, or a card without an indicator)', () => {
-      const css = readFileSync(
-        join(dirname(fileURLToPath(import.meta.url)), 'checkbox.css'),
-        'utf-8',
-      );
+      const css = checkboxStyles();
 
       expect(css).toContain(
         ".andes-checkbox--no-indicator[data-motion='check']",
@@ -350,10 +349,7 @@ describe('AndesCheckbox features', () => {
     });
 
     it('restarts the ring on a change that follows another one within its second', async () => {
-      const css = readFileSync(
-        join(dirname(fileURLToPath(import.meta.url)), 'checkbox.css'),
-        'utf-8',
-      );
+      const css = checkboxStyles();
       // Checking and unchecking play the ring under two names, so back-to-back clicks differ.
       expect(css).toContain('@keyframes andes-checkbox-ripple-alt');
 

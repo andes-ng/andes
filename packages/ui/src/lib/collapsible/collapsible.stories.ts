@@ -1,12 +1,18 @@
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
+import { AndesInput } from '../input/input';
+import { AndesSelect } from '../select/select';
+import { AndesTextarea } from '../textarea/textarea';
 import { AndesCollapsible } from './collapsible';
 import { AndesCollapsibleContent } from './collapsible-content';
 import { AndesCollapsibleLazy } from './collapsible-lazy';
 import { AndesCollapsibleTrigger } from './collapsible-trigger';
 
 const imports = [
+  AndesInput,
+  AndesSelect,
+  AndesTextarea,
   AndesCollapsible,
   AndesCollapsibleTrigger,
   AndesCollapsibleContent,
@@ -188,7 +194,7 @@ export const LazyContent: Story = {
           <button andesCollapsibleTrigger class="trigger-row">Draft notes (unmountOnClose) ${chevron}</button>
           <andes-collapsible-content unmountOnClose>
             <ng-template andesCollapsibleLazy>
-              <div class="body"><textarea rows="3" style="width:100%; font: inherit;" aria-label="Notes"></textarea></div>
+              <div class="body"><andes-textarea rows="3" aria-label="Notes" /></div>
             </ng-template>
           </andes-collapsible-content>
         </andes-collapsible>
@@ -196,7 +202,7 @@ export const LazyContent: Story = {
           <button andesCollapsibleTrigger class="trigger-row">Advanced options (forceMount) ${chevron}</button>
           <andes-collapsible-content forceMount>
             <ng-template andesCollapsibleLazy>
-              <div class="body"><label>Reference <input style="font: inherit;" /></label></div>
+              <div class="body"><label>Reference <andes-input size="sm" /></label></div>
             </ng-template>
           </andes-collapsible-content>
         </andes-collapsible>
@@ -209,24 +215,31 @@ export const LazyContent: Story = {
 export const AdvancedFilters: Story = {
   render: () => ({
     moduleMetadata: { imports },
+    props: {
+      statuses: [
+        { value: 'any', label: 'Any' },
+        { value: 'paid', label: 'Paid' },
+        { value: 'overdue', label: 'Overdue' },
+      ],
+    },
     styles: [
       ...styles,
       `.filters { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; padding-top: 0.75rem; }
        .btn { display: inline-flex; align-items: center; gap: 0.5rem; height: 2rem; padding: 0 0.6875rem; border: 1px solid var(--andes-color-input); border-radius: var(--andes-radius-md); background: var(--andes-color-background); color: inherit; font: inherit; font-size: 0.875rem; cursor: pointer; }
        .btn:focus-visible { outline: 2px solid var(--andes-color-focus-ring); outline-offset: 2px; }
        .filters label { display: grid; gap: 0.25rem; font-size: 0.75rem; line-height: 1.25rem; }
-       .filters input, .filters select { box-sizing: border-box; height: 2rem; padding: 0 0.6875rem; border: 1px solid var(--andes-color-input); border-radius: var(--andes-radius-md); background: var(--andes-color-background); color: inherit; font: inherit; font-size: 0.875rem; }`,
+       .filters input[type='date'] { box-sizing: border-box; height: 2rem; padding: 0 0.6875rem; border: 1px solid var(--andes-color-input); border-radius: var(--andes-radius-md); background: var(--andes-color-background); color: inherit; font: inherit; font-size: 0.875rem; }`,
     ],
     template: `
       <andes-collapsible class="panel" style="width: 26rem;">
         <div class="row">
-          <input aria-label="Search invoices" placeholder="Search invoices" style="flex:1; box-sizing: border-box; height: 2rem; padding: 0 0.6875rem; border: 1px solid var(--andes-color-input); border-radius: var(--andes-radius-md); background: var(--andes-color-background); color: inherit; font: inherit;" />
+          <andes-input style="flex: 1;" aria-label="Search invoices" placeholder="Search invoices" />
           <button andesCollapsibleTrigger class="btn">Filters ${chevron}</button>
         </div>
         <andes-collapsible-content>
           <div class="filters">
-            <label>Status<select><option>Any</option><option>Paid</option><option>Overdue</option></select></label>
-            <label>Customer<input placeholder="Any customer" /></label>
+            <label>Status<andes-select aria-label="Status" value="any" [options]="statuses" /></label>
+            <label>Customer<andes-input aria-label="Customer" placeholder="Any customer" /></label>
             <label>From<input type="date" /></label>
             <label>To<input type="date" /></label>
           </div>

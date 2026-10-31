@@ -32,8 +32,8 @@
   -webkit-appearance: none;
   appearance: none;
   transition:
-    color 150ms ease,
-    background-color 150ms ease;
+    color 200ms ease,
+    background-color 200ms ease;
 }
 
 /* The selected label color follows the group's variant (white on the filled thumb). */

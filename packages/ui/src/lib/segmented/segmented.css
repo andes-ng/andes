@@ -215,12 +215,12 @@
 /* Only slide after the first placement (data-thumb=ready), so it never glides in from 0,0. */
 :host([data-thumb='ready']) .andes-segmented__thumb {
   transition:
-    transform var(--andes-segmented-duration, 180ms)
-      var(--andes-segmented-easing, cubic-bezier(0.2, 0, 0, 1)),
-    width var(--andes-segmented-duration, 180ms)
-      var(--andes-segmented-easing, cubic-bezier(0.2, 0, 0, 1)),
-    height var(--andes-segmented-duration, 180ms)
-      var(--andes-segmented-easing, cubic-bezier(0.2, 0, 0, 1)),
+    transform var(--andes-segmented-duration, 300ms)
+      var(--andes-segmented-easing, cubic-bezier(0.645, 0.045, 0.355, 1)),
+    width var(--andes-segmented-duration, 300ms)
+      var(--andes-segmented-easing, cubic-bezier(0.645, 0.045, 0.355, 1)),
+    height var(--andes-segmented-duration, 300ms)
+      var(--andes-segmented-easing, cubic-bezier(0.645, 0.045, 0.355, 1)),
     opacity 150ms linear;
 }
 

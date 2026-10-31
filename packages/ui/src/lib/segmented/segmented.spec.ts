@@ -477,8 +477,8 @@ describe('segmented stylesheet contract', () => {
     expect(group).toMatch(/data-size='lg'\]\)\s*\{[^}]*--_h: 2.25rem/);
   });
 
-  it('slides the thumb in 180ms without bounce and not before first placement', () => {
-    expect(group).toContain('180ms');
+  it('slides the thumb in 300ms without bounce and not before first placement', () => {
+    expect(group).toContain('300ms');
     expect(group).not.toMatch(/cubic-bezier\([^)]*(1\.\d|-\d)/);
     expect(group).toContain("[data-thumb='ready']) .andes-segmented__thumb");
   });

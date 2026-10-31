@@ -1,4 +1,9 @@
-<div [class]="rootClass()" data-slot="upload-root" (paste)="onPaste($event)">
+<div
+  [class]="rootClass()"
+  data-slot="upload-root"
+  [attr.data-animate]="animateReady() ? '' : null"
+  (paste)="onPaste($event)"
+>
   @if (isField()) {
   <ng-container *ngTemplateOutlet="field" />
   } @else if (isCardList()) {
@@ -81,16 +86,20 @@
       class="andes-upload__item"
       role="listitem"
       data-slot="upload-item"
+      animate.enter="andes-upload__item--enter"
+      animate.leave="andes-upload__item--leave"
       [attr.data-status]="item.status"
       [attr.data-uid]="item.uid"
     >
-      @if (itemRender(); as render) {
-      <ng-container *ngTemplateOutlet="render; context: item.ctx" />
-      } @else {
-      <ng-container
-        *ngTemplateOutlet="defaultItem; context: { $implicit: item }"
-      />
-      }
+      <div class="andes-upload__item-inner">
+        @if (itemRender(); as render) {
+        <ng-container *ngTemplateOutlet="render; context: item.ctx" />
+        } @else {
+        <ng-container
+          *ngTemplateOutlet="defaultItem; context: { $implicit: item }"
+        />
+        }
+      </div>
     </li>
     }
   </ul>
@@ -110,7 +119,12 @@
       @if (iconRender(); as render) {
       <ng-container *ngTemplateOutlet="render; context: item.iconCtx" />
       } @else if (item.thumb) {
-      <img class="andes-upload__img" [src]="item.thumb" alt="" />
+      <img
+        class="andes-upload__img"
+        animate.enter="andes-upload__img--enter"
+        [src]="item.thumb"
+        alt=""
+      />
       @if (item.status === 'error') {
       <andes-upload-icon class="andes-upload__thumb-alert" name="alert" />
       } } @else {
@@ -204,6 +218,7 @@
   @if (item.status === 'uploading') {
   <div
     class="andes-upload__progress"
+    animate.leave="andes-upload__progress--leave"
     role="progressbar"
     aria-valuemin="0"
     aria-valuemax="100"
@@ -280,6 +295,7 @@
     } @if (fieldView().status === 'uploading') {
     <span
       class="andes-upload__field-progress"
+      animate.leave="andes-upload__field-progress--leave"
       role="progressbar"
       aria-valuemin="0"
       aria-valuemax="100"

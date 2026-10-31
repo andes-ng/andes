@@ -342,6 +342,11 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
 
   private readonly disabledByForm = signal(false);
   protected readonly dragging = signal(false);
+  /**
+   * Off while the first render's rows are entering, on after it: rows that are there from the
+   * start (an initial value) are not animated in, rows added later are.
+   */
+  protected readonly animateReady = signal(false);
   protected readonly announcement = signal('');
   /** Assumed true until the slot is measured, so an empty one is the exception. */
   protected readonly hasContent = signal(true);
@@ -540,6 +545,23 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
         attributeFilter: ['tabindex', 'disabled'],
       });
       onCleanup(() => observer.disconnect());
+    });
+
+    // Angular checks the entering classes of the first render on the next animation frame. This
+    // waits for that frame to pass (its callback was queued first), so those rows are not
+    // animated, and only then lets later rows animate.
+    afterNextRender(() => {
+      const view = this.document.defaultView;
+      const ready = () => {
+        if (!this.destroyed) {
+          this.animateReady.set(true);
+        }
+      };
+      if (view?.requestAnimationFrame) {
+        view.requestAnimationFrame(ready);
+      } else {
+        ready();
+      }
     });
 
     this.destroyRef.onDestroy(() => {

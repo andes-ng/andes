@@ -1673,6 +1673,82 @@ describe('AndesUpload', () => {
     });
   });
 
+  describe('list animation', () => {
+    const html = readFileSync(
+      join(process.cwd(), 'packages/ui/src/lib/upload/upload.html'),
+      'utf8',
+    );
+
+    /** The opening tag that carries `needle`, from its `<` to its `>`. */
+    function openingTag(needle: string): string {
+      const at = html.indexOf(needle);
+      const start = html.lastIndexOf('<', at);
+      return html.slice(start, html.indexOf('>', at) + 1);
+    }
+
+    it('hooks the row, the thumbnail and both progress bars into Angular animations', () => {
+      const row = openingTag('data-slot="upload-item"');
+      expect(row).toContain('animate.enter="andes-upload__item--enter"');
+      expect(row).toContain('animate.leave="andes-upload__item--leave"');
+      expect(openingTag('class="andes-upload__img"')).toContain(
+        'animate.enter="andes-upload__img--enter"',
+      );
+      expect(openingTag('class="andes-upload__progress"')).toContain(
+        'animate.leave="andes-upload__progress--leave"',
+      );
+      expect(openingTag('class="andes-upload__field-progress"')).toContain(
+        'animate.leave="andes-upload__field-progress--leave"',
+      );
+    });
+
+    it('wraps the row contents so they can collapse inside the list item', () => {
+      const { host, root, fixture } = setup();
+      host.files.set([{ uid: '1', name: 'a.pdf', status: 'done' }]);
+      host.custom.set(true);
+      fixture.detectChanges();
+      const item = root.querySelector('.andes-upload__item') as HTMLElement;
+      expect(item.children).toHaveLength(1);
+      expect(item.children[0].classList).toContain('andes-upload__item-inner');
+      expect(item.children[0].querySelector('.custom-item')).not.toBeNull();
+    });
+
+    it('lets rows animate only after the first render', async () => {
+      const fixture = TestBed.createComponent(HostComponent);
+      fixture.componentInstance.files.set([
+        { uid: '1', name: 'a.pdf', status: 'done' },
+      ]);
+      fixture.detectChanges();
+      const root = fixture.nativeElement.querySelector(
+        '[data-slot="upload-root"]',
+      ) as HTMLElement;
+      expect(root.hasAttribute('data-animate')).toBe(false);
+
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      fixture.detectChanges();
+      expect(root.hasAttribute('data-animate')).toBe(true);
+    });
+
+    it('moves the focus to the next row before the removed one has left', async () => {
+      const { host, root, fixture, upload } = setup();
+      host.files.set([
+        { uid: 'a', name: 'a.pdf', status: 'done' },
+        { uid: 'b', name: 'b.pdf', status: 'done' },
+      ]);
+      fixture.detectChanges();
+      const first = root.querySelector(
+        'button[aria-label="Remove a.pdf"]',
+      ) as HTMLButtonElement;
+      first.focus();
+
+      // No change detection yet: the removed row is still on screen, as it is while it leaves.
+      expect(await upload.removeFile('a')).toBe(true);
+      expect(first.isConnected).toBe(true);
+      expect(document.activeElement).toBe(
+        root.querySelector('button[aria-label="Remove b.pdf"]'),
+      );
+    });
+  });
+
   describe('stylesheet contract', () => {
     const css = readFileSync(
       join(process.cwd(), 'packages/ui/src/lib/upload/upload.css'),
@@ -1748,6 +1824,154 @@ describe('AndesUpload', () => {
           'opacity',
         ),
       ).toBe('0.35');
+    });
+
+    /** The text between the braces of the at-rule that starts with `head`. */
+    function atRule(head: string, which: 'first' | 'last' = 'first'): string {
+      const start =
+        which === 'first' ? css.indexOf(head) : css.lastIndexOf(head);
+      expect(start).toBeGreaterThan(-1);
+      const open = css.indexOf('{', start);
+      let depth = 0;
+      for (let i = open; i < css.length; i++) {
+        depth += css[i] === '{' ? 1 : css[i] === '}' ? -1 : 0;
+        if (depth === 0) {
+          return css.slice(open + 1, i);
+        }
+      }
+      throw new Error(`unclosed ${head}`);
+    }
+
+    describe('motion', () => {
+      const motion = atRule('@media (prefers-reduced-motion: no-preference)');
+
+      it('keeps every animation inside the no-preference query', () => {
+        const rest = css.replace(motion, '');
+        expect(rest).not.toContain('@keyframes');
+        expect(rest).not.toContain('animation:');
+        expect(motion).toContain('@keyframes andes-upload-row-in');
+        expect(motion).toContain('@keyframes andes-upload-row-out');
+        expect(motion).toContain('@keyframes andes-upload-card-in');
+        expect(motion).toContain('@keyframes andes-upload-card-out');
+      });
+
+      it('only animates rows that arrive after the first render', () => {
+        const arriving = [
+          '.andes-upload[data-animate] .andes-upload__item--enter',
+          '.andes-upload--card[data-animate] .andes-upload__item--enter',
+          '.andes-upload[data-animate] .andes-upload__img--enter',
+        ];
+        for (const selector of arriving) {
+          expect(declaredValue(motion, selector, 'animation')).toBeDefined();
+        }
+        expect(
+          declaredValue(motion, '.andes-upload__item--enter', 'animation'),
+        ).toBeUndefined();
+      });
+
+      it('collapses rows by their grid track with the library motion tokens', () => {
+        const enter = declaredValue(
+          motion,
+          '.andes-upload[data-animate] .andes-upload__item--enter',
+          'animation',
+        );
+        expect(enter).toContain('andes-upload-row-in');
+        expect(enter).toContain('var(--andes-motion-duration-slow');
+        expect(enter).toContain('var(--_andes-upload-ease)');
+        const leave = declaredValue(
+          motion,
+          '.andes-upload__item--leave',
+          'animation',
+        );
+        expect(leave).toContain('andes-upload-row-out');
+        expect(leave).toContain('var(--andes-motion-duration-mid');
+        expect(leave).toContain('var(--andes-motion-ease-in');
+        expect(leave).toContain('forwards');
+        expect(
+          declaredValue(motion, '.andes-upload__item--leave', 'display'),
+        ).toBe('grid');
+        const frames = atRule('@keyframes andes-upload-row-out');
+        expect(declaredValue(frames, 'to', 'grid-template-rows')).toBe('0fr');
+        expect(declaredValue(frames, 'from', 'grid-template-rows')).toBe('1fr');
+      });
+
+      it('scales and fades the cards instead of resizing them', () => {
+        expect(
+          declaredValue(
+            motion,
+            '.andes-upload--card .andes-upload__item--leave',
+            'display',
+          ),
+        ).toBe('block');
+        const frames = atRule('@keyframes andes-upload-card-out');
+        expect(declaredValue(frames, 'to', 'scale')).toBe('0.9');
+        expect(declaredValue(frames, 'to', 'opacity')).toBe('0');
+        expect(motion).not.toContain('width: 0');
+      });
+
+      it('fills a finished bar before it fades, and only fades a failed one', () => {
+        expect(
+          declaredValue(motion, '.andes-upload__progress--leave', 'animation'),
+        ).toContain('andes-upload-fade-out');
+        expect(
+          declaredValue(
+            motion,
+            ".andes-upload__item[data-status='done'] .andes-upload__progress-bar",
+            'inline-size',
+          ),
+        ).toBe('100% !important');
+        expect(motion).not.toContain(
+          "[data-status='error'] .andes-upload__progress",
+        );
+      });
+
+      it('eases the error colours in', () => {
+        expect(
+          declaredValue(motion, '.andes-upload__name', 'transition'),
+        ).toContain('color');
+        expect(
+          declaredValue(motion, '.andes-upload__row', 'transition'),
+        ).toContain('border-color');
+      });
+    });
+
+    describe('forced colors', () => {
+      // The last block: the field row has an earlier one for its focus ring.
+      const forced = atRule('@media (forced-colors: active)', 'last');
+
+      it('keeps the progress bar visible with system colours', () => {
+        expect(
+          declaredValue(
+            forced,
+            '.andes-upload__progress-bar',
+            'background-color',
+          ),
+        ).toBe('Highlight');
+        expect(
+          declaredValue(
+            forced,
+            '.andes-upload__progress',
+            'forced-color-adjust',
+          ),
+        ).toBe('none');
+      });
+
+      it('adds shape cues where colour alone would carry the state', () => {
+        expect(
+          declaredValue(
+            forced,
+            '.andes-upload__select--drag[data-dragging]',
+            'outline',
+          ),
+        ).toContain('Highlight');
+        expect(
+          declaredValue(
+            forced,
+            '.andes-upload__select--drag.andes-upload__select--invalid',
+            'border-style',
+          ),
+        ).toBe('solid');
+      });
     });
 
     describe('invalid state', () => {

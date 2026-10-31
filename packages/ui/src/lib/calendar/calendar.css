@@ -9,6 +9,7 @@
    across cells. */
 
 .andes-calendar {
+  position: relative;
   --andes-calendar-cell: 2.25rem;
   --andes-calendar-chip: 1.5rem;
   --andes-calendar-band: color-mix(
@@ -139,6 +140,23 @@
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+/* The default chevrons point left for "previous" and right for "next", which is backwards in a
+   right-to-left grid, where the previous period lies to the right. A custom icon is the
+   consumer's own and is left alone. */
+[dir='rtl'] .andes-calendar__nav svg {
+  scale: -1 1;
+}
+
+/* The calendar's one live region: read out, never seen. */
+.andes-calendar__announcer {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  white-space: nowrap;
+  clip-path: inset(50%);
 }
 
 /* Holds the place of the two nav buttons a non-edge panel of a multi-month grid
@@ -586,4 +604,92 @@
 .andes-calendar--fullscreen .andes-calendar__cell-content--full {
   flex: 1;
   font-size: inherit;
+}
+
+/*
+  Forced colors (Windows high contrast) replace background colors, so nothing that is told apart
+  by a fill alone survives: every state below is also drawn with a border or a system color.
+  A system color is kept as written, so these need no `forced-color-adjust: none` except where
+  a fill must stay (the selection).
+*/
+@media (forced-colors: active) {
+  /* The chip's transparent border would be painted in a system color around every day. */
+  /* prettier-ignore */
+  :is(.andes-calendar__day, .andes-calendar__period) > :is(.andes-calendar__cell-text, .andes-calendar__cell-content) {
+    border-color: Canvas;
+  }
+
+  .andes-calendar__day--outside,
+  .andes-calendar__day[aria-disabled='true'],
+  .andes-calendar__period[aria-disabled='true'] {
+    color: GrayText;
+    opacity: 1;
+  }
+
+  /* prettier-ignore */
+  :is(.andes-calendar__day, .andes-calendar__period):hover:not([aria-disabled='true']) > * {
+    border-color: Highlight;
+  }
+
+  /* Today: a dashed edge, which the solid fill of a selected day is not. */
+  .andes-calendar__day--today > * {
+    border-style: dashed;
+    border-color: CanvasText;
+  }
+
+  .andes-calendar__day--selected > *,
+  .andes-calendar__day--selected:hover:not([aria-disabled='true']) > * {
+    border-style: solid;
+    border-color: SelectedItem;
+    background-color: SelectedItem;
+    color: SelectedItemText;
+    forced-color-adjust: none;
+  }
+
+  /* The range band: a solid line above and below, from chip to chip. */
+  /* prettier-ignore */
+  .andes-calendar:has(.andes-calendar__day--in-range, .andes-calendar__day--range-end:not(.andes-calendar__day--range-start)) .andes-calendar__day--range-start:not(.andes-calendar__day--range-end)::before,
+  .andes-calendar__day--range-end:not(.andes-calendar__day--range-start)::before,
+  .andes-calendar__day--in-range::before {
+    border-block: 1px solid Highlight;
+  }
+
+  .andes-calendar__day--in-preview::before,
+  .andes-calendar__day--preview-start::before,
+  .andes-calendar__day--preview-end::before {
+    border-block-color: CanvasText;
+  }
+
+  .andes-calendar--week-picker .andes-calendar__day--selected {
+    color: SelectedItemText;
+    forced-color-adjust: none;
+  }
+
+  /* prettier-ignore */
+  .andes-calendar--week-picker .andes-calendar__day--selected::before,
+  .andes-calendar--week-picker .andes-calendar__row:hover .andes-calendar__day--selected::before {
+    background-color: SelectedItem;
+    forced-color-adjust: none;
+  }
+
+  .andes-calendar--week-picker
+    .andes-calendar__row:hover
+    .andes-calendar__day::before {
+    border-block: 1px solid Highlight;
+  }
+
+  .andes-calendar--fullscreen .andes-calendar__day--selected {
+    border-color: Highlight;
+  }
+
+  .andes-calendar--fullscreen .andes-calendar__day--in-range {
+    outline: 1px solid Highlight;
+    outline-offset: -1px;
+  }
+
+  .andes-calendar--fullscreen
+    .andes-calendar__day--today:not(.andes-calendar__day--selected) {
+    border-color: CanvasText;
+    border-style: dashed;
+  }
 }

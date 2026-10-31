@@ -215,13 +215,24 @@
     </div>
   </div>
   }
+
+  <!-- The one live region of the whole calendar: a keyboard user paging through
+       periods hears where they landed, once, however many months are on show (a
+       region per caption would announce each of them). The grid's own aria-label
+       carries the same text for context. -->
+  <div
+    class="andes-calendar__announcer"
+    data-slot="calendar-announcer"
+    aria-live="polite"
+    aria-atomic="true"
+  >
+    {{ announcement() }}
+  </div>
 </div>
 
-<!-- The caption climbs to the coarser grid (days → months → years). It stays a
-     live region so a keyboard user paging through periods hears where they
-     landed; the grid's own aria-label carries the same text for context. -->
+<!-- The caption climbs to the coarser grid (days → months → years). -->
 <ng-template #caption let-text>
-  <div class="andes-calendar__caption-wrap" aria-live="polite">
+  <div class="andes-calendar__caption-wrap">
     @if (canClimb()) {
     <button
       type="button"

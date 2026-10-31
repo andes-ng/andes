@@ -276,6 +276,97 @@ describe('AndesDatePicker styles', () => {
     });
   });
 
+  describe('forced colors', () => {
+    const forced = atRule(source, '@media (forced-colors: active)');
+
+    it('has a forced-colors block', () => {
+      expect(forced).not.toBe('');
+    });
+
+    it('rings the focused or open field with an outline, since the shadow ring is dropped', () => {
+      const focused = '.andes-date-picker__field:focus-within';
+      expect(declaredValue(forced, focused, 'outline')).toBe(
+        '2px solid Highlight',
+      );
+      expect(declaredValue(forced, focused, 'border-color')).toBe('Highlight');
+      expect(
+        declaredValue(forced, '.andes-date-picker__field--open', 'outline'),
+      ).toBe('2px solid Highlight');
+    });
+
+    it('mutes a disabled field with GrayText', () => {
+      expect(
+        declaredValue(
+          forced,
+          '.andes-date-picker__field[data-disabled]',
+          'color',
+        ),
+      ).toBe('GrayText');
+    });
+
+    it('keeps the range bar and the picked time visible with system colors', () => {
+      expect(
+        declaredValue(
+          forced,
+          '.andes-date-picker__active-bar',
+          'background-color',
+        ),
+      ).toBe('Highlight');
+      const selected = '.andes-date-picker__time-option--selected';
+      expect(declaredValue(forced, selected, 'background-color')).toBe(
+        'SelectedItem',
+      );
+      expect(declaredValue(forced, selected, 'color')).toBe('SelectedItemText');
+      expect(declaredValue(forced, selected, 'forced-color-adjust')).toBe(
+        'none',
+      );
+    });
+
+    it('draws hovered options and presets with an outline', () => {
+      for (const selector of [
+        '.andes-date-picker__time-option:hover',
+        '.andes-date-picker__preset:hover',
+      ]) {
+        expect(declaredValue(forced, selector, 'outline')).toBe(
+          '1px solid Highlight',
+        );
+      }
+    });
+
+    it('keeps the knocked-out "x" of the clear button apart from its disc', () => {
+      expect(
+        declaredValue(forced, '.andes-date-picker__clear-glyph circle', 'fill'),
+      ).toBe('ButtonText');
+      expect(
+        declaredValue(forced, '.andes-date-picker__clear-glyph path', 'stroke'),
+      ).toBe('Canvas');
+    });
+
+    it('edges only the sides of the arrow that face away from the panel', () => {
+      const arrow = '.andes-date-picker__arrow';
+      expect(declaredValue(forced, arrow, 'border-top-color')).toBe(
+        'CanvasText',
+      );
+      expect(declaredValue(forced, arrow, 'border-left-color')).toBe(
+        'CanvasText',
+      );
+      expect(declaredValue(forced, arrow, 'border-color')).toBe('Canvas');
+      const below = `${arrow}[data-side='top']`;
+      expect(declaredValue(forced, below, 'border-bottom-color')).toBe(
+        'CanvasText',
+      );
+      expect(declaredValue(forced, below, 'border-right-color')).toBe(
+        'CanvasText',
+      );
+    });
+
+    it("leaves the panel's transparent border to be painted by the browser", () => {
+      expect(
+        declaredValue(source, '::ng-deep .andes-date-picker__panel', 'border'),
+      ).toBe('1px solid transparent');
+    });
+  });
+
   describe('panel chrome', () => {
     const panel = '::ng-deep .andes-date-picker__panel';
 

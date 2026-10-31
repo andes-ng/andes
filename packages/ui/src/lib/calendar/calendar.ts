@@ -245,6 +245,29 @@ function yearMonth(year: number, month: number): Date {
   return date;
 }
 
+/**
+ * Whether `element` is laid out right to left: the nearest `dir` attribute decides (the
+ * panel of a date picker carries one), and without one the computed direction does.
+ */
+function isRtl(element: Element): boolean {
+  const dir = element.closest('[dir]')?.getAttribute('dir')?.toLowerCase();
+  if (dir === 'rtl' || dir === 'ltr') {
+    return dir === 'rtl';
+  }
+  return (
+    element.ownerDocument.defaultView?.getComputedStyle(element).direction ===
+    'rtl'
+  );
+}
+
+/** Left becomes Right and Right Left; any other key is returned as it is. */
+function mirrorArrow(key: string): string {
+  if (key === 'ArrowLeft') {
+    return 'ArrowRight';
+  }
+  return key === 'ArrowRight' ? 'ArrowLeft' : key;
+}
+
 /** Columns and paging steps of the three period grids, in months. */
 const PERIOD_GRID: Readonly<
   Record<
@@ -1036,6 +1059,27 @@ export class AndesCalendar {
     return format.format(anchor);
   });
 
+  /**
+   * What the calendar's one live region says: the caption(s) on show, joined, so paging a
+   * two-month range announces "October 2026 – November 2026" once. Empty where something
+   * else announces the change: the caption selects, or a custom header.
+   */
+  protected readonly announcement = computed(() => {
+    if (this.headerTemplate()) {
+      return '';
+    }
+    if (this.view() === 'date') {
+      return this.captionLayout() === 'label'
+        ? this.panels()
+            .map((panel) => panel.caption)
+            .join(' – ')
+        : '';
+    }
+    return this.yearDropdown() && this.view() !== 'year'
+      ? ''
+      : this.periodCaption();
+  });
+
   protected readonly periodGridLabel = computed(
     () => this.ariaLabel() ?? this.periodCaption(),
   );
@@ -1489,10 +1533,15 @@ export class AndesCalendar {
       return;
     }
 
+    // Left and Right follow the screen, so in a right-to-left grid Right goes back in time
+    // and Left forward; the other keys are about the calendar, not the screen.
+    const key = isRtl(event.currentTarget as Element)
+      ? mirrorArrow(event.key)
+      : event.key;
     const target =
       cell.view === 'date'
-        ? this.dayKeyTarget(event)
-        : this.periodKeyTarget(event, cell.view);
+        ? this.dayKeyTarget(key, event.shiftKey)
+        : this.periodKeyTarget(key, cell.view);
     if (!target) {
       return;
     }
@@ -1501,37 +1550,37 @@ export class AndesCalendar {
     this.moveFocusTo(target);
   }
 
-  private dayKeyTarget(event: KeyboardEvent): Date | null {
+  private dayKeyTarget(key: string, shift: boolean): Date | null {
     const active = this.activeDate();
     const weekStart = addDays(
       active,
       -((active.getDay() - this.weekStartsOn() + 7) % 7),
     );
 
-    switch (event.key) {
+    switch (key) {
       case 'ArrowLeft':
-        return event.shiftKey ? addMonths(active, -1) : addDays(active, -1);
+        return shift ? addMonths(active, -1) : addDays(active, -1);
       case 'ArrowRight':
-        return event.shiftKey ? addMonths(active, 1) : addDays(active, 1);
+        return shift ? addMonths(active, 1) : addDays(active, 1);
       case 'ArrowUp':
-        return event.shiftKey ? addYears(active, -1) : addDays(active, -7);
+        return shift ? addYears(active, -1) : addDays(active, -7);
       case 'ArrowDown':
-        return event.shiftKey ? addYears(active, 1) : addDays(active, 7);
+        return shift ? addYears(active, 1) : addDays(active, 7);
       case 'Home':
         return weekStart;
       case 'End':
         return addDays(weekStart, 6);
       case 'PageUp':
-        return event.shiftKey ? addYears(active, -1) : addMonths(active, -1);
+        return shift ? addYears(active, -1) : addMonths(active, -1);
       case 'PageDown':
-        return event.shiftKey ? addYears(active, 1) : addMonths(active, 1);
+        return shift ? addYears(active, 1) : addMonths(active, 1);
       default:
         return null;
     }
   }
 
   private periodKeyTarget(
-    event: KeyboardEvent,
+    key: string,
     view: Exclude<AndesCalendarView, 'date'>,
   ): Date | null {
     const active = this.activeDate();
@@ -1542,7 +1591,7 @@ export class AndesCalendar {
         : active.getMonth() / step;
     const column = index % columns;
 
-    switch (event.key) {
+    switch (key) {
       case 'ArrowLeft':
         return addMonths(active, -step);
       case 'ArrowRight':

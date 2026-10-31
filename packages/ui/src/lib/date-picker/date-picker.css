@@ -1131,3 +1131,78 @@
   outline: 2px solid var(--andes-color-focus-ring);
   outline-offset: 2px;
 }
+
+/*
+  Forced colors (Windows high contrast) replace background colors and drop shadows, so the
+  field's ring, the active bar, the selected time and the arrow's edge are all redrawn with
+  borders, outlines and system colors, which are kept as written.
+*/
+@media (forced-colors: active) {
+  .andes-date-picker__field:focus-within,
+  .andes-date-picker__field--open {
+    border-color: Highlight;
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
+  }
+
+  .andes-date-picker__field[data-disabled] {
+    border-color: GrayText;
+    color: GrayText;
+  }
+
+  .andes-date-picker__input::placeholder,
+  .andes-date-picker__input[data-preview],
+  .andes-date-picker__input[data-locked] {
+    color: GrayText;
+  }
+
+  .andes-date-picker__active-bar {
+    background-color: Highlight;
+    forced-color-adjust: none;
+  }
+
+  /* The disc and its knocked-out "x" are fills and strokes, which would otherwise both turn
+     into the text color and blot out the "x". */
+  .andes-date-picker__clear-glyph circle {
+    fill: ButtonText;
+  }
+
+  .andes-date-picker__clear-glyph path {
+    stroke: Canvas;
+  }
+
+  .andes-date-picker__preset:hover,
+  .andes-date-picker__time-option:hover {
+    outline: 1px solid Highlight;
+    outline-offset: -1px;
+  }
+
+  .andes-date-picker__time-option--selected,
+  .andes-date-picker__time-option--selected:hover {
+    background-color: SelectedItem;
+    color: SelectedItemText;
+    forced-color-adjust: none;
+  }
+
+  .andes-date-picker__time-option--disabled:not(
+      .andes-date-picker__time-option--selected
+    ) {
+    color: GrayText;
+    opacity: 1;
+  }
+
+  /* The arrow's shadow is gone: only the two edges facing away from the panel are drawn, and
+     they join the panel's own border. */
+  .andes-date-picker__arrow {
+    border-color: Canvas;
+    border-top-color: CanvasText;
+    border-left-color: CanvasText;
+  }
+
+  .andes-date-picker__arrow[data-side='top'] {
+    border-color: Canvas;
+    border-right-color: CanvasText;
+    border-bottom-color: CanvasText;
+  }
+}
+

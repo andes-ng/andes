@@ -253,20 +253,50 @@
   );
   box-shadow: 0 0 0 2px
     var(--andes-slider-handle-color, var(--_andes-slider-accent));
+  /* The soft halo that grows around the knob while it is hovered, focused or dragged. It is an
+     outline so it never takes part in layout and follows the knob's round box. */
+  outline: 0 solid transparent;
   transition:
     inset var(--andes-motion-duration-mid, 0.2s)
       var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1)),
     box-shadow var(--andes-motion-duration-mid, 0.2s)
+      var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1)),
+    outline var(--andes-motion-duration-mid, 0.2s)
       var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1));
 }
 
-/* A read-only slider gives no hover feedback (the knob only grows for keyboard focus). */
-:host(:not([data-readonly])) .andes-slider__thumb:hover::after,
+/* A read-only or disabled slider gives no hover feedback (the knob only grows for keyboard
+   focus). */
+:host(:not([data-readonly]):not([data-disabled]))
+  .andes-slider__thumb:not([data-disabled]):hover::after,
 .andes-slider__thumb:focus-visible::after,
 .andes-slider__thumb[data-dragging]::after {
   inset: 1px;
   box-shadow: 0 0 0 2.5px
     var(--andes-slider-handle-hover-color, var(--_andes-slider-accent-hover));
+  outline: 6px solid
+    color-mix(
+      in srgb,
+      var(--andes-slider-handle-hover-color, var(--_andes-slider-accent-hover))
+        20%,
+      transparent
+    );
+}
+
+/* A thumb that was clicked keeps the halo while it holds focus, so the handle that was just
+   used stays marked after the pointer leaves. */
+:host(:not([data-readonly]):not([data-disabled]))
+  .andes-slider__thumb:focus::after {
+  inset: 1px;
+  box-shadow: 0 0 0 2.5px
+    var(--andes-slider-handle-hover-color, var(--_andes-slider-accent-hover));
+  outline: 6px solid
+    color-mix(
+      in srgb,
+      var(--andes-slider-handle-hover-color, var(--_andes-slider-accent-hover))
+        20%,
+      transparent
+    );
 }
 
 :host([data-orientation='horizontal']) .andes-slider__thumb {
@@ -293,8 +323,8 @@
 
 .andes-slider__thumb:focus-visible {
   outline: 2px solid var(--andes-color-focus-ring);
-  /* Clears the grown 17px ring (1.5px past the box) with a visible gap. */
-  outline-offset: 3px;
+  /* Clears the grown knob, its ring and the 6px halo (12px from the centre) with a gap. */
+  outline-offset: 6px;
 }
 
 .andes-slider__thumb[data-dragging] {
@@ -310,6 +340,7 @@
 .andes-slider__thumb[data-disabled]::after {
   inset: 2px;
   box-shadow: 0 0 0 2px var(--andes-color-muted-foreground);
+  outline: 0 solid transparent;
 }
 
 /* Custom thumb (`thumbTemplate`): the template replaces the ring-and-knob circle, centered on
@@ -528,10 +559,14 @@
     box-shadow: 0 0 0 2px Highlight;
   }
 
-  :host(:not([data-readonly])) .andes-slider__thumb:hover::after,
+  :host(:not([data-readonly]):not([data-disabled]))
+    .andes-slider__thumb:not([data-disabled]):hover::after,
+  :host(:not([data-readonly]):not([data-disabled]))
+    .andes-slider__thumb:focus::after,
   .andes-slider__thumb:focus-visible::after,
   .andes-slider__thumb[data-dragging]::after {
     box-shadow: 0 0 0 2.5px Highlight;
+    outline: 0 solid transparent;
   }
 
   :host([data-disabled]) .andes-slider__indicator {

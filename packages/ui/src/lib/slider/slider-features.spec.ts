@@ -849,11 +849,60 @@ describe('AndesSlider features', () => {
           'touch-action',
         ),
       ).toBe('auto');
-      // The hover growth is scoped to the editable slider; focus-visible keeps its ring.
+      // The hover growth is scoped to the editable, enabled slider; focus-visible keeps its ring.
       expect(CSS).toContain(
-        ':host(:not([data-readonly])) .andes-slider__thumb:hover::after',
+        ':host(:not([data-readonly]):not([data-disabled]))\n  .andes-slider__thumb:not([data-disabled]):hover::after',
       );
       expect(CSS).not.toContain('\n.andes-slider__thumb:hover::after');
+    });
+  });
+
+  // --- motion --------------------------------------------------------------
+
+  describe('thumb halo', () => {
+    const THUMB_AFTER = '.andes-slider__thumb::after';
+
+    it('rests with no halo and transitions its width and colour with the ring', () => {
+      expect(declaredValue(CSS, THUMB_AFTER, 'outline')).toBe(
+        '0 solid transparent',
+      );
+      expect(declaredValue(CSS, THUMB_AFTER, 'transition')).toContain(
+        'outline var(--andes-motion-duration-mid, 0.2s)',
+      );
+    });
+
+    it('draws a 6px translucent halo while hovered, focused or dragged', () => {
+      const halo = CSS.slice(CSS.indexOf('outline: 6px solid'));
+      expect(halo).toContain('color-mix(');
+      expect(halo).toContain('20%');
+      expect(CSS.split('outline: 6px solid').length - 1).toBe(2);
+      expect(CSS).toContain('.andes-slider__thumb:focus::after');
+      expect(CSS).toContain('.andes-slider__thumb[data-dragging]::after');
+    });
+
+    it('clears the halo with the keyboard focus outline', () => {
+      expect(
+        declaredValue(
+          CSS,
+          '.andes-slider__thumb:focus-visible',
+          'outline-offset',
+        ),
+      ).toBe('6px');
+    });
+
+    it('gives a disabled thumb no halo and no hover growth', () => {
+      const start = CSS.indexOf('.andes-slider__thumb[data-disabled]::after {');
+      const rule = CSS.slice(start, CSS.indexOf('}', start));
+      expect(rule).toContain('outline: 0 solid transparent');
+      expect(CSS).toContain(
+        '.andes-slider__thumb:not([data-disabled]):hover::after',
+      );
+    });
+
+    it('drops the translucent halo in forced colors', () => {
+      const forced = CSS.slice(CSS.indexOf('@media (forced-colors: active)'));
+      expect(forced).toContain('outline: 0 solid transparent');
+      expect(forced).not.toContain('outline: 6px solid');
     });
   });
 

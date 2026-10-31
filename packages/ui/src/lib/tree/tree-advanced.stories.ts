@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
+import { AndesInput } from '../input/input';
 import { AndesTree } from './tree';
 import { AndesTreeNodeTemplate } from './tree-node-template';
 import type {
@@ -9,9 +10,14 @@ import type {
   AndesTreeNode,
 } from './tree-types';
 
-const TREE_IMPORTS = [AndesTree, AndesTreeNodeTemplate, AndesButton];
+const TREE_IMPORTS = [
+  AndesTree,
+  AndesTreeNodeTemplate,
+  AndesButton,
+  AndesInput,
+];
 
-/** A search box that follows the shared field look: one border, one soft focus ring. */
+/** Layout helpers for the demo panels; the search boxes are the library's own `andes-input`. */
 const STORY_STYLES = [
   `
   .panel {
@@ -27,26 +33,7 @@ const STORY_STYLES = [
     line-height: 1.375rem;
   }
   .row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-  .field {
-    box-sizing: border-box;
-    width: 100%;
-    height: 2rem;
-    margin-bottom: 12px;
-    padding: 0 0.6875rem;
-    border: 1px solid var(--andes-color-input);
-    border-radius: var(--andes-radius-md, 0.375rem);
-    background: var(--andes-color-background);
-    color: var(--andes-color-foreground);
-    font: inherit;
-    outline: none;
-    transition: border-color 150ms ease, box-shadow 150ms ease;
-  }
-  .field::placeholder { color: var(--andes-color-muted-foreground); }
-  .field:hover { border-color: color-mix(in srgb, var(--andes-color-primary) 65%, var(--andes-color-input)); }
-  .field:focus {
-    border-color: var(--andes-color-primary);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--andes-color-primary) 20%, transparent);
-  }
+  .field { display: block; margin-bottom: 12px; }
   .caption { margin: 12px 0 0; color: var(--andes-color-muted-foreground); font-size: 0.75rem; line-height: 1.25rem; }
   .caption code { font-size: inherit; }
   `,
@@ -120,7 +107,7 @@ type Story = StoryObj<AndesTree>;
  * Filtering. A `filter` keeps the matching nodes and their ancestors, opens the path to each match
  * and marks it; case and accents are ignored ("almacen" finds "Almacén"). The second tree sets
  * `filterMode="highlight"`, which keeps every node in place and only marks the matches. The
- * search text is kept in `query` and `highlightQuery` so Storybook does not forward it onto the
+ * search text is kept in `searchText` and `highlightText` so Storybook does not forward it onto the
  * tree's own `filter` input.
  */
 export const Filtering: Story = {
@@ -128,8 +115,8 @@ export const Filtering: Story = {
     moduleMetadata: { imports: TREE_IMPORTS },
     props: {
       nodes: warehouses(),
-      query: '',
-      highlightQuery: 'zona',
+      searchText: '',
+      highlightText: 'zona',
       expanded: [],
       highlightExpanded: [],
     },
@@ -137,34 +124,32 @@ export const Filtering: Story = {
     template: `
       <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start;">
         <div class="panel" style="width: 300px;">
-          <input
+          <andes-input
             class="field"
             type="search"
             aria-label="Search the tree"
             placeholder="Search…"
-            [value]="query"
-            (input)="query = $any($event.target).value"
+            [(value)]="searchText"
           />
           <andes-tree
             aria-label="Almacenes"
             [nodes]="nodes"
-            [filter]="query"
+            [filter]="searchText"
             [(expandedKeys)]="expanded"
           />
         </div>
         <div class="panel" style="width: 300px;">
-          <input
+          <andes-input
             class="field"
             type="search"
             aria-label="Highlight in the tree"
-            [value]="highlightQuery"
-            (input)="highlightQuery = $any($event.target).value"
+            [(value)]="highlightText"
           />
           <andes-tree
             aria-label="Almacenes (highlight)"
             filterMode="highlight"
             [nodes]="nodes"
-            [filter]="highlightQuery"
+            [filter]="highlightText"
             [(expandedKeys)]="highlightExpanded"
           />
         </div>

@@ -126,6 +126,33 @@ export interface AndesDatePickerTagContext {
   readonly disabled: boolean;
 }
 
+/** A side of a range, as `calendarChange`, `focused` and `blurred` name it. */
+export type AndesDatePickerRangeSide = 'start' | 'end';
+
+/** Emitted by `calendarChange` for each pick of a range's boundary, before it is committed. */
+export interface AndesDatePickerCalendarChange {
+  /** Both boundaries as they stand, with their times; an unpicked side is `null`. */
+  readonly value: readonly [Date | null, Date | null];
+  /** The same boundaries in the display format (`''` for an empty side). */
+  readonly text: readonly [string, string];
+  /** The boundary the pick set. */
+  readonly range: AndesDatePickerRangeSide;
+}
+
+/** Emitted by `focused` and `blurred`. */
+export interface AndesDatePickerFocusEvent {
+  readonly event: FocusEvent;
+  /** The input that took focus, or that last had it; always `start` outside `range` mode. */
+  readonly range: AndesDatePickerRangeSide;
+}
+
+/**
+ * What `valueTextChange` emits: the committed value in the display format, as a string in
+ * `single` mode, a `[start, end]` pair in `range` mode and a list in `multiple` mode.
+ */
+export type AndesDatePickerValueText =
+  string | readonly [string, string] | readonly string[];
+
 /** `id` of a range's inputs, one per side. */
 export interface AndesDatePickerIds {
   readonly start?: string;
@@ -1065,6 +1092,25 @@ export class AndesDatePicker implements ControlValueAccessor {
   /** Emits the committed value: a `Date`, a complete `[start, end]`, or `null`. */
   readonly valueChange = output<AndesDatePickerValue>();
 
+  /**
+   * Emits the committed value in the display format right after `valueChange`: a string,
+   * a range's `[start, end]` strings, or a `multiple` picker's list (`''` or `[]` when
+   * empty).
+   */
+  readonly valueTextChange = output<AndesDatePickerValueText>();
+
+  /**
+   * Emits when an input takes focus from outside the picker, or focus moves to the other
+   * input of a range, with the side that has it.
+   */
+  readonly focused = output<AndesDatePickerFocusEvent>();
+
+  /**
+   * Emits when focus leaves the picker - its field and its panel - with the side that last
+   * had it. Moving between the inputs, or into the panel, is not a blur.
+   */
+  readonly blurred = output<AndesDatePickerFocusEvent>();
+
   /** Emits when the clear button (or clearing the text) empties the value. */
   readonly clear = output<void>();
 
@@ -1072,9 +1118,11 @@ export class AndesDatePicker implements ControlValueAccessor {
   readonly ok = output<AndesDatePickerValue>();
 
   /**
-   * Emits each boundary pick of a range, before it is complete.
+   * Emits each boundary pick of a range (a day in the calendar, or a time in the time
+   * columns), before the range is committed: both boundaries, their display text, and
+   * which boundary the pick set.
    */
-  readonly calendarChange = output<readonly [Date | null, Date | null]>();
+  readonly calendarChange = output<AndesDatePickerCalendarChange>();
 
   /** Re-emits the calendar's panel navigation. */
   readonly panelChange = output<AndesCalendarPanelChange>();
@@ -1108,6 +1156,9 @@ export class AndesDatePicker implements ControlValueAccessor {
 
   /** Which input (and which time) the user is editing. */
   protected readonly activeSide = signal<Side>('start');
+
+  /** The input that has focus, while focus is inside the picker; `null` once it has left. */
+  private focusedSide: Side | null = null;
 
   /** Move focus into the grid when the panel opens (keyboard open). */
   protected readonly focusGridOnOpen = signal(false);
@@ -2376,7 +2427,7 @@ export class AndesDatePicker implements ControlValueAccessor {
     this.openPanel();
   }
 
-  protected onInputFocus(side: Side): void {
+  protected onInputFocus(side: Side, event: FocusEvent): void {
     if (this.responsiveTags()) {
       // The focused input asks for more room (see the stylesheet): re-fit the tags.
       this.afterRender(() => this.fitTags());
@@ -2388,6 +2439,10 @@ export class AndesDatePicker implements ControlValueAccessor {
       return;
     }
     this.setActiveSide(side);
+    if (this.focusedSide !== side) {
+      this.focusedSide = side;
+      this.focused.emit({ event, range: side });
+    }
   }
 
   /** A press on a locked side's input works on the other side instead. */
@@ -2569,6 +2624,12 @@ export class AndesDatePicker implements ControlValueAccessor {
       return;
     }
 
+    if (this.focusedSide) {
+      const range = this.focusedSide;
+      this.focusedSide = null;
+      this.blurred.emit({ event, range });
+    }
+
     let changed = false;
     for (const side of ['start', 'end'] as const) {
       if (this.draftFor(side)() !== null) {
@@ -2658,6 +2719,7 @@ export class AndesDatePicker implements ControlValueAccessor {
 
   protected onCalendarValueChange(next: AndesCalendarValue): void {
     const hadEnd = !!this.endDate();
+    const before = this.isRange() ? toOpenDateRange(this.selection()) : null;
     this.selection.set(next);
     this.startDraft.set(null);
     this.endDraft.set(null);
@@ -2679,7 +2741,12 @@ export class AndesDatePicker implements ControlValueAccessor {
         // A new end starts at the default time, not at the last range's end.
         this.endTime.set(this.defaultTimes()[1]);
       }
-      this.calendarChange.emit([range?.start ?? null, range?.end ?? null]);
+      // The end alone moved: the pick set the end. Anything else started or moved the start.
+      const endOnly =
+        !!range?.end &&
+        !sameInstant(range.end, before?.end) &&
+        sameInstant(range.start, before?.start);
+      this.emitCalendarChange(endOnly ? 'end' : 'start');
       this.setActiveSide(this.nextSideAfterPick(range));
       if (this.confirmRequired()) {
         return;
@@ -2765,6 +2832,9 @@ export class AndesDatePicker implements ControlValueAccessor {
     );
     this.startDraft.set(null);
     this.endDraft.set(null);
+    if (this.isRange()) {
+      this.emitCalendarChange(side);
+    }
     if (
       !this.confirmRequired() &&
       this.currentValue() !== null &&
@@ -3274,6 +3344,37 @@ export class AndesDatePicker implements ControlValueAccessor {
     this.committed.set(value);
     this.onChange(value);
     this.valueChange.emit(value);
+    this.valueTextChange.emit(this.valueText(value));
+  }
+
+  /** A value in the display format, in the shape `valueTextChange` emits. */
+  private valueText(value: AndesDatePickerValue): AndesDatePickerValueText {
+    const text = (date: Date | null | undefined) =>
+      date ? this.formatValue(date) : '';
+    if (this.isMultiple()) {
+      return toDateList(value).map((date) => this.formatValue(date));
+    }
+    if (this.isRange()) {
+      const [start, end] = Array.isArray(value)
+        ? (value as readonly (Date | null)[])
+        : [null, null];
+      return [text(start), text(end)];
+    }
+    return text(value as Date | null);
+  }
+
+  /** Reports a range's boundaries as they stand after a pick of `range`. */
+  private emitCalendarChange(range: Side): void {
+    const start = this.sideValue('start');
+    const end = this.sideValue('end');
+    this.calendarChange.emit({
+      value: [start, end],
+      text: [
+        start ? this.formatValue(start) : '',
+        end ? this.formatValue(end) : '',
+      ],
+      range,
+    });
   }
 
   /**

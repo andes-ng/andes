@@ -154,7 +154,7 @@
         [readOnly]="inputReadOnly() || lockedSides()[0]"
         (mousedown)="onInputMousedown('start', $event)"
         (click)="onInputClick('start')"
-        (focus)="onInputFocus('start')"
+        (focus)="onInputFocus('start', $event)"
         (input)="onInput('start', $event)"
         (keydown)="onInputKeydown('start', $event)"
       />
@@ -169,9 +169,7 @@
     >
       @if (separatorTemplate(); as separator) {
       <ng-container [ngTemplateOutlet]="separator" />
-      } @else {
-      {{ rangeSeparator() }}
-      }
+      } @else { {{ rangeSeparator() }} }
     </span>
     <input
       #endInput
@@ -203,7 +201,7 @@
       [readOnly]="inputReadOnly() || lockedSides()[1]"
       (mousedown)="onInputMousedown('end', $event)"
       (click)="onInputClick('end')"
-      (focus)="onInputFocus('end')"
+      (focus)="onInputFocus('end', $event)"
       (input)="onInput('end', $event)"
       (keydown)="onInputKeydown('end', $event)"
     />

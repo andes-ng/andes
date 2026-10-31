@@ -1,6 +1,8 @@
 export { AndesDatePicker } from './date-picker';
 export type {
   AndesDatePickerActiveIndex,
+  AndesDatePickerCalendarChange,
+  AndesDatePickerFocusEvent,
   AndesDatePickerIds,
   AndesDatePickerMaxTagCount,
   AndesDatePickerMode,
@@ -9,6 +11,7 @@ export type {
   AndesDatePickerPlacement,
   AndesDatePickerPreset,
   AndesDatePickerPreview,
+  AndesDatePickerRangeSide,
   AndesDatePickerRangeValue,
   AndesDatePickerSize,
   AndesDatePickerStatus,
@@ -16,6 +19,7 @@ export type {
   AndesDatePickerTagContext,
   AndesDatePickerType,
   AndesDatePickerValue,
+  AndesDatePickerValueText,
   AndesDatePickerVariant,
   AndesDisabledTime,
   AndesTimeCellContext,

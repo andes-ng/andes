@@ -4,9 +4,12 @@ import { TestBed } from '@angular/core/testing';
 import { toDateKey } from '../calendar/date-utils';
 import {
   AndesDatePicker,
+  type AndesDatePickerCalendarChange,
   type AndesDatePickerIds,
   type AndesDatePickerMode,
+  type AndesDatePickerType,
   type AndesDatePickerValue,
+  type AndesDatePickerValueText,
   type AndesTimeDisabledFn,
   type AndesTimeOptions,
 } from './date-picker';
@@ -443,7 +446,9 @@ describe('AndesDatePicker time options', () => {
     <ng-template #tag let-tag let-remove="remove" let-disabled="disabled">
       <span class="my-tag">{{ tag.key }}</span>
       @if (!disabled) {
-        <button type="button" class="my-remove" (click)="remove($event)">x</button>
+        <button type="button" class="my-remove" (click)="remove($event)">
+          x
+        </button>
       }
     </ng-template>
     <ng-template #separator><i class="my-separator">to</i></ng-template>
@@ -510,9 +515,7 @@ describe('AndesDatePicker field slots', () => {
       const separator = view.root.querySelector(
         '[data-slot="date-picker-separator"]',
       );
-      expect(separator?.querySelector('.my-separator')?.textContent).toBe(
-        'to',
-      );
+      expect(separator?.querySelector('.my-separator')?.textContent).toBe('to');
       expect(separator?.hasAttribute('data-arrow')).toBe(false);
     });
 
@@ -543,7 +546,9 @@ describe('AndesDatePicker field slots', () => {
         ),
       ).toEqual(['2024-02-01', '2024-02-09', '2024-02-20']);
       expect(
-        view.root.querySelector('.andes-date-picker__tag:not(.andes-date-picker__tag--rest)'),
+        view.root.querySelector(
+          '.andes-date-picker__tag:not(.andes-date-picker__tag--rest)',
+        ),
       ).toBeNull();
     });
 
@@ -569,6 +574,181 @@ describe('AndesDatePicker field slots', () => {
           .querySelector('[data-slot="date-picker-tag-rest"]')
           ?.textContent?.trim(),
       ).toContain('+ 1');
+    });
+  });
+});
+
+@Component({
+  imports: [AndesDatePicker],
+  template: `
+    <button type="button" id="outside">Outside</button>
+    <andes-date-picker
+      [mode]="mode()"
+      [picker]="picker()"
+      locale="en-US"
+      [format]="format()"
+      [defaultMonth]="defaultMonth"
+      [(value)]="value"
+      (valueTextChange)="texts.push($event)"
+      (calendarChange)="changes.push($event)"
+      (focused)="focusEvents.push('focus:' + $event.range)"
+      (blurred)="focusEvents.push('blur:' + $event.range)"
+    />
+  `,
+})
+class EventHost {
+  readonly mode = signal<AndesDatePickerMode>('single');
+  readonly picker = signal<AndesDatePickerType>('date');
+  readonly format = signal<string | null>(null);
+  readonly defaultMonth = d(2024, 2, 1);
+  readonly value = signal<AndesDatePickerValue | undefined>(undefined);
+  readonly texts: AndesDatePickerValueText[] = [];
+  readonly changes: AndesDatePickerCalendarChange[] = [];
+  readonly focusEvents: string[] = [];
+}
+
+describe('AndesDatePicker events', () => {
+  function create(setup: (host: EventHost) => void = () => undefined) {
+    const fixture = TestBed.createComponent(EventHost);
+    setup(fixture.componentInstance);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const inputs = () =>
+      Array.from(
+        root.querySelectorAll<HTMLInputElement>(
+          '[data-slot^="date-picker-input"]',
+        ),
+      );
+    const detect = () => fixture.detectChanges();
+    return {
+      host: fixture.componentInstance,
+      root,
+      inputs,
+      detect,
+      open: (index = 0) => {
+        inputs()[index].focus();
+        inputs()[index].click();
+        detect();
+      },
+      clickDay: (key: string) => {
+        document
+          .querySelector<HTMLElement>(
+            `[data-slot="date-picker-panel"] [data-date="${key}"]`,
+          )
+          ?.click();
+        detect();
+      },
+      leave: (from: HTMLElement) => {
+        const outside = root.querySelector<HTMLElement>('#outside');
+        from.dispatchEvent(
+          new FocusEvent('focusout', { bubbles: true, relatedTarget: outside }),
+        );
+        outside?.focus();
+        detect();
+      },
+    };
+  }
+
+  describe('valueTextChange', () => {
+    it('emits the committed date in the display format', () => {
+      const view = create((host) => host.format.set('DD/MM/YYYY'));
+      view.open();
+      view.clickDay('2024-02-09');
+
+      expect(view.host.texts).toEqual(['09/02/2024']);
+    });
+
+    it('emits a range as a pair and an empty value as empty text', () => {
+      const view = create((host) => host.mode.set('range'));
+      view.open();
+      view.clickDay('2024-02-09');
+      view.clickDay('2024-02-12');
+
+      expect(view.host.texts.at(-1)).toEqual(['Feb 9, 2024', 'Feb 12, 2024']);
+    });
+
+    it('emits a list in multiple mode', () => {
+      const view = create((host) => host.mode.set('multiple'));
+      view.open();
+      view.clickDay('2024-02-09');
+      view.clickDay('2024-02-03');
+
+      expect(view.host.texts.at(-1)).toEqual(['Feb 3, 2024', 'Feb 9, 2024']);
+    });
+  });
+
+  describe('calendarChange', () => {
+    it('reports an end picked from the end input as the end', () => {
+      const view = create((host) => {
+        host.mode.set('range');
+        host.value.set([d(2024, 2, 5), d(2024, 2, 8)]);
+      });
+      view.open(1);
+      view.clickDay('2024-02-14');
+
+      expect(view.host.changes.at(-1)?.range).toBe('end');
+      expect(view.host.changes.at(-1)?.text).toEqual([
+        'Feb 5, 2024',
+        'Feb 14, 2024',
+      ]);
+    });
+
+    it('reports each time picked in a time range, with its side', () => {
+      const view = create((host) => {
+        host.mode.set('range');
+        host.picker.set('time');
+        host.value.set([
+          new Date(2024, 1, 15, 9, 0),
+          new Date(2024, 1, 15, 17, 0),
+        ]);
+      });
+      view.open(1);
+      document
+        .querySelector<HTMLElement>(
+          '.andes-date-picker__time-column[data-unit="hours"] [role="option"]:nth-child(19)',
+        )
+        ?.dispatchEvent(new MouseEvent('mousedown', { button: 0 }));
+      view.detect();
+
+      const last = view.host.changes.at(-1);
+      expect(last?.range).toBe('end');
+      expect(last?.value[1]?.getHours()).toBe(18);
+    });
+  });
+
+  describe('focused and blurred', () => {
+    it('reports focus entering, moving between the inputs, and leaving', () => {
+      const view = create((host) => host.mode.set('range'));
+      const [start, end] = view.inputs();
+
+      start.focus();
+      view.detect();
+      end.focus();
+      view.detect();
+      view.leave(end);
+
+      expect(view.host.focusEvents).toEqual([
+        'focus:start',
+        'focus:end',
+        'blur:end',
+      ]);
+    });
+
+    it('does not report a blur while focus stays in the picker', () => {
+      const view = create();
+      const [input] = view.inputs();
+      input.focus();
+      view.detect();
+
+      input.dispatchEvent(
+        new FocusEvent('focusout', {
+          bubbles: true,
+          relatedTarget: view.root.querySelector('[data-slot="date-picker-trigger"]'),
+        }),
+      );
+      view.detect();
+
+      expect(view.host.focusEvents).toEqual(['focus:start']);
     });
   });
 });

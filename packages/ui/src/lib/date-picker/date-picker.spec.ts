@@ -17,6 +17,7 @@ import { toDateKey, type AndesPickerType } from '../calendar/date-utils';
 import type { AndesDateFormat } from '../calendar/date-format';
 import {
   AndesDatePicker,
+  type AndesDatePickerCalendarChange,
   type AndesDatePickerPanelContext,
   type AndesDatePickerPlacement,
   type AndesDatePickerPreset,
@@ -251,7 +252,7 @@ class FeatureHost {
   readonly useTemplates = signal(false);
   readonly open = signal(false);
   readonly values: AndesDatePickerValue[] = [];
-  readonly calendarChanges: (readonly [Date | null, Date | null])[] = [];
+  readonly calendarChanges: AndesDatePickerCalendarChange[] = [];
   clears = 0;
   oks = 0;
 }
@@ -1439,13 +1440,18 @@ describe('AndesDatePicker', () => {
         view.clickDay(d(2024, 2, 20));
 
         expect(
-          view.host.calendarChanges.map(([start, end]) => [
+          view.host.calendarChanges.map(({ value: [start, end], range }) => [
             start && toDateKey(start),
             end && toDateKey(end),
+            range,
           ]),
         ).toEqual([
-          ['2024-02-10', null],
-          ['2024-02-10', '2024-02-20'],
+          ['2024-02-10', null, 'start'],
+          ['2024-02-10', '2024-02-20', 'end'],
+        ]);
+        expect(view.host.calendarChanges.map(({ text }) => text)).toEqual([
+          ['Feb 10, 2024', ''],
+          ['Feb 10, 2024', 'Feb 20, 2024'],
         ]);
       });
 

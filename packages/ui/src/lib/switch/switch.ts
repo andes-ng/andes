@@ -378,7 +378,8 @@ export class AndesSwitch implements ControlValueAccessor {
    * moment the checked state flips (either way) until the ripple animation ends. Absent on the
    * first render and after the animation ends, so a switch that starts out on never ripples.
    */
-  protected readonly motion = signal<'change' | null>(null);
+  protected readonly motion = signal<'change' | 'change-alt' | null>(null);
+  private motionFlip = false;
 
   /**
    * Off until a moment after the first render, so the initial state - including a value a
@@ -407,7 +408,9 @@ export class AndesSwitch implements ControlValueAccessor {
       const previous = this.lastChecked;
       this.lastChecked = checked;
       if (this.motionReady && previous !== null && previous !== checked) {
-        this.motion.set('change');
+        // Alternating names restart a ring that is still running when the next change lands.
+        this.motionFlip = !this.motionFlip;
+        this.motion.set(this.motionFlip ? 'change' : 'change-alt');
       }
     });
 
@@ -444,7 +447,8 @@ export class AndesSwitch implements ControlValueAccessor {
   protected onMotionEnd(event: AnimationEvent): void {
     if (
       event.target === event.currentTarget &&
-      event.animationName.endsWith('andes-switch-ripple')
+      (event.animationName.endsWith('andes-switch-ripple') ||
+        event.animationName.endsWith('andes-switch-ripple-alt'))
     ) {
       this.motion.set(null);
     }

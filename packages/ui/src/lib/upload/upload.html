@@ -145,6 +145,7 @@
       <button
         type="button"
         class="andes-upload__action"
+        data-action="preview"
         [attr.aria-label]="item.labels.preview"
         [attr.title]="item.labels.preview"
         (click)="onPreviewClick(item.file, $event)"
@@ -154,6 +155,7 @@
       } @if (item.canDownload) {
       <a
         class="andes-upload__action"
+        data-action="download"
         download
         target="_blank"
         rel="noopener noreferrer"
@@ -168,6 +170,7 @@
       <button
         type="button"
         class="andes-upload__action"
+        data-action="retry"
         [attr.aria-label]="item.labels.retry"
         [attr.title]="item.labels.retry"
         (click)="onRetryClick(item.file)"
@@ -178,6 +181,7 @@
       <button
         type="button"
         class="andes-upload__action"
+        data-action="remove"
         [attr.aria-label]="item.labels.remove"
         [attr.title]="item.labels.remove"
         (click)="onRemoveClick(item.file)"

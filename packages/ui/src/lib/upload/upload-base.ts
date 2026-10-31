@@ -4,6 +4,7 @@ import {
   computed,
   DestroyRef,
   Directive,
+  DOCUMENT,
   effect,
   ElementRef,
   inject,
@@ -186,6 +187,8 @@ function hasFiles(event: DragEvent): boolean {
 export abstract class AndesUploadBase implements ControlValueAccessor {
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
+  private readonly document = inject(DOCUMENT);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly fileInput =
     viewChild<ElementRef<HTMLInputElement>>('fileInput');
   private readonly projected = viewChild<ElementRef<HTMLElement>>('projected');
@@ -738,8 +741,14 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
     }
     this.cancelAttempt(file.uid);
     const gone = { ...file, status: 'removed' as const };
-    const next = this.fileList().filter((entry) => entry.uid !== file.uid);
+    const before = this.fileList();
+    const next = before.filter((entry) => entry.uid !== file.uid);
+    // Decided before the list changes: once the row is gone there is nothing left to ask.
+    const refocus = this.holdsFocus(file.uid);
     this.fileList.set(next);
+    if (refocus) {
+      this.moveFocusAfterRemoval(before, file.uid);
+    }
     this.onChange(next);
     this.changed.emit({ file: gone, fileList: next });
     this.remove.emit(gone);
@@ -898,6 +907,52 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
   }
 
   /* ------------------------------------------------------------------ internals */
+
+  /** The row of one file, if it is rendered. */
+  private itemElement(uid: string): HTMLElement | undefined {
+    return Array.from(
+      this.host.nativeElement.querySelectorAll<HTMLElement>(
+        '[data-slot="upload-item"]',
+      ),
+    ).find((element) => element.getAttribute('data-uid') === uid);
+  }
+
+  /** Whether the keyboard focus sits inside the row of this file. */
+  private holdsFocus(uid: string): boolean {
+    const active = this.document.activeElement;
+    return !!active && !!this.itemElement(uid)?.contains(active);
+  }
+
+  /**
+   * The row that had the focus is going away, and with it the focus (it would fall back to the
+   * page). Moves it to the same action of the next row, else the previous one, else the file
+   * input. The neighbour is already on screen, so this happens before the removed row starts
+   * (or finishes) leaving; the input may still be disabled or hidden until the next render.
+   */
+  private moveFocusAfterRemoval(
+    before: readonly AndesUploadFile[],
+    uid: string,
+  ): void {
+    const index = before.findIndex((entry) => entry.uid === uid);
+    for (const neighbour of [before[index + 1], before[index - 1]]) {
+      const row = neighbour ? this.itemElement(neighbour.uid) : undefined;
+      const target =
+        row?.querySelector<HTMLElement>('[data-action="remove"]') ??
+        row?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+      if (target) {
+        target.focus();
+        return;
+      }
+    }
+    afterNextRender(
+      () => {
+        if (!this.destroyed) {
+          this.focus();
+        }
+      },
+      { injector: this.injector },
+    );
+  }
 
   private find(target: AndesUploadFile | string): AndesUploadFile | undefined {
     const uid = typeof target === 'string' ? target : target.uid;

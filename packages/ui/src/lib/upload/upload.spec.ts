@@ -846,6 +846,101 @@ describe('AndesUpload', () => {
       expect(await host.upload().removeFile(host.files()[0])).toBe(false);
     });
 
+    describe('focus after removal', () => {
+      const three: AndesUploadFile[] = [
+        { uid: 'a', name: 'a.pdf', status: 'done' },
+        { uid: 'b', name: 'b.pdf', status: 'done' },
+        { uid: 'c', name: 'c.pdf', status: 'done' },
+      ];
+
+      function removeButton(root: HTMLElement, name: string) {
+        return root.querySelector(
+          `button[aria-label="Remove ${name}"]`,
+        ) as HTMLButtonElement;
+      }
+
+      it('moves the focus to the remove button of the next file', async () => {
+        const { host, root, fixture, flush } = setup();
+        host.files.set(three);
+        fixture.detectChanges();
+        removeButton(root, 'b.pdf').focus();
+        removeButton(root, 'b.pdf').click();
+        await flush();
+
+        expect(host.files().map((f) => f.uid)).toEqual(['a', 'c']);
+        expect(document.activeElement).toBe(removeButton(root, 'c.pdf'));
+      });
+
+      it('moves the focus to the previous file when the last one goes', async () => {
+        const { host, root, fixture, flush } = setup();
+        host.files.set(three);
+        fixture.detectChanges();
+        removeButton(root, 'c.pdf').focus();
+        removeButton(root, 'c.pdf').click();
+        await flush();
+
+        expect(document.activeElement).toBe(removeButton(root, 'b.pdf'));
+      });
+
+      it('falls back to the file input when the list empties', async () => {
+        const { host, root, fixture, flush, input } = setup();
+        host.files.set([three[0]]);
+        fixture.detectChanges();
+        removeButton(root, 'a.pdf').focus();
+        removeButton(root, 'a.pdf').click();
+        await flush();
+
+        expect(host.files()).toEqual([]);
+        expect(document.activeElement).toBe(input());
+      });
+
+      it('reaches a file input that was disabled by a full list', async () => {
+        const { host, root, fixture, flush, input } = setup();
+        host.maxCount.set(1);
+        host.listType.set('picture-card');
+        host.files.set([three[0]]);
+        fixture.detectChanges();
+        expect(input().disabled).toBe(false);
+        host.maxCount.set(2);
+        host.files.set([three[0], three[1]]);
+        fixture.detectChanges();
+        expect(input().disabled).toBe(true);
+
+        removeButton(root, 'a.pdf').focus();
+        removeButton(root, 'a.pdf').click();
+        await flush();
+
+        expect(document.activeElement).toBe(removeButton(root, 'b.pdf'));
+        removeButton(root, 'b.pdf').click();
+        await flush();
+        expect(document.activeElement).toBe(input());
+      });
+
+      it('leaves the focus alone when it was not inside the removed row', async () => {
+        const { host, root, fixture, flush, upload } = setup();
+        host.files.set(three);
+        fixture.detectChanges();
+        removeButton(root, 'c.pdf').focus();
+
+        expect(await upload.removeFile('a')).toBe(true);
+        await flush();
+        expect(document.activeElement).toBe(removeButton(root, 'c.pdf'));
+      });
+
+      it('keeps the focus on the button when beforeRemove vetoes', async () => {
+        const { host, root, fixture, flush } = setup();
+        host.beforeRemove.set(async () => false);
+        host.files.set(three);
+        fixture.detectChanges();
+        removeButton(root, 'b.pdf').focus();
+        removeButton(root, 'b.pdf').click();
+        await flush();
+
+        expect(host.files()).toHaveLength(3);
+        expect(document.activeElement).toBe(removeButton(root, 'b.pdf'));
+      });
+    });
+
     it('aborts requests when the control is destroyed', async () => {
       const { fixture, aborted, host } = await withFile();
       const uid = host.files()[0].uid;

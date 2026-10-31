@@ -30,16 +30,67 @@ describe('AndesDatePicker styles', () => {
     });
 
     it('swaps with the calendar icon on hover or focus-within, and always shows without hover', () => {
-      expect(rule).toContain('visibility: hidden;');
-      expect(css).toContain(
-        '.andes-date-picker__field:hover .andes-date-picker__clear, .andes-date-picker__field:focus-within .andes-date-picker__clear { visibility: visible; }',
+      const clear = '.andes-date-picker__clear';
+      const shown =
+        '.andes-date-picker__field:focus-within .andes-date-picker__clear';
+      const icon = '.andes-date-picker__icon--hidden-on-hover';
+      const iconHidden =
+        '.andes-date-picker__field:focus-within .andes-date-picker__icon--hidden-on-hover';
+
+      expect(declaredValue(source, clear, 'visibility')).toBe('hidden');
+      expect(declaredValue(source, clear, 'opacity')).toBe('0');
+      expect(declaredValue(source, shown, 'visibility')).toBe('visible');
+      expect(declaredValue(source, shown, 'opacity')).toBe('1');
+      expect(declaredValue(source, iconHidden, 'visibility')).toBe('hidden');
+      expect(declaredValue(source, iconHidden, 'opacity')).toBe('0');
+
+      const touch = atRule(source, '@media (hover: none)');
+      expect(declaredValue(touch, clear, 'visibility')).toBe('visible');
+      expect(declaredValue(touch, clear, 'opacity')).toBe('1');
+      expect(declaredValue(touch, icon, 'visibility')).toBe('hidden');
+      expect(declaredValue(touch, icon, 'opacity')).toBe('0');
+    });
+
+    it('cross-fades with the calendar icon over 0.2s, moving visibility at the far end of the fade', () => {
+      const fade =
+        'opacity var(--andes-motion-duration-slow, 200ms) var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1))';
+      const slow = 'var(--andes-motion-duration-slow, 200ms)';
+      const mid = 'color var(--andes-motion-duration-mid, 150ms) ease';
+      const shown =
+        '.andes-date-picker__field:focus-within .andes-date-picker__clear';
+      const iconHidden =
+        '.andes-date-picker__field:focus-within .andes-date-picker__icon--hidden-on-hover';
+
+      // Going away waits for the fade; appearing does not.
+      expect(
+        declaredValue(motion, '.andes-date-picker__clear', 'transition'),
+      ).toBe(`${fade}, visibility 0s linear ${slow}, ${mid}`);
+      expect(declaredValue(motion, shown, 'transition')).toBe(
+        `${fade}, visibility 0s linear 0s, ${mid}`,
       );
-      expect(css).toContain(
-        '.andes-date-picker__field:hover .andes-date-picker__icon--hidden-on-hover, .andes-date-picker__field:focus-within .andes-date-picker__icon--hidden-on-hover { visibility: hidden; }',
+      expect(
+        declaredValue(
+          motion,
+          '.andes-date-picker__icon--hidden-on-hover',
+          'transition',
+        ),
+      ).toBe(`${fade}, visibility 0s linear 0s`);
+      expect(declaredValue(motion, iconHidden, 'transition')).toBe(
+        `${fade}, visibility 0s linear ${slow}`,
       );
-      expect(css).toContain(
-        '@media (hover: none) { .andes-date-picker__clear { visibility: visible; }',
-      );
+    });
+
+    it('does not animate the swap under reduced motion', () => {
+      expect(
+        declaredValue(source, '.andes-date-picker__clear', 'transition'),
+      ).toBeUndefined();
+      expect(
+        declaredValue(
+          source,
+          '.andes-date-picker__icon--hidden-on-hover',
+          'transition',
+        ),
+      ).toBeUndefined();
     });
 
     it('draws a muted disc with the "x" knocked out, with a focus ring', () => {
@@ -159,6 +210,11 @@ describe('AndesDatePicker styles', () => {
       expect(
         declaredValue(motion, '.andes-date-picker__preset', 'transition'),
       ).toBe('background-color var(--andes-motion-duration-mid, 150ms) ease');
+    });
+
+    it('uses the legacy duration aliases nowhere', () => {
+      expect(css.includes('--andes-duration-')).toBe(false);
+      expect(css.includes('--andes-ease-')).toBe(false);
     });
 
     it('fades the time options on hover with the fast token', () => {

@@ -622,8 +622,8 @@
   line-height: 1;
   cursor: pointer;
   transform: translate(-50%, -50%);
+  opacity: 0;
   visibility: hidden;
-  transition: color var(--andes-duration-base, 150ms) ease;
 }
 
 .andes-date-picker__clear:hover {
@@ -662,22 +662,68 @@
 
 .andes-date-picker__field:hover .andes-date-picker__clear,
 .andes-date-picker__field:focus-within .andes-date-picker__clear {
+  opacity: 1;
   visibility: visible;
 }
 
 /* prettier-ignore */
 .andes-date-picker__field:hover .andes-date-picker__icon--hidden-on-hover,
 .andes-date-picker__field:focus-within .andes-date-picker__icon--hidden-on-hover {
+  opacity: 0;
   visibility: hidden;
 }
 
 @media (hover: none) {
   .andes-date-picker__clear {
+    opacity: 1;
     visibility: visible;
   }
 
   .andes-date-picker__icon--hidden-on-hover {
+    opacity: 0;
     visibility: hidden;
+  }
+}
+
+/*
+  The swap is a cross-fade: the button fades in as the calendar icon fades out, and back.
+  `visibility` stays what keeps the hidden one out of the Tab order and the accessibility
+  tree, so it flips at the far end of the fade: at once when the element is appearing, after
+  the fade when it is going away. Reduced motion: the swap is instant.
+*/
+@media (prefers-reduced-motion: no-preference) {
+  .andes-date-picker__clear {
+    transition:
+      opacity var(--andes-motion-duration-slow, 200ms)
+        var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1)),
+      visibility 0s linear var(--andes-motion-duration-slow, 200ms),
+      color var(--andes-motion-duration-mid, 150ms) ease;
+  }
+
+  /* prettier-ignore */
+  .andes-date-picker__field:hover .andes-date-picker__clear,
+  .andes-date-picker__field:focus-within .andes-date-picker__clear {
+    transition:
+      opacity var(--andes-motion-duration-slow, 200ms)
+        var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1)),
+      visibility 0s linear 0s,
+      color var(--andes-motion-duration-mid, 150ms) ease;
+  }
+
+  .andes-date-picker__icon--hidden-on-hover {
+    transition:
+      opacity var(--andes-motion-duration-slow, 200ms)
+        var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1)),
+      visibility 0s linear 0s;
+  }
+
+  /* prettier-ignore */
+  .andes-date-picker__field:hover .andes-date-picker__icon--hidden-on-hover,
+  .andes-date-picker__field:focus-within .andes-date-picker__icon--hidden-on-hover {
+    transition:
+      opacity var(--andes-motion-duration-slow, 200ms)
+        var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1)),
+      visibility 0s linear var(--andes-motion-duration-slow, 200ms);
   }
 }
 

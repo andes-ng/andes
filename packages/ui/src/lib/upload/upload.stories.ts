@@ -56,7 +56,8 @@ const EXISTING: AndesUploadFile[] = [
     name: 'site-photo.png',
     size: 1_204_224,
     status: 'done',
-    url: picture('IMG', '#2563eb'),
+    url: 'https://files.example/site-photo.png',
+    thumbUrl: picture('IMG', '#2563eb'),
     type: 'image/png',
   },
   {
@@ -67,6 +68,36 @@ const EXISTING: AndesUploadFile[] = [
     errorMessage: 'The file is password protected',
   },
 ];
+
+const LONG_ERROR =
+  'The storage service rejected this upload because the quota of the account was exceeded; free some space or ask an administrator to raise the limit, then try again';
+
+/** Failed entries for the error stories: a short and a very long message, with and without a picture. */
+function failedFiles(): AndesUploadFile[] {
+  return [
+    {
+      uid: 'f1',
+      name: 'budget.xlsx',
+      size: 88_064,
+      status: 'error',
+      errorMessage: 'The file is password protected',
+    },
+    {
+      uid: 'f2',
+      name: 'quarterly-report-final-reviewed-v12-with-appendix-and-annexes.pdf',
+      size: 2_204_224,
+      status: 'error',
+      errorMessage: LONG_ERROR,
+    },
+    {
+      uid: 'f3',
+      name: 'site-photo.png',
+      status: 'error',
+      errorMessage: LONG_ERROR,
+      thumbUrl: picture('IMG', '#2563eb'),
+    },
+  ];
+}
 
 const meta: Meta<AndesUpload> = {
   title: 'Data Entry/Upload',
@@ -115,7 +146,7 @@ const meta: Meta<AndesUpload> = {
         [listType]="listType" [size]="size" [accept]="accept" [multiple]="multiple" [directory]="directory"
         [maxCount]="maxCount" [maxSize]="maxSize" [disabled]="disabled" [autoUpload]="autoUpload"
         [allowPaste]="allowPaste" [customRequest]="request" aria-label="Attachments">
-        <andes-button variant="outline" [disabled]="disabled">Select files</andes-button>
+        <andes-button variant="outline">Select files</andes-button>
       </andes-upload>
     </div>`,
   }),
@@ -151,6 +182,14 @@ export const Dragger: Story = {
  * keeps its file list visible but takes no new files and offers no remove action.
  */
 export const SizesAndStates: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A disabled upload also disables the `andes-button` inside it (no second `[disabled]` needed), and the default trigger (an outline `andes-button`, shown when nothing is projected) follows the size. `aria-invalid` gives the default trigger, the drop area and the picture cards the danger border, through hover and while dragging.',
+      },
+    },
+  },
   render: () => ({
     props: {
       request: simulatedUpload,
@@ -162,10 +201,19 @@ export const SizesAndStates: Story = {
         <andes-upload size="md" [customRequest]="request" aria-label="Medium"><andes-button variant="outline">Medium</andes-button></andes-upload>
         <andes-upload size="lg" [customRequest]="request" aria-label="Large"><andes-button size="lg" variant="outline">Large</andes-button></andes-upload>
         <andes-upload [customRequest]="request" aria-label="Default trigger"></andes-upload>
+        <andes-upload size="lg" [customRequest]="request" aria-label="Default trigger, large"></andes-upload>
       </div>
       <andes-upload [disabled]="true" [(fileList)]="files" aria-label="Attachments (locked)">
-        <andes-button variant="outline" [disabled]="true">Select files</andes-button>
+        <andes-button variant="outline">Select files</andes-button>
       </andes-upload>
+      <andes-upload [disabled]="true" aria-label="Default trigger (locked)"></andes-upload>
+      <div style="display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
+        <andes-upload [aria-invalid]="true" [customRequest]="request" aria-label="Invalid, default trigger"></andes-upload>
+        <andes-upload listType="picture-card" [aria-invalid]="true" [customRequest]="request" aria-label="Invalid, card">
+          <span style="font-size: 0.75rem; line-height: 1.25rem;">+ Upload</span>
+        </andes-upload>
+      </div>
+      <andes-upload-dragger [aria-invalid]="true" [customRequest]="request" dropHint="Required: add the signed contract" aria-label="Invalid, drop area" />
     </div>`,
   }),
 };
@@ -217,16 +265,26 @@ export const Limits: Story = {
     docs: {
       description: {
         story:
-          '`accept`, `maxSize` and `maxCount` are enforced for chosen, dropped and pasted files alike. The same checks are exported as pure functions (`isFileAccepted`, `isFileSizeValid`, `validateUploadFile`, `formatFileSize`) for use in your own forms and tests. Below the first control, a `maxCount` of 1 makes a new file replace the current one; the replaced upload is cancelled.',
+          '`accept`, `maxSize` and `maxCount` are enforced for chosen, dropped and pasted files alike. The same checks are exported as pure functions (`isFileAccepted`, `isFileSizeValid`, `validateUploadFile`, `formatFileSize`) for use in your own forms and tests. Below the first control, a `maxCount` of 1 makes a new file replace the current one; the replaced upload is cancelled, and `beforeRemove` may veto the replacement. Every text comes from `messages`, and an entry may be a function of its values for plural forms (the last control shows Spanish).',
       },
     },
   },
   decorators: [moduleMetadata({ imports: [LimitsDemo] })],
   render: () => ({
-    props: { request: simulatedUpload },
+    props: {
+      request: simulatedUpload,
+      spanish: {
+        announceRejected: '{name}: {reason}',
+        rejectCount: ({ count }: { count: string | number }) =>
+          count === 1 ? 'solo cabe 1 archivo' : `solo caben ${count} archivos`,
+        uploadFailed: 'No se pudo subir',
+        remove: 'Quitar {name}',
+      },
+    },
     template: `<div style="display: grid; gap: 1.5rem;">
       <andes-story-upload-limits />
       <andes-upload [maxCount]="1" [customRequest]="request" aria-label="Signed contract"><andes-button variant="outline">Upload signed contract (replaces)</andes-button></andes-upload>
+      <andes-upload [maxCount]="1" [customRequest]="request" [messages]="spanish" aria-label="Contrato firmado"><andes-button variant="outline">Subir contrato firmado</andes-button></andes-upload>
     </div>`,
   }),
 };
@@ -237,7 +295,7 @@ export const ExistingFiles: Story = {
     docs: {
       description: {
         story:
-          'Files that are already on the server come in through `fileList` with a `url`. The name links to the file, the preview action emits `preview` (call `preventDefault()` to show your own viewer instead of opening the URL) and the download action emits `download`. A failed entry shows its `errorMessage` and, with the original file, a retry action.',
+          'Files that are already on the server come in through `fileList` with a `url`. The name links to the file, the preview action emits `preview` (call `preventDefault()` to show your own viewer instead of opening the URL) and the download action emits `download`. The preview action only appears for files whose `url` is an `http(s)` or `blob:` address (a picture added locally, or a `data:` URL, has nothing to open); a custom viewer can still be wired through `itemRender`. A failed entry shows its `errorMessage` and, with the original file, a retry action.',
       },
     },
   },
@@ -355,16 +413,32 @@ export const Progress: Story = {
     docs: {
       description: {
         story:
-          'A 4px progress track under each uploading file. Name a file "fail" to see the error state: the message, a retry action and removal. Status changes are announced through a polite live region.',
+          'A 4px progress track under each uploading file; it fills and fades out when the upload finishes. Name a file "fail" to see the error state: the message, a retry action and removal. Status changes are announced through a polite live region. Rows and tiles animate in and out (and not at all with reduced motion); removing a file with the keyboard moves the focus to the next one. Below, failed entries with a very long message in a narrow column: in a row the message wraps beside the name, on a card it shows the name and two lines under the alert icon, and the whole text is the tooltip.',
       },
     },
   },
   render: () => ({
-    props: { request: simulatedUpload },
-    template: `<div style="max-width: 28rem;">
+    props: {
+      request: simulatedUpload,
+      rows: failedFiles(),
+      pictures: failedFiles(),
+      cards: failedFiles(),
+    },
+    template: `<div style="display: grid; gap: 1.5rem; max-width: 28rem;">
       <andes-upload [multiple]="true" [customRequest]="request" aria-label="Files">
         <andes-button variant="outline">Select files</andes-button>
       </andes-upload>
+      <div style="max-width: 22rem; display: grid; gap: 1.5rem;">
+        <andes-upload [(fileList)]="rows" aria-label="Failed files, list">
+          <andes-button variant="outline">Add</andes-button>
+        </andes-upload>
+        <andes-upload listType="picture" [(fileList)]="pictures" aria-label="Failed files, pictures">
+          <andes-button variant="outline">Add</andes-button>
+        </andes-upload>
+        <andes-upload listType="picture-card" [(fileList)]="cards" aria-label="Failed files, cards">
+          <span style="font-size: 0.75rem; line-height: 1.25rem;">+ Upload</span>
+        </andes-upload>
+      </div>
     </div>`,
   }),
 };

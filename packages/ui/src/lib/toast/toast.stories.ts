@@ -12,6 +12,7 @@ import {
   type StoryObj,
 } from '@storybook/angular';
 
+import { AndesButton } from '../button/button';
 import { AndesMessageService } from './message.service';
 import { provideAndesToastConfig } from './toast.config';
 import { AndesToastService } from './toast.service';
@@ -27,63 +28,62 @@ const NOTE_STYLE =
   'padding: 0 2rem; font-family: var(--andes-font-family), sans-serif; color: var(--andes-color-muted-foreground);';
 
 /**
- * The demo triggers are plain `<button>`s, which take the UA's own font rather than
- * inheriting the bar's - point them at the library font too.
- */
-const DEMO_STYLES =
-  'button { font-family: var(--andes-font-family), sans-serif; }';
-
-/**
  * Demo host: `AndesToastService`/`AndesToastViewport` are an imperative API with no visual
  * story of their own, so this wrapper provides trigger buttons the way a consuming app would.
  */
 @Component({
   selector: 'andes-toast-story',
-  imports: [AndesToastViewport],
-  styles: DEMO_STYLES,
+  imports: [AndesButton, AndesToastViewport],
   template: `
     <div [style]="barStyle">
-      <button
-        type="button"
+      <andes-button
+        variant="outline"
         (click)="toastService.success('Changes saved successfully.')"
       >
         Success
-      </button>
-      <button
-        type="button"
+      </andes-button>
+      <andes-button
+        variant="outline"
         (click)="toastService.error('Could not save your changes.')"
       >
         Error
-      </button>
-      <button
-        type="button"
+      </andes-button>
+      <andes-button
+        variant="outline"
         (click)="toastService.warning('Your session will expire in 5 minutes.')"
       >
         Warning
-      </button>
-      <button
-        type="button"
+      </andes-button>
+      <andes-button
+        variant="outline"
         (click)="toastService.info('A new version is available.')"
       >
         Info
-      </button>
-      <button type="button" (click)="showWithDescription()">
+      </andes-button>
+      <andes-button variant="outline" (click)="showWithDescription()">
         With description
-      </button>
-      <button type="button" (click)="toastService.loading('Loading data')">
+      </andes-button>
+      <andes-button
+        variant="outline"
+        (click)="toastService.loading('Loading data')"
+      >
         Loading
-      </button>
-      <button type="button" (click)="showPromise()">Promise</button>
-      <button type="button" (click)="showWithAction()">With action</button>
-      <button type="button" (click)="showPersistent()">
+      </andes-button>
+      <andes-button variant="outline" (click)="showPromise()"
+        >Promise</andes-button
+      >
+      <andes-button variant="outline" (click)="showWithAction()"
+        >With action</andes-button
+      >
+      <andes-button variant="outline" (click)="showPersistent()">
         Persistent (no auto-dismiss)
-      </button>
-      <button type="button" (click)="fireMany()">
+      </andes-button>
+      <andes-button variant="outline" (click)="fireMany()">
         Fire 8 toasts (max 3 open, rest queued)
-      </button>
-      <button type="button" (click)="toastService.dismissAll()">
+      </andes-button>
+      <andes-button variant="outline" (click)="toastService.dismissAll()">
         Dismiss all
-      </button>
+      </andes-button>
     </div>
     <p [style]="noteStyle">Queued: {{ toastService.queuedCount() }}</p>
     <andes-toast-viewport [position]="position()" />
@@ -146,35 +146,45 @@ class ToastStoryHost {
  */
 @Component({
   selector: 'andes-toast-gallery-story',
-  imports: [AndesToastViewport],
-  styles: DEMO_STYLES,
+  imports: [AndesButton, AndesToastViewport],
   template: `
     <div [style]="barStyle">
-      <button type="button" (click)="showDefault()">Default</button>
-      <button type="button" (click)="toasts.success('Event has been created')">
+      <andes-button variant="outline" (click)="showDefault()"
+        >Default</andes-button
+      >
+      <andes-button
+        variant="outline"
+        (click)="toasts.success('Event has been created')"
+      >
         Success
-      </button>
-      <button
-        type="button"
+      </andes-button>
+      <andes-button
+        variant="outline"
         (click)="toasts.info('Be at the area 10 minutes before the event time')"
       >
         Info
-      </button>
-      <button
-        type="button"
+      </andes-button>
+      <andes-button
+        variant="outline"
         (click)="toasts.warning('Event start time cannot be earlier than 8am')"
       >
         Warning
-      </button>
-      <button
-        type="button"
+      </andes-button>
+      <andes-button
+        variant="outline"
         (click)="toasts.error('Event has not been created')"
       >
         Error
-      </button>
-      <button type="button" (click)="showLoading()">Loading, then done</button>
-      <button type="button" (click)="showConfirm()">Action + cancel</button>
-      <button type="button" (click)="showMessage()">Message</button>
+      </andes-button>
+      <andes-button variant="outline" (click)="showLoading()"
+        >Loading, then done</andes-button
+      >
+      <andes-button variant="outline" (click)="showConfirm()"
+        >Action + cancel</andes-button
+      >
+      <andes-button variant="outline" (click)="showMessage()"
+        >Message</andes-button
+      >
     </div>
     <div [style]="barStyle">
       <label
@@ -193,7 +203,9 @@ class ToastStoryHost {
         />
         Always expanded (stack: false)</label
       >
-      <button type="button" (click)="destroyAll()">Destroy all</button>
+      <andes-button variant="outline" (click)="destroyAll()"
+        >Destroy all</andes-button
+      >
     </div>
     <p [style]="noteStyle">
       Hover the stack to expand it and pause every countdown; drag a toast
@@ -273,25 +285,36 @@ class GalleryStoryHost {
 /** Messages: compact, single-line, top-center, typed icons, `loading` -> `success`. */
 @Component({
   selector: 'andes-message-story',
-  imports: [AndesToastViewport],
-  styles: DEMO_STYLES,
+  imports: [AndesButton, AndesToastViewport],
   template: `
     <div [style]="barStyle">
-      <button type="button" (click)="messages.success('Saved')">Success</button>
-      <button type="button" (click)="messages.error('Upload failed')">
+      <andes-button variant="outline" (click)="messages.success('Saved')"
+        >Success</andes-button
+      >
+      <andes-button variant="outline" (click)="messages.error('Upload failed')">
         Error
-      </button>
-      <button type="button" (click)="messages.warning('Low disk space')">
+      </andes-button>
+      <andes-button
+        variant="outline"
+        (click)="messages.warning('Low disk space')"
+      >
         Warning
-      </button>
-      <button type="button" (click)="messages.info('Copied to clipboard')">
+      </andes-button>
+      <andes-button
+        variant="outline"
+        (click)="messages.info('Copied to clipboard')"
+      >
         Info
-      </button>
-      <button type="button" (click)="loadThenSucceed()">
+      </andes-button>
+      <andes-button variant="outline" (click)="loadThenSucceed()">
         Loading, then success (key update)
-      </button>
-      <button type="button" (click)="promiseMessage()">Promise</button>
-      <button type="button" (click)="messages.destroy()">Destroy all</button>
+      </andes-button>
+      <andes-button variant="outline" (click)="promiseMessage()"
+        >Promise</andes-button
+      >
+      <andes-button variant="outline" (click)="messages.destroy()"
+        >Destroy all</andes-button
+      >
     </div>
     <p [style]="noteStyle">{{ status() }}</p>
     <andes-toast-viewport />
@@ -333,26 +356,39 @@ class MessageStoryHost {
  */
 @Component({
   selector: 'andes-notification-story',
-  imports: [AndesToastViewport],
-  styles: DEMO_STYLES,
+  imports: [AndesButton, AndesToastViewport],
   template: `
     <div [style]="barStyle">
-      <button type="button" (click)="saveWithLoading()">
+      <andes-button variant="outline" (click)="saveWithLoading()">
         Loading, then success (key update)
-      </button>
-      <button type="button" (click)="withActions()">Actions group</button>
-      <button type="button" (click)="countdown()">Pause on hover</button>
-      <button type="button" (click)="noHoverPause()">No pause on hover</button>
-      <button type="button" (click)="clickable()">Clickable body</button>
-      <button type="button" (click)="customIcons()">
+      </andes-button>
+      <andes-button variant="outline" (click)="withActions()"
+        >Actions group</andes-button
+      >
+      <andes-button variant="outline" (click)="countdown()"
+        >Pause on hover</andes-button
+      >
+      <andes-button variant="outline" (click)="noHoverPause()"
+        >No pause on hover</andes-button
+      >
+      <andes-button variant="outline" (click)="clickable()"
+        >Clickable body</andes-button
+      >
+      <andes-button variant="outline" (click)="customIcons()">
         Custom icon + close icon
-      </button>
-      <button type="button" (click)="longContent()">Long content</button>
-      <button type="button" (click)="toasts.destroy()">Destroy all</button>
+      </andes-button>
+      <andes-button variant="outline" (click)="longContent()"
+        >Long content</andes-button
+      >
+      <andes-button variant="outline" (click)="toasts.destroy()"
+        >Destroy all</andes-button
+      >
     </div>
     <div [style]="barStyle">
       @for (placement of placements; track placement) {
-        <button type="button" (click)="at(placement)">{{ placement }}</button>
+        <andes-button variant="outline" (click)="at(placement)">{{
+          placement
+        }}</andes-button>
       }
     </div>
     <p [style]="noteStyle">{{ status() }}</p>
@@ -489,12 +525,15 @@ class NotificationStoryHost {
 /** Collapsed stack (`stack`), expanded while hovered/focused. */
 @Component({
   selector: 'andes-stack-story',
-  imports: [AndesToastViewport],
-  styles: DEMO_STYLES,
+  imports: [AndesButton, AndesToastViewport],
   template: `
     <div [style]="barStyle">
-      <button type="button" (click)="fire()">Fire 5 notifications</button>
-      <button type="button" (click)="toasts.destroy()">Destroy all</button>
+      <andes-button variant="outline" (click)="fire()"
+        >Fire 5 notifications</andes-button
+      >
+      <andes-button variant="outline" (click)="toasts.destroy()"
+        >Destroy all</andes-button
+      >
     </div>
     <p [style]="noteStyle">
       Open notifications collapse into a deck (three cards visible); hover or
@@ -526,7 +565,7 @@ class StackStoryHost {
  */
 @Component({
   selector: 'andes-toast-gallery-story',
-  imports: [AndesToastViewport],
+  imports: [AndesButton, AndesToastViewport],
   template: `
     <p [style]="noteStyle">
       Hover the deck to expand it; drag a toast sideways to swipe it away.
@@ -559,17 +598,24 @@ class ToastGalleryStoryHost {
  */
 @Component({
   selector: 'andes-rich-toast-story',
-  imports: [AndesToastViewport],
-  styles: DEMO_STYLES,
+  imports: [AndesButton, AndesToastViewport],
   template: `
     <div [style]="barStyle">
-      <button type="button" (click)="richNotification()">
+      <andes-button variant="outline" (click)="richNotification()">
         Template title + message
-      </button>
-      <button type="button" (click)="richMessage()">Template message</button>
-      <button type="button" (click)="wide()">Inline style (wide)</button>
-      <button type="button" (click)="noClose()">closeIcon: null</button>
-      <button type="button" (click)="destroyAll()">Destroy all</button>
+      </andes-button>
+      <andes-button variant="outline" (click)="richMessage()"
+        >Template message</andes-button
+      >
+      <andes-button variant="outline" (click)="wide()"
+        >Inline style (wide)</andes-button
+      >
+      <andes-button variant="outline" (click)="noClose()"
+        >closeIcon: null</andes-button
+      >
+      <andes-button variant="outline" (click)="destroyAll()"
+        >Destroy all</andes-button
+      >
     </div>
     <p [style]="noteStyle">{{ status() }}</p>
     <ng-template #exportTitle let-toast>
@@ -653,12 +699,13 @@ class RichToastStoryHost {
 /** Right-to-left content via the `rtl` option, for both flavors. */
 @Component({
   selector: 'andes-rtl-toast-story',
-  imports: [AndesToastViewport],
-  styles: DEMO_STYLES,
+  imports: [AndesButton, AndesToastViewport],
   template: `
     <div [style]="barStyle">
-      <button type="button" (click)="notify()">Notification</button>
-      <button type="button" (click)="message()">Message</button>
+      <andes-button variant="outline" (click)="notify()"
+        >Notification</andes-button
+      >
+      <andes-button variant="outline" (click)="message()">Message</andes-button>
     </div>
     <andes-toast-viewport />
   `,

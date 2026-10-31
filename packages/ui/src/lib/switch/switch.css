@@ -1,0 +1,735 @@
+/* The host is a box of its own: the label wraps the track and the text, and the default
+   `inline` host would sit them in a line box at the page's line-height. A card is a full-width
+   row, so it takes a block-level host (class set from the `variant` input). */
+:host {
+  display: inline-flex;
+}
+
+:host(.andes-switch-host--card) {
+  display: flex;
+}
+
+/* The field: the <label> around the track, the label text and the description. Without text it
+   is just the track (same footprint as the bare button); with text, the track is centered on the
+   first line (see the `:has()` rules below) so a wrapping label keeps it beside its first line.
+   Every selector using a descendant/child combinator stays on ONE line (see the note in
+   checkbox.css): Angular's style shim mis-scopes the split ones. */
+
+.andes-switch-field {
+  /* The label's line height and the track height the two are centered against; the size
+     modifiers below set them, and a track height set on the host wins. */
+  --_andes-switch-line: 1.375rem;
+  --_andes-switch-track: 1.375rem;
+  --_andes-switch-track-resolved: var(
+    --andes-switch-track-height,
+    var(--_andes-switch-track)
+  );
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--andes-space-2);
+  font-family: var(--andes-font-family), sans-serif;
+  /* Body-text scale (14px / 22px), like the checkbox, instead of the page's inherited 16px. */
+  font-size: var(--andes-text-font-size, 0.875rem);
+  line-height: var(--andes-text-line-height, 1.375rem);
+  color: var(--andes-color-foreground);
+  cursor: pointer;
+}
+
+.andes-switch-field--sm {
+  --_andes-switch-track: 1rem;
+  font-size: var(--andes-control-font-size-sm, 0.875rem);
+  line-height: var(--andes-control-line-height, 1.375rem);
+}
+
+.andes-switch-field--lg {
+  --_andes-switch-line: 1.5rem;
+  --_andes-switch-track: 1.75rem;
+  font-size: var(--andes-control-font-size-lg, 1rem);
+  line-height: 1.5rem;
+}
+
+/* `row-reverse` rather than reordering the DOM: the button stays first in source order (tab
+   order and label association unchanged), and flex direction already follows the writing
+   direction, so `start` lands on the right in RTL for free. */
+.andes-switch-field--label-start {
+  flex-direction: row-reverse;
+}
+
+.andes-switch-field--disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.andes-switch-field--readonly {
+  cursor: default;
+}
+
+.andes-switch-field--loading {
+  cursor: wait;
+}
+
+/* Hidden until it holds something (see the `:has()` rule just below). */
+.andes-switch-field__text {
+  display: none;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.andes-switch-field:has(> .andes-switch-field__text > :not(:empty)) {
+  align-items: flex-start;
+}
+
+/* prettier-ignore */
+.andes-switch-field:has(> .andes-switch-field__text > :not(:empty)) > .andes-switch-field__text {
+  display: block;
+}
+
+/* Centers the track on the label's first line - and the label on the track when the track is
+   the taller of the two (the lg size). */
+/* prettier-ignore */
+.andes-switch-field:has(> .andes-switch-field__text > :not(:empty)) > .andes-switch {
+  margin-block: max(
+    0px,
+    calc((var(--_andes-switch-line) - var(--_andes-switch-track-resolved)) / 2)
+  );
+}
+
+/* prettier-ignore */
+.andes-switch-field:has(> .andes-switch-field__text > :not(:empty)) > .andes-switch-field__text {
+  padding-block: max(
+    0px,
+    calc((var(--_andes-switch-track-resolved) - var(--_andes-switch-line)) / 2)
+  );
+}
+
+.andes-switch-field__label,
+.andes-switch-field__description {
+  display: block;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.andes-switch-field__label:empty,
+.andes-switch-field__description:empty {
+  display: none;
+}
+
+/* Secondary text under the label, in the same column, so it starts where the label starts (not
+   under the track) in either direction. It is part of the click target. */
+.andes-switch-field__description {
+  font-size: var(--andes-font-size-sm, 0.875rem);
+  line-height: var(--andes-line-height-sm, 1.25rem);
+  color: var(--andes-color-muted-foreground);
+}
+
+/* Card variant: the label element itself is the card, so the whole surface is the click target
+   with no extra wiring. The text takes the row and the track sits on the opposite side
+   (`labelPosition="start"` puts the text first and the track at the far end: a settings row). */
+
+.andes-switch-field--card {
+  --_andes-switch-card-padding-block: var(--andes-space-3);
+  --_andes-switch-card-padding-inline: var(--andes-space-4);
+  flex: 1 1 auto;
+  box-sizing: border-box;
+  gap: var(--andes-space-3);
+  padding-block: var(--_andes-switch-card-padding-block);
+  padding-inline: var(--_andes-switch-card-padding-inline);
+  border: 1px solid var(--andes-color-border);
+  border-radius: var(--andes-radius-md);
+  background-color: var(--andes-color-card, var(--andes-color-background));
+  color: var(--andes-color-card-foreground, var(--andes-color-foreground));
+  transition:
+    background-color var(--andes-motion-duration-fast, 0.1s)
+      var(--andes-motion-ease-in-out, cubic-bezier(0.645, 0.045, 0.355, 1)),
+    border-color var(--andes-motion-duration-fast, 0.1s)
+      var(--andes-motion-ease-in-out, cubic-bezier(0.645, 0.045, 0.355, 1));
+}
+
+.andes-switch-field--card.andes-switch-field--sm {
+  --_andes-switch-card-padding-block: var(--andes-space-2);
+  --_andes-switch-card-padding-inline: var(--andes-space-3);
+  border-radius: var(--andes-radius-sm);
+}
+
+.andes-switch-field--card.andes-switch-field--lg {
+  --_andes-switch-card-padding-block: var(--andes-space-4);
+  --_andes-switch-card-padding-inline: var(--andes-space-5);
+  border-radius: var(--andes-radius-lg);
+}
+
+.andes-switch-field--card > .andes-switch-field__text {
+  flex: 1 1 auto;
+}
+
+/* The label text of a card reads as its title. */
+.andes-switch-field--card .andes-switch-field__label {
+  font-weight: 500;
+}
+
+/* prettier-ignore */
+.andes-switch-field--card:not(.andes-switch-field--disabled):not(.andes-switch-field--readonly):not(.andes-switch-field--loading):hover {
+  border-color: var(--andes-color-primary);
+}
+
+.andes-switch-field--card.andes-switch-field--checked {
+  border-color: var(--andes-color-primary);
+  background-color: var(--andes-color-primary-subtle);
+}
+
+/* The card carries the focus ring; a second ring on the track inside it would be noise. */
+.andes-switch-field--card:has(.andes-switch:focus-visible) {
+  outline: 2px solid var(--andes-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.andes-switch-field--card .andes-switch:focus-visible {
+  outline: none;
+}
+
+/* Status wins over the checked and hover borders (declared after them; the :not() chain lifts
+   the hover variant to the specificity of the hover rule above). */
+
+/* prettier-ignore */
+.andes-switch-field--card.andes-switch-field--invalid, .andes-switch-field--card.andes-switch-field--invalid:not(.andes-switch-field--disabled):not(.andes-switch-field--readonly):not(.andes-switch-field--loading):hover {
+  border-color: var(--andes-color-danger);
+}
+
+/* prettier-ignore */
+.andes-switch-field--card.andes-switch-field--warning, .andes-switch-field--card.andes-switch-field--warning:not(.andes-switch-field--disabled):not(.andes-switch-field--readonly):not(.andes-switch-field--loading):hover {
+  border-color: var(--andes-color-warning-hover);
+}
+
+/* prettier-ignore */
+.andes-switch-field--card.andes-switch-field--invalid:has(.andes-switch:focus-visible) {
+  outline-color: var(--andes-color-danger);
+}
+
+/* prettier-ignore */
+.andes-switch-field--card.andes-switch-field--warning:has(.andes-switch:focus-visible) {
+  outline-color: var(--andes-color-warning-hover);
+}
+
+.andes-switch {
+  /* Size defaults: a 44 x 22px track with an 18px thumb. The public hooks
+     (--andes-switch-track-height, --andes-switch-track-width, --andes-switch-thumb-size,
+     --andes-switch-track-padding, --andes-switch-inner-margin) are never declared here, so a
+     value set on the <andes-switch> host - or any ancestor - inherits through and wins over
+     the default for the current size. */
+  --andes-switch-default-track-height: 1.375rem;
+  /* A minimum, not a fixed width: the track grows to fit checked/unchecked track content. */
+  --andes-switch-default-track-width: 2.75rem;
+  --andes-switch-default-thumb-size: 1.125rem;
+  /* Gap between the thumb and the track's outer edge. */
+  --andes-switch-default-track-padding: 0.125rem;
+  /* Gap between track content and the track edge on the side away from the thumb. */
+  --andes-switch-default-inner-margin: 0.5625rem;
+
+  /* Resolved geometry, read by the track and inherited by the thumb and track content. */
+  --andes-switch-resolved-track-height: var(
+    --andes-switch-track-height,
+    var(--andes-switch-default-track-height)
+  );
+  --andes-switch-resolved-track-width: var(
+    --andes-switch-track-width,
+    var(--andes-switch-default-track-width)
+  );
+  --andes-switch-resolved-thumb-size: var(
+    --andes-switch-thumb-size,
+    var(--andes-switch-default-thumb-size)
+  );
+  --andes-switch-resolved-track-padding: var(
+    --andes-switch-track-padding,
+    var(--andes-switch-default-track-padding)
+  );
+  --andes-switch-resolved-inner-margin: var(
+    --andes-switch-inner-margin,
+    var(--andes-switch-default-inner-margin)
+  );
+  /* The ring a change sends out (see the motion block at the end): the on color, or the status
+     color below. */
+  --_andes-switch-ripple-color: var(
+    --andes-switch-track-checked-color,
+    var(--andes-color-primary)
+  );
+  /* The on track under the pointer: its color lightened toward white, so hovering reads as
+     "lit", not "pressed". The same formula as the checkbox box and the radio disc; white (not
+     a theme token) so the dark theme lightens the same way. */
+  --_andes-switch-lift: color-mix(
+    in srgb,
+    var(--andes-switch-track-checked-color, var(--andes-color-primary)) 82%,
+    white
+  );
+
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  box-sizing: border-box;
+  height: var(--andes-switch-resolved-track-height);
+  min-width: var(--andes-switch-resolved-track-width);
+  padding: 0;
+  border-radius: var(--andes-radius-full);
+  /* Transparent, so it only shows in forced-colors mode (and as the invalid border). Everything
+     inside is positioned against the padding box, so offsets below subtract this 1px to keep
+     their distances measured from the track's outer edge. */
+  border: 1px solid transparent;
+  background-color: var(--andes-switch-track-color, var(--andes-color-input));
+  /* A native <button> does not inherit font-family, so projected/string track content would
+     otherwise fall back to the UA's default (serif/Arial) face. */
+  font-family: var(--andes-font-family), sans-serif;
+  cursor: pointer;
+  /* The track color and the thumb (below) move together, on the same 200ms ease. */
+  transition:
+    background-color var(--andes-motion-duration-slow, 0.2s)
+      var(--andes-motion-ease-in-out, cubic-bezier(0.645, 0.045, 0.355, 1)),
+    border-color var(--andes-motion-duration-slow, 0.2s)
+      var(--andes-motion-ease-in-out, cubic-bezier(0.645, 0.045, 0.355, 1));
+}
+
+.andes-switch--sm {
+  --_andes-switch-ring: 4px;
+
+  /* 28 x 16px with a 12px thumb. */
+  --andes-switch-default-track-height: 1rem;
+  --andes-switch-default-track-width: 1.75rem;
+  --andes-switch-default-thumb-size: 0.75rem;
+  --andes-switch-default-track-padding: 0.125rem;
+  --andes-switch-default-inner-margin: 0.375rem;
+}
+
+.andes-switch--lg {
+  --_andes-switch-ring: 8px;
+
+  /* 56 x 28px with a 24px thumb. */
+  --andes-switch-default-track-height: 1.75rem;
+  --andes-switch-default-track-width: 3.5rem;
+  --andes-switch-default-thumb-size: 1.5rem;
+  --andes-switch-default-track-padding: 0.125rem;
+  --andes-switch-default-inner-margin: 0.6875rem;
+}
+
+.andes-switch[data-checked] {
+  background-color: var(
+    --andes-switch-track-checked-color,
+    var(--andes-color-primary)
+  );
+}
+
+/* Hover only where a click would actually toggle - not on a read-only or loading switch. The
+   unchecked hover tint derives from the (possibly customised) track color. A checked track
+   LIGHTENS on hover (`--_andes-switch-lift`: its own color mixed toward white, a custom checked
+   color included) unless `--andes-switch-track-checked-hover-color` names the color to use; in
+   forced-colors mode the system palette owns the track and nothing changes on hover. */
+/* prettier-ignore */
+.andes-switch:hover:not(:disabled):not([data-disabled]):not([data-readonly]):not([data-loading]) {
+  background-color: var(--andes-switch-track-hover-color, color-mix(in srgb, var(--andes-switch-track-color, var(--andes-color-input)), var(--andes-color-foreground) 12%));
+}
+
+@media (forced-colors: none) {
+  /* prettier-ignore */
+  .andes-switch[data-checked]:hover:not(:disabled):not([data-disabled]):not([data-readonly]):not([data-loading]) {
+    background-color: var(--andes-switch-track-checked-hover-color, var(--_andes-switch-lift));
+  }
+}
+
+.andes-switch:focus-visible {
+  outline: 2px solid var(--andes-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.andes-switch:disabled,
+.andes-switch[data-disabled] {
+  cursor: not-allowed;
+}
+
+.andes-switch[data-readonly] {
+  cursor: default;
+}
+
+/* Same dimming as disabled, since a loading switch cannot be toggled, but the button stays
+   enabled and focusable - see the `loading` input's doc comment. */
+.andes-switch--loading {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.andes-switch--invalid {
+  --_andes-switch-ripple-color: var(--andes-color-danger);
+  border-color: var(--andes-color-danger);
+}
+
+/* The softer tier (the same warning shade AndesInput and AndesCheckbox use). */
+.andes-switch--warning {
+  --_andes-switch-ripple-color: var(--andes-color-warning-hover);
+  border-color: var(--andes-color-warning-hover);
+}
+
+/* One indicator only: the focus outline turns danger; no second halo around it. */
+.andes-switch--invalid:focus-visible {
+  outline-color: var(--andes-color-danger);
+}
+
+.andes-switch--warning:focus-visible {
+  outline-color: var(--andes-color-warning-hover);
+}
+
+/* Thumb - absolutely positioned (rather than a flex item nudged by a transform) so its
+   checked position tracks the actual track width, which grows with track content. */
+
+.andes-switch__thumb {
+  /* The thumb's inline size: the resting size, which the press stretch (motion block at the end)
+     swaps for a longer one. Both the width and the checked offset read it, so the thumb's outer
+     edge stays anchored at the track edge while it grows toward the side it will travel to. */
+  --_andes-switch-thumb-width: var(--andes-switch-resolved-thumb-size);
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  /* The track's 1px (transparent) border sits outside this containing block, so take it
+     back off - otherwise the inline gap is 1px wider than the block gap. */
+  inset-inline-start: calc(var(--andes-switch-resolved-track-padding) - 1px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--andes-switch-resolved-thumb-size);
+  width: var(--_andes-switch-thumb-width);
+  border-radius: var(--andes-radius-full);
+  /* A light knob in both themes: --andes-color-background turns near-black in the dark
+     theme, which left the thumb all but invisible on the dark track. The primary
+     foreground token is the one that stays white in both. */
+  background-color: var(
+    --andes-switch-thumb-color,
+    var(--andes-color-primary-foreground)
+  );
+  box-shadow: var(--andes-switch-thumb-shadow, 0 1px 2px rgb(0 0 0 / 15%));
+  transform: translateY(-50%);
+  /* Eased at both ends so the knob glides across and settles, rather than darting. */
+  transition:
+    inset-inline-start var(--andes-motion-duration-slow, 0.2s)
+      var(--andes-motion-ease-in-out, cubic-bezier(0.645, 0.045, 0.355, 1)),
+    width var(--andes-motion-duration-slow, 0.2s)
+      var(--andes-motion-ease-in-out, cubic-bezier(0.645, 0.045, 0.355, 1));
+  pointer-events: none;
+}
+
+.andes-switch[data-checked] .andes-switch__thumb {
+  inset-inline-start: calc(
+    100% - var(--_andes-switch-thumb-width) -
+      var(--andes-switch-resolved-track-padding) + 1px
+  );
+}
+
+.andes-switch__spinner {
+  width: 70%;
+  height: 70%;
+  border: 1.5px solid currentcolor;
+  border-right-color: transparent;
+  border-radius: var(--andes-radius-full);
+  color: var(--andes-color-muted-foreground);
+  animation: andes-switch-spin 1s linear infinite;
+}
+
+.andes-switch[data-checked] .andes-switch__spinner {
+  color: var(--andes-switch-track-checked-color, var(--andes-color-primary));
+}
+
+/* An icon inside the thumb (`checkedIcon` / `uncheckedIcon`): sized from the thumb, centered,
+   and drawn in `currentColor`. The thumb stays light in both themes, so the unchecked glyph
+   is mixed from tokens that stay dark enough on it in both (a theme foreground token turns
+   light in the dark theme and would vanish), reaching 4.5:1 on the white thumb. */
+.andes-switch__thumb-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: calc(var(--andes-switch-resolved-thumb-size) * 0.65);
+  line-height: 1;
+  color: color-mix(
+    in srgb,
+    var(--andes-color-muted-foreground) 50%,
+    var(--andes-color-primary-active)
+  );
+}
+
+.andes-switch[data-checked] .andes-switch__thumb-icon {
+  color: var(--andes-switch-track-checked-color, var(--andes-color-primary));
+}
+
+.andes-switch__thumb-icon ::ng-deep svg {
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .andes-switch,
+  .andes-switch__thumb,
+  .andes-switch__content,
+  .andes-switch-field--card {
+    transition: none;
+  }
+
+  /* Still turns - it is the only sign the switch is busy - just slower. */
+  .andes-switch__spinner {
+    animation-duration: 2.4s;
+  }
+}
+
+@keyframes andes-switch-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Track content (`checkedChildren` / `unCheckedChildren` or the matching slots), on the
+   opposite side of the track from the thumb. Both labels share one grid cell so the track is
+   as wide as the wider of the two and does not change width on toggle; only the active one is
+   visible. */
+
+.andes-switch__inner {
+  display: grid;
+  flex: 1 1 auto;
+  align-self: stretch;
+  /* 12px in both sizes - the caption floor; smaller track text stopped being readable. */
+  font-size: 0.75rem;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.andes-switch__content {
+  position: relative;
+  /* An explicit 0, not `auto`: an `auto` offset cannot be transitioned. */
+  inset-inline-start: 0;
+  grid-area: 1 / 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  visibility: hidden;
+  /* Nudged while the switch is pressed (motion block at the end). */
+  transition: inset-inline-start var(--andes-motion-duration-slow, 0.2s)
+    var(--andes-motion-ease-in-out, cubic-bezier(0.645, 0.045, 0.355, 1));
+}
+
+.andes-switch__content[data-active] {
+  visibility: visible;
+}
+
+.andes-switch__content--checked {
+  padding-inline-start: calc(var(--andes-switch-resolved-inner-margin) - 1px);
+  padding-inline-end: calc(
+    var(--andes-switch-resolved-thumb-size) + 3 *
+      var(--andes-switch-resolved-track-padding) - 1px
+  );
+  color: var(--andes-color-primary-foreground);
+}
+
+.andes-switch__content--unchecked {
+  padding-inline-start: calc(
+    var(--andes-switch-resolved-thumb-size) + 3 *
+      var(--andes-switch-resolved-track-padding) - 1px
+  );
+  padding-inline-end: calc(var(--andes-switch-resolved-inner-margin) - 1px);
+  /* --andes-color-muted-foreground only reaches ~3.2:1 on --andes-color-input, below
+     WCAG AA for this text's size - --andes-color-foreground clears it comfortably. */
+  color: var(--andes-color-foreground);
+}
+
+.andes-switch--lg .andes-switch__inner {
+  font-size: 0.875rem;
+}
+
+.andes-switch__content ::ng-deep svg {
+  width: 0.75em;
+  height: 0.75em;
+  flex-shrink: 0;
+}
+
+/* Forced colors (Windows high contrast): author colors are replaced, which would leave an on
+   track indistinguishable from an off one. Map track, thumb and card onto the system palette
+   explicitly; a status keeps its own border color so it is still told apart. */
+@media (forced-colors: active) {
+  .andes-switch {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+    background-color: Canvas;
+  }
+
+  .andes-switch[data-checked] {
+    border-color: Highlight;
+    background-color: Highlight;
+  }
+
+  .andes-switch__thumb {
+    background-color: CanvasText;
+    box-shadow: none;
+  }
+
+  .andes-switch[data-checked] .andes-switch__thumb {
+    background-color: HighlightText;
+  }
+
+  .andes-switch__thumb-icon,
+  .andes-switch__spinner {
+    color: Canvas;
+  }
+
+  .andes-switch[data-checked] .andes-switch__thumb-icon,
+  .andes-switch[data-checked] .andes-switch__spinner {
+    color: Highlight;
+  }
+
+  .andes-switch__content--unchecked {
+    color: CanvasText;
+  }
+
+  .andes-switch__content--checked {
+    color: HighlightText;
+  }
+
+  .andes-switch:disabled,
+  .andes-switch[data-disabled] {
+    border-color: GrayText;
+  }
+
+  .andes-switch:focus-visible {
+    outline-color: Highlight;
+  }
+
+  .andes-switch.andes-switch--invalid {
+    border-color: var(--andes-color-danger);
+  }
+
+  .andes-switch.andes-switch--warning {
+    border-color: var(--andes-color-warning-hover);
+  }
+
+  .andes-switch-field--card {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+    background-color: Canvas;
+    color: CanvasText;
+  }
+
+  .andes-switch-field--card.andes-switch-field--checked {
+    border-color: Highlight;
+  }
+
+  .andes-switch-field--card.andes-switch-field--invalid {
+    border-color: var(--andes-color-danger);
+  }
+
+  .andes-switch-field--card.andes-switch-field--warning {
+    border-color: var(--andes-color-warning-hover);
+  }
+
+  .andes-switch-field__description {
+    color: CanvasText;
+  }
+}
+
+/* Motion that answers the user: the press stretch and the change ripple. Only with motion
+   allowed, and not in forced-colors mode, where the system palette already redraws the track
+   and a moving ring would be noise. Under reduced motion the state changes instantly and none
+   of this applies.
+
+   Press: while the switch is held down (tracked on the field, so a press on the label text or
+   anywhere on a card counts too) the thumb stretches by 30% toward the side it will travel to,
+   and the track text slides away from it by twice the track padding. On release both settle
+   back while the thumb travels, so the move squishes and breathes. A disabled, read-only or
+   busy switch cannot change, so it gives no press feedback at all.
+
+   Ripple: `data-motion` is a one-shot hook the component sets only when the state CHANGES after
+   the first render (so a switch that starts out on never rings) and clears when this animation
+   ends. A soft ring in the on color - or the status color - leaves the track, for check and
+   uncheck alike.
+
+   Every selector with a combinator stays on ONE line (see the note at the top). */
+
+@keyframes andes-switch-ripple {
+  0% {
+    box-shadow: 0 0 0 0
+      color-mix(in srgb, var(--_andes-switch-ripple-color) 20%, transparent);
+  }
+
+  6% {
+    box-shadow: 0 0 0 calc(var(--_andes-switch-ring, 6px) * 0.7)
+      color-mix(in srgb, var(--_andes-switch-ripple-color) 16%, transparent);
+  }
+
+  16% {
+    box-shadow: 0 0 0 calc(var(--_andes-switch-ring, 6px) * 0.93)
+      color-mix(in srgb, var(--_andes-switch-ripple-color) 11%, transparent);
+  }
+
+  41% {
+    box-shadow: 0 0 0 var(--_andes-switch-ring, 6px)
+      color-mix(in srgb, var(--_andes-switch-ripple-color) 6%, transparent);
+  }
+
+  100% {
+    box-shadow: 0 0 0 var(--_andes-switch-ring, 6px)
+      color-mix(in srgb, var(--_andes-switch-ripple-color) 0%, transparent);
+  }
+}
+
+/* An identical twin, so two changes in a row restart the ring: switching between the two names
+   restarts a running animation. */
+@keyframes andes-switch-ripple-alt {
+  0% {
+    box-shadow: 0 0 0 0
+      color-mix(in srgb, var(--_andes-switch-ripple-color) 20%, transparent);
+  }
+
+  6% {
+    box-shadow: 0 0 0 calc(var(--_andes-switch-ring, 6px) * 0.7)
+      color-mix(in srgb, var(--_andes-switch-ripple-color) 16%, transparent);
+  }
+
+  16% {
+    box-shadow: 0 0 0 calc(var(--_andes-switch-ring, 6px) * 0.93)
+      color-mix(in srgb, var(--_andes-switch-ripple-color) 11%, transparent);
+  }
+
+  41% {
+    box-shadow: 0 0 0 var(--_andes-switch-ring, 6px)
+      color-mix(in srgb, var(--_andes-switch-ripple-color) 6%, transparent);
+  }
+
+  100% {
+    box-shadow: 0 0 0 var(--_andes-switch-ring, 6px)
+      color-mix(in srgb, var(--_andes-switch-ripple-color) 0%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) and (forced-colors: none) {
+  /* prettier-ignore */
+  .andes-switch-field:active:not(.andes-switch-field--disabled):not(.andes-switch-field--readonly):not(.andes-switch-field--loading) > .andes-switch .andes-switch__thumb {
+    /* Capped at the room inside the track, so a narrow custom track never loses the thumb. */
+    --_andes-switch-thumb-width: min(
+      calc(var(--andes-switch-resolved-thumb-size) * 1.3),
+      calc(100% - 2 * var(--andes-switch-resolved-track-padding) + 2px)
+    );
+  }
+
+  /* prettier-ignore */
+  .andes-switch-field:active:not(.andes-switch-field--disabled):not(.andes-switch-field--readonly):not(.andes-switch-field--loading) > .andes-switch:not([data-checked]) .andes-switch__content--unchecked {
+    inset-inline-start: calc(2 * var(--andes-switch-resolved-track-padding));
+  }
+
+  /* prettier-ignore */
+  .andes-switch-field:active:not(.andes-switch-field--disabled):not(.andes-switch-field--readonly):not(.andes-switch-field--loading) > .andes-switch[data-checked] .andes-switch__content--checked {
+    inset-inline-start: calc(-2 * var(--andes-switch-resolved-track-padding));
+  }
+
+  /* prettier-ignore */
+  .andes-switch[data-motion='change']:not(:disabled):not([data-disabled]):not([data-readonly]):not([data-loading]) {
+    animation: andes-switch-ripple 1s linear;
+  }
+
+  /* prettier-ignore */
+  .andes-switch[data-motion='change-alt']:not(:disabled):not([data-disabled]):not([data-readonly]):not([data-loading]) {
+    animation: andes-switch-ripple-alt 1s linear;
+  }
+}

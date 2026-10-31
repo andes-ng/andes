@@ -110,13 +110,20 @@
       <ng-container *ngTemplateOutlet="render; context: item.iconCtx" />
       } @else if (item.thumb) {
       <img class="andes-upload__img" [src]="item.thumb" alt="" />
-      } @else {
+      @if (item.status === 'error') {
+      <andes-upload-icon class="andes-upload__thumb-alert" name="alert" />
+      } } @else {
       <andes-upload-icon [name]="item.icon" />
       }
     </span>
     <span
       class="andes-upload__meta"
-      [class.andes-upload__meta--sr]="isCardList() && !!item.thumb"
+      [class.andes-upload__meta--sr]="
+        isCardList() && !!item.thumb && item.status !== 'error'
+      "
+      [class.andes-upload__meta--over]="
+        isCardList() && !!item.thumb && item.status === 'error'
+      "
     >
       @if (item.file.url && item.status === 'done') {
       <a
@@ -132,7 +139,9 @@
         >{{ item.file.name }}</span
       >
       } @if (item.errorText) {
-      <span class="andes-upload__error">{{ item.errorText }}</span>
+      <span class="andes-upload__error" [attr.title]="item.errorText"
+        >{{ item.errorText }}</span
+      >
       } @else if (item.caption) {
       <span class="andes-upload__caption">{{ item.caption }}</span>
       }

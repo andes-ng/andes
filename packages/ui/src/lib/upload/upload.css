@@ -248,13 +248,22 @@
 
 .andes-upload__caption,
 .andes-upload__error {
-  flex: none;
   font-size: 0.75rem;
   line-height: 1.25rem;
   color: var(--andes-color-muted-foreground, #64748b);
 }
 
+.andes-upload__caption {
+  flex: none;
+}
+
+/* The message may be as long as a server likes: it takes the room left beside the name (at
+   least 8rem) and wraps inside it, breaking even a long word, instead of keeping its natural
+   width and pushing the name to nothing and the page sideways. */
 .andes-upload__error {
+  flex: 1 1 8rem;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
   color: var(--andes-color-danger-text, var(--andes-color-danger, #dc2626));
 }
 
@@ -364,6 +373,10 @@
   gap: 0;
 }
 
+.andes-upload--picture .andes-upload__error {
+  flex: none;
+}
+
 .andes-upload--picture .andes-upload__progress {
   margin-inline: 0;
   margin-block-start: -0.375rem;
@@ -467,6 +480,52 @@
 
 .andes-upload--card .andes-upload__name {
   max-inline-size: 100%;
+}
+
+/* A failed card shows what went wrong: the name and the message (two lines at most; the whole
+   text is the tooltip) under the alert icon, on a plate that keeps them readable over a
+   picture. */
+.andes-upload--card
+  .andes-upload__item[data-status='error']
+  .andes-upload__meta {
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+.andes-upload--card .andes-upload__error {
+  display: -webkit-box;
+  flex: none;
+  max-inline-size: 100%;
+  overflow: hidden;
+  line-height: 1rem;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.andes-upload__meta--over {
+  margin-block-start: auto;
+  padding-block: var(--andes-space-1, 0.25rem);
+  border-radius: calc(var(--andes-radius-lg, 0.5rem) - 2px);
+  background-color: color-mix(
+    in srgb,
+    var(--andes-color-background, #ffffff) 92%,
+    transparent
+  );
+}
+
+.andes-upload__thumb-alert {
+  position: absolute;
+  inset-block-start: 0.5rem;
+  inset-inline: 0;
+  margin-inline: auto;
+  color: var(--andes-color-danger-text, var(--andes-color-danger, #dc2626));
+}
+
+.andes-upload--card
+  .andes-upload__item[data-status='error']
+  .andes-upload__img {
+  opacity: 0.35;
 }
 
 .andes-upload__meta--sr {

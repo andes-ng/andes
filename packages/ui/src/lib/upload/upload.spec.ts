@@ -5,6 +5,7 @@ import { Component, signal, viewChild } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 
+import { declaredValue } from '../../testing/computed-style';
 import { AndesUpload, AndesUploadDragger } from './upload';
 import { andesUploadMaxFiles, andesUploadSettled } from './upload-forms';
 import {
@@ -1193,6 +1194,90 @@ describe('AndesUpload', () => {
       expect(revoked).toHaveLength(0);
     });
 
+    describe('failed files', () => {
+      const long =
+        'The storage service rejected this upload because the quota of the account was exceeded, try again later';
+
+      it('shows a failed card its message, not only to screen readers', () => {
+        const { host, root, fixture } = setup();
+        host.listType.set('picture-card');
+        host.files.set([
+          {
+            uid: '1',
+            name: 'photo.png',
+            status: 'error',
+            errorMessage: long,
+            thumbUrl: 'https://cdn.test/t.png',
+          },
+        ]);
+        fixture.detectChanges();
+
+        const meta = root.querySelector('.andes-upload__meta') as HTMLElement;
+        expect(meta.classList).not.toContain('andes-upload__meta--sr');
+        expect(meta.classList).toContain('andes-upload__meta--over');
+        const error = root.querySelector('.andes-upload__error') as HTMLElement;
+        expect(error.textContent).toBe(long);
+        expect(error.getAttribute('title')).toBe(long);
+        expect(
+          root.querySelector('.andes-upload__thumb .andes-upload__thumb-alert'),
+        ).not.toBeNull();
+      });
+
+      it('keeps the picture card of a healthy file free of text', () => {
+        const { host, root, fixture } = setup();
+        host.listType.set('picture-card');
+        host.files.set([
+          {
+            uid: '1',
+            name: 'photo.png',
+            status: 'done',
+            thumbUrl: 'https://cdn.test/t.png',
+          },
+        ]);
+        fixture.detectChanges();
+
+        const meta = root.querySelector('.andes-upload__meta') as HTMLElement;
+        expect(meta.classList).toContain('andes-upload__meta--sr');
+        expect(meta.classList).not.toContain('andes-upload__meta--over');
+        expect(root.querySelector('.andes-upload__thumb-alert')).toBeNull();
+      });
+
+      it('relies on the alert icon of a failed card that has no picture', () => {
+        const { host, root, fixture } = setup();
+        host.listType.set('picture-card');
+        host.files.set([
+          {
+            uid: '1',
+            name: 'sheet.xlsx',
+            status: 'error',
+            errorMessage: 'Password protected',
+          },
+        ]);
+        fixture.detectChanges();
+
+        expect(root.querySelector('.andes-upload__thumb-alert')).toBeNull();
+        expect(
+          root.querySelector('.andes-upload__thumb andes-upload-icon'),
+        ).not.toBeNull();
+        expect(root.querySelector('.andes-upload__error')?.textContent).toBe(
+          'Password protected',
+        );
+      });
+
+      it('gives a failed text row the whole message as its title', () => {
+        const { host, root, fixture } = setup();
+        host.files.set([
+          { uid: '1', name: 'a.pdf', status: 'error', errorMessage: long },
+        ]);
+        fixture.detectChanges();
+
+        const error = root.querySelector('.andes-upload__error') as HTMLElement;
+        expect(error.textContent).toBe(long);
+        expect(error.getAttribute('title')).toBe(long);
+        expect(root.querySelector('.andes-upload__meta--over')).toBeNull();
+      });
+    });
+
     it('draws a progress bar and the actions on picture-card tiles', async () => {
       const { host, flush, root, requests } = setup();
       host.listType.set('picture-card');
@@ -1321,6 +1406,41 @@ describe('AndesUpload', () => {
       expect(css).not.toMatch(
         /margin-left|margin-right|padding-left|padding-right/,
       );
+    });
+
+    it('lets a long error message wrap beside the name instead of overflowing', () => {
+      const error = (property: string) =>
+        declaredValue(css, '.andes-upload__error', property);
+      expect(error('flex')).toBe('1 1 8rem');
+      expect(error('min-inline-size')).toBe('0');
+      expect(error('overflow-wrap')).toBe('anywhere');
+      // Picture rows stack the meta in a column, where a flex basis would be a height.
+      expect(
+        declaredValue(
+          css,
+          '.andes-upload--picture .andes-upload__error',
+          'flex',
+        ),
+      ).toBe('none');
+      expect(
+        declaredValue(css, '.andes-upload--card .andes-upload__error', 'flex'),
+      ).toBe('none');
+    });
+
+    it('clamps the message of a failed card to two lines', () => {
+      const card = '.andes-upload--card .andes-upload__error';
+      expect(declaredValue(css, card, '-webkit-line-clamp')).toBe('2');
+      expect(declaredValue(css, card, 'overflow')).toBe('hidden');
+      expect(
+        declaredValue(css, '.andes-upload__meta--over', 'margin-block-start'),
+      ).toBe('auto');
+      expect(
+        declaredValue(
+          css,
+          ".andes-upload--card .andes-upload__item[data-status='error'] .andes-upload__img",
+          'opacity',
+        ),
+      ).toBe('0.35');
     });
 
     it('reveals picture-card actions on hover and keyboard focus', () => {

@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { toDateKey } from '../calendar/date-utils';
 import {
   AndesDatePicker,
+  type AndesDatePickerIds,
   type AndesDatePickerMode,
   type AndesDatePickerValue,
   type AndesTimeDisabledFn,
@@ -270,7 +271,10 @@ describe('AndesDatePicker time columns from the format', () => {
   imports: [AndesDatePicker],
   template: `
     <ng-template #cell let-shown let-unit="unit" let-selected="selected">
-      <b class="time-cell" [attr.data-unit]="unit" [attr.data-selected]="selected"
+      <b
+        class="time-cell"
+        [attr.data-unit]="unit"
+        [attr.data-selected]="selected"
         >{{ unit }}:{{ shown }}</b
       >
     </ng-template>
@@ -346,7 +350,11 @@ describe('AndesDatePicker time options', () => {
   describe('hover preview', () => {
     function hover(view: ReturnType<typeof create>, option: HTMLElement) {
       option.dispatchEvent(
-        new MouseEvent('pointermove', { bubbles: true, screenX: 9, screenY: 9 }),
+        new MouseEvent('pointermove', {
+          bubbles: true,
+          screenX: 9,
+          screenY: 9,
+        }),
       );
       option.dispatchEvent(new MouseEvent('mouseenter'));
       view.detect();
@@ -409,9 +417,9 @@ describe('AndesDatePicker time options', () => {
       view.detect();
 
       expect(view.input.value).toBe('14:20');
-      expect(
-        view.options('minutes')[20].getAttribute('aria-selected'),
-      ).toBe('true');
+      expect(view.options('minutes')[20].getAttribute('aria-selected')).toBe(
+        'true',
+      );
     });
 
     it('leaves the value alone without changeOnScroll', async () => {
@@ -425,6 +433,142 @@ describe('AndesDatePicker time options', () => {
       view.detect();
 
       expect(view.input.value).toBe('14:05');
+    });
+  });
+});
+
+@Component({
+  imports: [AndesDatePicker],
+  template: `
+    <ng-template #tag let-tag let-remove="remove" let-disabled="disabled">
+      <span class="my-tag">{{ tag.key }}</span>
+      @if (!disabled) {
+        <button type="button" class="my-remove" (click)="remove($event)">x</button>
+      }
+    </ng-template>
+    <ng-template #separator><i class="my-separator">to</i></ng-template>
+    <andes-date-picker
+      [mode]="mode()"
+      locale="en-US"
+      [id]="id()"
+      [rangeSeparator]="useSeparator() ? separator : 'until'"
+      [tagTemplate]="tag"
+      [maxTagCount]="maxTagCount()"
+      [(value)]="value"
+    />
+  `,
+})
+class FieldSlotHost {
+  readonly mode = signal<AndesDatePickerMode>('range');
+  readonly id = signal<string | AndesDatePickerIds | undefined>(undefined);
+  readonly useSeparator = signal(true);
+  readonly maxTagCount = signal<number | undefined>(undefined);
+  readonly value = signal<AndesDatePickerValue | undefined>(undefined);
+}
+
+describe('AndesDatePicker field slots', () => {
+  function create(setup: (host: FieldSlotHost) => void = () => undefined) {
+    const fixture = TestBed.createComponent(FieldSlotHost);
+    setup(fixture.componentInstance);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    return {
+      fixture,
+      root,
+      host: fixture.componentInstance,
+      inputs: () =>
+        Array.from(
+          root.querySelectorAll<HTMLInputElement>(
+            '[data-slot^="date-picker-input"]',
+          ),
+        ),
+      detect: () => fixture.detectChanges(),
+    };
+  }
+
+  describe('id', () => {
+    it('puts a string id on the start input only', () => {
+      const view = create((host) => host.id.set('trip'));
+      expect(view.inputs().map((input) => input.id)).toEqual(['trip', '']);
+    });
+
+    it('gives each input of a range its own id from { start, end }', () => {
+      const view = create((host) =>
+        host.id.set({ start: 'trip-from', end: 'trip-to' }),
+      );
+      expect(view.inputs().map((input) => input.id)).toEqual([
+        'trip-from',
+        'trip-to',
+      ]);
+      expect(view.root.querySelector('andes-date-picker')?.id).toBe('');
+    });
+  });
+
+  describe('rangeSeparator', () => {
+    it('renders a template between the inputs', () => {
+      const view = create();
+      const separator = view.root.querySelector(
+        '[data-slot="date-picker-separator"]',
+      );
+      expect(separator?.querySelector('.my-separator')?.textContent).toBe(
+        'to',
+      );
+      expect(separator?.hasAttribute('data-arrow')).toBe(false);
+    });
+
+    it('still takes plain text', () => {
+      const view = create((host) => host.useSeparator.set(false));
+      expect(
+        view.root
+          .querySelector('[data-slot="date-picker-separator"]')
+          ?.textContent?.trim(),
+      ).toBe('until');
+    });
+  });
+
+  describe('tagTemplate', () => {
+    function createMultiple() {
+      return create((host) => {
+        host.mode.set('multiple');
+        host.value.set([d(2024, 2, 1), d(2024, 2, 9), d(2024, 2, 20)]);
+      });
+    }
+
+    it('draws each tag through the template', () => {
+      const view = createMultiple();
+      expect(
+        Array.from(
+          view.root.querySelectorAll('.my-tag'),
+          (tag) => tag.textContent,
+        ),
+      ).toEqual(['2024-02-01', '2024-02-09', '2024-02-20']);
+      expect(
+        view.root.querySelector('.andes-date-picker__tag:not(.andes-date-picker__tag--rest)'),
+      ).toBeNull();
+    });
+
+    it("removes the tag's date through the context's remove", () => {
+      const view = createMultiple();
+      view.root.querySelectorAll<HTMLElement>('.my-remove')[1].click();
+      view.detect();
+
+      expect(
+        (view.host.value() as Date[]).map((date) => toDateKey(date)),
+      ).toEqual(['2024-02-01', '2024-02-20']);
+    });
+
+    it('keeps the + N tag beside the custom tags', () => {
+      const view = create((host) => {
+        host.mode.set('multiple');
+        host.maxTagCount.set(1);
+        host.value.set([d(2024, 2, 1), d(2024, 2, 9)]);
+      });
+      expect(view.root.querySelectorAll('.my-tag')).toHaveLength(1);
+      expect(
+        view.root
+          .querySelector('[data-slot="date-picker-tag-rest"]')
+          ?.textContent?.trim(),
+      ).toContain('+ 1');
     });
   });
 });

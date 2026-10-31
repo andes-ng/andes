@@ -116,6 +116,22 @@ export interface AndesDatePickerTag {
   readonly label: string;
 }
 
+/** Template context for `tagTemplate`. */
+export interface AndesDatePickerTagContext {
+  /** The date the tag stands for, with its key and display label. */
+  readonly $implicit: AndesDatePickerTag;
+  /** Removes the date from the selection (as the default tag's remove button does). */
+  readonly remove: (event?: Event) => void;
+  /** Whether the picker is disabled, so the tag should not offer removal. */
+  readonly disabled: boolean;
+}
+
+/** `id` of a range's inputs, one per side. */
+export interface AndesDatePickerIds {
+  readonly start?: string;
+  readonly end?: string;
+}
+
 /** Field height (24 / 32 / 40px), matching `AndesButton`'s `sm`/`md`/`lg`. */
 export type AndesDatePickerSize = 'sm' | 'md' | 'lg';
 
@@ -824,8 +840,20 @@ export class AndesDatePicker implements ControlValueAccessor {
     undefined,
   );
 
-  /** Text between the two inputs of a range. */
-  readonly rangeSeparator = input('→');
+  /**
+   * What sits between the two inputs of a range: text, or a template (an icon, a word in
+   * another style). The default arrow turns round in a right-to-left field.
+   */
+  readonly rangeSeparator = input<string | TemplateRef<unknown>>('→');
+
+  /**
+   * Replaces each date tag of a `multiple` picker, in the field and in the `+ N ...`
+   * popover. The context holds the tag, a `remove()` to drop its date and whether the
+   * picker is disabled; a remove control in the template should call `remove($event)`.
+   */
+  readonly tagTemplate = input<TemplateRef<AndesDatePickerTagContext> | null>(
+    null,
+  );
 
   /**
    * `Intl.DateTimeFormat` options for the display value, used when `format` is not
@@ -959,8 +987,11 @@ export class AndesDatePicker implements ControlValueAccessor {
     alias: 'aria-labelledby',
   });
 
-  /** `id` of the input (the start input in `range` mode), for a `<label for>`. */
-  readonly id = input<string | undefined>(undefined);
+  /**
+   * `id` of the input, for a `<label for>`. In `range` mode a string goes on the start
+   * input; `{ start, end }` gives each input its own.
+   */
+  readonly id = input<string | AndesDatePickerIds | undefined>(undefined);
 
   /** Native `name` of the input(s). */
   readonly name = input<string | undefined>(undefined);
@@ -1161,6 +1192,24 @@ export class AndesDatePicker implements ControlValueAccessor {
   private heldHover: Date | null = null;
 
   protected readonly isRange = computed(() => this.mode() === 'range');
+
+  /** The start (or only) input's `id`. */
+  protected readonly startId = computed(() => {
+    const id = this.id();
+    return typeof id === 'object' ? id.start : id;
+  });
+
+  /** A range's end input's `id`, given through `{ start, end }`. */
+  protected readonly endId = computed(() => {
+    const id = this.id();
+    return typeof id === 'object' ? id.end : undefined;
+  });
+
+  /** `rangeSeparator` when it is a template. */
+  protected readonly separatorTemplate = computed(() => {
+    const separator = this.rangeSeparator();
+    return separator instanceof TemplateRef ? separator : null;
+  });
 
   protected readonly isTimeOnly = computed(() => this.picker() === 'time');
 
@@ -2381,6 +2430,28 @@ export class AndesDatePicker implements ControlValueAccessor {
     event.stopPropagation();
     this.removeDate(tag.date);
     this.startInput()?.nativeElement.focus();
+  }
+
+  /**
+   * `tagTemplate`'s context. `remove` is the `+ N` popover's own remover inside it, which
+   * keeps focus there, and the field's otherwise.
+   */
+  protected tagContext(
+    tag: AndesDatePickerTag,
+    remove: ((date: Date, event: Event) => void) | undefined,
+  ): AndesDatePickerTagContext {
+    return {
+      $implicit: tag,
+      disabled: this.isDisabled(),
+      remove: (event?: Event) => {
+        const trigger = event ?? new Event('remove');
+        if (remove) {
+          remove(tag.date, trigger);
+        } else {
+          this.onTagRemove(tag, trigger);
+        }
+      },
+    };
   }
 
   protected tagRemoveLabel(tag: AndesDatePickerTag): string {

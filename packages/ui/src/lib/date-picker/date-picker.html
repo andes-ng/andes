@@ -131,7 +131,7 @@
         role="combobox"
         autocomplete="off"
         aria-haspopup="dialog"
-        [attr.id]="id()"
+        [attr.id]="startId()"
         [attr.name]="name()"
         [attr.aria-expanded]="overlay.isOpen()"
         [attr.aria-controls]="overlay.isOpen() ? overlay.contentId : null"
@@ -163,10 +163,16 @@
     @if (isRange()) {
     <span
       class="andes-date-picker__separator"
+      data-slot="date-picker-separator"
       aria-hidden="true"
       [attr.data-arrow]="rangeSeparator() === '→' || null"
-      >{{ rangeSeparator() }}</span
     >
+      @if (separatorTemplate(); as separator) {
+      <ng-container [ngTemplateOutlet]="separator" />
+      } @else {
+      {{ rangeSeparator() }}
+      }
+    </span>
     <input
       #endInput
       type="text"
@@ -175,6 +181,7 @@
       role="combobox"
       autocomplete="off"
       aria-haspopup="dialog"
+      [attr.id]="endId()"
       [attr.aria-expanded]="overlay.isOpen()"
       [attr.aria-controls]="overlay.isOpen() ? overlay.contentId : null"
       [attr.name]="name()"
@@ -309,6 +316,14 @@
      buttons stay out of the Tab order: Backspace in the input removes the last date,
      one Tab stop instead of one per tag. -->
 <ng-template #tagSlot let-tag let-remove="remove">
+  @if (tagTemplate(); as customTag) {
+  <span class="andes-date-picker__tag-custom" data-slot="date-picker-tag">
+    <ng-container
+      [ngTemplateOutlet]="customTag"
+      [ngTemplateOutletContext]="tagContext(tag, remove)"
+    />
+  </span>
+  } @else {
   <span
     class="andes-date-picker__tag"
     data-slot="date-picker-tag"
@@ -331,6 +346,7 @@
     </button>
     }
   </span>
+  }
 </ng-template>
 
 <!-- The panel's content, apart from its root so a panelTemplate can wrap it. -->
@@ -434,9 +450,7 @@
                 [ngTemplateOutlet]="cellTemplate"
                 [ngTemplateOutletContext]="option.context"
               />
-              } @else {
-              {{ option.text }}
-              }
+              } @else { {{ option.text }} }
             </div>
             }
           </div>

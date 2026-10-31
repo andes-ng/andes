@@ -1,6 +1,7 @@
 export { AndesDatePicker } from './date-picker';
 export type {
   AndesDatePickerActiveIndex,
+  AndesDatePickerIds,
   AndesDatePickerMaxTagCount,
   AndesDatePickerMode,
   AndesDatePickerPanelClass,
@@ -12,6 +13,7 @@ export type {
   AndesDatePickerSize,
   AndesDatePickerStatus,
   AndesDatePickerTag,
+  AndesDatePickerTagContext,
   AndesDatePickerType,
   AndesDatePickerValue,
   AndesDatePickerVariant,

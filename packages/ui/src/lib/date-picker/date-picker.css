@@ -298,7 +298,8 @@
 }
 
 /* prettier-ignore */
-.andes-date-picker__field[data-responsive] .andes-date-picker__selection > .andes-date-picker__tag {
+.andes-date-picker__field[data-responsive] .andes-date-picker__selection > .andes-date-picker__tag,
+.andes-date-picker__field[data-responsive] .andes-date-picker__selection > .andes-date-picker__tag-custom {
   flex: 0 1 auto;
   min-width: 0;
 }
@@ -573,8 +574,18 @@
 }
 
 .andes-date-picker__separator {
+  display: inline-flex;
   flex-shrink: 0;
+  align-items: center;
   color: var(--andes-color-muted-foreground);
+}
+
+/* A tagTemplate draws the whole tag; its wrapper only keeps it in the row. */
+.andes-date-picker__tag-custom {
+  display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
+  align-items: center;
 }
 
 /* The default arrow points from the start input to the end input, so it turns round in a

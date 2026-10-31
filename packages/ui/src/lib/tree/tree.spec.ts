@@ -7,6 +7,7 @@ import { Component, signal, viewChild } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { Subject } from 'rxjs';
 
+import { declaredValue } from '../../testing/computed-style';
 import { AndesTree } from './tree';
 import { AndesTreeNodeTemplate } from './tree-node-template';
 import type {
@@ -1623,6 +1624,19 @@ describe('AndesTree', () => {
       expect(css).toContain('--_title-height: 1.5rem');
       expect(css).toContain('--_gap: 0.25rem');
       expect(css).toMatch(/\[data-density='compact'\]\s*{\s*--_gap: 0rem/);
+    });
+
+    it('keeps the checkbox edge above 3:1 by mixing the input colour towards the foreground', () => {
+      expect(declaredValue(css, '.andes-tree__checkbox', 'border')).toBe(
+        '1px solid color-mix( in srgb, var(--andes-color-input, #cbd5e1), var(--andes-color-foreground, #0f172a) 35% )',
+      );
+    });
+
+    it('slows the spinner under reduced motion instead of freezing it', () => {
+      const start = css.indexOf('@media (prefers-reduced-motion: reduce)');
+      const block = css.slice(start, css.indexOf('/* Virtual list', start));
+      expect(block).toContain('animation-duration: 2.4s');
+      expect(block).not.toContain('animation: none');
     });
 
     it('fills a selected directory row with a rounded pseudo-element, not a clipped background', () => {

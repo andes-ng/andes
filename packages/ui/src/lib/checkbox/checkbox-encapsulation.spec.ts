@@ -22,23 +22,27 @@ import { AndesCheckbox } from './checkbox';
  * user actually sees - and it is the only way a test here can fail when the source regresses.
  */
 
-const CSS_PATH = join(
-  process.cwd(),
-  new URL('./checkbox.css', import.meta.url).pathname,
-);
-
+/**
+ * The checkbox's styles: its own sheet, then the shared check motion holding the keyframes
+ * it animates with (own sheet first, so a lookup of its first at-rule still finds its own).
+ */
+const CSS_PATHS = [
+  join(process.cwd(), new URL('./checkbox.css', import.meta.url).pathname),
+  join(process.cwd(), new URL('./check-motion.css', import.meta.url).pathname),
+];
 /** Stand-in for the `%COMP%` placeholder Angular fills with the component's own id. */
 const SCOPE = 'andes-test-scope';
 
 function runtimeScopedCss(): string {
-  const raw = readFileSync(CSS_PATH, 'utf8');
-
-  return encapsulateStyle(raw).split('%COMP%').join(SCOPE);
+  return CSS_PATHS.map((path) => encapsulateStyle(readFileSync(path, 'utf8')))
+    .join('\n')
+    .split('%COMP%')
+    .join(SCOPE);
 }
 
 /** The raw stylesheet source, for the contract tests that read it as text. */
 function rawCss(): string {
-  return readFileSync(CSS_PATH, 'utf8');
+  return CSS_PATHS.map((path) => readFileSync(path, 'utf8')).join('\n');
 }
 
 /**
@@ -255,14 +259,22 @@ describe('AndesCheckbox style encapsulation', () => {
 
   describe('stylesheet contract', () => {
     it('only animates inside the motion-allowed, non-forced-colors query', () => {
-      const css = rawCss();
-      const motion = atRuleBody(css, MOTION_QUERY);
+      // The animations live in the shared check motion, next to the keyframes they play
+      // (Angular scopes keyframe names one stylesheet at a time); the checkbox's own sheet
+      // has none.
+      const [own, shared] = CSS_PATHS.map((path) => readFileSync(path, 'utf8'));
+      expect(indicesOf(own, 'animation:')).toEqual([]);
 
-      expect(motion).not.toBe('');
-      const everywhere = indicesOf(css, 'animation:').length;
-      const inside = indicesOf(motion, 'animation:').length;
+      const blocks = shared.split(`${MOTION_QUERY} {`).slice(1);
+      expect(blocks.length).toBeGreaterThan(0);
+      const inside = blocks
+        .map((block) => atRuleBody(`${MOTION_QUERY} {${block}`, MOTION_QUERY))
+        .reduce(
+          (count, body) => count + indicesOf(body, 'animation:').length,
+          0,
+        );
       expect(inside).toBeGreaterThan(0);
-      expect(inside).toBe(everywhere);
+      expect(inside).toBe(indicesOf(shared, 'animation:').length);
     });
 
     it('keys every animation off the one-shot data-motion hook', () => {

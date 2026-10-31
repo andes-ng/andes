@@ -1,0 +1,439 @@
+<div class="andes-date-picker">
+  <!-- The field: looks like one input, holds one (single) or two (range)
+       comboboxes. It is also the overlay's anchor, so a click anywhere in it is
+       "inside" and the panel lines up with its left edge. -->
+  <div
+    #field
+    [class]="fieldClasses()"
+    data-slot="date-picker-trigger"
+    [attr.role]="isRange() ? 'group' : null"
+    [attr.aria-label]="isRange() ? ariaLabel() : null"
+    [attr.aria-labelledby]="isRange() ? ariaLabelledby() : null"
+    [attr.data-disabled]="isDisabled() || null"
+    [attr.data-empty]="isMultiple() && !tags().length ? '' : null"
+    [attr.data-responsive]="responsiveTags() || null"
+    (mousedown)="onFieldMousedown($event)"
+    (focusout)="onFocusOut($event)"
+  >
+    @if (prefix(); as prefixTemplate) {
+    <span class="andes-date-picker__prefix" data-slot="date-picker-prefix">
+      <ng-container [ngTemplateOutlet]="prefixTemplate" />
+    </span>
+    }
+
+    <!-- multiple mode: the dates as tags, then the input, on rows of their own
+         between the prefix and the suffix. Other modes render the input alone. -->
+    @if (isMultiple()) {
+    <div
+      #selectionRow
+      class="andes-date-picker__selection"
+      data-slot="date-picker-selection"
+    >
+      @for (tag of visibleTags(); track tag.key) {
+      <ng-container
+        [ngTemplateOutlet]="tagSlot"
+        [ngTemplateOutletContext]="{ $implicit: tag }"
+      />
+      } @if (omittedTags().length) {
+      <!-- The "+ N ..." tag: a button opening a popover of the hidden dates (see
+           AndesDatePickerOverflow). Its popover template lives inside it so that it
+           shares the tag's overlay. -->
+      <span
+        #overflow="andesDatePickerOverflow"
+        class="andes-date-picker__tag andes-date-picker__tag--rest"
+        data-slot="date-picker-tag-rest"
+        [andesDatePickerOverflow]="overflowPanel"
+        [overflowCount]="omittedTags().length"
+        [overflowDisabled]="isDisabled()"
+        [overflowBlocked]="overlay.isOpen()"
+        [overflowLabel]="overflowLabel()"
+        (overflowRemove)="removeDate($event)"
+        (overflowExit)="focus()"
+      >
+        + {{ omittedTags().length }} ...
+        <ng-template #overflowPanel>
+          <!-- The overlay makes this a dialog; its keydown only watches Tab bubbling
+               up from the remove buttons inside, which are the focusable parts. -->
+          <!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus -->
+          <div
+            andesOverlayContent
+            class="andes-date-picker__overflow"
+            data-slot="date-picker-overflow"
+            [attr.aria-label]="overflowLabel()"
+            [attr.dir]="overflow.direction()"
+            [attr.data-size]="size()"
+            (pointerenter)="overflow.onPanelPointerEnter($event)"
+            (pointerleave)="overflow.onPanelPointerLeave($event)"
+            (focusin)="overflow.onPanelFocusIn()"
+            (focusout)="overflow.onPanelFocusOut($event)"
+            (keydown)="overflow.onPanelKeydown($event)"
+          >
+            <div class="andes-date-picker__overflow-body">
+              <ul class="andes-date-picker__overflow-list" role="list">
+                @for (tag of omittedTags(); track tag.key) {
+                <li class="andes-date-picker__overflow-item">
+                  <ng-container
+                    [ngTemplateOutlet]="tagSlot"
+                    [ngTemplateOutletContext]="{
+                      $implicit: tag,
+                      remove: overflow.remove
+                    }"
+                  />
+                </li>
+                }
+              </ul>
+            </div>
+          </div>
+        </ng-template>
+      </span>
+      } @if (responsiveTags()) {
+      <!-- Every tag on one invisible row, so the field can tell how many fit before
+           deciding which ones to show. Inert: nothing in it is reachable. -->
+      <div
+        #measure
+        class="andes-date-picker__measure"
+        data-slot="date-picker-tag-measure"
+        aria-hidden="true"
+        inert
+      >
+        @for (tag of tags(); track tag.key) {
+        <span class="andes-date-picker__measure-item" data-measure="tag">
+          <ng-container
+            [ngTemplateOutlet]="tagSlot"
+            [ngTemplateOutletContext]="{ $implicit: tag }"
+          />
+        </span>
+        }
+        <span class="andes-date-picker__measure-item" data-measure="rest">
+          <span class="andes-date-picker__tag andes-date-picker__tag--rest"
+            >+ {{ tags().length }} ...</span
+          >
+        </span>
+      </div>
+      }
+      <ng-container [ngTemplateOutlet]="startInputSlot" />
+    </div>
+    } @else {
+    <ng-container [ngTemplateOutlet]="startInputSlot" />
+    }
+
+    <!-- In range mode only the start input takes `id` (label clicks land where
+         typing starts); describedby, required, name and invalid go on both. A side
+         locked through `disabled` is read-only, out of the Tab order and
+         aria-disabled, rather than natively disabled, so a press on it can still
+         hand focus to the other side. -->
+    <ng-template #startInputSlot>
+      <input
+        #startInput
+        type="text"
+        class="andes-date-picker__input"
+        [attr.data-slot]="isRange() ? 'date-picker-input-start' : 'date-picker-input'"
+        role="combobox"
+        autocomplete="off"
+        aria-haspopup="dialog"
+        [attr.id]="id()"
+        [attr.name]="name()"
+        [attr.aria-expanded]="overlay.isOpen()"
+        [attr.aria-controls]="overlay.isOpen() ? overlay.contentId : null"
+        [attr.aria-label]="isRange() ? startInputLabel() : ariaLabel()"
+        [attr.aria-labelledby]="isRange() ? null : ariaLabelledby()"
+        [attr.aria-describedby]="ariaDescribedby()"
+        [attr.aria-invalid]="isInvalid() || null"
+        [attr.aria-required]="ariaRequired() || null"
+        [attr.aria-disabled]="lockedSides()[0] || null"
+        [attr.data-locked]="lockedSides()[0] || null"
+        [attr.tabindex]="lockedSides()[0] ? -1 : null"
+        [required]="required()"
+        [attr.data-active]="
+          isRange() && overlay.isOpen() && activeSide() === 'start' ? '' : null
+        "
+        [attr.data-preview]="(hoverText()?.[0] ?? null) !== null || null"
+        [placeholder]="isMultiple() && tags().length ? '' : placeholders()[0]"
+        [value]="startText()"
+        [disabled]="isDisabled()"
+        [readOnly]="inputReadOnly() || lockedSides()[0]"
+        (mousedown)="onInputMousedown('start', $event)"
+        (click)="onInputClick('start')"
+        (focus)="onInputFocus('start')"
+        (input)="onInput('start', $event)"
+        (keydown)="onInputKeydown('start', $event)"
+      />
+    </ng-template>
+
+    @if (isRange()) {
+    <span class="andes-date-picker__separator" aria-hidden="true"
+      >{{ rangeSeparator() }}</span
+    >
+    <input
+      #endInput
+      type="text"
+      class="andes-date-picker__input"
+      data-slot="date-picker-input-end"
+      role="combobox"
+      autocomplete="off"
+      aria-haspopup="dialog"
+      [attr.aria-expanded]="overlay.isOpen()"
+      [attr.aria-controls]="overlay.isOpen() ? overlay.contentId : null"
+      [attr.name]="name()"
+      [attr.aria-label]="endInputLabel()"
+      [attr.aria-describedby]="ariaDescribedby()"
+      [attr.aria-invalid]="isInvalid() || null"
+      [attr.aria-required]="ariaRequired() || null"
+      [attr.aria-disabled]="lockedSides()[1] || null"
+      [attr.data-locked]="lockedSides()[1] || null"
+      [attr.tabindex]="lockedSides()[1] ? -1 : null"
+      [required]="required()"
+      [attr.data-active]="
+        overlay.isOpen() && activeSide() === 'end' ? '' : null
+      "
+      [attr.data-preview]="(hoverText()?.[1] ?? null) !== null || null"
+      [placeholder]="placeholders()[1]"
+      [value]="endText()"
+      [disabled]="isDisabled()"
+      [readOnly]="inputReadOnly() || lockedSides()[1]"
+      (mousedown)="onInputMousedown('end', $event)"
+      (click)="onInputClick('end')"
+      (focus)="onInputFocus('end')"
+      (input)="onInput('end', $event)"
+      (keydown)="onInputKeydown('end', $event)"
+    />
+    }
+
+    <span class="andes-date-picker__suffix">
+      <span
+        class="andes-date-picker__icon"
+        [class.andes-date-picker__icon--hidden-on-hover]="showClear()"
+        aria-hidden="true"
+      >
+        @if (suffixIcon(); as suffixTemplate) {
+        <ng-container [ngTemplateOutlet]="suffixTemplate" />
+        } @else if (timeOptions()) {
+        <svg viewBox="0 0 24 24" focusable="false">
+          <path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 6v6l4 2" />
+        </svg>
+        } @else {
+        <svg viewBox="0 0 24 24" focusable="false">
+          <path
+            d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"
+          />
+        </svg>
+        }
+      </span>
+
+      @if (showClear()) {
+      <!-- A Tab stop of its own, after the input(s): it shows while the field is
+           hovered or holds focus, so tabbing on from the text reaches it. A mouse press
+           is cancelled so focus stays in the text. -->
+      <button
+        type="button"
+        class="andes-date-picker__clear"
+        data-slot="date-picker-clear"
+        [attr.aria-label]="clearLabel()"
+        (mousedown)="$event.preventDefault()"
+        (click)="clearValue($event)"
+      >
+        @if (clearIcon(); as clearTemplate) {
+        <ng-container [ngTemplateOutlet]="clearTemplate" />
+        } @else {
+        <svg
+          class="andes-date-picker__clear-glyph"
+          viewBox="0 0 16 16"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <circle cx="8" cy="8" r="8" />
+          <path d="M5.5 5.5l5 5m0-5-5 5" />
+        </svg>
+        }
+      </button>
+      }
+    </span>
+  </div>
+</div>
+
+<ng-template #panel>
+  <div
+    andesOverlayContent
+    class="andes-date-picker__panel"
+    data-slot="date-picker-panel"
+    [class]="panelClass()"
+    [attr.dir]="panelDirection()"
+    [attr.aria-label]="panelName()"
+    (mousedown)="onPanelMousedown($event)"
+    (pointermove)="onPanelPointerMove($event)"
+    (focusout)="onFocusOut($event)"
+  >
+    @if (panelTemplate(); as wrapper) {
+    <ng-container
+      [ngTemplateOutlet]="wrapper"
+      [ngTemplateOutletContext]="{ $implicit: panelContent }"
+    />
+    } @else {
+    <ng-container [ngTemplateOutlet]="panelContent" />
+    }
+  </div>
+</ng-template>
+
+<!-- A date tag of `multiple` mode, shared by the field, the measuring row and the
+     "+ N" popover. `remove` is set in the popover only: there, each remove button is
+     a Tab stop of its own and removing keeps focus inside it. In the field the
+     buttons stay out of the Tab order: Backspace in the input removes the last date,
+     one Tab stop instead of one per tag. -->
+<ng-template #tagSlot let-tag let-remove="remove">
+  <span
+    class="andes-date-picker__tag"
+    data-slot="date-picker-tag"
+    [attr.title]="tag.label"
+  >
+    <span class="andes-date-picker__tag-label">{{ tag.label }}</span>
+    @if (!isDisabled()) {
+    <button
+      type="button"
+      class="andes-date-picker__tag-remove"
+      data-slot="date-picker-tag-remove"
+      [attr.tabindex]="remove ? null : -1"
+      [attr.aria-label]="tagRemoveLabel(tag)"
+      (mousedown)="$event.preventDefault()"
+      (click)="remove ? remove(tag.date, $event) : onTagRemove(tag, $event)"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M18 6 6 18M6 6l12 12" />
+      </svg>
+    </button>
+    }
+  </span>
+</ng-template>
+
+<!-- The panel's content, apart from its root so a panelTemplate can wrap it. -->
+<ng-template #panelContent>
+  <div class="andes-date-picker__panel-layout">
+    @if (presets().length) {
+    <ul
+      class="andes-date-picker__presets"
+      data-slot="date-picker-presets"
+      [attr.aria-label]="presetsLabel()"
+    >
+      @for (preset of presets(); track preset.label) {
+      <li>
+        <button
+          type="button"
+          class="andes-date-picker__preset"
+          (click)="applyPreset(preset)"
+          (mouseenter)="onPresetHover(preset)"
+          (mouseleave)="onPresetHover(null)"
+        >
+          {{ preset.label }}
+        </button>
+      </li>
+      }
+    </ul>
+    }
+
+    <div class="andes-date-picker__panel-main">
+      <div
+        class="andes-date-picker__panel-body"
+        [class.andes-date-picker__panel-body--time-only]="isTimeOnly()"
+      >
+        @if (!isTimeOnly()) {
+        <andes-calendar
+          [autoFocus]="focusGridOnOpen()"
+          [mode]="calendarMode()"
+          [picker]="calendarPicker()"
+          [value]="selection()"
+          [min]="min()"
+          [max]="max()"
+          [locale]="locale()"
+          [weekStartsOn]="weekStartsOn()"
+          [showOutsideDays]="showOutsideDays()"
+          [fixedWeeks]="fixedWeeks()"
+          [numberOfMonths]="monthCount()"
+          [showWeek]="showWeek()"
+          [cellTemplate]="cellTemplate()"
+          [dateDisabled]="dateDisabled()"
+          [defaultMonth]="defaultMonth()"
+          [disabled]="calendarDisabled()"
+          [editingSide]="calendarEditingSide()"
+          [maxCount]="maxCount()"
+          [captionLayout]="captionLayout()"
+          [startYear]="startYear()"
+          [endYear]="endYear()"
+          [panelView]="panelView()"
+          [previousIcon]="previousIcon()"
+          [nextIcon]="nextIcon()"
+          [fastPreviousIcon]="fastPreviousIcon()"
+          [fastNextIcon]="fastNextIcon()"
+          (valueChange)="onCalendarValueChange($event)"
+          (panelChange)="panelChange.emit($event)"
+          (cellHover)="onCalendarHover($event)"
+        />
+        } @if (timeColumns().length) {
+        <div class="andes-date-picker__time" data-slot="date-picker-time">
+          @for (column of timeColumns(); track column.unit) {
+          <!-- Selection follows focus: arrow keys change the value directly,
+                 so the listbox never holds a "focused but unselected" option. -->
+          <div
+            class="andes-date-picker__time-column"
+            role="listbox"
+            tabindex="0"
+            [attr.data-unit]="column.unit"
+            [attr.aria-label]="column.label"
+            [attr.aria-activedescendant]="column.activeId"
+            (keydown)="onTimeKeydown($event, column)"
+          >
+            @for (option of column.options; track option.value) {
+            <div
+              role="option"
+              class="andes-date-picker__time-option"
+              [class.andes-date-picker__time-option--selected]="
+                  option.selected
+                "
+              [class.andes-date-picker__time-option--disabled]="
+                  option.disabled
+                "
+              [id]="option.id"
+              [attr.aria-selected]="option.selected"
+              [attr.aria-disabled]="option.disabled || null"
+              (mousedown)="onTimeOptionMousedown($event, column.unit, option)"
+            >
+              {{ option.text }}
+            </div>
+            }
+          </div>
+          }
+        </div>
+        }
+      </div>
+
+      @if (showFooter()) {
+      <div class="andes-date-picker__footer" data-slot="date-picker-footer">
+        @if (extraFooter(); as footerTemplate) {
+        <div class="andes-date-picker__extra-footer">
+          <ng-container [ngTemplateOutlet]="footerTemplate" />
+        </div>
+        }
+        <div class="andes-date-picker__footer-actions">
+          @if (showNow() && isSingle()) {
+          <button
+            type="button"
+            class="andes-date-picker__now"
+            data-slot="date-picker-now"
+            (click)="selectNow()"
+          >
+            {{ nowText() }}
+          </button>
+          } @if (confirmRequired()) {
+          <andes-button
+            size="sm"
+            data-slot="date-picker-ok"
+            [disabled]="!canConfirm()"
+            (click)="confirm()"
+          >
+            {{ okLabel() }}
+          </andes-button>
+          }
+        </div>
+      </div>
+      }
+    </div>
+  </div>
+</ng-template>

@@ -1,5 +1,5 @@
 import { Component, signal, TemplateRef, viewChild } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 
 import { AndesRadio } from './radio';
@@ -1029,6 +1029,154 @@ class MotionHost {
   readonly extras = signal<string[]>([]);
 }
 
+/** The `animationend` the ring dispatches (its end bubbles up to the label). */
+function ringEnd(name = 'andes-radio-ripple'): Event {
+  return Object.assign(new Event('animationend', { bubbles: true }), {
+    animationName: name,
+  });
+}
+
+@Component({
+  imports: [AndesRadioGroup, AndesRadio],
+  template: `<andes-radio-group
+    aria-label="Letter"
+    [optionType]="optionType()"
+    [variant]="variant()"
+    [readOnly]="readOnly()"
+    [(value)]="selected"
+  >
+    <andes-radio value="a">A</andes-radio>
+    <andes-radio value="b" [disabled]="bDisabled()">B</andes-radio>
+  </andes-radio-group>`,
+})
+class PressHost {
+  readonly selected = signal<string | null>('a');
+  readonly optionType = signal<'default' | 'button'>('default');
+  readonly variant = signal<AndesRadioVariant>('default');
+  readonly readOnly = signal(false);
+  readonly bDisabled = signal(false);
+}
+
+describe('AndesRadio ring on every click', () => {
+  function create(setup: (host: PressHost) => void = () => undefined): {
+    fixture: ComponentFixture<PressHost>;
+    labels: HTMLElement[];
+    inputs: HTMLInputElement[];
+  } {
+    const fixture = TestBed.createComponent(PressHost);
+    setup(fixture.componentInstance);
+    render(fixture);
+    return {
+      fixture,
+      labels: Array.from(
+        fixture.nativeElement.querySelectorAll('.andes-radio__label'),
+      ),
+      inputs: inputsOf(fixture.nativeElement),
+    };
+  }
+
+  it('rings a click on the radio that is already selected, and alternates the hook', async () => {
+    const { fixture, labels, inputs } = create();
+    await settle();
+
+    inputs[0].click();
+    render(fixture);
+    expect(inputs[0].checked).toBe(true);
+    expect(labels[0].getAttribute('data-motion')).toBe('press');
+
+    // A second click while the ring still runs replays it under the other name.
+    inputs[0].click();
+    render(fixture);
+    expect(labels[0].getAttribute('data-motion')).toBe('press-alt');
+
+    inputs[0].click();
+    render(fixture);
+    expect(labels[0].getAttribute('data-motion')).toBe('press');
+  });
+
+  it('clears the hook only when the ring ends, not on another animation', async () => {
+    const { fixture, labels, inputs } = create();
+    await settle();
+
+    inputs[0].click();
+    render(fixture);
+    labels[0].dispatchEvent(ringEnd('something-else'));
+    render(fixture);
+    expect(labels[0].getAttribute('data-motion')).toBe('press');
+
+    labels[0].dispatchEvent(ringEnd('andes-radio-ripple-alt'));
+    render(fixture);
+    expect(labels[0].hasAttribute('data-motion')).toBe(false);
+
+    // The next click rings again from a clean state.
+    inputs[0].click();
+    render(fixture);
+    expect(labels[0].getAttribute('data-motion')).toBe('press');
+  });
+
+  it('still marks a radio that becomes selected with check, not press', async () => {
+    const { fixture, labels, inputs } = create();
+    await settle();
+
+    inputs[1].click();
+    render(fixture);
+
+    expect(inputs[1].checked).toBe(true);
+    expect(labels[1].getAttribute('data-motion')).toBe('check');
+    expect(labels[0].hasAttribute('data-motion')).toBe(false);
+  });
+
+  it('does not ring before the hook is armed', () => {
+    const { fixture, labels, inputs } = create();
+
+    inputs[0].click();
+    render(fixture);
+
+    expect(labels[0].hasAttribute('data-motion')).toBe(false);
+  });
+
+  it('does not ring a read-only radio, whose click is cancelled', async () => {
+    const { fixture, labels, inputs } = create((host) =>
+      host.readOnly.set(true),
+    );
+    await settle();
+
+    inputs[0].click();
+    render(fixture);
+
+    expect(labels[0].hasAttribute('data-motion')).toBe(false);
+  });
+
+  it('does not ring a disabled radio', async () => {
+    const { fixture, labels, inputs } = create((host) => {
+      host.selected.set('b');
+      host.bDisabled.set(true);
+    });
+    await settle();
+
+    inputs[1].click();
+    render(fixture);
+
+    expect(labels[1].hasAttribute('data-motion')).toBe(false);
+  });
+
+  it('rings a selected button option and a selected card the same way', async () => {
+    for (const setup of [
+      (host: PressHost) => host.optionType.set('button'),
+      (host: PressHost) => host.variant.set('card'),
+    ]) {
+      const { fixture, labels, inputs } = create(setup);
+      await settle();
+
+      inputs[0].click();
+      render(fixture);
+
+      expect(labels[0].getAttribute('data-motion')).toBe('press');
+      fixture.destroy();
+    }
+  });
+});
+
 describe('AndesRadio dot animation hook', () => {
   function labels(root: HTMLElement): HTMLElement[] {
     return Array.from(
@@ -1072,7 +1220,7 @@ describe('AndesRadio dot animation hook', () => {
     const [first] = labels(fixture.nativeElement);
     expect(first.getAttribute('data-motion')).toBe('check');
 
-    first.dispatchEvent(new Event('animationend', { bubbles: true }));
+    first.dispatchEvent(ringEnd());
     render(fixture);
     expect(first.hasAttribute('data-motion')).toBe(false);
 

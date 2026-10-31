@@ -233,11 +233,16 @@ export class AndesRadio {
   });
 
   /**
-   * The one-shot animation hook, exposed as the label's `data-motion` attribute: `check`
-   * while a radio that just became checked plays its dot-in animation. Absent on first render
-   * and after the animation ends, so a radio that starts out checked never animates.
+   * The one-shot animation hook, exposed as the label's `data-motion` attribute. `check` while a
+   * radio that just became checked rings; `press` / `press-alt` while an ALREADY checked radio
+   * is clicked again (nothing changes, but the click still answers back). The two press values
+   * alternate on every such click, and the stylesheet plays the ring under a different name for
+   * each, so a click that follows another within the ring's second restarts it. Absent on first
+   * render and once the ring ends, so a radio that starts out checked never animates.
    */
-  protected readonly motion = signal<'check' | null>(null);
+  protected readonly motion = signal<'check' | 'press' | 'press-alt' | null>(
+    null,
+  );
 
   /** Off until a moment after the first render, so the initial state - including a value a
    *  template-driven `ngModel` writes in a microtask after that render - never animates. */
@@ -282,14 +287,26 @@ export class AndesRadio {
     this.inputRef().nativeElement.blur();
   }
 
-  /** The one-shot animation finished: drop the hook so a re-shown dot does not replay it. */
-  protected onMotionEnd(): void {
-    this.motion.set(null);
+  /**
+   * The ring finished: drop the hook so a re-shown dot does not replay it. Only the ring counts
+   * (its end bubbles up from whichever element plays it); a colour transition or any other
+   * animation inside the label must not cut it short.
+   */
+  protected onMotionEnd(event: AnimationEvent): void {
+    if (event.animationName.includes('andes-radio-ripple')) {
+      this.motion.set(null);
+    }
   }
 
   protected onClick(event: MouseEvent): void {
     if (this.isReadOnly()) {
       event.preventDefault();
+      return;
+    }
+    // A click on the radio that is already selected changes nothing, so the `check` hook (set
+    // when it BECOMES selected) never fires: ring it here instead, on every press-release.
+    if (this.motionReady && this.isChecked()) {
+      this.motion.set(this.motion() === 'press' ? 'press-alt' : 'press');
     }
   }
 

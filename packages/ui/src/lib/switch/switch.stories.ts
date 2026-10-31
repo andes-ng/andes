@@ -48,6 +48,11 @@ export const Default: Story = {};
  * support a `transform` (a two-way binding's output must emit exactly the type its input
  * accepts), so a bare, bracket-less attribute isn't coerced through `booleanAttribute`; bind the
  * literal with brackets instead (same fix `AndesCheckbox`'s stories needed).
+ *
+ * Try pressing and holding any of them: the thumb stretches by 30% toward the side it will
+ * travel to (its outer edge stays at the track edge when on) and settles back as it slides, and
+ * every change sends a soft ring out of the track. Both are relative to the size, and both are
+ * skipped under `prefers-reduced-motion`.
  */
 export const Sizes: Story = {
   render: () => ({
@@ -80,7 +85,8 @@ export const Sizes: Story = {
  * Every state side by side: unchecked, checked, disabled (both ways), read-only, required and
  * invalid (`aria-invalid`). `checked` needs a property binding, not a bare attribute;
  * `disabled`, `readonly` and `required` stay bare since they're plain `input()`s with a
- * `booleanAttribute` transform.
+ * `booleanAttribute` transform. Press and hold the first two to feel the thumb stretch; the
+ * disabled and read-only ones give no press or hover feedback and never ring.
  */
 export const States: Story = {
   render: () => ({

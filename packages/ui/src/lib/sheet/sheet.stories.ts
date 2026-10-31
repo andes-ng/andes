@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
+import { AndesInput } from '../input/input';
 import { AndesSheet } from './sheet';
 import { AndesSheetClose } from './sheet-close';
 import { AndesSheetContent } from './sheet-content';
@@ -14,6 +15,7 @@ import { AndesSheetTrigger } from './sheet-trigger';
 
 const imports = [
   AndesButton,
+  AndesInput,
   AndesSheet,
   AndesSheetTrigger,
   AndesSheetHeader,
@@ -26,46 +28,15 @@ const imports = [
 
 const fieldStyle =
   'display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.875rem;';
-/**
- * Demo text fields styled like the library's own fields: one focus indicator (primary
- * border plus a soft 2px ring), never the browser's outline drawn as a second frame.
- */
-const FIELD_STYLES = `
-  <style>
-    .sb-field-input {
-      box-sizing: border-box;
-      min-height: 2rem;
-      padding: 0.25rem 0.6875rem;
-      border: 1px solid var(--andes-color-input);
-      border-radius: var(--andes-radius-md);
-      background-color: var(--andes-color-background);
-      color: var(--andes-color-foreground);
-      font: inherit;
-      line-height: 1.375rem;
-      outline: none;
-      transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
-    }
-    .sb-field-input::placeholder { color: var(--andes-color-muted-foreground); }
-    .sb-field-input:hover {
-      border-color: color-mix(in srgb, var(--andes-color-primary) 65%, var(--andes-color-input));
-    }
-    .sb-field-input:focus {
-      border-color: var(--andes-color-primary);
-      box-shadow: 0 0 0 2px color-mix(in srgb, var(--andes-color-primary) 20%, transparent);
-      outline: none;
-    }
-  </style>
-`;
-
 const profileForm = `
   <div style="display: flex; flex-direction: column; gap: 0.75rem;">
     <label style="${fieldStyle}">
       Name
-      <input value="Jane Doe" class="sb-field-input" />
+      <andes-input value="Jane Doe" />
     </label>
     <label style="${fieldStyle}">
       Username
-      <input value="@janedoe" class="sb-field-input" />
+      <andes-input value="@janedoe" />
     </label>
   </div>
 `;
@@ -107,7 +78,7 @@ const meta: Meta<AndesSheet> = {
   render: (args) => ({
     moduleMetadata: { imports },
     props: args,
-    template: `${FIELD_STYLES}
+    template: `
       <andes-sheet
         [side]="side"
         [size]="size"
@@ -168,7 +139,7 @@ const sheetDemo = (attrs: string, label: string, text: string): string => `
 `;
 
 const row = (...sheets: string[]): string =>
-  `${FIELD_STYLES}<div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">${sheets.join('')}</div>`;
+  `<div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">${sheets.join('')}</div>`;
 
 /** `side` anchors the sheet to the right (the default), left, top or bottom edge. */
 export const Sides: Story = {
@@ -304,7 +275,7 @@ export const ExtraAndCloseIcon: Story = {
 export const LazyContent: Story = {
   render: () => ({
     moduleMetadata: { imports },
-    template: `${FIELD_STYLES}
+    template: `
       <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
         <andes-sheet>
           <andes-button variant="primary" andesSheetTrigger>Kept alive</andes-button>

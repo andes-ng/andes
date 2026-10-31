@@ -252,6 +252,14 @@
     --andes-switch-track-checked-color,
     var(--andes-color-primary)
   );
+  /* The on track under the pointer: its color lightened toward white, so hovering reads as
+     "lit", not "pressed". The same formula as the checkbox box and the radio disc; white (not
+     a theme token) so the dark theme lightens the same way. */
+  --_andes-switch-lift: color-mix(
+    in srgb,
+    var(--andes-switch-track-checked-color, var(--andes-color-primary)) 82%,
+    white
+  );
 
   position: relative;
   display: inline-flex;
@@ -305,17 +313,20 @@
 }
 
 /* Hover only where a click would actually toggle - not on a read-only or loading switch. The
-   unchecked hover tint derives from the (possibly customised) track color; a custom checked
-   color without its own hover color keeps that color on hover instead of snapping back to
-   the primary hover shade. */
+   unchecked hover tint derives from the (possibly customised) track color. A checked track
+   LIGHTENS on hover (`--_andes-switch-lift`: its own color mixed toward white, a custom checked
+   color included) unless `--andes-switch-track-checked-hover-color` names the color to use; in
+   forced-colors mode the system palette owns the track and nothing changes on hover. */
 /* prettier-ignore */
 .andes-switch:hover:not(:disabled):not([data-disabled]):not([data-readonly]):not([data-loading]) {
   background-color: var(--andes-switch-track-hover-color, color-mix(in srgb, var(--andes-switch-track-color, var(--andes-color-input)), var(--andes-color-foreground) 12%));
 }
 
-/* prettier-ignore */
-.andes-switch[data-checked]:hover:not(:disabled):not([data-disabled]):not([data-readonly]):not([data-loading]) {
-  background-color: var(--andes-switch-track-checked-hover-color, var(--andes-switch-track-checked-color, var(--andes-color-primary-hover)));
+@media (forced-colors: none) {
+  /* prettier-ignore */
+  .andes-switch[data-checked]:hover:not(:disabled):not([data-disabled]):not([data-readonly]):not([data-loading]) {
+    background-color: var(--andes-switch-track-checked-hover-color, var(--_andes-switch-lift));
+  }
 }
 
 .andes-switch:focus-visible {

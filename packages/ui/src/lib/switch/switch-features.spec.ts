@@ -1213,6 +1213,58 @@ describe('AndesSwitch features', () => {
     });
   });
 
+  describe('hover lift', () => {
+    const NOT_BUSY_TRACK =
+      ':not(:disabled):not([data-disabled]):not([data-readonly]):not([data-loading])';
+    const flat = () =>
+      css()
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/\s+/g, ' ');
+
+    it('defines one private lift: the on color mixed 82% toward white', () => {
+      expect(flat()).toContain(
+        '--_andes-switch-lift: color-mix( in srgb, var(--andes-switch-track-checked-color, var(--andes-color-primary)) 82%, white );',
+      );
+    });
+
+    it('lightens an on track on hover instead of darkening it', () => {
+      const sheet = flat();
+
+      expect(sheet).toContain(
+        `.andes-switch[data-checked]:hover${NOT_BUSY_TRACK} { background-color: var(--andes-switch-track-checked-hover-color, var(--_andes-switch-lift)); }`,
+      );
+      expect(sheet).not.toContain('primary-hover');
+    });
+
+    it('never lightens a disabled, read-only or loading track', () => {
+      // The rule above only exists with the whole exclusion chain.
+      expect(flat()).toContain(
+        `.andes-switch[data-checked]:hover${NOT_BUSY_TRACK}`,
+      );
+      expect(flat()).not.toContain('.andes-switch[data-checked]:hover {');
+    });
+
+    it('leaves forced-colors mode to the system palette', () => {
+      const sheet = flat();
+      const lift = sheet.indexOf(
+        `.andes-switch[data-checked]:hover${NOT_BUSY_TRACK}`,
+      );
+
+      expect(
+        sheet.lastIndexOf('@media (forced-colors: none) {', lift),
+      ).toBeGreaterThan(sheet.lastIndexOf('}', lift - 1) - 400);
+      expect(sheet.lastIndexOf('@media', lift)).toBe(
+        sheet.lastIndexOf('@media (forced-colors: none) {', lift),
+      );
+    });
+
+    it('keeps the unchecked hover tint toward the foreground', () => {
+      expect(flat()).toContain(
+        `.andes-switch:hover${NOT_BUSY_TRACK} { background-color: var(--andes-switch-track-hover-color, color-mix(in srgb, var(--andes-switch-track-color, var(--andes-color-input)), var(--andes-color-foreground) 12%)); }`,
+      );
+    });
+  });
+
   describe('motion stylesheet contract', () => {
     const MOTION_MEDIA =
       '@media (prefers-reduced-motion: no-preference) and (forced-colors: none) {';

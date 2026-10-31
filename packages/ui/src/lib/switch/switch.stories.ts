@@ -85,7 +85,8 @@ export const Sizes: Story = {
  * Every state side by side: unchecked, checked, disabled (both ways), read-only, required and
  * invalid (`aria-invalid`). `checked` needs a property binding, not a bare attribute;
  * `disabled`, `readonly` and `required` stay bare since they're plain `input()`s with a
- * `booleanAttribute` transform. Press and hold the first two to feel the thumb stretch; the
+ * `booleanAttribute` transform. Press and hold the first two to feel the thumb stretch, and
+ * hover them: an on track LIGHTENS (its color mixed toward white) rather than darkening. The
  * disabled and read-only ones give no press or hover feedback and never ring.
  */
 export const States: Story = {

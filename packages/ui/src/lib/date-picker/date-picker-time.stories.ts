@@ -16,7 +16,10 @@ type Story = StoryObj<AndesDatePicker>;
 
 /**
  * `showTime` adds hour/minute columns; `needConfirm` is then on by default, so
- * picks stay pending until OK. `showNow` adds a "Now" shortcut.
+ * picks stay pending until OK. `showNow` adds a "Now" shortcut. The field and the
+ * columns share one clock: 24 hours, unless `use12Hours` asks for the AM/PM form. A
+ * picked time scrolls to the top of its column, and the Left and Right arrows move
+ * between columns while PageUp and PageDown jump five options.
  */
 export const WithTime: Story = {
   render: () => ({

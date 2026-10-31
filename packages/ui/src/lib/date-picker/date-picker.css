@@ -1185,8 +1185,8 @@
   }
 
   .andes-date-picker__time-option--disabled:not(
-      .andes-date-picker__time-option--selected
-    ) {
+    .andes-date-picker__time-option--selected
+  ) {
     color: GrayText;
     opacity: 1;
   }
@@ -1205,4 +1205,3 @@
     border-bottom-color: CanvasText;
   }
 }
-

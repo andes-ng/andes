@@ -88,8 +88,10 @@ const MONO = 'font: 0.75rem/1.5 ui-monospace, monospace;';
 export const Single: Story = {};
 
 /**
- * `mode="range"`: two inputs in one field and two months side by side. After the
- * first pick, hovering previews the range the second pick would close.
+ * `mode="range"`: two inputs in one field and two months side by side. The input the
+ * next pick fills is marked by a bar that slides to the other input, and the panel's
+ * arrow follows it. After the first pick, hovering previews the range the second pick
+ * would close, as a dashed band that runs from day to day.
  */
 export const Range: Story = {
   args: { mode: 'range' },

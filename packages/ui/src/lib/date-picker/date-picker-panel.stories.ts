@@ -102,15 +102,30 @@ export const CustomPanel: Story = {
   }),
 };
 
-/** `placement` picks the corner the panel opens from; it still flips to fit. */
+/**
+ * `placement` picks the corner the panel opens from, and the panel grows out of the
+ * field's edge facing it. It still flips to fit: the picker at the bottom of the short
+ * scroller opens upwards, and its panel grows from the bottom edge. Under `dir="rtl"`
+ * the corners follow the reading direction, the calendar's arrow keys and chevrons
+ * mirror, and a range's panel arrow points at the active input.
+ */
 export const Placement: Story = {
   render: () => ({
-    template: `<div style="min-height: 46rem; display: flex; align-items: center; justify-content: center;">
+    template: `<div style="min-height: 46rem; display: flex; flex-direction: column; gap: 2rem; align-items: center; justify-content: center;">
       <div style="display: grid; grid-template-columns: repeat(2, 14rem); gap: 1rem;">
         <andes-date-picker placement="topLeft" locale="en-US" placeholder="topLeft" />
         <andes-date-picker placement="topRight" locale="en-US" placeholder="topRight" />
         <andes-date-picker placement="bottomLeft" locale="en-US" placeholder="bottomLeft" />
         <andes-date-picker placement="bottomRight" locale="en-US" placeholder="bottomRight" />
+      </div>
+      <div style="display: grid; grid-template-columns: 14rem 24rem; gap: 1rem; align-items: start;">
+        <div style="height: 9rem; overflow: auto; border: 1px dashed var(--andes-color-border); border-radius: 0.5rem; padding: 0.5rem;">
+          <div style="height: 6.5rem;"></div>
+          <andes-date-picker locale="en-US" placeholder="Flips upwards" aria-label="Flips upwards" />
+        </div>
+        <div dir="rtl" style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <andes-date-picker mode="range" locale="ar" placeholder="RTL range" aria-label="RTL range" />
+        </div>
       </div>
     </div>`,
   }),

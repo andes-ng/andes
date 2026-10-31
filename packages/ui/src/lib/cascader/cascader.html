@@ -24,7 +24,15 @@
   [attr.data-invalid]="invalid() ? '' : null"
   (mousedown)="onBoxMousedown($event)"
   (click)="onBoxClick($event)"
+  (focusin)="onFocusIn($event)"
+  (focusout)="onFocusOut($event)"
 >
+  @if (prefix(); as prefixTemplate) {
+  <span class="andes-cascader__prefix" data-slot="cascader-prefix">
+    <ng-container [ngTemplateOutlet]="prefixTemplate" />
+  </span>
+  }
+
   <ng-template #valueView>
     @if (singleEntry(); as entry) { @if (displayRender(); as template) {
     <ng-container
@@ -35,7 +43,13 @@
   </ng-template>
 
   <div class="andes-cascader__selection">
-    @if (multiple()) { @for (entry of tags(); track entry.path) {
+    @if (multiple()) { @for (entry of tags(); track entry.path) { @if
+    (tagTemplate(); as customTag) {
+    <ng-container
+      [ngTemplateOutlet]="customTag"
+      [ngTemplateOutletContext]="tagContext(entry)"
+    />
+    } @else {
     <span
       class="andes-cascader__tag"
       data-slot="cascader-tag"
@@ -63,6 +77,9 @@
         (mousedown)="$event.preventDefault()"
         (click)="onTagRemoveClick(entry, $event)"
       >
+        @if (removeIcon(); as removeTemplate) {
+        <ng-container [ngTemplateOutlet]="removeTemplate" />
+        } @else {
         <svg
           viewBox="0 0 24 24"
           fill="none"
@@ -76,9 +93,10 @@
             stroke-linejoin="round"
           />
         </svg>
+        }
       </button>
     </span>
-    } @if (omittedTags().length > 0) {
+    } } @if (omittedTags().length > 0) {
     <span
       class="andes-cascader__tag andes-cascader__tag--rest"
       data-slot="cascader-tag-rest"
@@ -87,13 +105,13 @@
     >
     } } @if (searchEnabled()) {
     <span class="andes-cascader__search">
-      @if (!searchText() && (!multiple() || !hasValue())) {
+      @if (!searchValue() && (!multiple() || !hasValue())) {
       <span class="andes-cascader__ghost" aria-hidden="true">
         <ng-container [ngTemplateOutlet]="valueView" />
       </span>
       } @else if (multiple()) {
       <span class="andes-cascader__mirror" aria-hidden="true"
-        >{{ searchText() }}&nbsp;</span
+        >{{ searchValue() }}&nbsp;</span
       >
       }
       <input
@@ -105,15 +123,16 @@
         aria-haspopup="tree"
         class="andes-cascader__combobox andes-cascader__input"
         [attr.id]="id() ?? null"
-        [value]="searchText()"
+        [value]="searchValue()"
         [disabled]="isDisabled()"
         [attr.aria-expanded]="isOpen()"
-        [attr.aria-controls]="isOpen() ? panelId : null"
+        [attr.aria-controls]="controlsId()"
         [attr.aria-activedescendant]="activeDescendantId()"
         [attr.aria-label]="ariaLabel()"
         [attr.aria-labelledby]="ariaLabelledby()"
         [attr.aria-describedby]="ariaDescribedby()"
         [attr.aria-invalid]="invalid() || null"
+        [attr.aria-required]="required() || null"
         (input)="onSearchInput($any($event.target).value)"
         (keydown)="onKeydown($event)"
         (blur)="markTouched()"
@@ -130,12 +149,13 @@
       [disabled]="isDisabled()"
       [attr.data-placeholder]="hasValue() ? null : ''"
       [attr.aria-expanded]="isOpen()"
-      [attr.aria-controls]="isOpen() ? panelId : null"
+      [attr.aria-controls]="controlsId()"
       [attr.aria-activedescendant]="activeDescendantId()"
       [attr.aria-label]="ariaLabel()"
       [attr.aria-labelledby]="ariaLabelledby()"
       [attr.aria-describedby]="ariaDescribedby()"
       [attr.aria-invalid]="invalid() || null"
+      [attr.aria-required]="required() || null"
       (keydown)="onKeydown($event)"
       (blur)="markTouched()"
     >
@@ -161,6 +181,9 @@
       (mousedown)="$event.preventDefault()"
       (click)="onClearClick($event)"
     >
+      @if (clearIcon(); as clearTemplate) {
+      <ng-container [ngTemplateOutlet]="clearTemplate" />
+      } @else {
       <svg
         class="andes-cascader__clear-glyph"
         viewBox="0 0 16 16"
@@ -170,15 +193,27 @@
         <circle cx="8" cy="8" r="8" />
         <path d="M5.5 5.5l5 5m0-5-5 5" />
       </svg>
+      }
     </button>
-    } @if (loading()) {
+    } @if (loading()) { @if (loadingIcon(); as loadingTemplate) {
+    <span
+      class="andes-cascader__loading-icon"
+      data-slot="cascader-loading"
+      aria-hidden="true"
+    >
+      <ng-container [ngTemplateOutlet]="loadingTemplate" />
+    </span>
+    } @else {
     <span
       class="andes-cascader__spinner"
       data-slot="cascader-loading"
       aria-hidden="true"
     ></span>
-    } @else {
+    } } @else if (suffixIcon() !== null) {
     <span class="andes-cascader__chevron" aria-hidden="true">
+      @if (suffixIcon(); as suffixTemplate) {
+      <ng-container [ngTemplateOutlet]="suffixTemplate" />
+      } @else {
       <svg
         viewBox="0 0 24 24"
         fill="none"
@@ -187,33 +222,59 @@
       >
         <path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round" />
       </svg>
+      }
     </span>
     }
   </span>
+
+  @if (name(); as fieldName) { @for (value of formValues(); track $index) {
+  <input
+    type="hidden"
+    data-slot="cascader-form-value"
+    [name]="fieldName"
+    [value]="value"
+  />
+  } }
 </div>
 
 <ng-template #panel>
   <!--
     A press inside the panel never takes focus from the combobox: the options are reached
-    through `aria-activedescendant`, so there is nothing in here to focus.
+    through `aria-activedescendant`, so there is nothing in here to focus. The header and
+    footer are the exception for their text fields (see `onPanelMousedown`).
   -->
-  <!-- eslint-disable-next-line @angular-eslint/template/mouse-events-have-key-events, @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
   <div
     andesOverlayContent
     class="andes-cascader__panel"
     data-slot="cascader-panel"
+    [attr.dir]="panelDirection()"
     [attr.data-side]="side()"
     [attr.data-search]="searching() ? '' : null"
     [style.--andes-cascader-anchor-width.px]="anchorWidth()"
-    (mousedown)="$event.preventDefault()"
+    (mousedown)="onPanelMousedown($event)"
+    (keydown)="onPanelKeydown($event)"
+    (pointerleave)="onPanelPointerLeave()"
+    (focusin)="onFocusIn($event)"
+    (focusout)="onFocusOut($event)"
   >
-    @if (searching()) { @if (results().length > 0) {
+    @if (panelHeader(); as header) {
+    <div
+      class="andes-cascader__panel-extra andes-cascader__panel-extra--header"
+      data-slot="cascader-panel-header"
+    >
+      <ng-container
+        [ngTemplateOutlet]="header"
+        [ngTemplateOutletContext]="panelContext()"
+      />
+    </div>
+    } @if (searching()) { @if (results().length > 0) {
     <ul
       role="tree"
       class="andes-cascader__results"
       data-slot="cascader-results"
       [id]="treeId"
       [attr.aria-multiselectable]="multiple() || null"
+      (scroll)="onPanelScroll($event)"
     >
       @for (result of results(); track result.key; let i = $index) {
       <li
@@ -226,10 +287,11 @@
         [attr.aria-checked]="multiple() ? resultChecked(result) : null"
         [attr.aria-disabled]="result.disabled ? 'true' : null"
         [attr.data-active]="i === activeResultIndex() ? '' : null"
+        [attr.data-highlighted]="i === highlightedResult() ? '' : null"
         [attr.data-disabled]="result.disabled ? '' : null"
         [attr.data-selected]="resultSelected(result) ? '' : null"
         (click)="onResultClick(i)"
-        (mouseenter)="onResultEnter(i)"
+        (pointermove)="onResultPointerMove(i, $event)"
       >
         @if (multiple()) {
         <span
@@ -239,14 +301,19 @@
         ></span>
         }
         <span class="andes-cascader__label">
-          @for (parts of resultParts(result); track $index; let last = $last)
-          {@for (part of parts; track $index) {@if (part.match) {<mark
+          @if (optionTemplate(); as template) {
+          <ng-container
+            [ngTemplateOutlet]="template"
+            [ngTemplateOutletContext]="resultContext(result)"
+          />
+          } @else { @for (parts of resultParts(result); track $index; let last =
+          $last) {@for (part of parts; track $index) {@if (part.match) {<mark
             class="andes-cascader__match"
             >{{ part.text }}</mark
           >} @else {<span>{{ part.text }}</span>}}@if (!last) {<span
             class="andes-cascader__separator"
             >{{ separator() }}</span
-          >}}
+          >}} }
         </span>
       </li>
       }
@@ -264,6 +331,7 @@
         role="group"
         class="andes-cascader__column"
         [attr.aria-label]="columnLabel(column)"
+        (scroll)="onPanelScroll($event)"
       >
         @for (node of column.nodes; track node.key; let i = $index) {
         <li
@@ -279,12 +347,14 @@
           [attr.aria-checked]="multiple() ? ariaChecked(node) : null"
           [attr.aria-disabled]="node.disabled ? 'true' : null"
           [attr.data-active]="isActive(node) ? '' : null"
+          [attr.data-highlighted]="isHighlighted(node) ? '' : null"
           [attr.data-expanded]="isExpanded(node) ? '' : null"
           [attr.data-in-path]="isInSelectedPath(node) ? '' : null"
           [attr.data-disabled]="node.disabled ? '' : null"
           [attr.data-loading]="isLoadingNode(node) ? '' : null"
           (click)="onItemClick(node)"
           (mouseenter)="onItemEnter(node)"
+          (pointermove)="onItemPointerMove(node, $event)"
         >
           @if (multiple()) {
           <span
@@ -302,9 +372,13 @@
             />
             } @else { {{ node.label }} }
           </span>
-          @if (isLoadingNode(node)) {
+          @if (isLoadingNode(node)) { @if (loadingIcon(); as loadingTemplate) {
+          <span class="andes-cascader__loading-icon" aria-hidden="true">
+            <ng-container [ngTemplateOutlet]="loadingTemplate" />
+          </span>
+          } @else {
           <span class="andes-cascader__spinner" aria-hidden="true"></span>
-          } @else if (isBranch(node)) {
+          } } @else if (isBranch(node)) {
           <svg
             class="andes-cascader__expand"
             viewBox="0 0 24 24"
@@ -344,5 +418,16 @@
     <span class="andes-cascader__sr" role="status" aria-live="polite"
       >{{ resultsAnnouncement() }}</span
     >
+    @if (panelFooter(); as footer) {
+    <div
+      class="andes-cascader__panel-extra andes-cascader__panel-extra--footer"
+      data-slot="cascader-panel-footer"
+    >
+      <ng-container
+        [ngTemplateOutlet]="footer"
+        [ngTemplateOutletContext]="panelContext()"
+      />
+    </div>
+    }
   </div>
 </ng-template>

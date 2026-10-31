@@ -7,6 +7,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   ElementRef,
   forwardRef,
   inject,
@@ -372,6 +373,20 @@ export class AndesSwitch implements ControlValueAccessor {
     () => !!this.name() && this.isChecked(),
   );
 
+  /**
+   * The one-shot ripple hook, exposed as the button's `data-motion` attribute: `change` from the
+   * moment the checked state flips (either way) until the ripple animation ends. Absent on the
+   * first render and after the animation ends, so a switch that starts out on never ripples.
+   */
+  protected readonly motion = signal<'change' | null>(null);
+
+  /**
+   * Off until a moment after the first render, so the initial state - including a value a
+   * template-driven `ngModel` writes in a microtask after that render - never animates.
+   */
+  private motionReady = false;
+  private lastChecked: boolean | null = null;
+
   /** Releases an in-flight `Observable` guard when the component goes away. */
   private guardSubscription: Subscription | undefined;
   private destroyed = false;
@@ -380,6 +395,19 @@ export class AndesSwitch implements ControlValueAccessor {
     afterNextRender(() => {
       if (this.autoFocus()) {
         this.focus();
+      }
+      const timer = setTimeout(() => (this.motionReady = true));
+      this.destroyRef.onDestroy(() => clearTimeout(timer));
+    });
+
+    // Turns a change of the RENDERED state (whatever caused it: a click, a form write, a
+    // binding) into the one-shot `data-motion` hook the stylesheet animates.
+    effect(() => {
+      const checked = this.isChecked();
+      const previous = this.lastChecked;
+      this.lastChecked = checked;
+      if (this.motionReady && previous !== null && previous !== checked) {
+        this.motion.set('change');
       }
     });
 
@@ -406,6 +434,20 @@ export class AndesSwitch implements ControlValueAccessor {
   /** Removes focus from the button. */
   blur(): void {
     this.control().nativeElement.blur();
+  }
+
+  /**
+   * The ripple finished: drop the hook so it can replay on the next change. Only the ripple
+   * counts - the stylesheet's keyframes name is scoped by the framework (hence the suffix match)
+   * and any other animation bubbling up from the track content must not clear it.
+   */
+  protected onMotionEnd(event: AnimationEvent): void {
+    if (
+      event.target === event.currentTarget &&
+      event.animationName.endsWith('andes-switch-ripple')
+    ) {
+      this.motion.set(null);
+    }
   }
 
   private onChange: (value: boolean) => void = () => undefined;

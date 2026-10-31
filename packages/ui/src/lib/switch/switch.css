@@ -246,6 +246,12 @@
     --andes-switch-inner-margin,
     var(--andes-switch-default-inner-margin)
   );
+  /* The ring a change sends out (see the motion block at the end): the on color, or the status
+     color below. */
+  --_andes-switch-ripple-color: var(
+    --andes-switch-track-checked-color,
+    var(--andes-color-primary)
+  );
 
   position: relative;
   display: inline-flex;
@@ -265,10 +271,11 @@
      otherwise fall back to the UA's default (serif/Arial) face. */
   font-family: var(--andes-font-family), sans-serif;
   cursor: pointer;
+  /* The track color and the thumb (below) move together, on the same 200ms ease. */
   transition:
-    background-color var(--andes-motion-duration-fast, 0.1s)
+    background-color var(--andes-motion-duration-slow, 0.2s)
       var(--andes-motion-ease-in-out, cubic-bezier(0.645, 0.045, 0.355, 1)),
-    border-color var(--andes-motion-duration-fast, 0.1s)
+    border-color var(--andes-motion-duration-slow, 0.2s)
       var(--andes-motion-ease-in-out, cubic-bezier(0.645, 0.045, 0.355, 1));
 }
 
@@ -333,11 +340,13 @@
 }
 
 .andes-switch--invalid {
+  --_andes-switch-ripple-color: var(--andes-color-danger);
   border-color: var(--andes-color-danger);
 }
 
 /* The softer tier (the same warning shade AndesInput and AndesCheckbox use). */
 .andes-switch--warning {
+  --_andes-switch-ripple-color: var(--andes-color-warning-hover);
   border-color: var(--andes-color-warning-hover);
 }
 
@@ -354,6 +363,10 @@
    checked position tracks the actual track width, which grows with track content. */
 
 .andes-switch__thumb {
+  /* The thumb's inline size: the resting size, which the press stretch (motion block at the end)
+     swaps for a longer one. Both the width and the checked offset read it, so the thumb's outer
+     edge stays anchored at the track edge while it grows toward the side it will travel to. */
+  --_andes-switch-thumb-width: var(--andes-switch-resolved-thumb-size);
   position: absolute;
   z-index: 1;
   top: 50%;
@@ -364,7 +377,7 @@
   align-items: center;
   justify-content: center;
   height: var(--andes-switch-resolved-thumb-size);
-  width: var(--andes-switch-resolved-thumb-size);
+  width: var(--_andes-switch-thumb-width);
   border-radius: var(--andes-radius-full);
   /* A light knob in both themes: --andes-color-background turns near-black in the dark
      theme, which left the thumb all but invisible on the dark track. The primary
@@ -376,14 +389,17 @@
   box-shadow: var(--andes-switch-thumb-shadow, 0 1px 2px rgb(0 0 0 / 15%));
   transform: translateY(-50%);
   /* Eased at both ends so the knob glides across and settles, rather than darting. */
-  transition: inset-inline-start var(--andes-motion-duration-mid, 0.2s)
-    var(--andes-motion-ease-in-out, cubic-bezier(0.645, 0.045, 0.355, 1));
+  transition:
+    inset-inline-start var(--andes-motion-duration-slow, 0.2s)
+      var(--andes-motion-ease-in-out, cubic-bezier(0.645, 0.045, 0.355, 1)),
+    width var(--andes-motion-duration-slow, 0.2s)
+      var(--andes-motion-ease-in-out, cubic-bezier(0.645, 0.045, 0.355, 1));
   pointer-events: none;
 }
 
 .andes-switch[data-checked] .andes-switch__thumb {
   inset-inline-start: calc(
-    100% - var(--andes-switch-resolved-thumb-size) -
+    100% - var(--_andes-switch-thumb-width) -
       var(--andes-switch-resolved-track-padding) + 1px
   );
 }
@@ -434,6 +450,7 @@
 @media (prefers-reduced-motion: reduce) {
   .andes-switch,
   .andes-switch__thumb,
+  .andes-switch__content,
   .andes-switch-field--card {
     transition: none;
   }
@@ -466,12 +483,18 @@
 }
 
 .andes-switch__content {
+  position: relative;
+  /* An explicit 0, not `auto`: an `auto` offset cannot be transitioned. */
+  inset-inline-start: 0;
   grid-area: 1 / 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   white-space: nowrap;
   visibility: hidden;
+  /* Nudged while the switch is pressed (motion block at the end). */
+  transition: inset-inline-start var(--andes-motion-duration-slow, 0.2s)
+    var(--andes-motion-ease-in-out, cubic-bezier(0.645, 0.045, 0.355, 1));
 }
 
 .andes-switch__content[data-active] {
@@ -588,5 +611,61 @@
 
   .andes-switch-field__description {
     color: CanvasText;
+  }
+}
+
+/* Motion that answers the user: the press stretch and the change ripple. Only with motion
+   allowed, and not in forced-colors mode, where the system palette already redraws the track
+   and a moving ring would be noise. Under reduced motion the state changes instantly and none
+   of this applies.
+
+   Press: while the switch is held down (tracked on the field, so a press on the label text or
+   anywhere on a card counts too) the thumb stretches by 30% toward the side it will travel to,
+   and the track text slides away from it by twice the track padding. On release both settle
+   back while the thumb travels, so the move squishes and breathes. A disabled, read-only or
+   busy switch cannot change, so it gives no press feedback at all.
+
+   Ripple: `data-motion` is a one-shot hook the component sets only when the state CHANGES after
+   the first render (so a switch that starts out on never rings) and clears when this animation
+   ends. A soft ring in the on color - or the status color - leaves the track, for check and
+   uncheck alike.
+
+   Every selector with a combinator stays on ONE line (see the note at the top). */
+
+@keyframes andes-switch-ripple {
+  from {
+    box-shadow: 0 0 0 0
+      color-mix(in srgb, var(--_andes-switch-ripple-color) 35%, transparent);
+  }
+
+  to {
+    box-shadow: 0 0 0 6px
+      color-mix(in srgb, var(--_andes-switch-ripple-color) 0%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) and (forced-colors: none) {
+  /* prettier-ignore */
+  .andes-switch-field:active:not(.andes-switch-field--disabled):not(.andes-switch-field--readonly):not(.andes-switch-field--loading) > .andes-switch .andes-switch__thumb {
+    /* Capped at the room inside the track, so a narrow custom track never loses the thumb. */
+    --_andes-switch-thumb-width: min(
+      calc(var(--andes-switch-resolved-thumb-size) * 1.3),
+      calc(100% - 2 * var(--andes-switch-resolved-track-padding) + 2px)
+    );
+  }
+
+  /* prettier-ignore */
+  .andes-switch-field:active:not(.andes-switch-field--disabled):not(.andes-switch-field--readonly):not(.andes-switch-field--loading) > .andes-switch:not([data-checked]) .andes-switch__content--unchecked {
+    inset-inline-start: calc(2 * var(--andes-switch-resolved-track-padding));
+  }
+
+  /* prettier-ignore */
+  .andes-switch-field:active:not(.andes-switch-field--disabled):not(.andes-switch-field--readonly):not(.andes-switch-field--loading) > .andes-switch[data-checked] .andes-switch__content--checked {
+    inset-inline-start: calc(-2 * var(--andes-switch-resolved-track-padding));
+  }
+
+  /* prettier-ignore */
+  .andes-switch[data-motion]:not(:disabled):not([data-disabled]):not([data-readonly]):not([data-loading]) {
+    animation: andes-switch-ripple 0.4s cubic-bezier(0.08, 0.82, 0.17, 1);
   }
 }

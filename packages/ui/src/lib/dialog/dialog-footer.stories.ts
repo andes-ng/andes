@@ -3,6 +3,7 @@ import { signal } from '@angular/core';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
+import { AndesInput } from '../input/input';
 import { ANDES_DIALOG_IMPORTS, AndesDialog } from './dialog';
 
 /**
@@ -48,31 +49,6 @@ const TRIGGER_STYLES = `
       font-size: 0.875rem;
       color: var(--andes-color-foreground);
     }
-    /* The library has no Input component yet, so this demo field is a native input styled
-       as one: a single focus indicator (primary border plus a soft 2px ring), never an
-       outline drawn around the border as a second frame. */
-    .sb-field input {
-      box-sizing: border-box;
-      height: 2rem;
-      padding: 0 0.6875rem;
-      border: 1px solid var(--andes-color-input);
-      border-radius: var(--andes-radius-md);
-      background-color: var(--andes-color-background);
-      color: var(--andes-color-foreground);
-      font: inherit;
-      line-height: 1.375rem;
-      outline: none;
-      transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
-    }
-    .sb-field input::placeholder { color: var(--andes-color-muted-foreground); }
-    .sb-field input:hover {
-      border-color: color-mix(in srgb, var(--andes-color-primary) 65%, var(--andes-color-input));
-    }
-    .sb-field input:focus {
-      border-color: var(--andes-color-primary);
-      box-shadow: 0 0 0 2px color-mix(in srgb, var(--andes-color-primary) 20%, transparent);
-      outline: none;
-    }
   </style>
 `;
 
@@ -100,7 +76,7 @@ export const BuiltInFooter: Story = {
     const saving = signal(false);
     const log = signal<string[]>([]);
     return {
-      moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS] },
+      moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS, AndesInput] },
       props: {
         open,
         saving,
@@ -136,7 +112,7 @@ export const BuiltInFooter: Story = {
 
             <label class="sb-field">
               Name
-              <input value="Ada Lovelace" />
+              <andes-input value="Ada Lovelace" />
             </label>
           </andes-dialog-content>
         </andes-dialog>

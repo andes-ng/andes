@@ -17,6 +17,7 @@ import {
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
+import { AndesInput } from '../input/input';
 import { ANDES_PALETTE_COLORS } from '../palette/palette';
 import { AndesTag, AndesTagCloseEvent } from './tag';
 
@@ -329,18 +330,20 @@ export const Icons: Story = {
 export const AddAndRemove: Story = {
   render: () => {
     const tags = signal(['Unremovable', 'Invoices', 'Q3 close']);
+    const draft = signal('');
     return {
-      moduleMetadata: { imports: [AndesButton] },
+      moduleMetadata: { imports: [AndesButton, AndesInput] },
       props: {
         tags,
         remove: (tag: string) =>
           tags.update((all) => all.filter((t) => t !== tag)),
-        add: (field: HTMLInputElement) => {
-          const value = field.value.trim();
+        draft,
+        add: () => {
+          const value = draft().trim();
           if (value && !tags().includes(value)) {
             tags.update((all) => [...all, value]);
           }
-          field.value = '';
+          draft.set('');
         },
       },
       template: `
@@ -357,12 +360,11 @@ export const AddAndRemove: Story = {
               >{{ tag }}</andes-tag>
             }
           </div>
-          <form style="display: flex; gap: 0.5rem;" (submit)="$event.preventDefault(); add(field)">
-            <input
-              #field
+          <form style="display: flex; gap: 0.5rem;" (submit)="$event.preventDefault(); add()">
+            <andes-input
               aria-label="New tag"
               placeholder="New tag"
-              style="height: 2rem; padding-inline: 0.75rem; border: 1px solid var(--andes-color-input); border-radius: var(--andes-radius-md); background: var(--andes-color-background); color: var(--andes-color-foreground); font-family: inherit; font-size: 0.875rem;"
+              [(value)]="draft"
             />
             <andes-button type="submit" variant="outline">Add</andes-button>
           </form>

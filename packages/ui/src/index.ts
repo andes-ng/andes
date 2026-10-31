@@ -157,6 +157,6 @@ export * from './lib/toggle';
 
 // @slot typography
 
-// @slot upload
+export * from './lib/upload';
 
 // @slot watermark

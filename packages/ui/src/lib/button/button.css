@@ -48,7 +48,9 @@
   opacity: 0.6;
 }
 
-.andes-button--invalid {
+/* Two classes so the danger border beats the variants' own border colour (outline, dashed...),
+   which are declared further down with one class each. */
+.andes-button.andes-button--invalid {
   border-color: var(--andes-color-danger);
 }
 

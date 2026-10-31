@@ -8,9 +8,12 @@
   [attr.aria-describedby]="ariaDescribedby()"
   [attr.title]="tooltip() ?? null"
   [attr.tabindex]="tabIndex()"
+  [attr.data-motion]="motion()"
   [disabled]="isDisabled()"
   (click)="onClick()"
   (blur)="onBlur()"
+  (animationend)="onMotionEnd($event)"
+  (animationcancel)="onMotionCancel($event)"
 >
   <span class="andes-toggle__icon" aria-hidden="true"
     >@if (iconStart(); as startTemplate) {

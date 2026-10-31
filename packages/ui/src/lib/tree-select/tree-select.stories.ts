@@ -2,6 +2,8 @@ import { JsonPipe } from '@angular/common';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import type { Meta, StoryObj } from '@storybook/angular';
 
+import { AndesButton } from '../button/button';
+import { AndesInput } from '../input/input';
 import { AndesTreeNodeTemplate } from '../tree/tree-node-template';
 import type {
   AndesTreeKey,
@@ -208,9 +210,13 @@ export const States: Story = {
 };
 
 /**
- * Two ways to hold the value. A two-way `[(value)]` whose panel opens on the branch that
- * holds the current value, and a form control: bind it with `formControl` or `ngModel`, and
- * show validation with `status`.
+ * Ways to hold the value and the panel. A two-way `[(value)]` whose panel opens on the branch
+ * that holds the current value; a form control, bound with `formControl` or `ngModel`, with
+ * validation shown through `status`; `labelInValue`, which swaps the bare keys for
+ * `{ value, label }` objects (in the value and in the events) so a selection keeps its title
+ * even when its node is not loaded; and `[(open)]`, which follows the panel whoever opens or
+ * closes it. `selectionChange`, `optionSelect` and `optionDeselect` report what the user did
+ * (the last ones are listed under the labelled field).
  */
 export const Binding: Story = {
   render: () => {
@@ -219,10 +225,13 @@ export const Binding: Story = {
       Validators.required,
     );
     return {
-      moduleMetadata: { imports: IMPORTS },
+      moduleMetadata: { imports: [...IMPORTS, AndesButton] },
       props: {
         regionNodes: regions(),
         selected: 'cusco-urubamba' as AndesTreeKey,
+        labeled: [{ value: 'iquitos', label: 'Iquitos' }],
+        history: [] as string[],
+        panelOpen: false,
         control,
       },
       styles: STORY_STYLES,
@@ -245,6 +254,27 @@ export const Binding: Story = {
             }
           </div>
           <p class="caption">Value: <code>{{ control.value | json }}</code> · {{ control.status }}</p>
+          <div>
+            <span class="label">labelInValue</span>
+            <andes-tree-select
+              aria-label="Regions, labelled"
+              multiple
+              labelInValue
+              allowClear
+              [nodes]="regionNodes"
+              [(value)]="labeled"
+              (optionSelect)="history = ['select ' + $any($event).label, ...history].slice(0, 3)"
+              (optionDeselect)="history = ['deselect ' + $any($event).label, ...history].slice(0, 3)"
+            />
+            <p class="caption">Value: <code>{{ labeled | json }}</code></p>
+            <p class="caption">Last events: {{ history.join(' · ') || 'none yet' }}</p>
+          </div>
+          <div>
+            <span class="label">[(open)]</span>
+            <andes-tree-select aria-label="Region, controlled panel" placeholder="Controlled panel" [nodes]="regionNodes" [(open)]="panelOpen" />
+            <andes-button size="sm" variant="secondary" (click)="panelOpen = !panelOpen">{{ panelOpen ? 'Close' : 'Open' }} the panel</andes-button>
+            <p class="caption">open: <code>{{ panelOpen }}</code></p>
+          </div>
         </div>
       `,
     };
@@ -433,10 +463,18 @@ export const DefaultExpandAll: Story = {
   }),
 };
 
-/** An `andesTreeNode` template draws the nodes in the panel. */
+/**
+ * An `andesTreeNode` template draws the nodes in the panel (first field). The field and the
+ * panel take templates too: `tagTemplate` (its context carries `onClose`), `prefix`,
+ * `suffixIcon` (`null` removes the chevron), `clearIcon`, `removeIcon` and `loadingIcon`;
+ * `panelHeader` and `panelFooter` add content above and below the tree - the footer here adds a
+ * region, and its field takes focus like any other - while `panelScroll` fires when the list
+ * scrolls (the last field counts those events, on a long list). `matchTriggerWidth` takes a
+ * width in px, and `expandAction="click"` opens a branch from a click on its row.
+ */
 export const CustomNodeContent: Story = {
   render: () => ({
-    moduleMetadata: { imports: IMPORTS },
+    moduleMetadata: { imports: [...IMPORTS, AndesButton, AndesInput] },
     props: {
       stockNodes: [
         {
@@ -447,25 +485,81 @@ export const CustomNodeContent: Story = {
         },
         { key: 'b', title: 'Almacén Cusco', stock: 310 },
       ] satisfies AndesTreeNode[],
+      regionNodes: regions(),
+      longNodes: Array.from({ length: 40 }, (_, i) => ({
+        key: `n${i}`,
+        title: `Region ${i + 1}`,
+      })) satisfies AndesTreeNode[],
       selected: null,
+      many: ['lima-sur', 'iquitos'] as AndesTreeKey[],
+      draft: '',
+      scrolls: 0,
+      add(this: { regionNodes: AndesTreeNode[]; draft: string }) {
+        const title = this.draft.trim();
+        if (title) {
+          this.regionNodes = [
+            ...this.regionNodes,
+            { key: title.toLowerCase().replace(/\s+/g, '-'), title },
+          ];
+          this.draft = '';
+        }
+      },
     },
     styles: [
       ...STORY_STYLES,
       `.stock { margin-inline-start: 8px; color: var(--andes-color-muted-foreground); font-size: 0.75rem; }`,
     ],
     template: `
+      <ng-template #pin>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+      </ng-template>
+      <ng-template #caret>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></svg>
+      </ng-template>
+      <ng-template #erase>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg>
+      </ng-template>
+      <ng-template #hourglass>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 2h12M6 22h12M7 2c0 6 10 6 10 10S7 16 7 22M17 2c0 6-10 6-10 10s10 4 10 10"/></svg>
+      </ng-template>
+      <ng-template #tag let-tag let-onClose="onClose">
+        <span style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0 0.5rem; border-radius: var(--andes-radius-full); background: var(--andes-color-primary-subtle); color: var(--andes-color-primary);">
+          {{ tag.title }}
+          <andes-button variant="ghost" size="icon-xs" aria-label="Drop" (click)="onClose()">×</andes-button>
+        </span>
+      </ng-template>
+      <ng-template #header let-search>
+        <span class="caption">{{ search ? 'Results for "' + search + '"' : 'Pick a region' }}</span>
+      </ng-template>
+      <ng-template #footer let-close="close">
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <andes-input aria-label="New region" size="sm" placeholder="New region" [(value)]="draft" (keydown.enter)="add()" />
+          <andes-button size="sm" (click)="add(); close()">Add</andes-button>
+        </div>
+      </ng-template>
       <div class="stack">
         <andes-tree-select aria-label="Almacén" treeDefaultExpandAll [nodes]="stockNodes" [(value)]="selected">
           <ng-template andesTreeNode let-node>
             <span>{{ node.title }}</span><span class="stock">{{ node.stock }} u.</span>
           </ng-template>
         </andes-tree-select>
+        <andes-tree-select aria-label="Regions as pills" multiple [tagTemplate]="tag" [nodes]="regionNodes" [(value)]="many" />
+        <andes-tree-select aria-label="Region with custom icons" allowClear [prefix]="pin" [suffixIcon]="caret" [clearIcon]="erase" [loadingIcon]="hourglass" [nodes]="regionNodes" [(value)]="selected" />
+        <andes-tree-select aria-label="Regions, custom remove icon" multiple [removeIcon]="erase" [nodes]="regionNodes" [(value)]="many" />
+        <andes-tree-select aria-label="Loading, custom spinner" loading [loadingIcon]="hourglass" [suffixIcon]="null" placeholder="Loading" [nodes]="regionNodes" />
+        <andes-tree-select aria-label="Region with header and footer" [panelHeader]="header" [panelFooter]="footer" placeholder="Add a region from the footer" [nodes]="regionNodes" [(value)]="selected" />
+        <andes-tree-select aria-label="Region, branches open on click" expandAction="click" [matchTriggerWidth]="360" [nodes]="regionNodes" placeholder="360px wide, rows expand on click" />
+        <andes-tree-select aria-label="Long list" [nodes]="longNodes" (panelScroll)="scrolls = scrolls + 1" placeholder="Scroll the list" />
+        <p class="caption">panel scroll events: <code>{{ scrolls }}</code></p>
       </div>
     `,
   }),
 };
 
-/** The panel stays above or below the field: `topLeft` opens upwards. */
+/**
+ * The panel stays above or below the field: `topLeft` opens upwards. `defaultOpen` opens it once
+ * on render, so this one is open from the start (click away to dismiss it).
+ */
 export const PlacementAbove: Story = {
   parameters: { layout: 'padded' },
   render: () => ({
@@ -478,7 +572,7 @@ export const PlacementAbove: Story = {
     template: `
       <div class="bottom">
         <div class="stack">
-          <andes-tree-select aria-label="Region" placement="topLeft" treeDefaultExpandAll [nodes]="regionNodes" />
+          <andes-tree-select aria-label="Region" placement="topLeft" defaultOpen treeDefaultExpandAll [nodes]="regionNodes" />
         </div>
       </div>
     `,

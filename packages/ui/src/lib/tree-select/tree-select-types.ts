@@ -15,12 +15,48 @@ export type AndesTreeSelectSearchPlacement = 'panel' | 'trigger';
 /** A single key, or a list of keys in a multiple or checkable select, or nothing. */
 export type AndesTreeSelectValue = AndesTreeKey | AndesTreeKey[] | null;
 
+/** A selected node as `labelInValue` holds it: its key and the title it was shown with. */
+export interface AndesTreeSelectLabeledValue {
+  value: AndesTreeKey;
+  label: string;
+}
+
+/**
+ * What the `value` holds: keys, or with `labelInValue` `{ value, label }` objects in their
+ * place (one, a list, or `null`). The same shape is what `selectionChange` emits.
+ */
+export type AndesTreeSelectModel =
+  | AndesTreeSelectValue
+  | AndesTreeSelectLabeledValue
+  | AndesTreeSelectLabeledValue[];
+
 /** One selected node, as shown in the field. */
 export interface AndesTreeSelectOption {
   key: AndesTreeKey;
   title: string;
   /** The node object; `undefined` for a key whose node is not in `nodes` (yet). */
   node: AndesTreeNode | undefined;
+}
+
+/** One tag of a multiple select: a selected node, as the field shows it. */
+export interface AndesTreeSelectTag extends AndesTreeSelectOption {
+  /** `false` while the select is disabled. */
+  closable: boolean;
+}
+
+/** Context of the `tagTemplate`. */
+export interface AndesTreeSelectTagContext {
+  $implicit: AndesTreeSelectTag;
+  /** Removes this node from the selection, exactly as the built-in remove button does. */
+  onClose: () => void;
+}
+
+/** Context of the `panelHeader` and `panelFooter` templates. */
+export interface AndesTreeSelectPanelContext {
+  /** The text typed into the search. */
+  $implicit: string;
+  /** Closes the panel. */
+  close: () => void;
 }
 
 /** What `maxTagPlaceholder` is given when a function: the tags that are not shown. */

@@ -60,7 +60,8 @@ export const SettingsRows: Story = {
  * Card states and sizes: disabled, read-only (no hover feedback, still focusable), `loading`,
  * the `error` and `warning` statuses (the border and the focus ring follow the status color),
  * the three sizes, a card without a description, a long text wrapping inside its column, and
- * right-to-left.
+ * right-to-left. Press and hold anywhere on a card: the inner thumb stretches just like a bare
+ * switch (mirrored in right-to-left), except on the disabled, read-only and loading ones.
  */
 export const StatesAndSizes: Story = {
   render: () => ({

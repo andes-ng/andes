@@ -32,6 +32,8 @@ import {
 } from './upload-files';
 import { xhrUploadRequest } from './upload-request';
 import {
+  AndesUploadCancelledError,
+  AndesUploadHttpError,
   AndesUploadItemEvent,
   type AndesUploadAction,
   type AndesUploadBeforeRemove,
@@ -60,13 +62,18 @@ export const DEFAULT_UPLOAD_MESSAGES: AndesUploadMessages = {
   uploading: 'Uploading {name}',
   ready: 'Ready to upload',
   uploadFailed: 'Upload failed',
+  uploadCancelled: 'Upload cancelled',
+  httpError: 'Upload failed with status {status}',
+  networkError: 'Network error',
+  timeout: 'The upload timed out',
   announceUploaded: '{name} uploaded',
   announceFailed: '{name} could not be uploaded',
   announceRemoved: '{name} removed',
   announceRejected: '{name} was not added: {reason}',
   rejectAccept: 'this file type is not allowed',
   rejectSize: 'the file is larger than {max}',
-  rejectCount: 'the limit of {count} files is reached',
+  rejectCount: ({ count }) =>
+    `the limit of ${count} ${count === 1 ? 'file' : 'files'} is reached`,
   rejectBefore: 'the file was not accepted',
   preview: 'Preview {name}',
   download: 'Download {name}',
@@ -74,7 +81,7 @@ export const DEFAULT_UPLOAD_MESSAGES: AndesUploadMessages = {
   retry: 'Retry uploading {name}',
   dropTitle: 'Click or drag files to this area to upload',
   noFileChosen: 'No file chosen',
-  filesChosen: '{count} files',
+  filesChosen: ({ count }) => `${count} ${count === 1 ? 'file' : 'files'}`,
   announceAdded: '{name} added',
 };
 
@@ -143,11 +150,15 @@ function noop(): void {
   // Default Forms callbacks until the real ones are registered.
 }
 
+/** `Node.ELEMENT_NODE` and `Node.TEXT_NODE`, spelled out: there is no `Node` global on a server. */
+const ELEMENT_NODE = 1;
+const TEXT_NODE = 3;
+
 function hasProjectedContent(slot: HTMLElement): boolean {
   return Array.from(slot.childNodes).some(
     (node) =>
-      node.nodeType === Node.ELEMENT_NODE ||
-      (node.nodeType === Node.TEXT_NODE && !!node.textContent?.trim()),
+      node.nodeType === ELEMENT_NODE ||
+      (node.nodeType === TEXT_NODE && !!node.textContent?.trim()),
   );
 }
 
@@ -367,6 +378,16 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
     ...this.messages(),
   }));
 
+  /** The texts with no placeholders that the template prints as they are. */
+  protected readonly text = computed(() => {
+    const messages = this.msg();
+    return {
+      selectFiles: formatMessage(messages.selectFiles),
+      fileList: formatMessage(messages.fileList),
+      dropTitle: formatMessage(messages.dropTitle),
+    };
+  });
+
   protected readonly isCardList = computed(
     () =>
       !this.dragMode &&
@@ -436,7 +457,7 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
     const failed = list.find((file) => file.status === 'error');
     const text =
       list.length === 0
-        ? messages.noFileChosen
+        ? formatMessage(messages.noFileChosen)
         : list.length === 1
           ? list[0].name
           : formatMessage(messages.filesChosen, { count: list.length });
@@ -445,12 +466,7 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
       empty: list.length === 0,
       status,
       percent,
-      errorText: failed
-        ? (failed.errorMessage ??
-          (failed.error instanceof Error && failed.error.message
-            ? failed.error.message
-            : messages.uploadFailed))
-        : undefined,
+      errorText: failed ? this.errorTextOf(failed) : undefined,
       uploadingLabel: formatMessage(messages.uploading, { name: text }),
       clearLabel: formatMessage(messages.remove, { name: text }),
       canClear: list.length > 0 && !this.isDisabled(),
@@ -769,7 +785,7 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
     this.cancelAttempt(file.uid);
     this.patch(file.uid, {
       status: 'error',
-      error: new Error('Upload cancelled'),
+      error: new AndesUploadCancelledError(),
     });
   }
 
@@ -991,17 +1007,46 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
     return files.slice(0, room);
   }
 
+  /**
+   * Why a file failed, in the control's language: the file's own `errorMessage`, else the text
+   * for the kind of failure the transport or `abortFile()` reported, else any other error's
+   * message, else the generic one.
+   */
+  private errorTextOf(file: AndesUploadFile): string {
+    const messages = this.msg();
+    if (file.errorMessage) {
+      return file.errorMessage;
+    }
+    const error = file.error;
+    if (error instanceof AndesUploadCancelledError) {
+      return formatMessage(messages.uploadCancelled);
+    }
+    if (error instanceof AndesUploadHttpError) {
+      switch (error.kind) {
+        case 'network':
+          return formatMessage(messages.networkError);
+        case 'timeout':
+          return formatMessage(messages.timeout);
+        default:
+          return formatMessage(messages.httpError, { status: error.status });
+      }
+    }
+    return error instanceof Error && error.message
+      ? error.message
+      : formatMessage(messages.uploadFailed);
+  }
+
   private describeRejections(rejections: AndesUploadRejection[]): string {
     const messages = this.msg();
     const reasons: Record<AndesUploadRejection['reason'], string> = {
-      accept: messages.rejectAccept,
+      accept: formatMessage(messages.rejectAccept),
       size: formatMessage(messages.rejectSize, {
         max: formatFileSize(this.maxSize() ?? 0),
       }),
       count: formatMessage(messages.rejectCount, {
         count: this.maxCount() ?? 1,
       }),
-      'before-upload': messages.rejectBefore,
+      'before-upload': formatMessage(messages.rejectBefore),
     };
     return rejections
       .map(({ file, reason }) =>
@@ -1278,17 +1323,11 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
     if (status === 'uploading') {
       caption = `${percent}%`;
     } else if (status === 'ready') {
-      caption = messages.ready;
+      caption = formatMessage(messages.ready);
     } else if (status !== 'error' && config.fileSize && file.size != null) {
       caption = formatFileSize(file.size);
     }
-    const errorText =
-      status === 'error'
-        ? (file.errorMessage ??
-          (file.error instanceof Error && file.error.message
-            ? file.error.message
-            : messages.uploadFailed))
-        : undefined;
+    const errorText = status === 'error' ? this.errorTextOf(file) : undefined;
 
     const disabled = this.isDisabled();
     const icon: AndesUploadIconName =

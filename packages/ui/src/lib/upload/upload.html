@@ -49,7 +49,7 @@
         }
       </span>
       <p class="andes-upload__drag-title">
-        {{ dropTitle() ?? msg().dropTitle }}
+        {{ dropTitle() ?? text().dropTitle }}
       </p>
       @if (dropHint()) {
       <p class="andes-upload__drag-hint">{{ dropHint() }}</p>
@@ -60,7 +60,7 @@
     @if (!dragMode && !hasContent()) {
     <span class="andes-upload__default">
       <andes-upload-icon name="upload" />
-      {{ msg().selectFiles }}
+      {{ text().selectFiles }}
     </span>
     }
   </div>
@@ -72,7 +72,7 @@
     class="andes-upload__list"
     role="list"
     data-slot="upload-list"
-    [attr.aria-label]="msg().fileList"
+    [attr.aria-label]="text().fileList"
     [attr.data-list-type]="listType()"
   >
     @for (item of items(); track item.uid) {
@@ -243,7 +243,7 @@
       aria-hidden="true"
     >
       <andes-upload-icon name="upload" />
-      <span class="andes-upload__field-label">{{ msg().selectFiles }}</span>
+      <span class="andes-upload__field-label">{{ text().selectFiles }}</span>
     </span>
     <span
       class="andes-upload__field-text"
@@ -305,7 +305,7 @@
     [multiple]="multiple() || directory()"
     [disabled]="triggerBlocked()"
     [attr.webkitdirectory]="directory() ? '' : null"
-    [attr.aria-label]="ariaLabelledby() ? null : (ariaLabel() ?? msg().selectFiles)"
+    [attr.aria-label]="ariaLabelledby() ? null : (ariaLabel() ?? text().selectFiles)"
     [attr.aria-labelledby]="ariaLabelledby()"
     [attr.aria-describedby]="inputDescribedby()"
     [attr.aria-invalid]="ariaInvalid() ? 'true' : null"

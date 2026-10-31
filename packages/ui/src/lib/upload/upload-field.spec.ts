@@ -193,6 +193,12 @@ describe('AndesUpload field variant', () => {
       ]);
       detect();
       expect(text()?.textContent?.trim()).toBe('3 files');
+
+      host.messages.set({
+        filesChosen: ({ count }) => `${count} archivos`,
+      });
+      detect();
+      expect(text()?.textContent?.trim()).toBe('3 archivos');
     });
 
     it('never renders the list, whatever listType and showUploadList say', () => {

@@ -3,7 +3,12 @@
  * drag-and-drop traversal. Nothing here depends on Angular, so apps can reuse the validators in
  * their own forms and tests.
  */
-import type { AndesUploadFile, AndesUploadRejectReason } from './upload-types';
+import type {
+  AndesUploadFile,
+  AndesUploadMessage,
+  AndesUploadMessageParams,
+  AndesUploadRejectReason,
+} from './upload-types';
 
 /** The slice of `File` the validators read; lets `AndesUploadFile` entries be checked too. */
 export interface AndesUploadFileLike {
@@ -309,11 +314,17 @@ export function isNavigableUrl(
 
 /* ------------------------------------------------------------------------ text */
 
-/** Replaces `{key}` placeholders. Unknown keys are left as they are. */
+/**
+ * Turns a message into text: a function is called with the values, a string has its `{key}`
+ * placeholders replaced (unknown keys are left as they are).
+ */
 export function formatMessage(
-  template: string,
-  values: Record<string, string | number>,
+  template: AndesUploadMessage,
+  values: AndesUploadMessageParams = {},
 ): string {
+  if (typeof template === 'function') {
+    return template(values);
+  }
   return template.replace(/\{(\w+)\}/g, (match, key: string) =>
     key in values ? String(values[key]) : match,
   );

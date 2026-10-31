@@ -147,16 +147,32 @@ export type AndesUploadRequest = (
   options: AndesUploadRequestOptions,
 ) => AndesUploadRequestHandle | (() => void) | void;
 
-/** The failure the built-in transport reports for a non-2xx answer or a network error. */
+/** What went wrong in a request: a non-2xx answer, no answer at all, or no answer in time. */
+export type AndesUploadHttpErrorKind = 'http' | 'network' | 'timeout';
+
+/**
+ * The failure the built-in transport reports for a non-2xx answer, a network error or a
+ * timeout. `message` is English text for logs; the row shows the translated `messages` entry
+ * for its `kind` (`httpError`, `networkError`, `timeout`) unless the file has an `errorMessage`.
+ */
 export class AndesUploadHttpError extends Error {
   constructor(
     message: string,
     /** The HTTP status, `0` for network errors and timeouts. */
     readonly status: number,
     readonly response?: unknown,
+    readonly kind: AndesUploadHttpErrorKind = 'http',
   ) {
     super(message);
     this.name = 'AndesUploadHttpError';
+  }
+}
+
+/** The error a file carries after `abortFile()`; the row shows `messages.uploadCancelled`. */
+export class AndesUploadCancelledError extends Error {
+  constructor(message = 'Upload cancelled') {
+    super(message);
+    this.name = 'AndesUploadCancelledError';
   }
 }
 
@@ -170,32 +186,56 @@ export interface AndesUploadListOptions {
   showFileSize?: boolean;
 }
 
-/** Texts the control writes itself. `{name}`, `{max}` and `{count}` are filled in. */
+/** What a message function receives: the same values a `{placeholder}` would be filled with. */
+export type AndesUploadMessageParams = Readonly<
+  Record<string, string | number>
+>;
+
+/**
+ * A text of the control: a string with `{placeholders}`, or a function of the same values for
+ * languages whose plural forms need more than a swapped word (`({ count }) => ...`).
+ */
+export type AndesUploadMessage =
+  string | ((params: AndesUploadMessageParams) => string);
+
+/**
+ * Texts the control writes itself. `{name}`, `{max}`, `{count}`, `{reason}` and `{status}` are
+ * filled in where they make sense; every entry may also be a function of those values.
+ */
 export interface AndesUploadMessages {
-  selectFiles: string;
-  fileList: string;
-  uploading: string;
-  ready: string;
-  uploadFailed: string;
-  announceUploaded: string;
-  announceFailed: string;
-  announceRemoved: string;
-  announceRejected: string;
-  rejectAccept: string;
-  rejectSize: string;
-  rejectCount: string;
-  rejectBefore: string;
-  preview: string;
-  download: string;
-  remove: string;
-  retry: string;
-  dropTitle: string;
+  selectFiles: AndesUploadMessage;
+  fileList: AndesUploadMessage;
+  uploading: AndesUploadMessage;
+  ready: AndesUploadMessage;
+  uploadFailed: AndesUploadMessage;
+  /** A file the user cancelled while it was sending (`abortFile()`). */
+  uploadCancelled: AndesUploadMessage;
+  /** The server answered with an error (`{status}`). */
+  httpError: AndesUploadMessage;
+  /** The request could not reach the server. */
+  networkError: AndesUploadMessage;
+  /** The server did not answer in time. */
+  timeout: AndesUploadMessage;
+  announceUploaded: AndesUploadMessage;
+  announceFailed: AndesUploadMessage;
+  announceRemoved: AndesUploadMessage;
+  announceRejected: AndesUploadMessage;
+  rejectAccept: AndesUploadMessage;
+  rejectSize: AndesUploadMessage;
+  /** The limit was hit (`{count}` is the limit): the one entry that needs a plural. */
+  rejectCount: AndesUploadMessage;
+  rejectBefore: AndesUploadMessage;
+  preview: AndesUploadMessage;
+  download: AndesUploadMessage;
+  remove: AndesUploadMessage;
+  retry: AndesUploadMessage;
+  dropTitle: AndesUploadMessage;
   /** Field variant: the text shown while no file is chosen. */
-  noFileChosen: string;
+  noFileChosen: AndesUploadMessage;
   /** Field variant: the text shown for several files (`{count}`). */
-  filesChosen: string;
+  filesChosen: AndesUploadMessage;
   /** Field variant: announced when files join the list (`{name}`). */
-  announceAdded: string;
+  announceAdded: AndesUploadMessage;
 }
 
 export interface AndesUploadItemContext {

@@ -83,15 +83,20 @@ export function xhrUploadRequest(
           `Upload failed with status ${xhr.status}`,
           xhr.status,
           response,
+          'http',
         ),
         response,
       );
     }
   };
   xhr.onerror = () =>
-    options.onError(new AndesUploadHttpError('Network error', 0));
+    options.onError(
+      new AndesUploadHttpError('Network error', 0, undefined, 'network'),
+    );
   xhr.ontimeout = () =>
-    options.onError(new AndesUploadHttpError('The upload timed out', 0));
+    options.onError(
+      new AndesUploadHttpError('The upload timed out', 0, undefined, 'timeout'),
+    );
 
   xhr.send(form);
   return { abort: () => xhr.abort() };

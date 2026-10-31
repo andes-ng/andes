@@ -140,6 +140,12 @@ describe('upload file helpers', () => {
         'a is 3',
       );
       expect(formatMessage('{unknown}', {})).toBe('{unknown}');
+      expect(formatMessage('no values')).toBe('no values');
+      expect(
+        formatMessage(({ count }) => (count === 1 ? 'one' : 'many'), {
+          count: 1,
+        }),
+      ).toBe('one');
     });
   });
 

@@ -130,6 +130,7 @@ describe('xhrUploadRequest', () => {
     const error = calls.error[0] as AndesUploadHttpError;
     expect(error).toBeInstanceOf(AndesUploadHttpError);
     expect(error.status).toBe(413);
+    expect(error.kind).toBe('http');
     expect(error.response).toEqual({ error: 'too big' });
     expect(calls.success).toEqual([]);
   });
@@ -143,6 +144,8 @@ describe('xhrUploadRequest', () => {
     expect((b.calls.error[0] as AndesUploadHttpError).message).toMatch(
       /timed out/,
     );
+    expect((a.calls.error[0] as AndesUploadHttpError).kind).toBe('network');
+    expect((b.calls.error[0] as AndesUploadHttpError).kind).toBe('timeout');
   });
 
   it('aborts through the handle', () => {

@@ -9,6 +9,8 @@ import { declaredValue } from '../../testing/computed-style';
 import { AndesUpload, AndesUploadDragger } from './upload';
 import { andesUploadMaxFiles, andesUploadSettled } from './upload-forms';
 import {
+  AndesUploadCancelledError,
+  AndesUploadHttpError,
   AndesUploadItemEvent,
   type AndesUploadBeforeRemove,
   type AndesUploadBeforeUpload,
@@ -1437,6 +1439,127 @@ describe('AndesUpload', () => {
       root.querySelector('input')?.dispatchEvent(files);
       await flush();
       expect(host.files()).toEqual([]);
+    });
+  });
+
+  describe('localisation', () => {
+    const errorText = (root: HTMLElement) =>
+      root.querySelector('.andes-upload__error')?.textContent;
+
+    async function failWith(error: unknown) {
+      const ctx = setup();
+      pick([pdf('a.pdf')]);
+      await ctx.flush();
+      ctx.requests[0].onError(error);
+      await ctx.flush();
+      return ctx;
+    }
+
+    it('writes the cancelled upload in the chosen language', async () => {
+      const { host, root, flush, fixture } = setup();
+      pick([pdf('a.pdf')]);
+      await flush();
+      host.upload().abortFile(host.files()[0].uid);
+      await flush();
+      expect(host.files()[0].error).toBeInstanceOf(AndesUploadCancelledError);
+      expect(errorText(root)).toBe('Upload cancelled');
+
+      host.messages.set({ uploadCancelled: 'Subida cancelada' });
+      fixture.detectChanges();
+      expect(errorText(root)).toBe('Subida cancelada');
+    });
+
+    it.each([
+      ['http', 503, 'Upload failed with status 503', 'Error 503 del servidor'],
+      ['network', 0, 'Network error', 'Sin conexion'],
+      ['timeout', 0, 'The upload timed out', 'Tiempo agotado'],
+    ] as const)(
+      'translates a %s failure of the transport',
+      async (kind, status, english, spanish) => {
+        const { host, root, fixture } = await failWith(
+          new AndesUploadHttpError(english, status, undefined, kind),
+        );
+        expect(errorText(root)).toBe(english);
+
+        host.messages.set({
+          httpError: 'Error {status} del servidor',
+          networkError: 'Sin conexion',
+          timeout: 'Tiempo agotado',
+        });
+        fixture.detectChanges();
+        expect(errorText(root)).toBe(spanish);
+      },
+    );
+
+    it('keeps the file errorMessage, then any other error message', async () => {
+      const { host, root, fixture } = await failWith(new Error('Disk full'));
+      expect(errorText(root)).toBe('Disk full');
+      host.messages.set({ uploadFailed: 'Fallo' });
+      host.files.update((list) =>
+        list.map((file) => ({ ...file, errorMessage: 'Archivo bloqueado' })),
+      );
+      fixture.detectChanges();
+      expect(errorText(root)).toBe('Archivo bloqueado');
+
+      host.files.update((list) =>
+        list.map((file) => ({
+          ...file,
+          errorMessage: undefined,
+          error: 'not an error object',
+        })),
+      );
+      fixture.detectChanges();
+      expect(errorText(root)).toBe('Fallo');
+    });
+
+    it('says "file" for a limit of one and "files" for more', async () => {
+      const { host, flush, live, fixture } = setup();
+      host.multiple.set(false);
+      host.maxCount.set(2);
+      fixture.detectChanges();
+      pick([pdf('a.pdf'), pdf('b.pdf')]);
+      await flush();
+      expect(live()).toBe(
+        'b.pdf was not added: the limit of 2 files is reached',
+      );
+
+      host.multiple.set(true);
+      host.maxCount.set(1);
+      host.files.set([]);
+      fixture.detectChanges();
+      pick([pdf('c.pdf'), pdf('d.pdf')]);
+      await flush();
+      expect(live()).toBe(
+        'd.pdf was not added: the limit of 1 file is reached',
+      );
+    });
+
+    it('lets a message be a function for languages with more plural forms', async () => {
+      const { host, flush, live, fixture } = setup();
+      host.multiple.set(true);
+      host.maxCount.set(1);
+      host.messages.set({
+        rejectCount: ({ count }) =>
+          count === 1 ? 'solo cabe 1 archivo' : `caben ${count} archivos`,
+        announceRejected: '{name}: {reason}',
+      });
+      fixture.detectChanges();
+      pick([pdf('c.pdf'), pdf('d.pdf')]);
+      await flush();
+      expect(live()).toBe('d.pdf: solo cabe 1 archivo');
+    });
+
+    it('keeps the English texts when only some are given', () => {
+      const { host, root, fixture } = setup();
+      host.messages.set({ selectFiles: () => 'Elegir' });
+      host.files.set([{ uid: '1', name: 'a.pdf', status: 'ready' }]);
+      fixture.detectChanges();
+      expect(
+        root.querySelector('input[type="file"]')?.getAttribute('aria-label'),
+      ).toBe('Elegir');
+      expect(root.querySelector('.andes-upload__caption')?.textContent).toBe(
+        'Ready to upload',
+      );
     });
   });
 

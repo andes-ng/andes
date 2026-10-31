@@ -18,7 +18,11 @@ export type {
   AndesUploadValidationOptions,
 } from './upload-files';
 export { xhrUploadRequest } from './upload-request';
-export { AndesUploadHttpError, AndesUploadItemEvent } from './upload-types';
+export {
+  AndesUploadCancelledError,
+  AndesUploadHttpError,
+  AndesUploadItemEvent,
+} from './upload-types';
 export type {
   AndesUploadAction,
   AndesUploadBeforeRemove,
@@ -27,9 +31,12 @@ export type {
   AndesUploadChangeEvent,
   AndesUploadData,
   AndesUploadFile,
+  AndesUploadHttpErrorKind,
   AndesUploadIconContext,
   AndesUploadListOptions,
   AndesUploadListType,
+  AndesUploadMessage,
+  AndesUploadMessageParams,
   AndesUploadMessages,
   AndesUploadItemContext,
   AndesUploadRejectReason,

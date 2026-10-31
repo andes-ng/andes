@@ -109,7 +109,7 @@ export * from './lib/rate';
 
 // @slot scroll-area
 
-// @slot segmented
+export * from './lib/segmented';
 
 export * from './lib/select';
 
@@ -143,7 +143,7 @@ export * from './lib/textarea';
 
 // @slot toast
 
-// @slot toggle
+export * from './lib/toggle';
 
 // @slot tooltip
 

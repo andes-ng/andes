@@ -56,7 +56,7 @@ const meta: Meta<AndesDatePicker> = {
     weekStartsOn: 0,
     disabled: false,
     showOutsideDays: true,
-    fixedWeeks: false,
+    fixedWeeks: true,
   },
   render: (args) => ({
     props: args,

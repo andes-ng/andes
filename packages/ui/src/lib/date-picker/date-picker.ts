@@ -542,8 +542,12 @@ export class AndesDatePicker implements ControlValueAccessor {
   /** Render the adjacent months' days in the calendar's leading/trailing cells. */
   readonly showOutsideDays = input(true, { transform: booleanAttribute });
 
-  /** Keep the panel a constant six rows tall across months. */
-  readonly fixedWeeks = input(false, { transform: booleanAttribute });
+  /**
+   * Keep the panel a constant six rows tall across months, so it does not jump 36px when
+   * a five-week month gives way to a six-week one (the time columns follow its height).
+   * On by default; `[fixedWeeks]="false"` shrinks the panel to the weeks the month needs.
+   */
+  readonly fixedWeeks = input(true, { transform: booleanAttribute });
 
   /**
    * Months shown side by side. Defaults to two for a `range` day/week picker, one

@@ -23,6 +23,7 @@ function d(year: number, month1: number, day: number): Date {
         [placement]="placement()"
         [defaultMonth]="defaultMonth()"
         [showTime]="showTime()"
+        [fixedWeeks]="fixedWeeks()"
         [(value)]="value"
       />
     </div>
@@ -34,6 +35,7 @@ class MotionHost {
   readonly placement = signal<AndesDatePickerPlacement>('bottomLeft');
   readonly defaultMonth = signal(d(2024, 2, 1));
   readonly showTime = signal<AndesTimeOptions | boolean | null>(null);
+  readonly fixedWeeks = signal(true);
   readonly value = signal<AndesDatePickerValue | undefined>(undefined);
 }
 
@@ -196,6 +198,38 @@ describe('AndesDatePicker motion and layout', () => {
       view.detect();
       await view.fixture.whenStable();
       expect(remove.mock.calls.some(([type]) => type === 'resize')).toBe(true);
+    });
+  });
+
+  describe('stable panel height', () => {
+    const weekRows = (view: Awaited<ReturnType<typeof create>>) =>
+      view
+        .panel()
+        ?.querySelectorAll(
+          '.andes-calendar__row:not(.andes-calendar__row--weekdays)',
+        ).length;
+
+    it('keeps six week rows for a five-week month and a six-week month alike', async () => {
+      // February 2024 spans five weeks from Sunday; March 2024 spans six.
+      const feb = await create();
+      await feb.open();
+      expect(weekRows(feb)).toBe(6);
+      feb.fixture.destroy();
+      document
+        .querySelectorAll('.cdk-overlay-container')
+        .forEach((container) => (container.innerHTML = ''));
+
+      const march = await create((host) =>
+        host.defaultMonth.set(d(2024, 3, 1)),
+      );
+      await march.open();
+      expect(weekRows(march)).toBe(6);
+    });
+
+    it('can still shrink to the weeks a month needs with [fixedWeeks]="false"', async () => {
+      const view = await create((host) => host.fixedWeeks.set(false));
+      await view.open();
+      expect(weekRows(view)).toBe(5);
     });
   });
 });

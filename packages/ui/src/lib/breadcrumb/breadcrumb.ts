@@ -629,6 +629,8 @@ export class AndesBreadcrumbEllipsis {
 /** @internal A resolved crumb plus what the root template needs to render it. */
 interface CrumbView extends AndesBreadcrumbResolvedCrumb {
   readonly menuItems: readonly AndesBreadcrumbMenuEntry[] | undefined;
+  /** A link plus a separate caret button: the crumb has a menu AND somewhere to navigate. */
+  readonly split: boolean;
   readonly context: AndesBreadcrumbItemRenderContext;
 }
 
@@ -660,10 +662,11 @@ function optionalNumberAttribute(value: unknown): number | undefined {
  *
  * - **Projected parts** - author the `<ol andesBreadcrumbList>` yourself (full control, e.g.
  *   `routerLink` on each `<a andesBreadcrumbLink>`).
- * - **`[items]`** - data-driven API: pass an array of crumbs (`title`, `icon`, `href`/`path`,
- *   `menu`, `dropdownProps`, `onClick`, `className`) and separator entries, and the root renders the list, marks
- *   the last crumb as the current page, and collapses long trails into an ellipsis dropdown when
- *   `maxItems` is set. Projected content is ignored while `items` is set.
+ * - **`[items]`** - data-driven API: pass an array of crumbs (`title`, `icon`, `href`/`path`/
+ *   `target`, `disabled`, `menu`, `dropdownProps`, `onClick`, `className`) and separator entries,
+ *   and the root renders the list, marks the last crumb as the current page, and collapses long
+ *   trails into an ellipsis dropdown when `maxItems` is set. Projected content is ignored while
+ *   `items` is set.
  *
  * @example Projected parts
  * <andes-breadcrumb>
@@ -709,47 +712,41 @@ function optionalNumberAttribute(value: unknown): number | undefined {
               </li>
             } @else {
               <li andesBreadcrumbItem [class]="node.crumb.item.className ?? ''">
-                @if (node.crumb.menuItems) {
-                  <andes-breadcrumb-dropdown
-                    triggerClass="andes-breadcrumb-menu-trigger"
-                    [current]="node.crumb.last"
-                    [items]="node.crumb.menuItems"
-                    [side]="node.crumb.item.dropdownProps?.side"
-                    [align]="node.crumb.item.dropdownProps?.align"
-                    [disabled]="
-                      node.crumb.item.dropdownProps?.disabled ?? false
-                    "
-                    [panelClass]="
-                      node.crumb.item.dropdownProps?.panelClass ?? ''
-                    "
-                    (selected)="
-                      onMenuSelected(node.crumb, $event.item, $event.event)
-                    "
-                    (openChange)="onMenuOpenChange(node.crumb, $event)"
-                  >
+                @if (node.crumb.split) {
+                  <span class="andes-breadcrumb-split">
+                    <a
+                      andesBreadcrumbLink
+                      [class.andes-breadcrumb-has-icon]="!!node.crumb.item.icon"
+                      [href]="node.crumb.href"
+                      [attr.target]="node.crumb.item.target ?? null"
+                      [attr.rel]="
+                        node.crumb.item.target === '_blank'
+                          ? 'noopener noreferrer'
+                          : null
+                      "
+                      (click)="onCrumbClick(node.crumb, $event)"
+                    >
+                      <ng-container
+                        [ngTemplateOutlet]="crumbLabel"
+                        [ngTemplateOutletContext]="{ $implicit: node.crumb }"
+                      />
+                    </a>
                     <ng-container
-                      [ngTemplateOutlet]="crumbText"
-                      [ngTemplateOutletContext]="{ $implicit: node.crumb }"
+                      [ngTemplateOutlet]="crumbMenu"
+                      [ngTemplateOutletContext]="{
+                        $implicit: node.crumb,
+                        caretOnly: true,
+                      }"
                     />
-                    @if (dropdownIcon(); as icon) {
-                      <ng-container [ngTemplateOutlet]="icon" />
-                    } @else {
-                      <svg
-                        class="andes-breadcrumb-menu-trigger__icon"
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        aria-hidden="true"
-                      >
-                        <path d="m6 9 6 6 6-6" />
-                      </svg>
-                    }
-                  </andes-breadcrumb-dropdown>
+                  </span>
+                } @else if (node.crumb.menuItems) {
+                  <ng-container
+                    [ngTemplateOutlet]="crumbMenu"
+                    [ngTemplateOutletContext]="{
+                      $implicit: node.crumb,
+                      caretOnly: false,
+                    }"
+                  />
                 } @else if (itemRender()) {
                   <ng-container
                     [ngTemplateOutlet]="crumbText"
@@ -765,11 +762,28 @@ function optionalNumberAttribute(value: unknown): number | undefined {
                       [ngTemplateOutletContext]="{ $implicit: node.crumb }"
                     />
                   </span>
+                } @else if (node.crumb.item.disabled) {
+                  <span
+                    class="andes-breadcrumb-text andes-breadcrumb-text--disabled"
+                    aria-disabled="true"
+                    [class.andes-breadcrumb-has-icon]="!!node.crumb.item.icon"
+                  >
+                    <ng-container
+                      [ngTemplateOutlet]="crumbLabel"
+                      [ngTemplateOutletContext]="{ $implicit: node.crumb }"
+                    />
+                  </span>
                 } @else if (node.crumb.href !== undefined) {
                   <a
                     andesBreadcrumbLink
                     [class.andes-breadcrumb-has-icon]="!!node.crumb.item.icon"
                     [href]="node.crumb.href"
+                    [attr.target]="node.crumb.item.target ?? null"
+                    [attr.rel]="
+                      node.crumb.item.target === '_blank'
+                        ? 'noopener noreferrer'
+                        : null
+                    "
                     (click)="onCrumbClick(node.crumb, $event)"
                   >
                     <ng-container
@@ -808,6 +822,58 @@ function optionalNumberAttribute(value: unknown): number | undefined {
         <ng-content />
       }
     </nav>
+
+    <!-- A crumb's dropdown: either the whole crumb as the trigger (label + caret), or - next to
+         the crumb's own link - a caret-only button whose accessible name is the menu label. -->
+    <ng-template #crumbMenu let-crumb let-caretOnly="caretOnly">
+      <andes-breadcrumb-dropdown
+        [triggerClass]="
+          caretOnly
+            ? 'andes-breadcrumb-menu-trigger andes-breadcrumb-menu-trigger--caret'
+            : 'andes-breadcrumb-menu-trigger'
+        "
+        [current]="crumb.last"
+        [items]="crumb.menuItems"
+        [side]="crumb.item.dropdownProps?.side"
+        [align]="crumb.item.dropdownProps?.align"
+        [disabled]="
+          (crumb.item.dropdownProps?.disabled ?? false) ||
+          (crumb.item.disabled ?? false)
+        "
+        [panelClass]="crumb.item.dropdownProps?.panelClass ?? ''"
+        (selected)="onMenuSelected(crumb, $event.item, $event.event)"
+        (openChange)="onMenuOpenChange(crumb, $event)"
+      >
+        @if (caretOnly) {
+          <span class="andes-breadcrumb-sr-only">{{
+            crumb.title ? crumb.title + ': ' + menuLabel() : menuLabel()
+          }}</span>
+        } @else {
+          <ng-container
+            [ngTemplateOutlet]="crumbText"
+            [ngTemplateOutletContext]="{ $implicit: crumb }"
+          />
+        }
+        @if (dropdownIcon(); as icon) {
+          <ng-container [ngTemplateOutlet]="icon" />
+        } @else {
+          <svg
+            class="andes-breadcrumb-menu-trigger__icon"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        }
+      </andes-breadcrumb-dropdown>
+    </ng-template>
 
     <!-- A crumb's content: the consumer's itemRender template, or its default label. -->
     <ng-template #crumbText let-crumb>
@@ -913,6 +979,12 @@ export class AndesBreadcrumb implements AndesBreadcrumbContext {
   readonly ellipsisLabel = input('More');
 
   /**
+   * Accessible name of the caret-only button next to a crumb that has both a link and a `menu`,
+   * read out after the crumb's title (`'Components: Show menu'`). Defaults to `'Show menu'`.
+   */
+  readonly menuLabel = input('Show menu');
+
+  /**
    * Emits when a default-rendered `[items]` crumb is clicked - including from the collapse
    * ellipsis' dropdown. Fires after the item's own `onClick`.
    */
@@ -930,23 +1002,35 @@ export class AndesBreadcrumb implements AndesBreadcrumbContext {
   protected readonly nodes = computed<NodeView[]>(() => {
     const items = this.items() ?? [];
     const params = this.params();
-    const view = (crumb: AndesBreadcrumbResolvedCrumb): CrumbView => ({
-      ...crumb,
-      menuItems: crumb.item.menu?.items.length
+    const hasRender = !!this.itemRender();
+    const view = (crumb: AndesBreadcrumbResolvedCrumb): CrumbView => {
+      const menuItems = crumb.item.menu?.items.length
         ? crumb.item.menu.items
-        : undefined,
-      context: {
-        $implicit: crumb.item,
-        item: crumb.item,
-        title: crumb.title,
-        params,
-        items,
-        paths: crumb.paths,
-        href: crumb.href,
-        last: crumb.last,
-        hasMenu: !!crumb.item.menu?.items.length,
-      },
-    });
+        : undefined;
+      return {
+        ...crumb,
+        menuItems,
+        // `itemRender` owns the whole crumb, a disabled crumb has no link to keep, and the last
+        // crumb is the current page: all three stay a single trigger.
+        split:
+          !!menuItems &&
+          !crumb.last &&
+          crumb.href !== undefined &&
+          !crumb.item.disabled &&
+          !hasRender,
+        context: {
+          $implicit: crumb.item,
+          item: crumb.item,
+          title: crumb.title,
+          params,
+          items,
+          paths: crumb.paths,
+          href: crumb.href,
+          last: crumb.last,
+          hasMenu: !!crumb.item.menu?.items.length,
+        },
+      };
+    };
 
     return buildBreadcrumbNodes(items, params, this.separator(), {
       maxItems: this.maxItems(),
@@ -964,7 +1048,9 @@ export class AndesBreadcrumb implements AndesBreadcrumbContext {
               key: crumb.key,
               label: crumb.title || (crumb.item.ariaLabel ?? ''),
               href: crumb.href,
+              target: crumb.item.target,
               icon: crumb.item.icon,
+              disabled: crumb.item.disabled,
               onClick: (event: MouseEvent) => this.onCrumbClick(crumb, event),
             })),
           };

@@ -2,7 +2,9 @@ import { AndesOverlayPrimitive } from '@andes-ng/primitives';
 import { Component, signal, type TemplateRef, viewChild } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
+import { readFileSync } from 'node:fs';
 
+import { declaredValue } from '../../testing/computed-style';
 import { AndesDropdownMenu } from '../dropdown-menu/dropdown-menu';
 import {
   AndesBreadcrumb,
@@ -879,6 +881,7 @@ describe('Breadcrumb', () => {
           [itemsBeforeCollapse]="before()"
           [itemsAfterCollapse]="after()"
           ellipsisLabel="Más"
+          menuLabel="Mostrar menú"
           (itemClick)="clicks.push($event)"
           (menuClick)="menuClicks.push($event)"
           (menuOpenChange)="openChanges.push($event)"
@@ -1575,6 +1578,501 @@ describe('Breadcrumb', () => {
         expect(host.clicks[0].item.title).toBe('Guides');
         expect(host.clicks[0].index).toBe(2);
       });
+
+      it('lists a disabled hidden crumb as a disabled entry and keeps its link target', async () => {
+        const {
+          root,
+          update,
+          menuItems: entries,
+        } = await render((h) => {
+          h.items.set(
+            long.map((item, i) =>
+              i === 1
+                ? { ...item, disabled: true }
+                : i === 2
+                  ? { ...item, target: '_blank' }
+                  : item,
+            ),
+          );
+          h.maxItems.set(2);
+        });
+        (
+          root.querySelector(
+            '.andes-breadcrumb-ellipsis__trigger',
+          ) as HTMLElement
+        ).click();
+        await update();
+
+        expect(entries()[0].hasAttribute('data-disabled')).toBe(true);
+        expect(entries()[1].querySelector('a')?.getAttribute('target')).toBe(
+          '_blank',
+        );
+        expect(entries()[1].querySelector('a')?.getAttribute('rel')).toBe(
+          'noopener noreferrer',
+        );
+      });
+    });
+
+    describe('link target and disabled crumbs', () => {
+      it('opens a link crumb in its target, protecting the opener for _blank', async () => {
+        const { root } = await render((h) =>
+          h.items.set([
+            { title: 'Docs', href: '/docs', target: '_blank' },
+            { title: 'Blog', href: '/blog', target: '_self' },
+            { title: 'Plain', href: '/plain' },
+            { title: 'Here' },
+          ]),
+        );
+        const [blank, self, plain] = Array.from(
+          root.querySelectorAll('a'),
+        ) as HTMLAnchorElement[];
+
+        expect(blank.getAttribute('target')).toBe('_blank');
+        expect(blank.getAttribute('rel')).toBe('noopener noreferrer');
+        expect(self.getAttribute('target')).toBe('_self');
+        expect(self.hasAttribute('rel')).toBe(false);
+        expect(plain.hasAttribute('target')).toBe(false);
+        expect(plain.hasAttribute('rel')).toBe(false);
+      });
+
+      it('renders a disabled crumb as dimmed text that is neither a link nor focusable', async () => {
+        const onClick = vi.fn();
+        const { root } = await render((h) =>
+          h.items.set([
+            { title: 'Home', href: '/' },
+            { title: 'Archive', href: '/archive', disabled: true, onClick },
+            { title: 'Here' },
+          ]),
+        );
+        const disabled = root.querySelector(
+          '.andes-breadcrumb-text--disabled',
+        ) as HTMLElement;
+
+        expect(disabled.tagName).toBe('SPAN');
+        expect(disabled.textContent?.trim()).toBe('Archive');
+        expect(disabled.getAttribute('aria-disabled')).toBe('true');
+        expect(disabled.classList).not.toContain('andes-breadcrumb-link');
+        expect(root.querySelectorAll('a')).toHaveLength(1);
+        expect(root.querySelector('button')).toBeNull();
+
+        disabled.click();
+        expect(onClick).not.toHaveBeenCalled();
+      });
+
+      it('never shows the last crumb as disabled: it stays the current page', async () => {
+        const { root } = await render((h) =>
+          h.items.set([
+            { title: 'Home', href: '/' },
+            { title: 'Here', disabled: true },
+          ]),
+        );
+
+        expect(
+          root.querySelector('.andes-breadcrumb-text--disabled'),
+        ).toBeNull();
+        expect(
+          root
+            .querySelector('.andes-breadcrumb-page')
+            ?.getAttribute('aria-current'),
+        ).toBe('page');
+      });
+
+      it('keeps the caret of a disabled crumb with a menu, but the menu cannot open', async () => {
+        const {
+          root,
+          update,
+          menuItems: entries,
+        } = await render((h) =>
+          h.items.set([
+            { title: 'Home', href: '/' },
+            {
+              title: 'Archive',
+              href: '/archive',
+              disabled: true,
+              menu: { items: [{ label: 'Old' }] },
+            },
+            { title: 'Here' },
+          ]),
+        );
+        const trigger = root.querySelector(
+          '.andes-breadcrumb-menu-trigger',
+        ) as HTMLButtonElement;
+
+        expect(trigger.disabled).toBe(true);
+        expect(root.querySelector('.andes-breadcrumb-split')).toBeNull();
+        trigger.click();
+        await update();
+        expect(entries()).toHaveLength(0);
+      });
+    });
+
+    describe('a crumb with its own link and a menu', () => {
+      const menu = { items: [{ label: 'General', href: '/general' }] };
+
+      async function renderSplit(setup?: (host: ItemsHost) => void) {
+        const result = await render((h) => {
+          h.items.set([
+            { title: 'Home', href: '/' },
+            { title: 'Components', href: '/components', menu },
+            { title: 'Button' },
+          ]);
+          setup?.(h);
+        });
+        const split = result.root.querySelector(
+          '.andes-breadcrumb-split',
+        ) as HTMLElement | null;
+        return { ...result, split };
+      }
+
+      it('keeps the link and adds a separate caret button that names the menu', async () => {
+        const { split } = await renderSplit();
+        const link = split?.querySelector('a') as HTMLAnchorElement;
+        const caret = split?.querySelector('button') as HTMLButtonElement;
+
+        expect(link.getAttribute('href')).toBe('/components');
+        expect(link.textContent?.trim()).toBe('Components');
+        expect(link.classList).toContain('andes-breadcrumb-link');
+        expect(caret.classList).toContain(
+          'andes-breadcrumb-menu-trigger--caret',
+        );
+        expect(caret.getAttribute('aria-haspopup')).toBe('menu');
+        expect(caret.textContent?.trim()).toBe('Components: Mostrar menú');
+        expect(caret.querySelector('svg')?.getAttribute('aria-hidden')).toBe(
+          'true',
+        );
+        expect(
+          split?.querySelectorAll('.andes-breadcrumb-menu-trigger'),
+        ).toHaveLength(1);
+      });
+
+      it('navigates from the link and opens the menu from the caret only', async () => {
+        const { split, host, update, menuItems: entries } = await renderSplit();
+        const link = split?.querySelector('a') as HTMLAnchorElement;
+        const caret = split?.querySelector('button') as HTMLButtonElement;
+        link.addEventListener('click', (event) => event.preventDefault());
+
+        link.click();
+        await update();
+        expect(host.clicks.map((c) => c.index)).toEqual([1]);
+        expect(entries()).toHaveLength(0);
+
+        caret.click();
+        await update();
+        expect(entries().map((el) => el.textContent?.trim())).toEqual([
+          'General',
+        ]);
+        expect(caret.getAttribute('aria-expanded')).toBe('true');
+      });
+
+      it('reports the open state through (menuOpenChange)', async () => {
+        const { split, host, update } = await renderSplit();
+        (split?.querySelector('button') as HTMLButtonElement).click();
+        await update();
+
+        expect(host.openChanges.map((e) => [e.item.title, e.open])).toEqual([
+          ['Components', true],
+        ]);
+      });
+
+      it('stays a single trigger when the crumb has no link, is the last, or is rendered by itemRender', async () => {
+        const noLink = await render((h) =>
+          h.items.set([
+            { title: 'Home', href: '/' },
+            { title: 'Pick', menu },
+            { title: 'Here' },
+          ]),
+        );
+        expect(noLink.root.querySelector('.andes-breadcrumb-split')).toBeNull();
+        expect(
+          noLink.root
+            .querySelector('.andes-breadcrumb-menu-trigger')
+            ?.textContent?.trim(),
+        ).toBe('Pick');
+
+        const last = await render((h) =>
+          h.items.set([
+            { title: 'Home', href: '/' },
+            { title: 'Here', href: '/here', menu },
+          ]),
+        );
+        expect(last.root.querySelector('.andes-breadcrumb-split')).toBeNull();
+        expect(
+          last.root
+            .querySelector('.andes-breadcrumb-menu-trigger')
+            ?.getAttribute('aria-current'),
+        ).toBe('page');
+
+        const custom = await renderSplit((h) => h.useRender.set(true));
+        expect(custom.split).toBeNull();
+      });
+
+      it('falls back to the plain menu label when the crumb has no title', async () => {
+        const { split } = await render((h) =>
+          h.items.set([
+            { title: 'Home', href: '/' },
+            { ariaLabel: 'Section', href: '/section', menu },
+            { title: 'Here' },
+          ]),
+        ).then((result) => ({
+          split: result.root.querySelector('.andes-breadcrumb-split'),
+        }));
+
+        expect(split?.querySelector('button')?.textContent?.trim()).toBe(
+          'Mostrar menú',
+        );
+      });
+    });
+
+    describe('accessibility of the rendered trail', () => {
+      it('is a labelled nav around an ol whose separators are hidden from assistive tech', async () => {
+        const { root, list } = await render();
+
+        const nav = root.querySelector('nav') as HTMLElement;
+        expect(nav.getAttribute('aria-label')).toBe('breadcrumb');
+        expect(list().tagName).toBe('OL');
+        expect(list().parentElement).toBe(nav);
+        const separators = Array.from(
+          list().querySelectorAll('.andes-breadcrumb-separator'),
+        );
+        expect(separators.length).toBeGreaterThan(0);
+        expect(
+          separators.every(
+            (el) =>
+              el.getAttribute('aria-hidden') === 'true' &&
+              el.getAttribute('role') === 'presentation',
+          ),
+        ).toBe(true);
+        expect(
+          Array.from(list().children).every((el) => el.tagName === 'LI'),
+        ).toBe(true);
+      });
+
+      it('marks only the last crumb as the current page, without a link role to follow', async () => {
+        const { root } = await render();
+        const current = Array.from(root.querySelectorAll('[aria-current]'));
+
+        expect(current).toHaveLength(1);
+        expect(current[0].getAttribute('aria-current')).toBe('page');
+        expect(current[0].closest('li')?.nextElementSibling).toBeNull();
+      });
+    });
+  });
+
+  // The hover/active/focus treatment and its motion live in breadcrumb.css, behind pseudo-classes
+  // and media queries jsdom does not evaluate, so the contract is read from the stylesheet source.
+  describe('hover, focus and motion (stylesheet contract)', () => {
+    const css = readFileSync(
+      'packages/ui/src/lib/breadcrumb/breadcrumb.css',
+      'utf8',
+    );
+
+    /** Body of the first top-level at-rule whose prelude is `prelude`, found by brace counting. */
+    function atRuleBody(source: string, prelude: string): string {
+      const start = source.indexOf(prelude);
+      if (start < 0) {
+        return '';
+      }
+      const open = source.indexOf('{', start);
+      let depth = 0;
+      for (let i = open; i < source.length; i++) {
+        if (source[i] === '{') {
+          depth++;
+        } else if (source[i] === '}') {
+          depth--;
+          if (depth === 0) {
+            return source.slice(open + 1, i);
+          }
+        }
+      }
+      return '';
+    }
+
+    const NOT_CURRENT = ":where(:not([aria-current='page']))";
+    const motion = atRuleBody(
+      css,
+      '@media (prefers-reduced-motion: no-preference)',
+    );
+    const forced = atRuleBody(css, '@media (forced-colors: active)');
+
+    it('never underlines a crumb', () => {
+      expect(css).not.toContain('text-decoration: underline');
+      expect(
+        declaredValue(css, '.andes-breadcrumb-link', 'text-decoration'),
+      ).toBe('none');
+    });
+
+    it('turns a link into a soft pill whose padding is cancelled by a negative margin', () => {
+      const link = '.andes-breadcrumb-link';
+
+      expect(declaredValue(css, link, 'padding-inline')).toBe(
+        'var(--andes-space-1)',
+      );
+      expect(declaredValue(css, link, 'margin-inline')).toBe(
+        'calc(var(--andes-space-1) * -1)',
+      );
+      expect(declaredValue(css, link, 'border-radius')).toBe(
+        'var(--andes-radius-sm)',
+      );
+      expect(declaredValue(css, link, 'background-color')).toBe('transparent');
+      expect(declaredValue(css, link, 'min-block-size')).toBe(
+        'var(--andes-text-line-height, 1.375rem)',
+      );
+    });
+
+    it('fills a hovered link with the subtle accent and a pressed one a step darker', () => {
+      const hover = `.andes-breadcrumb-link:hover${NOT_CURRENT}`;
+      const active = `.andes-breadcrumb-link:active${NOT_CURRENT}`;
+
+      expect(declaredValue(css, hover, 'background-color')).toBe(
+        'var(--andes-color-accent)',
+      );
+      expect(declaredValue(css, hover, 'color')).toBe(
+        'var(--andes-color-foreground)',
+      );
+      expect(declaredValue(css, active, 'background-color')).toBe(
+        'var(--andes-color-accent-hover)',
+      );
+    });
+
+    it('gives the current page no hover or active state', () => {
+      expect(css).not.toContain('.andes-breadcrumb-page:hover');
+      expect(css).not.toContain('.andes-breadcrumb-page:active');
+      expect(css).not.toContain('.andes-breadcrumb-text:hover');
+      // A link marked `aria-current` is excluded from the pill; the hover rules never match it.
+      expect(css).toContain(`.andes-breadcrumb-link:hover${NOT_CURRENT}`);
+      expect(declaredValue(css, '.andes-breadcrumb-page', 'color')).toBe(
+        'var(--andes-color-foreground)',
+      );
+    });
+
+    it('gives the menu trigger and the collapse dots the same pill, open or hovered', () => {
+      const trigger = '.andes-breadcrumb-menu-trigger';
+      const dots = '.andes-breadcrumb-ellipsis__trigger';
+
+      expect(declaredValue(css, trigger, 'padding-inline')).toBe(
+        'var(--andes-space-1)',
+      );
+      expect(declaredValue(css, trigger, 'margin-inline')).toBe(
+        'calc(var(--andes-space-1) * -1)',
+      );
+      expect(declaredValue(css, trigger, 'border-radius')).toBe(
+        'var(--andes-radius-sm)',
+      );
+      for (const selector of [
+        `${trigger}:hover:not(:disabled)`,
+        `${trigger}[aria-expanded='true']:not(:disabled)`,
+        `${dots}:hover`,
+        `${dots}[aria-expanded='true']`,
+      ]) {
+        expect(declaredValue(css, selector, 'background-color')).toBe(
+          'var(--andes-color-accent)',
+        );
+        expect(declaredValue(css, selector, 'color')).toBe(
+          'var(--andes-color-foreground)',
+        );
+      }
+      for (const selector of [
+        `${trigger}:active:not(:disabled)`,
+        `${dots}:active`,
+      ]) {
+        expect(declaredValue(css, selector, 'background-color')).toBe(
+          'var(--andes-color-accent-hover)',
+        );
+      }
+      expect(
+        declaredValue(css, `${trigger}--caret`, 'margin-inline-start'),
+      ).toBe('0');
+    });
+
+    it('draws the library focus ring on every interactive crumb', () => {
+      for (const selector of [
+        '.andes-breadcrumb-link:focus-visible',
+        '.andes-breadcrumb-menu-trigger:focus-visible',
+        '.andes-breadcrumb-ellipsis__trigger:focus-visible',
+      ]) {
+        expect(declaredValue(css, selector, 'outline')).toBe(
+          '2px solid var(--andes-color-focus-ring)',
+        );
+        expect(declaredValue(css, selector, 'outline-offset')).toBe('2px');
+      }
+    });
+
+    it('keeps the dropdown entries free of the pill', () => {
+      for (const selector of [
+        '.andes-breadcrumb-menu-entry',
+        '.andes-breadcrumb-menu-entry:hover',
+        '.andes-breadcrumb-menu-entry:active',
+      ]) {
+        expect(declaredValue(css, selector, 'padding')).toBe('0');
+        expect(declaredValue(css, selector, 'margin')).toBe('0');
+        expect(declaredValue(css, selector, 'background-color')).toBe(
+          'transparent',
+        );
+        expect(declaredValue(css, selector, 'text-decoration')).toBe('none');
+      }
+    });
+
+    it('fades color and fill in 200ms on the shared curve, only when motion is allowed', () => {
+      const fade = [
+        'color var(--andes-motion-duration-slow, 0.2s) var(--andes-motion-ease-in-out, cubic-bezier(0.645, 0.045, 0.355, 1))',
+        'background-color var(--andes-motion-duration-slow, 0.2s) var(--andes-motion-ease-in-out, cubic-bezier(0.645, 0.045, 0.355, 1))',
+      ].join(', ');
+
+      expect(motion).not.toBe('');
+      for (const selector of [
+        '.andes-breadcrumb-link:not(.andes-breadcrumb-menu-entry)',
+        '.andes-breadcrumb-menu-trigger',
+        '.andes-breadcrumb-ellipsis__trigger',
+      ]) {
+        expect(declaredValue(motion, selector, 'transition')).toBe(fade);
+        // Outside the media query there is no transition at all, so reduced motion has none.
+        expect(declaredValue(css, selector, 'transition')).toBeUndefined();
+      }
+      expect(css).not.toContain('transition: none');
+    });
+
+    it('animates nothing that would move the text', () => {
+      expect(motion).not.toContain('transform');
+      expect(motion).not.toContain('padding');
+      expect(motion).not.toContain('margin');
+    });
+
+    it('draws the hover fill and the focus ring from system colors when colors are forced', () => {
+      expect(forced).not.toBe('');
+      const hovered = `.andes-breadcrumb-link:hover${NOT_CURRENT}`;
+
+      expect(declaredValue(forced, hovered, 'background-color')).toBe(
+        'Highlight',
+      );
+      expect(declaredValue(forced, hovered, 'color')).toBe('HighlightText');
+      expect(
+        declaredValue(
+          forced,
+          '.andes-breadcrumb-ellipsis__trigger:hover',
+          'background-color',
+        ),
+      ).toBe('Highlight');
+      expect(
+        declaredValue(
+          forced,
+          '.andes-breadcrumb-menu-trigger:focus-visible',
+          'outline-color',
+        ),
+      ).toBe('Highlight');
+      expect(
+        declaredValue(forced, '.andes-breadcrumb-text--disabled', 'color'),
+      ).toBe('GrayText');
+    });
+
+    it('uses logical properties only, so the pill is symmetric in right-to-left text', () => {
+      for (const physical of [
+        'margin-left',
+        'margin-right',
+        'padding-left',
+        'padding-right',
+      ]) {
+        expect(css).not.toContain(physical);
+      }
     });
   });
 });

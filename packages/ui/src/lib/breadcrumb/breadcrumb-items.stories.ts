@@ -67,6 +67,11 @@ const ICON_TEMPLATES = `
  * `[items]` is the data-driven API: the root renders the list, joins each `path` onto the
  * previous ones (`/users`, `/users/42`), interpolates `:param`s from `[params]` into paths and
  * titles, and renders the last crumb as the current page (`aria-current="page"`).
+ *
+ * Hover a link: it gets a soft rounded fill (a little darker while pressed) instead of an
+ * underline, and the text does not move. The last crumb is where you already are, so it has no
+ * hover. Links, the menu trigger and the collapse dots all fade color and fill over 200ms, with
+ * no fade when reduced motion is requested.
  */
 export const Items: Story = {
   render: () => ({
@@ -206,6 +211,9 @@ export const CollapsedItems: Story = {
  * `(itemClick)` and each item's `onClick` receive the crumb and the `MouseEvent` -
  * `preventDefault()` it to route in-app. A crumb with `onClick` and no `href` renders as a
  * keyboard-reachable `<button>` styled like a link; one with neither is plain text.
+ *
+ * `target` sets where a link opens (`'_blank'` also gets `rel="noopener noreferrer"`), and
+ * `disabled` shows a crumb as dimmed text that cannot be activated.
  */
 export const ClickHandling: Story = {
   render: () => ({
@@ -218,10 +226,14 @@ export const ClickHandling: Story = {
           onClick: () => action('onClick')('Reports'),
         },
         { title: 'Plain text' },
+        { title: 'Docs (new tab)', href: '/docs', target: '_blank' },
+        { title: 'Archive (disabled)', href: '/archive', disabled: true },
         { title: 'Q3' },
       ] satisfies AndesBreadcrumbItemType[],
       onItemClick: (event: AndesBreadcrumbItemClickEvent) => {
-        event.event.preventDefault();
+        if (!event.item.target) {
+          event.event.preventDefault();
+        }
         action('itemClick')({ title: event.item.title, index: event.index });
       },
     },

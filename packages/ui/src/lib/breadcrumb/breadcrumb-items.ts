@@ -114,6 +114,17 @@ export interface AndesBreadcrumbRouteItem {
   /** Target of the crumb's link. Ignored when `path` is set. */
   readonly href?: string;
   /**
+   * Browsing context of the crumb's link (e.g. `'_blank'`). A `'_blank'` link also gets
+   * `rel="noopener noreferrer"`, so the opened page cannot reach back into this one.
+   */
+  readonly target?: string;
+  /**
+   * Shows the crumb as plain, dimmed text that cannot be activated (no link, no hover). With a
+   * `menu` it keeps the caret but the menu cannot open. The last crumb is the current page and
+   * is never shown as disabled.
+   */
+  readonly disabled?: boolean;
+  /**
    * A path segment joined onto the segments of every previous item that has one, so
    * `[{path: 'users'}, {path: ':id'}]` links to `/users` and `/users/42`. `:param` placeholders are
    * replaced from `params`. Takes precedence over `href`.
@@ -121,7 +132,8 @@ export interface AndesBreadcrumbRouteItem {
   readonly path?: string;
   /**
    * Turns the crumb into a dropdown trigger (label + caret) listing `menu.items` - entries,
-   * dividers and labelled groups.
+   * dividers and labelled groups. A crumb that also has a link (`href` / `path`) and is not the
+   * last one keeps the link and gets a separate caret button that opens the menu.
    */
   readonly menu?: { readonly items: readonly AndesBreadcrumbMenuEntry[] };
   /** Placement, panel class, disabled state and open/close callback of the crumb's `menu`. */

@@ -62,12 +62,32 @@ const ICON_TEMPLATES = `
 /**
  * A crumb with `menu.items` renders its label with a caret that opens a dropdown (the shared
  * `AndesDropdownMenu`). Entries with an `href` stay real links; `(menuClick)` and each entry's
- * `onClick` report activations. `[dropdownIcon]` replaces the caret.
+ * `onClick` report activations. `[dropdownIcon]` replaces the caret. The label and the caret hover
+ * as one soft pill, which stays filled while the menu is open.
+ *
+ * A crumb that has BOTH its own link (`href` / `path`) and a `menu` keeps the link and gets a
+ * separate caret button next to it; `menuLabel` names that button for assistive technology
+ * ("Components: Show menu"). The last crumb, a disabled one and one drawn by `[itemRender]` stay
+ * a single trigger.
  */
 export const ItemWithMenu: Story = {
   render: () => ({
     moduleMetadata: { imports },
     props: {
+      linkWithMenu: [
+        { title: 'Home', href: '/' },
+        {
+          title: 'Components',
+          href: '/components',
+          menu: {
+            items: [
+              { label: 'General', href: '/components/general' },
+              { label: 'Layout', href: '/components/layout' },
+            ],
+          },
+        },
+        { title: 'Button' },
+      ] satisfies AndesBreadcrumbItemType[],
       items: [
         { title: 'Home', href: '/' },
         { title: 'Components', href: '/components' },
@@ -97,6 +117,7 @@ export const ItemWithMenu: Story = {
       <div style="display: grid; gap: 1rem;">
         <andes-breadcrumb [items]="items" (menuClick)="onMenuClick($event)" />
         <andes-breadcrumb [items]="items" [dropdownIcon]="plus" (menuClick)="onMenuClick($event)" />
+        <andes-breadcrumb [items]="linkWithMenu" menuLabel="Show menu" (menuClick)="onMenuClick($event)" />
       </div>
     `,
   }),

@@ -208,7 +208,15 @@
   height: 1rem;
   margin-block-start: calc((var(--_title-height) - 1rem) / 2);
   margin-inline-end: 0.25rem;
-  border: 1px solid var(--andes-color-input, #cbd5e1);
+  /* The input colour alone is about 1.5:1 against the surface; mixed 35% towards the
+     foreground it clears the 3:1 minimum for a control's edge, light and dark, as the
+     checkbox's own box does. */
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--andes-color-input, #cbd5e1),
+      var(--andes-color-foreground, #0f172a) 35%
+    );
   border-radius: var(--andes-radius-sm, 0.25rem);
   background-color: var(--andes-color-background, #fff);
   color: var(--andes-color-primary-foreground, #fff);
@@ -416,8 +424,9 @@
     transition: none;
   }
 
+  /* Slower, not frozen: a ring that stands still no longer says something is loading. */
   .andes-tree__spinner {
-    animation: none;
+    animation-duration: 2.4s;
   }
 }
 

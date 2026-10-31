@@ -6,6 +6,7 @@ import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AndesOverlayPrimitive } from '@andes-ng/primitives';
 
+import { declaredValue } from '../../testing/computed-style';
 import { AndesTreeNodeTemplate } from '../tree/tree-node-template';
 import type {
   AndesTreeCheckedStrategy,
@@ -310,13 +311,16 @@ describe('AndesTreeSelect', () => {
   });
 
   describe('opening and closing', () => {
-    it('opens on click and wires aria-expanded and aria-controls to the panel', () => {
+    it('opens on click and wires aria-expanded and aria-controls to the tree', () => {
       const fixture = setup();
       open(fixture);
       expect(panel()).toBeTruthy();
       expect(box(fixture).getAttribute('aria-expanded')).toBe('true');
-      expect(box(fixture).getAttribute('aria-controls')).toBe(panel()?.id);
-      expect(panel()?.querySelector('[role="tree"]')).toBeTruthy();
+      // The popup role is `tree`, so the field controls the tree, not the panel around it.
+      const tree = panel()?.querySelector('[role="tree"]') as HTMLElement;
+      expect(tree).toBeTruthy();
+      expect(box(fixture).getAttribute('aria-controls')).toBe(tree.id);
+      expect(tree.id).not.toBe(panel()?.id);
       expect(fixture.componentInstance.opens).toEqual([true]);
     });
 
@@ -1159,12 +1163,72 @@ describe('AndesTreeSelect', () => {
 
   describe('stylesheet contract', () => {
     const css = readFileSync(join(__dirname, 'tree-select.css'), 'utf8');
+    const noPreference = '@media (prefers-reduced-motion: no-preference)';
+
+    /** The text between the braces of every at-rule whose prelude is exactly `header`. */
+    function atRuleBodies(header: string): string[] {
+      const bodies: string[] = [];
+      let from = css.indexOf(header);
+      while (from !== -1) {
+        const open = css.indexOf('{', from);
+        let depth = 0;
+        let close = -1;
+        for (let i = open; i < css.length && close === -1; i++) {
+          if (css[i] === '{') {
+            depth++;
+          } else if (css[i] === '}' && --depth === 0) {
+            close = i;
+          }
+        }
+        if (open === -1 || close === -1) {
+          break;
+        }
+        bodies.push(css.slice(open + 1, close));
+        from = css.indexOf(header, close);
+      }
+      return bodies;
+    }
+
+    /** `declaredValue` for a rule that lives inside an at-rule such as `@media (...)`. */
+    function declaredInAtRule(
+      header: string,
+      selector: string,
+      property: string,
+    ): string | undefined {
+      let found: string | undefined;
+      for (const body of atRuleBodies(header)) {
+        found = declaredValue(body, selector, property) ?? found;
+      }
+      return found;
+    }
+
+    /** Every property name the stylesheet declares. */
+    function declaredProperties(): Set<string> {
+      const names = new Set<string>();
+      for (const chunk of css.split(/[{};]/)) {
+        const colon = chunk.indexOf(':');
+        if (colon > 0) {
+          names.add(chunk.slice(0, colon).trim());
+        }
+      }
+      return names;
+    }
 
     it('draws focus as one border and one 2px ring, with no outline ring', () => {
-      expect(css).toMatch(
-        /\.andes-tree-select__trigger:focus-within,[^{]*\{\s*border-color: var\(--_status-border, var\(--andes-color-primary, #2563eb\)\);\s*box-shadow: 0 0 0 2px var\(--_ring\);/,
+      for (const selector of [
+        '.andes-tree-select__trigger:focus-within',
+        ".andes-tree-select__trigger[data-state='open']",
+      ]) {
+        expect(declaredValue(css, selector, 'border-color')).toBe(
+          'var(--_status-border, var(--andes-color-primary, #2563eb))',
+        );
+        expect(declaredValue(css, selector, 'box-shadow')).toBe(
+          '0 0 0 2px var(--_ring)',
+        );
+      }
+      expect(declaredValue(css, '.andes-tree-select__trigger', 'outline')).toBe(
+        'none',
       );
-      expect(css).toContain('outline: none;');
     });
 
     it('sizes the field 24, 32 and 40px with literal fallbacks', () => {
@@ -1183,43 +1247,152 @@ describe('AndesTreeSelect', () => {
     });
 
     it('exits the panel in 100-120ms with ease-in when the overlay marks it closing', () => {
-      expect(css).toMatch(
-        /\.andes-tree-select__panel\[data-andes-closing\]\s*\{[^}]*animation: andes-tree-select-panel-exit\s+var\(--andes-motion-duration-fast, 120ms\)\s+var\(--andes-motion-ease-in, ease-in\) forwards/,
+      expect(
+        declaredInAtRule(
+          noPreference,
+          '.andes-tree-select__panel[data-andes-closing]',
+          'animation',
+        ),
+      ).toBe(
+        'andes-tree-select-panel-exit var(--andes-motion-duration-fast, 120ms) var(--andes-motion-ease-in, ease-in) forwards',
       );
-      expect(css).toMatch(
-        /@keyframes andes-tree-select-panel-exit[^}]*\}[^}]*opacity: 0;\s*transform: scale\(0\.97\)/,
-      );
+      const [exit] = atRuleBodies('@keyframes andes-tree-select-panel-exit');
+      expect(declaredValue(exit, 'to', 'opacity')).toBe('0');
+      expect(declaredValue(exit, 'to', 'transform')).toBe('scale(0.97)');
     });
 
     it('enters the panel in 150ms from 97% scale and only when motion is allowed', () => {
-      const motion = css.slice(
-        css.indexOf('@media (prefers-reduced-motion: no-preference)'),
+      expect(
+        declaredInAtRule(
+          noPreference,
+          ".andes-tree-select__panel[data-state='open']",
+          'animation',
+        ),
+      ).toBe(
+        'andes-tree-select-panel-enter var(--andes-motion-duration-mid, 150ms) var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1))',
       );
-      expect(motion).toMatch(
-        /andes-tree-select-panel-enter\s+var\(--andes-motion-duration-mid, 150ms\)/,
-      );
-      expect(motion).toContain('andes-tree-select-panel-exit');
-      const before = css.slice(
-        0,
-        css.indexOf('@media (prefers-reduced-motion: no-preference)'),
-      );
-      expect(before).not.toMatch(/animation: andes-tree-select-panel/);
-      expect(css).not.toMatch(/scale\(0\.[0-8]/);
+      // Outside the query the panel carries no animation at all.
+      expect(
+        declaredValue(
+          css,
+          ".andes-tree-select__panel[data-state='open']",
+          'animation',
+        ),
+      ).toBeUndefined();
+      expect(
+        declaredValue(
+          css,
+          '.andes-tree-select__panel[data-andes-closing]',
+          'animation',
+        ),
+      ).toBeUndefined();
+      // Every scale in the file is the 97% of the enter and exit keyframes.
+      const scales = css
+        .split('scale(')
+        .slice(1)
+        .map((rest) => rest.slice(0, rest.indexOf(')')));
+      expect(scales.length).toBeGreaterThan(0);
+      expect(new Set(scales)).toEqual(new Set(['0.97']));
     });
 
     it('sets the font on the panel root, which renders outside the host', () => {
-      expect(css).toMatch(
-        /\.andes-tree-select__panel\s*\{[^}]*font-family: var\(--andes-font-family\), sans-serif/,
-      );
+      expect(
+        declaredValue(css, '.andes-tree-select__panel', 'font-family'),
+      ).toBe('var(--andes-font-family), sans-serif');
     });
 
     it('never continues a selector on a new line that starts with a combinator', () => {
-      expect(css).not.toMatch(/^\s*[>+~]\s/m);
+      for (const line of css.split('\n')) {
+        const start = line.trimStart().slice(0, 2);
+        expect(['> ', '+ ', '~ ']).not.toContain(start);
+      }
     });
 
     it('uses logical properties only', () => {
-      expect(css).not.toMatch(/(^|[\s;{])(margin|padding)-(left|right)\s*:/);
-      expect(css).not.toMatch(/(^|[\s;{])(left|right)\s*:/);
+      const names = declaredProperties();
+      for (const physical of [
+        'margin-left',
+        'margin-right',
+        'padding-left',
+        'padding-right',
+        'left',
+        'right',
+      ]) {
+        expect(names.has(physical)).toBe(false);
+      }
+    });
+
+    it('ignores the pointer while the panel is closing', () => {
+      expect(
+        declaredValue(
+          css,
+          '.andes-tree-select__panel[data-andes-closing]',
+          'pointer-events',
+        ),
+      ).toBe('none');
+    });
+
+    it('isolates the "+ N ..." tag from the surrounding direction', () => {
+      expect(
+        declaredValue(css, '.andes-tree-select__tag--rest', 'unicode-bidi'),
+      ).toBe('isolate');
+    });
+
+    it('draws the loading ring like the select family and slows it under reduced motion', () => {
+      expect(declaredValue(css, '.andes-tree-select__spinner', 'border')).toBe(
+        '2px solid currentcolor',
+      );
+      expect(
+        declaredValue(css, '.andes-tree-select__spinner', 'border-right-color'),
+      ).toBe('transparent');
+      expect(
+        declaredInAtRule(
+          '@media (prefers-reduced-motion: reduce)',
+          '.andes-tree-select__spinner',
+          'animation-duration',
+        ),
+      ).toBe('2.4s');
+      expect(
+        declaredInAtRule(
+          '@media (prefers-reduced-motion: reduce)',
+          '.andes-tree-select__spinner',
+          'animation',
+        ),
+      ).toBeUndefined();
+    });
+
+    it('sizes the panel to the field, to its content or to a fixed width', () => {
+      expect(
+        declaredValue(
+          css,
+          '.andes-tree-select__panel[data-match-width]',
+          'width',
+        ),
+      ).toBe('100%');
+      expect(
+        declaredValue(
+          css,
+          '.andes-tree-select__panel:not([data-match-width], [data-fixed-width])',
+          'min-width',
+        ),
+      ).toBe('12rem');
+    });
+
+    it('separates the header and footer from the tree with a rule', () => {
+      expect(
+        declaredValue(
+          css,
+          '.andes-tree-select__panel-extra--header',
+          'border-block-end',
+        ),
+      ).toBe('1px solid var(--andes-color-border, #e2e8f0)');
+      expect(
+        declaredValue(
+          css,
+          '.andes-tree-select__panel-extra--footer',
+          'border-block-start',
+        ),
+      ).toBe('1px solid var(--andes-color-border, #e2e8f0)');
     });
   });
 

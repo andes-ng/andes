@@ -8,11 +8,13 @@ import {
 import { NgTemplateOutlet } from '@angular/common';
 import {
   afterNextRender,
+  afterRenderEffect,
   booleanAttribute,
   ChangeDetectionStrategy,
   Component,
   computed,
   contentChild,
+  DestroyRef,
   effect,
   ElementRef,
   forwardRef,
@@ -30,7 +32,8 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NG_VALUE_ACCESSOR, type ControlValueAccessor } from '@angular/forms';
 
-import { AndesTree } from '../tree/tree';
+import { matchTriggerWidthAttribute } from '../select/select-state';
+import { AndesTree, type AndesTreeExpandAction } from '../tree/tree';
 import { AndesTreeNodeTemplate } from '../tree/tree-node-template';
 import type {
   AndesTreeCheckedStrategy,
@@ -50,13 +53,18 @@ import {
   andesToggleCheck,
 } from '../tree/tree-utils';
 import type {
+  AndesTreeSelectLabeledValue,
   AndesTreeSelectLabels,
   AndesTreeSelectMaxTagPlaceholder,
+  AndesTreeSelectModel,
   AndesTreeSelectOption,
+  AndesTreeSelectPanelContext,
   AndesTreeSelectPlacement,
   AndesTreeSelectSearchPlacement,
   AndesTreeSelectSize,
   AndesTreeSelectStatus,
+  AndesTreeSelectTag,
+  AndesTreeSelectTagContext,
   AndesTreeSelectValue,
   AndesTreeSelectVariant,
 } from './tree-select-types';
@@ -92,11 +100,27 @@ function optionalNumber(value: unknown): number | undefined {
     : numberAttribute(value);
 }
 
-function toKeys(value: AndesTreeSelectValue | undefined): AndesTreeKey[] {
+function isLabeled(value: unknown): value is AndesTreeSelectLabeledValue {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'value' in value &&
+    'label' in value
+  );
+}
+
+/** The keys a model holds, whether bare or wrapped by `labelInValue`. */
+function toKeys(
+  value: AndesTreeSelectModel | undefined,
+  labelInValue: boolean,
+): AndesTreeKey[] {
   if (value === null || value === undefined) {
     return [];
   }
-  return Array.isArray(value) ? value : [value];
+  const list: readonly unknown[] = Array.isArray(value) ? value : [value];
+  return list.map((entry) =>
+    labelInValue && isLabeled(entry) ? entry.value : (entry as AndesTreeKey),
+  );
 }
 
 /**
@@ -129,9 +153,23 @@ function toKeys(value: AndesTreeSelectValue | undefined): AndesTreeKey[] {
  *
  * ## Keyboard
  *
- * With the field focused, ArrowDown, Enter and Space open the panel (ArrowDown again moves into
- * the tree), Escape closes it and Tab leaves. Backspace removes the last tag of a multiple
- * select. Inside the tree the usual treeview keys apply.
+ * With the field focused, ArrowDown, Enter and Space open the panel and move focus into its
+ * tree (ArrowDown on the field while the panel is open does the same, when focus came back to
+ * it). Escape closes the panel and returns focus to the field, and Tab leaves. Backspace removes
+ * the last tag of a multiple select. Inside the tree the usual treeview keys apply. The field
+ * is the combobox and names the tree in `aria-controls`.
+ *
+ * ## Value
+ *
+ * `labelInValue` swaps the bare keys for `{ value, label }` objects, in `value`, in
+ * `selectionChange` and in `optionSelect` / `optionDeselect`: the label travels with the key, so
+ * a selected node that is not in `nodes` (yet) still reads right in the field.
+ *
+ * ## Panel
+ *
+ * `panelHeader` and `panelFooter` put content above and below the tree, inside the panel;
+ * `panelScroll` fires when the panel's list scrolls (the virtual list too). `[(open)]` follows
+ * the panel whoever opens or closes it, and `defaultOpen` opens it once on render.
  *
  * ## Forms
  *
@@ -172,8 +210,11 @@ export class AndesTreeSelect implements ControlValueAccessor {
   readonly nodes = input<AndesTreeNode[]>([]);
   readonly fieldNames = input<AndesTreeFieldNames | undefined>(undefined);
 
-  /** A key, `null`, or (multiple and checkable) an array of keys. */
-  readonly value = model<AndesTreeSelectValue>(null);
+  /**
+   * A key, `null`, or (multiple and checkable) an array of keys; with `labelInValue`,
+   * `{ value, label }` objects in their place.
+   */
+  readonly value = model<AndesTreeSelectModel>(null);
   /** Open nodes, two-way. */
   readonly expandedKeys = model<AndesTreeKey[]>([]);
   /** The text in the search box. */
@@ -200,11 +241,21 @@ export class AndesTreeSelect implements ControlValueAccessor {
     ((node: AndesTreeNode, query: string) => boolean) | undefined
   >(undefined);
 
+  /**
+   * Opens the panel once, right after the first render, as though the field had been clicked.
+   * Later opening and closing are up to the user or `[(open)]`.
+   */
+  readonly defaultOpen = input(false, { transform: booleanAttribute });
+  /** Emit and accept `{ value, label }` objects instead of bare keys. */
+  readonly labelInValue = input(false, { transform: booleanAttribute });
+
   /** Open every branch the first time options arrive. */
   readonly treeDefaultExpandAll = input(false, { transform: booleanAttribute });
   readonly loadData = input<AndesTreeLoadData | undefined>(undefined);
   readonly showLine = input(false, { transform: booleanAttribute });
   readonly showIcon = input(false, { transform: booleanAttribute });
+  /** What expands a branch: a click on the row, a double click, or only its switcher (`false`). */
+  readonly expandAction = input<AndesTreeExpandAction | undefined>(undefined);
   readonly virtualScroll = input(false, { transform: booleanAttribute });
   /** Tallest the panel's list grows before it scrolls (a number is px). */
   readonly panelHeight = input<number>(320);
@@ -218,8 +269,46 @@ export class AndesTreeSelect implements ControlValueAccessor {
   >(undefined);
 
   readonly placement = input<AndesTreeSelectPlacement>('bottomLeft');
-  /** Make the panel as wide as the field. Otherwise it is as wide as its content. */
-  readonly matchTriggerWidth = input(true, { transform: booleanAttribute });
+  /**
+   * Panel width: `true` (the default) sizes it to the field, `false` to its own content, and a
+   * number sets it in px.
+   */
+  readonly matchTriggerWidth = input<boolean | number | undefined, unknown>(
+    undefined,
+    { transform: matchTriggerWidthAttribute },
+  );
+  /** Extra classes on the overlay pane - the hook for scoping custom properties. */
+  readonly panelClass = input<string | readonly string[] | null>(null);
+  /** Renders each tag in a multiple select, in place of the built-in one. */
+  readonly tagTemplate = input<
+    TemplateRef<AndesTreeSelectTagContext> | undefined
+  >(undefined);
+  /** Content rendered before the selection, inside the field box. */
+  readonly prefix = input<TemplateRef<unknown> | undefined>(undefined);
+  /** Replaces the chevron. `null` removes it. */
+  readonly suffixIcon = input<TemplateRef<unknown> | null | undefined>(
+    undefined,
+  );
+  /** Replaces the clear button's icon. */
+  readonly clearIcon = input<TemplateRef<unknown> | undefined>(undefined);
+  /** Replaces each tag's remove icon. */
+  readonly removeIcon = input<TemplateRef<unknown> | undefined>(undefined);
+  /** Replaces the spinner shown in the field while `loading`. */
+  readonly loadingIcon = input<TemplateRef<unknown> | undefined>(undefined);
+  /**
+   * Content rendered above the tree, inside the panel - a hint, or filters. Context: the search
+   * text as `$implicit`, and a `close` callback.
+   */
+  readonly panelHeader = input<
+    TemplateRef<AndesTreeSelectPanelContext> | undefined
+  >(undefined);
+  /**
+   * Content rendered below the tree, inside the panel - an "Add" form, or a link to manage the
+   * options. Context as for {@link panelHeader}.
+   */
+  readonly panelFooter = input<
+    TemplateRef<AndesTreeSelectPanelContext> | undefined
+  >(undefined);
   readonly labels = input<Partial<AndesTreeSelectLabels>>({});
 
   readonly id = input<string | undefined>(undefined);
@@ -238,14 +327,34 @@ export class AndesTreeSelect implements ControlValueAccessor {
     transform: booleanAttribute,
   });
 
-  /** The panel opened (`true`) or closed (`false`). */
-  readonly openChange = output<boolean>();
+  /**
+   * Whether the panel is open. Two-way bindable as `[(open)]`; `openChange` fires on every
+   * transition, whatever caused it. A one-way `[open]` binding acts as a request: the user can
+   * still close the panel, and the binding only re-applies when its value changes.
+   */
+  readonly openState = model(false, { alias: 'open' });
   /** The search text changed because the user typed. */
   readonly searched = output<string>();
   /** The clear button emptied the select. */
   readonly cleared = output<void>();
   readonly focused = output<FocusEvent>();
   readonly blurred = output<FocusEvent>();
+  /**
+   * The user changed the selection - picked, checked, removed a tag or cleared - with the new
+   * value, in the shape of `value`. Never fires for a value written by a form or a binding.
+   */
+  readonly selectionChange = output<AndesTreeSelectModel>();
+  /** The user added a node to the selection: its key, or `{ value, label }` with `labelInValue`. */
+  readonly optionSelect = output<AndesTreeKey | AndesTreeSelectLabeledValue>();
+  /** The user took a node off the selection (a tag removed, a node unchecked): same shape. */
+  readonly optionDeselect = output<
+    AndesTreeKey | AndesTreeSelectLabeledValue
+  >();
+  /**
+   * The panel's list scrolled (the virtual list too) - the hook for loading more nodes at its
+   * end.
+   */
+  readonly panelScroll = output<Event>();
 
   /** Custom node content for the panel's tree. */
   protected readonly nodeTemplate = contentChild(AndesTreeNodeTemplate);
@@ -291,7 +400,22 @@ export class AndesTreeSelect implements ControlValueAccessor {
   );
   private readonly titleCache = new Map<AndesTreeKey, string>();
 
-  protected readonly valueKeys = computed(() => toKeys(this.value()));
+  protected readonly valueKeys = computed(() =>
+    toKeys(this.value(), this.labelInValue()),
+  );
+  /** The labels a `labelInValue` value brings along, for keys whose nodes are not in `nodes`. */
+  private readonly valueLabels = computed(() => {
+    const labels = new Map<AndesTreeKey, string>();
+    const raw = this.value();
+    if (this.labelInValue() && raw !== null && raw !== undefined) {
+      for (const entry of Array.isArray(raw) ? raw : [raw]) {
+        if (isLabeled(entry)) {
+          labels.set(entry.value, String(entry.label));
+        }
+      }
+    }
+    return labels;
+  });
   /** The strategy that applies: independent nodes have no parents to fold into. */
   private readonly strategy = computed<AndesTreeCheckedStrategy>(() =>
     this.checkStrictly() ? 'all' : this.showCheckedStrategy(),
@@ -327,10 +451,11 @@ export class AndesTreeSelect implements ControlValueAccessor {
       .join(', '),
   );
 
-  protected readonly visibleTags = computed(() => {
+  protected readonly visibleTags = computed<AndesTreeSelectTag[]>(() => {
     const max = this.maxTagCount();
     const all = this.selectedOptions();
-    return max === undefined ? all : all.slice(0, Math.max(0, max));
+    const tags = max === undefined ? all : all.slice(0, Math.max(0, max));
+    return tags.map((option) => ({ ...option, closable: !this.isDisabled() }));
   });
   protected readonly omittedTags = computed(() => {
     const max = this.maxTagCount();
@@ -367,9 +492,34 @@ export class AndesTreeSelect implements ControlValueAccessor {
   );
   protected readonly side = computed(() => PLACEMENTS[this.placement()].side);
   protected readonly searching = computed(() => this.searchValue() !== '');
+  protected readonly panelContext = computed<AndesTreeSelectPanelContext>(
+    () => ({ $implicit: this.searchValue(), close: () => this.close() }),
+  );
+
+  /**
+   * What the field controls: the tree itself, which is what its popup role names. With no
+   * rows on show (an empty panel) the panel stands in, so the reference never dangles.
+   */
+  protected readonly controlsId = computed(() => {
+    if (!this.isOpen()) {
+      return null;
+    }
+    const tree = this.tree();
+    return tree?.hasRows() ? tree.listId : this.panelId;
+  });
+
+  private readonly widthRule = computed(() => this.matchTriggerWidth() ?? true);
+  protected readonly matchesTriggerWidth = computed(
+    () => this.widthRule() === true,
+  );
+  protected readonly fixedWidth = computed(() => {
+    const rule = this.widthRule();
+    return typeof rule === 'number' ? rule : null;
+  });
 
   private expandAllApplied = false;
-  private onChange: (value: AndesTreeSelectValue) => void = () => undefined;
+  private onChange: (value: AndesTreeSelectModel) => void = () => undefined;
+  private stopWatchingScroll: (() => void) | null = null;
   private onTouched: () => void = () => undefined;
 
   constructor() {
@@ -390,8 +540,23 @@ export class AndesTreeSelect implements ControlValueAccessor {
           // Beside the field the panel would no longer read as its list: stay above or below.
           crossSideFallback: false,
           shift: true,
-          matchAnchorWidth: this.matchTriggerWidth(),
+          matchAnchorWidth: this.matchesTriggerWidth(),
         },
+      });
+    });
+
+    effect(() => this.overlay.configure({ panelClass: this.panelClass() }));
+
+    // `[open]` is honoured after render: the panel template and the field (the positioning
+    // anchor) only exist once the view has rendered.
+    afterRenderEffect(() => {
+      const requested = booleanAttribute(this.openState());
+      untracked(() => {
+        if (requested && !this.isOpen()) {
+          this.open();
+        } else if (!requested && this.isOpen()) {
+          this.close();
+        }
       });
     });
 
@@ -428,15 +593,24 @@ export class AndesTreeSelect implements ControlValueAccessor {
       }
     });
 
-    this.overlay.opened
-      .pipe(takeUntilDestroyed())
-      .subscribe(() => this.openChange.emit(true));
+    this.overlay.opened.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.openState.set(true);
+      this.watchPanelScroll();
+    });
     this.overlay.closed.pipe(takeUntilDestroyed()).subscribe(() => {
       if (this.searchValue() !== '') {
         this.searchValue.set('');
       }
+      this.unwatchPanelScroll();
       this.onTouched();
-      this.openChange.emit(false);
+      this.openState.set(false);
+    });
+    inject(DestroyRef).onDestroy(() => this.unwatchPanelScroll());
+
+    afterNextRender(() => {
+      if (this.defaultOpen() && !this.isOpen()) {
+        this.open();
+      }
     });
   }
 
@@ -481,11 +655,11 @@ export class AndesTreeSelect implements ControlValueAccessor {
    * ControlValueAccessor
    * ------------------------------------------------------------------------------------- */
 
-  writeValue(value: AndesTreeSelectValue | undefined): void {
+  writeValue(value: AndesTreeSelectModel | undefined): void {
     this.value.set(value ?? (this.multiMode() ? [] : null));
   }
 
-  registerOnChange(fn: (value: AndesTreeSelectValue) => void): void {
+  registerOnChange(fn: (value: AndesTreeSelectModel) => void): void {
     this.onChange = fn;
   }
 
@@ -511,11 +685,19 @@ export class AndesTreeSelect implements ControlValueAccessor {
       : this.text().more(omitted.length);
   }
 
+  protected tagContext(tag: AndesTreeSelectTag): AndesTreeSelectTagContext {
+    return { $implicit: tag, onClose: () => this.removeOption(tag) };
+  }
+
   private optionFor(key: AndesTreeKey): AndesTreeSelectOption {
     const entry = this.index().byKey.get(key);
     return {
       key,
-      title: entry?.title ?? this.titleCache.get(key) ?? String(key),
+      title:
+        entry?.title ??
+        this.valueLabels().get(key) ??
+        this.titleCache.get(key) ??
+        String(key),
       node: entry?.node,
     };
   }
@@ -668,12 +850,38 @@ export class AndesTreeSelect implements ControlValueAccessor {
    * ------------------------------------------------------------------------------------- */
 
   protected onPanelKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Tab') {
-      // Leave for the next control after the field: put focus on the field and let the
-      // browser's own Tab move on from there.
-      this.focusTarget().focus();
-      this.close();
+    if (event.key !== 'Tab' || this.movesWithinExtras(event)) {
+      return;
     }
+    // Leave for the next control after the field: put focus on the field and let the
+    // browser's own Tab move on from there.
+    this.focusTarget().focus();
+    this.close();
+  }
+
+  /**
+   * Whether Tab goes from or to a control of the header or footer, which the browser moves
+   * between by itself (tree, header and footer are reached in that order). Anywhere else Tab
+   * leaves the select.
+   */
+  private movesWithinExtras(event: KeyboardEvent): boolean {
+    const tabbables = Array.from(
+      this.overlay
+        .panelElement()
+        ?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+    );
+    const here = tabbables.findIndex((element) =>
+      element.contains(event.target as Node),
+    );
+    const next = tabbables[here + (event.shiftKey ? -1 : 1)];
+    if (here === -1 || !next) {
+      return false;
+    }
+    const inExtras = (element: HTMLElement) =>
+      !!element.closest('.andes-tree-select__panel-extra');
+    return inExtras(tabbables[here]) || inExtras(next);
   }
 
   protected onSearchKeydown(event: KeyboardEvent): void {
@@ -697,6 +905,7 @@ export class AndesTreeSelect implements ControlValueAccessor {
     if (!this.multiMode() && this.valueKeys()[0] === event.key) {
       const entry = this.index().byKey.get(event.key);
       if (entry?.selectable) {
+        this.optionSelect.emit(this.externalKey(event.key));
         this.close();
       }
     }
@@ -715,9 +924,66 @@ export class AndesTreeSelect implements ControlValueAccessor {
     ];
   }
 
+  /**
+   * Writes a selection the user made: into `value`, to the form, and out through
+   * `selectionChange`, with `optionSelect` / `optionDeselect` for the nodes that came and went.
+   */
   private commit(value: AndesTreeSelectValue): void {
-    this.value.set(value);
-    this.onChange(value);
+    const before = this.valueKeys();
+    const after = toKeys(value, false);
+    const external = this.toExternal(value);
+    this.value.set(external);
+    this.onChange(external);
+    this.selectionChange.emit(external);
+    const beforeSet = new Set(before);
+    const afterSet = new Set(after);
+    for (const key of after) {
+      if (!beforeSet.has(key)) {
+        this.optionSelect.emit(this.externalKey(key));
+      }
+    }
+    for (const key of before) {
+      if (!afterSet.has(key)) {
+        this.optionDeselect.emit(this.externalKey(key));
+      }
+    }
+  }
+
+  /** A key in the shape the outside sees it: bare, or `{ value, label }` with `labelInValue`. */
+  private externalKey(
+    key: AndesTreeKey,
+  ): AndesTreeKey | AndesTreeSelectLabeledValue {
+    return this.labelInValue()
+      ? { value: key, label: this.optionFor(key).title }
+      : key;
+  }
+
+  private toExternal(value: AndesTreeSelectValue): AndesTreeSelectModel {
+    if (!this.labelInValue() || value === null) {
+      return value;
+    }
+    return Array.isArray(value)
+      ? value.map((key) => this.externalKey(key) as AndesTreeSelectLabeledValue)
+      : (this.externalKey(value) as AndesTreeSelectLabeledValue);
+  }
+
+  private watchPanelScroll(): void {
+    this.unwatchPanelScroll();
+    const pane = this.overlay.panelElement();
+    if (!pane) {
+      return;
+    }
+    // Scroll events do not bubble, so they are caught on the way down to whatever scrolled:
+    // the panel's own viewport, or the virtual list inside the tree.
+    const onScroll = (event: Event) => this.panelScroll.emit(event);
+    pane.addEventListener('scroll', onScroll, true);
+    this.stopWatchingScroll = () =>
+      pane.removeEventListener('scroll', onScroll, true);
+  }
+
+  private unwatchPanelScroll(): void {
+    this.stopWatchingScroll?.();
+    this.stopWatchingScroll = null;
   }
 
   private focusTree(): void {

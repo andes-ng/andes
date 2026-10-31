@@ -187,6 +187,19 @@
   padding-inline-start: 0.1875rem;
 }
 
+/* Content in front of the selection. In a multiple box the tags sit 3px from the border, so
+   the prefix is pushed in to the size's padding. */
+.andes-tree-select__prefix {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  color: var(--andes-color-muted-foreground, #64748b);
+}
+
+.andes-tree-select__trigger[data-multiple] .andes-tree-select__prefix {
+  margin-inline-start: calc(var(--_padding-x) - 0.1875rem);
+}
+
 .andes-tree-select__selection {
   position: relative;
   display: flex;
@@ -311,6 +324,9 @@
 
 .andes-tree-select__tag--rest {
   color: var(--andes-color-muted-foreground, #64748b);
+  /* "+ 2 ..." is a fixed run of Latin punctuation: isolated, so a right-to-left page does not
+     reorder the plus and the dots around the number. */
+  unicode-bidi: isolate;
 }
 
 .andes-tree-select__tag-label {
@@ -440,14 +456,24 @@
   }
 }
 
+.andes-tree-select__loading-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+/* The ring the select, combobox and cascader share: the muted suffix colour with its trailing
+   quarter cut out. */
 .andes-tree-select__spinner {
+  display: inline-block;
+  flex: 0 0 auto;
   width: 0.875em;
   height: 0.875em;
   box-sizing: border-box;
-  border: 2px solid color-mix(in srgb, currentcolor 25%, transparent);
-  border-top-color: var(--andes-color-primary, #2563eb);
-  border-radius: 50%;
-  animation: andes-tree-select-spin 0.9s linear infinite;
+  border: 2px solid currentcolor;
+  border-right-color: transparent;
+  border-radius: var(--andes-radius-full, 9999px);
+  animation: andes-tree-select-spin 0.8s linear infinite;
 }
 
 @keyframes andes-tree-select-spin {
@@ -456,9 +482,10 @@
   }
 }
 
+/* Slower, not frozen: a ring that stands still no longer says something is loading. */
 @media (prefers-reduced-motion: reduce) {
   .andes-tree-select__spinner {
-    animation: none;
+    animation-duration: 2.4s;
   }
 }
 
@@ -489,8 +516,14 @@
   width: 100%;
 }
 
-.andes-tree-select__panel:not([data-match-width]) {
+.andes-tree-select__panel:not([data-match-width], [data-fixed-width]) {
   min-width: 12rem;
+}
+
+/* The overlay keeps the panel in the page until its exit animation ends (and a little after):
+   nothing under it should be clickable meanwhile. */
+.andes-tree-select__panel[data-andes-closing] {
+  pointer-events: none;
 }
 
 .andes-tree-select__panel[data-size='lg'] {
@@ -593,6 +626,20 @@
   .andes-tree-select__search-input {
     transition: none;
   }
+}
+
+/* `panelHeader` / `panelFooter` content, separated from the tree by a rule. */
+.andes-tree-select__panel-extra {
+  flex: 0 0 auto;
+  padding: var(--andes-space-2, 0.5rem);
+}
+
+.andes-tree-select__panel-extra--header {
+  border-block-end: 1px solid var(--andes-color-border, #e2e8f0);
+}
+
+.andes-tree-select__panel-extra--footer {
+  border-block-start: 1px solid var(--andes-color-border, #e2e8f0);
 }
 
 .andes-tree-select__viewport {

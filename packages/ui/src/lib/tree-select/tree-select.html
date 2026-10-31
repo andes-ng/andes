@@ -25,7 +25,7 @@
   [attr.id]="searchInTrigger() ? null : (id() ?? null)"
   [attr.aria-haspopup]="searchInTrigger() ? null : 'tree'"
   [attr.aria-expanded]="searchInTrigger() ? null : isOpen()"
-  [attr.aria-controls]="!searchInTrigger() && isOpen() ? panelId : null"
+  [attr.aria-controls]="searchInTrigger() ? null : controlsId()"
   [attr.aria-label]="searchInTrigger() ? null : (ariaLabel() ?? null)"
   [attr.aria-labelledby]="searchInTrigger() ? null : (ariaLabelledby() ?? null)"
   [attr.aria-describedby]="searchInTrigger() ? null : describedBy()"
@@ -38,8 +38,20 @@
   (focusin)="onFocusIn($event)"
   (focusout)="onFocusOut($event)"
 >
+  @if (prefix(); as prefixTemplate) {
+  <span class="andes-tree-select__prefix" data-slot="tree-select-prefix">
+    <ng-container [ngTemplateOutlet]="prefixTemplate" />
+  </span>
+  }
+
   <div class="andes-tree-select__selection">
-    @if (multiMode()) { @for (option of visibleTags(); track option.key) {
+    @if (multiMode()) { @for (option of visibleTags(); track option.key) { @if
+    (tagTemplate(); as customTag) {
+    <ng-container
+      [ngTemplateOutlet]="customTag"
+      [ngTemplateOutletContext]="tagContext(option)"
+    />
+    } @else {
     <span
       class="andes-tree-select__tag"
       data-slot="tree-select-tag"
@@ -58,6 +70,9 @@
         [attr.aria-label]="text().remove(option.title)"
         (click)="removeOption(option, $event)"
       >
+        @if (removeIcon(); as removeTemplate) {
+        <ng-container [ngTemplateOutlet]="removeTemplate" />
+        } @else {
         <svg
           viewBox="0 0 24 24"
           fill="none"
@@ -71,10 +86,11 @@
             stroke-linejoin="round"
           />
         </svg>
+        }
       </button>
       }
     </span>
-    } @if (omittedTags().length > 0) {
+    } } @if (omittedTags().length > 0) {
     <span
       class="andes-tree-select__tag andes-tree-select__tag--rest"
       data-slot="tree-select-tag-rest"
@@ -110,7 +126,7 @@
       [disabled]="isDisabled()"
       [attr.placeholder]="hasValue() ? null : (placeholder() ?? null)"
       [attr.aria-expanded]="isOpen()"
-      [attr.aria-controls]="isOpen() ? panelId : null"
+      [attr.aria-controls]="controlsId()"
       [attr.aria-label]="ariaLabel() ?? null"
       [attr.aria-labelledby]="ariaLabelledby() ?? null"
       [attr.aria-describedby]="describedBy()"
@@ -131,19 +147,34 @@
       [attr.aria-label]="text().clear"
       (click)="clear($event)"
     >
+      @if (clearIcon(); as clearTemplate) {
+      <ng-container [ngTemplateOutlet]="clearTemplate" />
+      } @else {
       <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
         <circle cx="8" cy="8" r="8" />
         <path d="M5.5 5.5l5 5m0-5-5 5" />
       </svg>
+      }
     </button>
-    } @if (loading()) {
+    } @if (loading()) { @if (loadingIcon(); as loadingTemplate) {
+    <span
+      class="andes-tree-select__loading-icon"
+      data-slot="tree-select-loading"
+      aria-hidden="true"
+    >
+      <ng-container [ngTemplateOutlet]="loadingTemplate" />
+    </span>
+    } @else {
     <span
       class="andes-tree-select__spinner"
       data-slot="tree-select-loading"
       aria-hidden="true"
     ></span>
-    } @else {
+    } } @else if (suffixIcon() !== null) {
     <span class="andes-tree-select__chevron" aria-hidden="true">
+      @if (suffixIcon(); as suffixTemplate) {
+      <ng-container [ngTemplateOutlet]="suffixTemplate" />
+      } @else {
       <svg
         viewBox="0 0 24 24"
         fill="none"
@@ -152,6 +183,7 @@
       >
         <path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round" />
       </svg>
+      }
     </span>
     }
   </span>
@@ -167,10 +199,22 @@
     [id]="panelId"
     [attr.data-side]="side()"
     [attr.data-size]="size()"
-    [attr.data-match-width]="matchTriggerWidth() ? '' : null"
+    [attr.data-match-width]="matchesTriggerWidth() ? '' : null"
+    [attr.data-fixed-width]="fixedWidth() === null ? null : ''"
+    [style.width.px]="fixedWidth()"
     (keydown)="onPanelKeydown($event)"
   >
-    @if (searchInPanel()) {
+    @if (panelHeader(); as header) {
+    <div
+      class="andes-tree-select__panel-extra andes-tree-select__panel-extra--header"
+      data-slot="tree-select-panel-header"
+    >
+      <ng-container
+        [ngTemplateOutlet]="header"
+        [ngTemplateOutletContext]="panelContext()"
+      />
+    </div>
+    } @if (searchInPanel()) {
     <div class="andes-tree-select__search">
       <input
         class="andes-tree-select__search-input"
@@ -209,6 +253,7 @@
         [filterFn]="filterFn()"
         [showLine]="showLine()"
         [showIcon]="showIcon()"
+        [expandAction]="expandAction()"
         [virtualScroll]="virtualScroll()"
         [height]="panelHeight()"
         [labels]="treeLabels()"
@@ -218,5 +263,16 @@
         (nodeClick)="onTreeClick($event)"
       />
     </div>
+    @if (panelFooter(); as footer) {
+    <div
+      class="andes-tree-select__panel-extra andes-tree-select__panel-extra--footer"
+      data-slot="tree-select-panel-footer"
+    >
+      <ng-container
+        [ngTemplateOutlet]="footer"
+        [ngTemplateOutletContext]="panelContext()"
+      />
+    </div>
+    }
   </div>
 </ng-template>

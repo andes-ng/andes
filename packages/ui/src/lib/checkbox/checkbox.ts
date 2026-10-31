@@ -522,9 +522,15 @@ export class AndesCheckbox implements ControlValueAccessor {
     }
   }
 
-  /** The one-shot animation finished: drop the hook so a re-shown box does not replay it. */
-  protected onMotionEnd(): void {
-    this.motion.set(null);
+  /**
+   * The one-shot animation finished: drop the hook so a re-shown box does not replay it. The
+   * ripple is the longest of the animations a change starts (the tick and the pop end sooner),
+   * so only its end counts; an earlier one would cut the ring short.
+   */
+  protected onMotionEnd(event: AnimationEvent): void {
+    if (event.animationName.includes('andes-checkbox-ripple')) {
+      this.motion.set(null);
+    }
   }
 
   protected onNativeChange(event: Event): void {

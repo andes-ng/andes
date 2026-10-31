@@ -633,10 +633,32 @@
   }
 }
 
+/* The click ripple: a soft ring that leaves the box on every change (checking, unchecking and
+   the indeterminate state), so a click always answers back, like a pressed physical control. */
+
+@keyframes andes-checkbox-ripple {
+  from {
+    box-shadow: 0 0 0 0
+      color-mix(in srgb, var(--andes-color-primary) 35%, transparent);
+  }
+
+  to {
+    box-shadow: 0 0 0 6px
+      color-mix(in srgb, var(--andes-color-primary) 0%, transparent);
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) and (forced-colors: none) {
   .andes-checkbox[data-motion='check'] .andes-checkbox__box {
-    animation: andes-checkbox-pop var(--andes-motion-duration-mid, 0.2s)
-      var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1));
+    animation:
+      andes-checkbox-pop var(--andes-motion-duration-mid, 0.2s)
+        var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1)),
+      andes-checkbox-ripple 0.4s cubic-bezier(0.08, 0.82, 0.17, 1);
+  }
+
+  /* prettier-ignore */
+  .andes-checkbox[data-motion='uncheck'] .andes-checkbox__box, .andes-checkbox[data-motion='indeterminate'] .andes-checkbox__box {
+    animation: andes-checkbox-ripple 0.4s cubic-bezier(0.08, 0.82, 0.17, 1);
   }
 
   /* prettier-ignore */

@@ -1,3 +1,7 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
@@ -246,16 +250,40 @@ describe('AndesCheckbox features', () => {
       expect(label.getAttribute('data-motion')).toBe('uncheck');
     });
 
-    it('drops the hook once the animation ends, so a re-shown box does not replay it', async () => {
+    it('drops the hook once the ripple ends, so a re-shown box does not replay it', async () => {
       const { fixture, label, input } = render();
       await settle();
 
       input.click();
       fixture.detectChanges();
-      label.dispatchEvent(new Event('animationend', { bubbles: true }));
-      fixture.detectChanges();
+      const end = (animationName: string) =>
+        label.dispatchEvent(
+          Object.assign(new Event('animationend', { bubbles: true }), {
+            animationName,
+          }),
+        );
 
+      // The tick and the pop finish first: the ring is still running, so the hook stays.
+      end('andes-checkbox-draw');
+      fixture.detectChanges();
+      expect(label.hasAttribute('data-motion')).toBe(true);
+
+      end('andes-checkbox-ripple');
+      fixture.detectChanges();
       expect(label.hasAttribute('data-motion')).toBe(false);
+    });
+
+    it('rings the box on every change, not only when it becomes checked', () => {
+      const css = readFileSync(
+        join(dirname(fileURLToPath(import.meta.url)), 'checkbox.css'),
+        'utf-8',
+      );
+
+      expect(css).toContain('@keyframes andes-checkbox-ripple');
+      expect(css).toContain("[data-motion='uncheck'] .andes-checkbox__box");
+      expect(css).toContain(
+        "[data-motion='indeterminate'] .andes-checkbox__box",
+      );
     });
 
     it('ignores changes made before the hook is armed', () => {

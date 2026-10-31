@@ -1,6 +1,8 @@
 import { signal } from '@angular/core';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 
+import { AndesButton } from '../button/button';
+import { AndesInput } from '../input/input';
 import { AndesSidebar } from './sidebar';
 import { AndesSidebarMenuButton } from './sidebar-menu-button';
 import {
@@ -39,7 +41,6 @@ const USERS = ICON(
 const GEAR = ICON(
   '<circle cx="8" cy="8" r="2"/><path d="M8 2v1.5M8 12.5V14M2 8h1.5M12.5 8H14M3.8 3.8l1 1M11.2 11.2l1 1M12.2 3.8l-1 1M4.8 11.2l-1 1"/>',
 );
-const SEARCH = ICON('<circle cx="7" cy="7" r="4"/><path d="m10 10 3.5 3.5"/>');
 
 const STYLES = `
   .stage { height: 30rem; border: 1px solid var(--andes-color-border); border-radius: var(--andes-radius-lg); overflow: hidden; }
@@ -56,9 +57,6 @@ const STYLES = `
   .card { padding: 1rem; border: 1px solid var(--andes-color-border); border-radius: var(--andes-radius-lg); background: var(--andes-color-card); color: var(--andes-color-card-foreground); }
   .card__label { color: var(--andes-color-muted-foreground); font-size: 12px; line-height: 20px; }
   .card__value { font: 600 24px/32px var(--andes-font-family), sans-serif; }
-  .search { display: flex; align-items: center; gap: 0.5rem; box-sizing: border-box; height: 2rem; min-width: 12rem; padding: 0 0.75rem; border: 1px solid var(--andes-color-input); border-radius: var(--andes-radius-md); background: var(--andes-color-background); color: var(--andes-color-muted-foreground); font: 14px/22px var(--andes-font-family), sans-serif; }
-  .search:focus-within { border-color: var(--andes-color-primary); box-shadow: 0 0 0 2px color-mix(in srgb, var(--andes-color-primary) 20%, transparent); }
-  .search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; padding: 0; font: inherit; color: var(--andes-color-foreground); }
   .grow { flex: 1; }
   table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
   th, td { padding: 0.5rem 0.75rem; text-align: start; border-bottom: 1px solid var(--andes-color-border); }
@@ -142,6 +140,8 @@ const meta: Meta<AndesSidebar> = {
         AndesSidebarMenuBadge,
         AndesSidebarMenuButton,
         AndesSidebarSeparator,
+        AndesButton,
+        AndesInput,
       ],
     }),
   ],
@@ -242,7 +242,7 @@ export const Controlled: Story = {
       props: { open },
       template: `
         <p class="page" style="padding:0 0 0.5rem">open = {{ open() }}
-          <button type="button" (click)="open.set(!open())" style="margin-inline-start:0.5rem">Toggle from outside</button>
+          <andes-button variant="outline" size="sm" style="margin-inline-start:0.5rem" (click)="open.set(!open())">Toggle from outside</andes-button>
         </p>
         <div class="stage">
           <andes-sidebar-provider contained [(open)]="open">
@@ -311,7 +311,7 @@ export const AdminLayout: Story = {
             <andes-sidebar-trigger />
             <span class="bar__title">Dashboard</span>
             <span class="grow"></span>
-            <label class="search">${SEARCH}<input type="search" placeholder="Search orders" aria-label="Search orders" /></label>
+            <andes-input type="search" size="sm" placeholder="Search orders" aria-label="Search orders" style="min-width: 12rem;" />
           </header>
           <main class="page">
             <div class="cards">

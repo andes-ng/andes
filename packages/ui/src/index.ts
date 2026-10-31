@@ -117,7 +117,7 @@ export * from './lib/select';
 
 // @slot skeleton
 
-// @slot slider
+export * from './lib/slider';
 
 // @slot space
 

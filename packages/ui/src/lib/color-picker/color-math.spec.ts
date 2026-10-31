@@ -583,6 +583,32 @@ describe('contrast', () => {
   });
 });
 
+describe('parsing functional notation', () => {
+  it('parses a colour function whatever the spacing inside the parentheses', () => {
+    expect(parseColor('rgb(  255 ,0, 0  )')).toEqual({
+      r: 255,
+      g: 0,
+      b: 0,
+      a: 1,
+    });
+    expect(parseColor('RGB(0 0 255)')).toEqual({ r: 0, g: 0, b: 255, a: 1 });
+  });
+
+  it('rejects unknown functions, a stray closing parenthesis and unclosed calls', () => {
+    expect(parseColor('foo(1, 2, 3)')).toBeNull();
+    expect(parseColor('rgb(1, 2, 3')).toBeNull();
+    expect(parseColor('rgb(1, 2) 3)')).toBeNull();
+    expect(parseColor('(1, 2, 3)')).toBeNull();
+  });
+
+  it('stays fast on a very long run of spaces', () => {
+    const started = performance.now();
+    expect(parseColor('rgb(' + ' '.repeat(200000) + 'x')).toBeNull();
+    expect(parseColor('rgb(' + ' '.repeat(200000) + ')')).toBeNull();
+    expect(performance.now() - started).toBeLessThan(500);
+  });
+});
+
 describe('parsing source', () => {
   it('never builds a regular expression at run time', () => {
     const folder = dirname(fileURLToPath(import.meta.url));

@@ -362,6 +362,36 @@ export interface AndesParseColorOptions {
   bareHex?: boolean;
 }
 
+const FUNCTIONAL_NAMES = new Set([
+  'rgb',
+  'rgba',
+  'hsl',
+  'hsla',
+  'hsb',
+  'hsba',
+  'hsv',
+  'hsva',
+  'oklch',
+]);
+
+/**
+ * Splits `name( args )` into its name and trimmed argument text, or `null` when `text` is not
+ * a call to one of the colour functions. Scans for the parentheses instead of matching a
+ * pattern, so a long run of spaces inside them costs a single pass.
+ */
+function splitFunctional(text: string): { name: string; args: string } | null {
+  const open = text.indexOf('(');
+  if (open <= 0 || !text.endsWith(')')) {
+    return null;
+  }
+  const name = text.slice(0, open);
+  const args = text.slice(open + 1, -1);
+  if (!FUNCTIONAL_NAMES.has(name) || args.includes(')')) {
+    return null;
+  }
+  return { name, args: args.trim() };
+}
+
 /**
  * Reads a colour from text: `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`, `rgb()`/`rgba()`,
  * `hsl()`/`hsla()`, `hsb()`/`hsba()`/`hsv()`/`hsva()` (comma or space separated, alpha after a
@@ -390,12 +420,10 @@ export function parseColor(
     return parseHex(named.slice(1));
   }
 
-  const functional = /^(rgba?|hsla?|hsba?|hsva?|oklch)\(\s*([^)]*?)\s*\)$/.exec(
-    text,
-  );
+  const functional = splitFunctional(text);
   if (functional) {
-    const name = functional[1].replace(/^hsv/, 'hsb');
-    const args = functional[2].split(/[\s,/]+/).filter(Boolean);
+    const name = functional.name.replace(/^hsv/, 'hsb');
+    const args = functional.args.split(/[\s,/]+/).filter(Boolean);
     return parseFunctional(name, args);
   }
 

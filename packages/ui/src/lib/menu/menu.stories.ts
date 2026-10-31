@@ -10,6 +10,7 @@ import { DomSanitizer } from '@angular/platform-browser';
 import type { TemplateRef } from '@angular/core';
 import { type Meta, moduleMetadata, type StoryObj } from '@storybook/angular';
 
+import { AndesButton } from '../button/button';
 import { AndesMenu } from './menu';
 import { AndesMenuDivider } from './menu-divider';
 import { AndesMenuGroup } from './menu-group';
@@ -138,7 +139,7 @@ class StorySidebar {
 /** Collapsing the rail from a button, like an application shell would. */
 @Component({
   selector: 'andes-story-rail',
-  imports: [StorySidebar],
+  imports: [StorySidebar, AndesButton],
   template: `
     <div style="display: flex; gap: 1rem; align-items: flex-start;">
       <andes-story-sidebar
@@ -148,13 +149,13 @@ class StorySidebar {
         style="display: block; padding: 0.5rem; border-radius: 0.5rem; background: var(--andes-color-background);"
         [style.width]="collapsed() ? 'auto' : '16rem'"
       />
-      <button
-        type="button"
+      <andes-button
+        variant="outline"
+        size="sm"
         (click)="collapsed.set(!collapsed())"
-        style="font: inherit; font-size: 0.875rem; padding: 0.25rem 0.75rem; border: 1px solid var(--andes-color-input); border-radius: 0.375rem; background: var(--andes-color-background); color: var(--andes-color-foreground); cursor: pointer;"
       >
         {{ collapsed() ? 'Expand' : 'Collapse' }}
-      </button>
+      </andes-button>
     </div>
   `,
 })

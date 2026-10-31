@@ -1,42 +1,17 @@
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
+import { AndesInput } from '../input/input';
 import { AndesPopover } from './popover';
 import { AndesPopoverContent } from './popover-content';
 import { AndesPopoverTrigger } from './popover-trigger';
 
-const imports = [AndesButton, AndesPopoverTrigger, AndesPopoverContent];
-
-/**
- * Demo text field styled like the library's own fields: one focus indicator (primary
- * border plus a soft 2px ring), never the browser's outline drawn as a second frame.
- */
-const FIELD_STYLES = `
-  <style>
-    .sb-field-input {
-      box-sizing: border-box;
-      height: 2rem;
-      padding: 0 0.6875rem;
-      border: 1px solid var(--andes-color-input);
-      border-radius: var(--andes-radius-md);
-      background-color: var(--andes-color-background);
-      color: var(--andes-color-foreground);
-      font: inherit;
-      line-height: 1.375rem;
-      outline: none;
-      transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
-    }
-    .sb-field-input::placeholder { color: var(--andes-color-muted-foreground); }
-    .sb-field-input:hover {
-      border-color: color-mix(in srgb, var(--andes-color-primary) 65%, var(--andes-color-input));
-    }
-    .sb-field-input:focus {
-      border-color: var(--andes-color-primary);
-      box-shadow: 0 0 0 2px color-mix(in srgb, var(--andes-color-primary) 20%, transparent);
-      outline: none;
-    }
-  </style>
-`;
+const imports = [
+  AndesButton,
+  AndesInput,
+  AndesPopoverTrigger,
+  AndesPopoverContent,
+];
 
 const meta: Meta<AndesPopover> = {
   title: 'Data Display/Popover/Advanced/Behavior',
@@ -127,7 +102,7 @@ export const AutoAdjustOverflow: Story = {
 export const DestroyOnHidden: Story = {
   render: () => ({
     moduleMetadata: { imports },
-    template: `${FIELD_STYLES}
+    template: `
       <div style="display: flex; gap: 2rem; padding: 8rem 2rem;">
         <andes-popover title="Kept" [content]="form">
           <andes-button variant="outline" andesPopoverTrigger>Keeps state</andes-button>
@@ -138,7 +113,7 @@ export const DestroyOnHidden: Story = {
         <ng-template #form>
           <label style="display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.875rem;">
             Note
-            <input class="sb-field-input" placeholder="Type, close, reopen" />
+            <andes-input placeholder="Type, close, reopen" />
           </label>
         </ng-template>
       </div>

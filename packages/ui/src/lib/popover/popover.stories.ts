@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
+import { AndesInput } from '../input/input';
 import { AndesPopover } from './popover';
 import { AndesPopoverContent } from './popover-content';
 import {
@@ -19,6 +20,7 @@ const PLACEMENTS = Object.keys(ANDES_POPOVER_PLACEMENTS);
 
 const imports = [
   AndesButton,
+  AndesInput,
   AndesPopoverTrigger,
   AndesPopoverContent,
   AndesPopoverHeader,
@@ -226,9 +228,9 @@ export const ComposedContent: Story = {
             </div>
             <div style="display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 0.75rem; align-items: center; font-size: 0.875rem; margin-bottom: 0.75rem;">
               <label for="composed-width">Width</label>
-              <input id="composed-width" value="100%" />
+              <andes-input id="composed-width" size="sm" value="100%" />
               <label for="composed-height">Height</label>
-              <input id="composed-height" value="25px" />
+              <andes-input id="composed-height" size="sm" value="25px" />
             </div>
             <div style="display: flex; justify-content: flex-end;">
               <andes-button size="sm" andesPopoverClose>Done</andes-button>
@@ -290,7 +292,7 @@ export const Disabled: Story = {
         </andes-popover>
         <andes-popover trigger="hover" content="Publishing needs an approved review." [showArrow]="true">
           <span andesPopoverTrigger style="display: inline-block; cursor: not-allowed;">
-            <button type="button" disabled style="pointer-events: none; font: inherit;">Publish</button>
+            <andes-button variant="outline" disabled style="pointer-events: none;">Publish</andes-button>
           </span>
         </andes-popover>
       </div>

@@ -26,6 +26,8 @@ import type {
 import { AndesFormLabel } from './form-label';
 import { withDemoControls } from './form-field.stories';
 
+// Native controls (see form-field.stories.ts) on purpose: the field tints status and feedback only on a direct native child, and andesFormControl wires AndesInput by hand.
+
 /**
  * Stand-in for a control on another branch adopting the size hook: it defaults its own
  * `size` from the enclosing `andesForm` via `injectAndesFormSize()`.

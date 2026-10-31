@@ -34,6 +34,7 @@ export const fieldModuleMetadata = {
   ],
 };
 
+// Native controls on purpose: the field tints status and feedback only on a direct native child, and andesFormControl wires AndesInput by hand.
 /**
  * Andes-look styling for the NATIVE controls these stories render (AndesInput/AndesSelect are
  * not on `develop` yet - see the docs below): the shared control scale (24/32/40px, 14px text)

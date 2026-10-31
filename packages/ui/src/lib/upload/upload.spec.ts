@@ -195,6 +195,24 @@ class FormHost {
   };
 }
 
+@Component({
+  imports: [AndesUpload, ReactiveFormsModule],
+  template: `<andes-upload
+    [formControl]="control"
+    [customRequest]="request"
+    [emitProgressToForm]="emitProgress()"
+    ><button type="button">Choose</button></andes-upload
+  >`,
+})
+class ProgressFormHost {
+  readonly control = new FormControl<AndesUploadFile[]>([]);
+  readonly emitProgress = signal(false);
+  options: AndesUploadRequestOptions[] = [];
+  readonly request: AndesUploadRequest = (options) => {
+    this.options.push(options);
+  };
+}
+
 /* ------------------------------------------------------------------- helpers */
 
 const png = (name = 'photo.png', size = 100) =>
@@ -1442,6 +1460,98 @@ describe('AndesUpload', () => {
     });
   });
 
+  describe('edge cases', () => {
+    it('keeps the add tile of a card list that shows no list (an avatar field)', async () => {
+      const { host, flush, root, fixture } = setup();
+      host.listType.set('picture-circle');
+      host.maxCount.set(1);
+      host.showList.set(false);
+      fixture.detectChanges();
+      pick([png('a.png')]);
+      await flush();
+
+      expect(host.files()).toHaveLength(1);
+      expect(
+        (root.querySelector('.andes-upload__select') as HTMLElement).hidden,
+      ).toBe(false);
+
+      host.showList.set(true);
+      fixture.detectChanges();
+      expect(
+        (root.querySelector('.andes-upload__select') as HTMLElement).hidden,
+      ).toBe(true);
+    });
+
+    describe('maxCount of 1', () => {
+      it('asks beforeRemove about the file it replaces', async () => {
+        const { host, flush } = setup();
+        host.maxCount.set(1);
+        const asked: string[] = [];
+        host.beforeRemove.set(async (file) => {
+          asked.push(file.name);
+        });
+        pick([pdf('a.pdf')]);
+        await flush();
+        expect(asked).toEqual([]);
+
+        pick([pdf('b.pdf')]);
+        await flush();
+        expect(asked).toEqual(['a.pdf']);
+        expect(host.files().map((file) => file.name)).toEqual(['b.pdf']);
+        expect(host.removed.map((file) => file.name)).toEqual(['a.pdf']);
+      });
+
+      it('keeps the current file and turns the new one away when beforeRemove vetoes', async () => {
+        const { host, flush, live, aborted } = setup();
+        host.maxCount.set(1);
+        pick([pdf('a.pdf')]);
+        await flush();
+        const keptUid = host.files()[0].uid;
+        host.beforeRemove.set(async () => false);
+
+        pick([pdf('b.pdf')]);
+        await flush();
+        expect(host.files().map((file) => file.uid)).toEqual([keptUid]);
+        expect(aborted).toEqual([]);
+        expect(host.removed).toEqual([]);
+        expect(host.rejections.at(-1)).toMatchObject([
+          { reason: 'count', file: { name: 'b.pdf' } },
+        ]);
+        expect(live()).toBe(
+          'b.pdf was not added: the limit of 1 file is reached',
+        );
+      });
+
+      it('treats a rejecting beforeRemove as a veto', async () => {
+        const { host, flush } = setup();
+        host.maxCount.set(1);
+        pick([pdf('a.pdf')]);
+        await flush();
+        host.beforeRemove.set(() => Promise.reject(new Error('no')));
+        pick([pdf('b.pdf')]);
+        await flush();
+        expect(host.files().map((file) => file.name)).toEqual(['a.pdf']);
+      });
+    });
+
+    it('does not read the Node global, which a server does not have', async () => {
+      const fixture = TestBed.createComponent(HostComponent);
+      fixture.componentInstance.withContent.set(false);
+      // Angular's own testing code needs `Node`; the control must not.
+      vi.stubGlobal('Node', undefined);
+      try {
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+      } finally {
+        vi.unstubAllGlobals();
+      }
+      expect(
+        fixture.nativeElement.querySelector('.andes-upload__default'),
+      ).not.toBeNull();
+    });
+  });
+
   describe('localisation', () => {
     const errorText = (root: HTMLElement) =>
       root.querySelector('.andes-upload__error')?.textContent;
@@ -1902,6 +2012,77 @@ describe('AndesUpload with Forms', () => {
     await flush();
     expect(host.control.errors).toMatchObject({
       uploadMaxFiles: { max: 2, actual: 3 },
+    });
+  });
+
+  describe('upload progress', () => {
+    async function start(emitProgress: boolean) {
+      const fixture = TestBed.createComponent(ProgressFormHost);
+      fixture.componentInstance.emitProgress.set(emitProgress);
+      fixture.detectChanges();
+      const emitted: AndesUploadFile[][] = [];
+      fixture.componentInstance.control.valueChanges.subscribe((value) =>
+        emitted.push(value ?? []),
+      );
+      choose(
+        fixture.nativeElement.querySelector(
+          'input[type="file"]',
+        ) as HTMLInputElement,
+        [pdf('a.pdf')],
+      );
+      await new Promise((resolve) => setTimeout(resolve));
+      fixture.detectChanges();
+      return { fixture, host: fixture.componentInstance, emitted };
+    }
+
+    it('tells the control about states, not about every percent', async () => {
+      const { host, fixture, emitted } = await start(false);
+      expect(emitted).toHaveLength(1);
+      expect(emitted[0][0].status).toBe('uploading');
+
+      for (const percent of [10, 40, 80]) {
+        host.options[0].onProgress(percent);
+      }
+      fixture.detectChanges();
+      expect(emitted).toHaveLength(1);
+      // The model still carries the progress.
+      const upload = fixture.debugElement.children[0].componentInstance;
+      expect(upload.fileList()[0].percent).toBe(80);
+
+      host.options[0].onSuccess({});
+      expect(emitted).toHaveLength(2);
+      expect(emitted[1][0]).toMatchObject({ status: 'done', percent: 100 });
+    });
+
+    it('reports every step with emitProgressToForm', async () => {
+      const { host, emitted } = await start(true);
+      for (const percent of [10, 40, 80]) {
+        host.options[0].onProgress(percent);
+      }
+      expect(emitted.map((list) => list[0].percent)).toEqual([0, 10, 40, 80]);
+    });
+
+    it('still reports a file that starts sending later', async () => {
+      const fixture = TestBed.createComponent(ProgressFormHost);
+      fixture.detectChanges();
+      const emitted: AndesUploadFile[][] = [];
+      fixture.componentInstance.control.valueChanges.subscribe((value) =>
+        emitted.push(value ?? []),
+      );
+      fixture.componentInstance.control.setValue([
+        {
+          uid: 'x',
+          name: 'x.pdf',
+          status: 'ready',
+          originFileObj: pdf('x.pdf'),
+        },
+      ]);
+      emitted.length = 0;
+      const upload = fixture.debugElement.children[0].componentInstance;
+      upload.submit();
+      await new Promise((resolve) => setTimeout(resolve));
+      expect(emitted).toHaveLength(1);
+      expect(emitted[0][0].status).toBe('uploading');
     });
   });
 

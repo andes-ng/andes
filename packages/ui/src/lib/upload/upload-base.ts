@@ -252,8 +252,20 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
   /** Off: only `open()` (or a drop) starts a selection. */
   readonly openFileDialogOnClick = input(true, { transform: booleanAttribute });
 
+  /**
+   * Tell the bound form control about upload progress too. By default it hears about a file
+   * only when its state changes (added, started, done, failed, removed), so `valueChanges`
+   * does not fire for every percent point; the `changed` output and `fileList` still carry
+   * every step.
+   */
+  readonly emitProgressToForm = input(false, { transform: booleanAttribute });
+
   readonly beforeUpload = input<AndesUploadBeforeUpload | undefined>(undefined);
-  /** Return `false` (or reject) to keep a file the user asked to remove. */
+  /**
+   * Return `false` (or reject) to keep a file the user asked to remove. It also runs for the
+   * file that a new one replaces when `maxCount` is 1; if it vetoes, the new file is rejected
+   * (reason `count`) and the current one stays.
+   */
   readonly beforeRemove = input<AndesUploadBeforeRemove | undefined>(undefined);
 
   /**
@@ -420,11 +432,18 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
     () => this.isDisabled() || this.isFull(),
   );
 
-  /** Picture-card lists replace the "add" tile with the pictures once the limit is hit. */
+  /**
+   * Picture-card lists replace the "add" tile with the pictures once the limit is hit. With
+   * the list turned off there are no pictures to take its place (the tile is then the picture,
+   * as in an avatar field), so it stays.
+   */
   protected readonly triggerHidden = computed(() => {
     const max = this.maxCount();
     return (
-      this.isCardList() && max !== undefined && this.fileList().length >= max
+      this.isCardList() &&
+      this.listConfig().show &&
+      max !== undefined &&
+      this.fileList().length >= max
     );
   });
 
@@ -632,6 +651,22 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
         rejections.push({ file: outcome.file, reason: 'before-upload' });
       }
     }
+    // With room for one file, a new file replaces the current one, which `beforeRemove` may
+    // want to keep: then the new file is the one turned away.
+    if (approved.length > 0 && this.maxCount() === 1 && this.beforeRemove()) {
+      for (const current of this.fileList()) {
+        if (!(await this.mayRemove(current))) {
+          rejections.push(
+            ...approved.map(({ file }) => ({ file, reason: 'count' as const })),
+          );
+          approved = [];
+          break;
+        }
+      }
+      if (this.destroyed) {
+        return;
+      }
+    }
     // The list may have changed while the hooks ran.
     const room = this.roomLeft();
     if (approved.length > room) {
@@ -738,6 +773,19 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
     return removed !== undefined;
   }
 
+  /** Asks `beforeRemove`; a `false` answer or a rejection keeps the file. */
+  private async mayRemove(file: AndesUploadFile): Promise<boolean> {
+    const hook = this.beforeRemove();
+    if (!hook) {
+      return true;
+    }
+    try {
+      return (await hook(file)) !== false;
+    } catch {
+      return false;
+    }
+  }
+
   /** Removes one file (vetoable, cancelling its request) without announcing it. */
   private async removeEntry(
     target: AndesUploadFile | string,
@@ -746,15 +794,9 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
     if (!file || this.isDisabled()) {
       return undefined;
     }
-    const hook = this.beforeRemove();
-    if (hook) {
-      try {
-        if ((await hook(file)) === false) {
-          return undefined;
-        }
-      } catch {
-        return undefined;
-      }
+    // Awaiting only when there is a hook keeps a plain removal synchronous.
+    if (this.beforeRemove() && !(await this.mayRemove(file))) {
+      return undefined;
     }
     if (this.destroyed || !this.find(file.uid)) {
       return undefined;
@@ -1079,7 +1121,12 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
     const updated = { ...list[index], ...changes };
     const next = list.map((file, i) => (i === index ? updated : file));
     this.fileList.set(next);
-    this.onChange(next);
+    // A progress tick that changes no state is not news for the form control.
+    const stateChanged =
+      (list[index].status ?? 'done') !== (updated.status ?? 'done');
+    if (!event || stateChanged || this.emitProgressToForm()) {
+      this.onChange(next);
+    }
     this.changed.emit({ file: updated, fileList: next, event });
     return updated;
   }

@@ -1,4 +1,7 @@
+import { signal } from '@angular/core';
+
 import { AndesButton } from '../button/button';
+import { AndesInput } from '../input/input';
 import { AndesRadio } from './radio';
 import { AndesRadioGroup } from './radio-group';
 import type { Meta, StoryObj } from '@storybook/angular';
@@ -192,8 +195,8 @@ export const DisabledToggle: Story = {
  *  is selected. Any markup can sit inside an item's label. */
 export const VerticalWithExtraContent: Story = {
   render: () => ({
-    moduleMetadata: { imports: [AndesRadio] },
-    props: { value: 'email', other: '' },
+    moduleMetadata: { imports: [AndesRadio, AndesInput] },
+    props: { value: 'email', other: signal('') },
     template: `
       <andes-radio-group aria-label="Contact preference" [(value)]="value">
         <andes-radio value="email">Email</andes-radio>
@@ -202,12 +205,12 @@ export const VerticalWithExtraContent: Story = {
         <andes-radio value="other">
           Other...
           @if (value === 'other') {
-            <input
+            <andes-input
+              size="sm"
               aria-label="Other contact preference"
               placeholder="Please specify"
-              style="margin-inline-start: 0.5rem; height: 1.5rem; padding-inline: 0.5rem; box-sizing: border-box; font-family: inherit; font-size: 0.875rem; color: var(--andes-color-foreground); background: var(--andes-color-background); border: 1px solid var(--andes-color-input); border-radius: var(--andes-radius-md);"
-              [value]="other"
-              (input)="other = $any($event.target).value"
+              style="display: inline-flex; vertical-align: middle; margin-inline-start: 0.5rem; inline-size: 14rem;"
+              [(value)]="other"
             />
           }
         </andes-radio>

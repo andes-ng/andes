@@ -8,6 +8,7 @@
  * | Token          | Meaning                                  | Example        |
  * | -------------- | ---------------------------------------- | -------------- |
  * | `YYYY` / `YY`  | Year (week-year when the pattern has `w`) | `2024` / `24`  |
+ * | `BBBB` / `BB`  | Buddhist-era year (the year + 543)       | `2567` / `67`  |
  * | `Q`            | Quarter                                  | `1`            |
  * | `MMMM` / `MMM` | Localized month name, long / short       | `February`     |
  * | `MM` / `M`     | Month number, padded / not               | `02` / `2`     |
@@ -48,7 +49,7 @@ export interface AndesFormatContext {
 }
 
 const TOKEN_PATTERN =
-  /\[([^\]]*)]|YYYY|YY|MMMM|MMM|MM|M|DD|D|dddd|ddd|ww|w|HH|H|hh|h|mm|m|ss|s|A|a|Q/g;
+  /\[([^\]]*)]|YYYY|YY|BBBB|BB|MMMM|MMM|MM|M|DD|D|dddd|ddd|ww|w|HH|H|hh|h|mm|m|ss|s|A|a|Q/g;
 
 type Token =
   | { readonly kind: 'literal'; readonly text: string }
@@ -78,6 +79,9 @@ function tokenize(pattern: string): Token[] {
 }
 
 const pad = (value: number, length = 2) => String(value).padStart(length, '0');
+
+/** Years between the Gregorian calendar and the Buddhist era (`BBBB`). */
+const BUDDHIST_ERA_OFFSET = 543;
 
 function monthName(
   date: Date,
@@ -122,6 +126,10 @@ export function formatWithPattern(
           return pad(year, 4);
         case 'YY':
           return pad(year % 100);
+        case 'BBBB':
+          return pad(year + BUDDHIST_ERA_OFFSET, 4);
+        case 'BB':
+          return pad((year + BUDDHIST_ERA_OFFSET) % 100);
         case 'Q':
           return String(quarterOf(date));
         case 'MMMM':
@@ -259,9 +267,11 @@ export function parseWithPattern(
     fields.push(token.token);
     switch (token.token) {
       case 'YYYY':
+      case 'BBBB':
         source += '(\\d{4})';
         break;
       case 'YY':
+      case 'BB':
         source += '(\\d{2})';
         break;
       case 'Q':
@@ -318,6 +328,13 @@ export function parseWithPattern(
       case 'YY':
         // dayjs's customParseFormat pivot: 69-99 are the 1900s.
         year = value > 68 ? 1900 + value : 2000 + value;
+        break;
+      case 'BBBB':
+        year = value - BUDDHIST_ERA_OFFSET;
+        break;
+      case 'BB':
+        // Two digits of a Buddhist-era year name a year of the 2500s (1957-2056).
+        year = 2500 + value - BUDDHIST_ERA_OFFSET;
         break;
       case 'Q':
         quarter = value;
@@ -435,8 +452,11 @@ export function patternFromIntl(
   // Jan 5, 13:07:09: single-digit month and day tell `M` from `MM` and `D` from `DD`.
   const sample = new Date(2024, 0, 5, 13, 7, 9);
   const format = new Intl.DateTimeFormat(locale, options);
-  const hourCycle = format.resolvedOptions().hourCycle;
+  const { hourCycle, calendar } = format.resolvedOptions();
   const twelveHour = hourCycle === 'h11' || hourCycle === 'h12';
+  // A Buddhist-era locale (`th-TH`, or any locale with `-u-ca-buddhist`) prints the year
+  // 543 years on, which `BBBB` reads back; other calendars' years do not parse.
+  const buddhist = calendar === 'buddhist';
 
   return format
     .formatToParts(sample)
@@ -444,6 +464,9 @@ export function patternFromIntl(
       const value = normalizeDigits(part.value);
       switch (part.type) {
         case 'year':
+          if (buddhist) {
+            return value.length === 2 ? 'BB' : 'BBBB';
+          }
           return value.length === 2 ? 'YY' : 'YYYY';
         case 'month':
           if (/^\d+$/.test(value)) {
@@ -463,9 +486,11 @@ export function patternFromIntl(
         case 'dayPeriod':
           return 'A';
         case 'literal':
+        case 'era':
+          // An era ("BE", "AD") is matched as the text it is, so a typed value can keep it.
           return `[${part.value.replace(/]/g, '')}]`;
         default:
-          // Eras, time zone names and non-Gregorian year names are display-only.
+          // Time zone names and non-Gregorian year names are display-only.
           return '';
       }
     })

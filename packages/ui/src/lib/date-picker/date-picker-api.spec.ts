@@ -121,3 +121,62 @@ describe('AndesDatePicker panel month', () => {
     expect(captions()).toEqual(['November 2026', 'December 2026']);
   });
 });
+
+@Component({
+  imports: [AndesDatePicker],
+  template: `<andes-date-picker
+    [locale]="locale()"
+    [format]="format()"
+    [(value)]="value"
+  />`,
+})
+class EraHost {
+  readonly locale = signal('th-TH');
+  readonly format = signal<string | null>(null);
+  readonly value = signal<AndesDatePickerValue | undefined>(d(2024, 2, 15));
+}
+
+describe('AndesDatePicker Buddhist era', () => {
+  function create(setup: (host: EraHost) => void = () => undefined) {
+    const fixture = TestBed.createComponent(EraHost);
+    setup(fixture.componentInstance);
+    fixture.detectChanges();
+    const input = (fixture.nativeElement as HTMLElement).querySelector(
+      'input',
+    ) as HTMLInputElement;
+    return {
+      host: fixture.componentInstance,
+      input,
+      type: (text: string) => {
+        input.focus();
+        input.value = text;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
+        );
+        fixture.detectChanges();
+      },
+    };
+  }
+
+  it('shows the year of a Buddhist-calendar locale and reads it back', () => {
+    const view = create();
+    expect(view.input.value).toContain('2567');
+
+    view.type(view.input.value.replace('15', '20'));
+
+    expect(toDateKey(view.host.value() as Date)).toBe('2024-02-20');
+  });
+
+  it('takes the BBBB token in a format', () => {
+    const view = create((host) => {
+      host.locale.set('en-US');
+      host.format.set('DD/MM/BBBB');
+    });
+    expect(view.input.value).toBe('15/02/2567');
+
+    view.type('01/03/2567');
+
+    expect(toDateKey(view.host.value() as Date)).toBe('2024-03-01');
+  });
+});

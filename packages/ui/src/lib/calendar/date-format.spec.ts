@@ -196,5 +196,40 @@ describe('date-format', () => {
       expect(parsed?.getHours()).toBe(21);
       expect(parsed?.getMinutes()).toBe(45);
     });
+
+    it.each([
+      ['th-TH', { dateStyle: 'medium' }],
+      ['th-TH', { dateStyle: 'long' }],
+      ['en-US-u-ca-buddhist', { dateStyle: 'medium' }],
+    ] as const)(
+      'reads the Buddhist-era year of %s %j back',
+      (locale, options) => {
+        expect(patternFromIntl(locale, options)).toContain('BBBB');
+        expect(keyOf(roundTrip(locale, options))).toBe('2024-02-15');
+      },
+    );
+
+    it('keeps an era in the pattern as text', () => {
+      expect(patternFromIntl('en-US-u-ca-buddhist', { dateStyle: 'medium' }))
+        .toBe('MMMM[ ]D[, ]BBBB[ ][BE]');
+    });
+  });
+
+  describe('Buddhist-era tokens', () => {
+    const date = new Date(2024, 1, 5);
+
+    it('formats the year 543 years on', () => {
+      expect(formatWithPattern(date, 'DD/MM/BBBB', en)).toBe('05/02/2567');
+      expect(formatWithPattern(date, 'DD/MM/BB', en)).toBe('05/02/67');
+    });
+
+    it('parses a Buddhist-era year back into the Gregorian date', () => {
+      expect(keyOf(parseWithPattern('05/02/2567', 'DD/MM/BBBB', en))).toBe(
+        '2024-02-05',
+      );
+      expect(keyOf(parseWithPattern('05/02/67', 'DD/MM/BB', en))).toBe(
+        '2024-02-05',
+      );
+    });
   });
 });

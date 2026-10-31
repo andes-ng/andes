@@ -10,6 +10,7 @@ import {
 import { DomSanitizer } from '@angular/platform-browser';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 
+import { AndesButton } from '../button/button';
 import { AndesTour } from './tour';
 import type {
   AndesTourCloseEvent,
@@ -21,7 +22,10 @@ import type {
   AndesTourType,
 } from './tour-types';
 
-/** A small admin page the tours point at. */
+/**
+ * A small admin page the tours point at. It is injected as plain HTML (`[innerHTML]`), so its
+ * search field and button stay native: Angular components are not instantiated inside it.
+ */
 const PAGE_STYLES = `
   andes-story-tour, andes-story-tour-controlled { display: block; font: 14px/22px var(--andes-font-family, system-ui), sans-serif; color: var(--andes-color-foreground); }
   andes-story-tour .page, andes-story-tour-controlled .page { display: grid; grid-template-columns: 11rem 1fr; min-height: 26rem; border: 1px solid var(--andes-color-border); border-radius: 0.5rem; background: var(--andes-color-background); overflow: hidden; }
@@ -42,7 +46,6 @@ const PAGE_STYLES = `
   andes-story-tour th, andes-story-tour td, andes-story-tour-controlled th, andes-story-tour-controlled td { text-align: start; padding: 0.5rem; border-bottom: 1px solid var(--andes-color-border); }
   andes-story-tour th, andes-story-tour-controlled th { color: var(--andes-color-muted-foreground); font-weight: 500; }
   andes-story-tour .toolbar, andes-story-tour-controlled .toolbar { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
-  andes-story-tour .toolbar button, andes-story-tour-controlled .toolbar button { height: 2rem; padding: 0 0.6875rem; border: 1px solid var(--andes-color-input); border-radius: 0.375rem; background: var(--andes-color-background); color: inherit; font: inherit; cursor: pointer; }
 `;
 
 const PAGE = `
@@ -131,20 +134,20 @@ const ANCHOR_PAGE = `<div style="display: grid; place-items: center; height: 30r
 
 @Component({
   selector: 'andes-story-tour',
-  imports: [AndesTour],
+  imports: [AndesTour, AndesButton],
   template: `
     <div class="toolbar">
-      <button type="button" id="start" (click)="start()">Start the tour</button>
+      <andes-button variant="outline" id="start" (click)="start()"
+        >Start the tour</andes-button
+      >
       @if (variants()) {
         @for (option of VARIANTS; track option.id) {
-          <button
-            type="button"
-            [attr.aria-pressed]="variant() === option.id"
-            [style.font-weight]="variant() === option.id ? 700 : 400"
+          <andes-button
+            [variant]="variant() === option.id ? 'primary' : 'outline'"
             (click)="variant.set(option.id)"
           >
             {{ option.label }}
-          </button>
+          </andes-button>
         }
       }
       <span
@@ -390,13 +393,21 @@ export const ScrollsToTarget: Story = {
 
 @Component({
   selector: 'andes-story-tour-controlled',
-  imports: [AndesTour],
+  imports: [AndesTour, AndesButton],
   template: `
     <div class="toolbar">
-      <button type="button" (click)="open.set(true)">Open</button>
-      <button type="button" (click)="current.set(2)">Jump to step 3</button>
-      <button type="button" (click)="tour.next()">next()</button>
-      <button type="button" (click)="tour.previous()">previous()</button>
+      <andes-button variant="outline" (click)="open.set(true)"
+        >Open</andes-button
+      >
+      <andes-button variant="outline" (click)="current.set(2)"
+        >Jump to step 3</andes-button
+      >
+      <andes-button variant="outline" (click)="tour.next()"
+        >next()</andes-button
+      >
+      <andes-button variant="outline" (click)="tour.previous()"
+        >previous()</andes-button
+      >
       <span style="align-self: center;"
         >open: {{ open() }}, current: {{ current() }}</span
       >

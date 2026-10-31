@@ -105,19 +105,47 @@ describe('radio stylesheet contract', () => {
 
       expect(selectors.length).toBeGreaterThan(0);
       for (const selector of selectors) {
-        expect(selector).toContain("[data-motion='check']");
-        expect(selector).toContain('.andes-radio__control');
+        expect(selector).toContain('[data-motion=');
       }
+      expect(motion).toContain("[data-motion='check']");
+      expect(motion).toContain("[data-motion='press']");
+      expect(motion).toContain("[data-motion='press-alt']");
     });
 
-    it('fades a soft ring out of the selected disc', () => {
+    it('fades a soft ring out of the selected disc and lets it linger', () => {
       const css = radioCss();
       const motion = atRuleBody(css, MOTION_QUERY);
       const keyframes = atRuleBody(css, '@keyframes andes-radio-ripple');
 
       expect(keyframes).toContain('box-shadow: 0 0 0 0');
-      expect(keyframes).toContain('box-shadow: 0 0 0 6px');
-      expect(motion).toContain('andes-radio-ripple 0.4s');
+      expect(keyframes).toContain('var(--_andes-radio-ring)');
+      expect(keyframes).toContain('var(--_andes-radio-tone) 20%');
+      expect(keyframes).toContain('var(--_andes-radio-tone) 0%');
+      expect(motion).toContain('andes-radio-ripple 1s linear');
+    });
+
+    it('plays the same ring under a second name so a repeated click restarts it', () => {
+      const css = radioCss();
+      const first = atRuleBody(css, '@keyframes andes-radio-ripple');
+      const second = atRuleBody(css, '@keyframes andes-radio-ripple-alt');
+      const motion = atRuleBody(css, MOTION_QUERY);
+
+      expect(second).toBe(first);
+      expect(motion).toContain('animation: andes-radio-ripple-alt 1s linear;');
+    });
+
+    it('rings the circle, the segment face of a button and an item without a circle', () => {
+      const motion = atRuleBody(radioCss(), MOTION_QUERY);
+
+      expect(motion).toContain(
+        ".andes-radio__label[data-motion='check'] .andes-radio__control",
+      );
+      expect(motion).toContain(
+        ":host(.andes-radio--button) .andes-radio__label[data-motion='press'] .andes-radio__text",
+      );
+      expect(motion).toContain(
+        ":host(.andes-radio--no-indicator) .andes-radio__label[data-motion='check']",
+      );
     });
 
     it('grows the dot with a transition on transform and opacity, never on the first render', () => {
@@ -146,6 +174,96 @@ describe('radio stylesheet contract', () => {
       expect(reduced).toContain('.andes-radio__label');
       expect(reduced).toContain('.andes-radio__text');
       expect(reduced).toContain('transition: none');
+    });
+  });
+
+  describe('button option type motion', () => {
+    function segmentRule(): string {
+      const css = withoutComments(radioCss());
+      const start = css.indexOf(
+        ':host(.andes-radio--button) .andes-radio__text {',
+      );
+      return css.slice(start, css.indexOf('\n}', start));
+    }
+
+    it('fades fill, border, text and focus hairline over the 0.2s slow duration', () => {
+      const rule = segmentRule();
+
+      expect(rule).toContain('transition:');
+      for (const property of [
+        'background-color',
+        'border-color',
+        'color',
+        'box-shadow',
+      ]) {
+        expect(rule).toContain(
+          `${property} var(--andes-motion-duration-slow, 0.2s)`,
+        );
+      }
+    });
+
+    it('drops the segment transitions under prefers-reduced-motion', () => {
+      const reduced = atRuleBody(
+        radioCss(),
+        '@media (prefers-reduced-motion: reduce)',
+      );
+
+      expect(reduced).toContain(
+        ':host(.andes-radio--button) .andes-radio__text',
+      );
+      expect(reduced).toContain('transition: none');
+    });
+
+    it('keeps the checked segment raised, so the shared edge is its own border', () => {
+      const css = radioCss();
+
+      expect(css).toContain(
+        ':host(.andes-radio--button.andes-radio--checked) {',
+      );
+      expect(css).toContain('z-index: 1;');
+    });
+  });
+
+  describe('hover lift', () => {
+    it('defines one private lift: the selected tone mixed 82% toward white', () => {
+      const css = radioCss().split(/\s+/).join(' ');
+
+      expect(css).toContain(
+        '--_andes-radio-lift: color-mix(in srgb, var(--_andes-radio-tone) 82%, white);',
+      );
+      expect(css).toContain('--_andes-radio-tone: var(--andes-color-primary);');
+    });
+
+    it('lightens the selected disc on hover, never the darker token', () => {
+      const css = radioCss();
+      const forcedNone = atRuleBody(css, '@media (forced-colors: none)');
+
+      expect(css).not.toContain('primary-hover');
+      expect(forcedNone).toContain(
+        ':host(.andes-radio--checked:not(.andes-radio--disabled):not(.andes-radio--readonly)) .andes-radio__label:hover .andes-radio__control',
+      );
+      expect(forcedNone).toContain(
+        'background-color: var(--_andes-radio-lift);',
+      );
+    });
+
+    it('lightens a checked solid segment, but never a disabled or read-only one', () => {
+      const css = radioCss();
+
+      expect(css).toContain(
+        ':host(.andes-radio--button.andes-radio--solid.andes-radio--checked:not(.andes-radio--disabled):not(.andes-radio--readonly)) .andes-radio__label:hover .andes-radio__text',
+      );
+    });
+
+    it('lets a status carry its own color into the lift', () => {
+      const css = radioCss();
+
+      expect(css).toContain(
+        ':host(.andes-radio--invalid:not(.andes-radio--button)) .andes-radio__label {',
+      );
+      expect(css).toContain(
+        ':host(.andes-radio--warning:not(.andes-radio--button)) .andes-radio__label {',
+      );
     });
   });
 

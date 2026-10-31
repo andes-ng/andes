@@ -15,7 +15,9 @@ type Story = StoryObj<AndesRadioGroup>;
 /**
  * `optionType="button"` turns the items into a segmented control. Arrow keys still move focus
  * AND selection (native radio behavior). Shown: the outline and solid styles, a vertical group,
- * and a disabled item and a disabled group.
+ * and a disabled item and a disabled group. Selecting a segment fades its fill, border and text
+ * over 0.2s, and every click on an enabled segment - the selected one included - sends a soft
+ * ring out of it (solid segments lighten on hover, outline ones tint their text).
  */
 export const ButtonStyles: Story = {
   render: () => ({

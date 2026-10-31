@@ -3,7 +3,7 @@
   data-slot="radio"
   [attr.for]="inputId()"
   [attr.data-motion]="motion()"
-  (animationend)="onMotionEnd()"
+  (animationend)="onMotionEnd($event)"
 >
   <input
     #input

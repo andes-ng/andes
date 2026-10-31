@@ -1640,6 +1640,84 @@ describe('AndesUpload', () => {
       ).toBe('0.35');
     });
 
+    describe('invalid state', () => {
+      const invalidBorder = (selector: string) =>
+        declaredValue(css, selector, 'border-color');
+
+      it('keeps the danger border on the drop area through hover and dragging', () => {
+        const base =
+          '.andes-upload__select--drag.andes-upload__select--invalid';
+        for (const selector of [
+          base,
+          `${base}:hover`,
+          `${base}[data-dragging]`,
+        ]) {
+          expect(invalidBorder(selector)).toBe(
+            'var(--andes-color-danger, #dc2626)',
+          );
+        }
+      });
+
+      it('draws the card trigger with the danger border too', () => {
+        const base =
+          '.andes-upload__select--card.andes-upload__select--invalid';
+        expect(invalidBorder(base)).toBe('var(--andes-color-danger, #dc2626)');
+        expect(invalidBorder(`${base}:hover`)).toBe(
+          'var(--andes-color-danger, #dc2626)',
+        );
+      });
+
+      it('comes after the drag and card rules it has to beat', () => {
+        const invalid = css.indexOf(
+          '.andes-upload__select--card.andes-upload__select--invalid',
+        );
+        expect(invalid).toBeGreaterThan(
+          css.indexOf('.andes-upload__select--card:not([data-disabled]):hover'),
+        );
+        expect(invalid).toBeGreaterThan(
+          css.indexOf('.andes-upload__select--drag[data-dragging]'),
+        );
+      });
+
+      it('marks the trigger and the real input as invalid', async () => {
+        const { host, root, fixture, input } = setup();
+        host.withContent.set(false);
+        host.listType.set('picture-card');
+        fixture.detectChanges();
+        const trigger = root.querySelector(
+          '[data-slot="upload-trigger"]',
+        ) as HTMLElement;
+        expect(trigger.hasAttribute('data-invalid')).toBe(false);
+
+        host.invalid.set(true);
+        fixture.detectChanges();
+        expect(trigger.hasAttribute('data-invalid')).toBe(true);
+        expect(trigger.classList).toContain('andes-upload__select--invalid');
+        expect(input().getAttribute('aria-invalid')).toBe('true');
+      });
+    });
+
+    describe('focus ring', () => {
+      it('follows the corners of the drop area and of the cards', () => {
+        const ring = ':has(.andes-upload__input:focus-visible)';
+        const radius = (selector: string) =>
+          declaredValue(css, `${selector}${ring}`, 'border-radius');
+        expect(radius('.andes-upload__select--drag')).toBe(
+          'var(--andes-radius-lg, 0.5rem)',
+        );
+        expect(radius('.andes-upload__select--card')).toBe(
+          'var(--andes-radius-lg, 0.5rem)',
+        );
+        expect(radius('.andes-upload__select[data-circle]')).toBe(
+          'var(--andes-radius-full, 9999px)',
+        );
+        // The drop area itself is drawn with the same radius.
+        expect(
+          declaredValue(css, '.andes-upload__select--drag', 'border-radius'),
+        ).toBe('var(--andes-radius-lg, 0.5rem)');
+      });
+    });
+
     it('reveals picture-card actions on hover and keyboard focus', () => {
       expect(css).toContain(':focus-within .andes-upload__actions');
     });

@@ -28,6 +28,7 @@
     [class.andes-upload__select--drag]="dragMode"
     [class.andes-upload__select--card]="isCardList()"
     [class.andes-upload__select--invalid]="ariaInvalid()"
+    [attr.data-invalid]="ariaInvalid() ? '' : null"
     [attr.data-circle]="listType() === 'picture-circle' ? '' : null"
     [attr.data-dragging]="dragging() ? '' : null"
     [attr.data-disabled]="triggerBlocked() ? '' : null"

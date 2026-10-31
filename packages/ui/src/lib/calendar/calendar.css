@@ -385,20 +385,27 @@
   background-color: var(--andes-calendar-band);
 }
 
-/* The range the hovered (or focused) cell would close: a dashed outline of the
-   band, so it stays distinct from the committed range's solid fill. */
+/* The range the hovered (or focused) cell would close: the same filled band as a committed
+   range, so the preview reads as the range about to be made. Forced colors, which replace
+   fills, draw it as a dashed line instead (see the end of this file). */
 .andes-calendar__day--in-preview::before {
-  border-block: 1px dashed
-    var(--andes-color-primary-text, var(--andes-color-primary));
+  background-color: var(--andes-calendar-band);
 }
 
 /* The previewed range's first and last day carry half a band towards the inside, the picked
-   start and the hovered end alike: the dashes then run from chip to chip, with no gap of a
-   few pixels beside the start and no tail past the end. */
+   start and the hovered end alike: the band then runs from chip to chip, with no gap beside
+   the start and no tail past the end. */
 .andes-calendar__day--preview-start::before,
 .andes-calendar__day--preview-end::before {
-  border-block: 1px dashed
-    var(--andes-color-primary-text, var(--andes-color-primary));
+  background-color: var(--andes-calendar-band);
+}
+
+/* The hovered boundary of the preview is outlined, not filled, so the day the range would end
+   on is the one that stands out. The picked start keeps its solid fill. */
+/* prettier-ignore */
+:is(.andes-calendar__day--preview-start, .andes-calendar__day--preview-end):not(.andes-calendar__day--selected):hover:not([aria-disabled='true']) > * {
+  border-color: var(--andes-color-primary-text, var(--andes-color-primary));
+  background-color: transparent;
 }
 
 .andes-calendar__day--preview-start::before {
@@ -659,7 +666,7 @@
   .andes-calendar__day--in-preview::before,
   .andes-calendar__day--preview-start::before,
   .andes-calendar__day--preview-end::before {
-    border-block-color: CanvasText;
+    border-block: 1px dashed CanvasText;
   }
 
   .andes-calendar--week-picker .andes-calendar__day--selected {

@@ -39,16 +39,16 @@ describe('AndesCalendar styles', () => {
   });
 
   describe('range preview', () => {
-    const dashed =
-      '1px dashed var(--andes-color-primary-text, var(--andes-color-primary))';
+    const band = 'var(--andes-calendar-band)';
 
-    it('runs the dashed band from chip to chip: half a band at each boundary', () => {
+    it('fills the preview with the range band, half a band at each boundary', () => {
       for (const selector of [
         '.andes-calendar__day--in-preview::before',
         '.andes-calendar__day--preview-start::before',
         '.andes-calendar__day--preview-end::before',
       ]) {
-        expect(declaredValue(source, selector, 'border-block')).toBe(dashed);
+        expect(declaredValue(source, selector, 'background-color')).toBe(band);
+        expect(declaredValue(source, selector, 'border-block')).toBeUndefined();
       }
       expect(
         declaredValue(
@@ -169,21 +169,14 @@ describe('AndesCalendar styles', () => {
           'border-block',
         ),
       ).toBe('1px solid Highlight');
-      // The preview keeps its dashed style from the base rule and only changes color.
+      // Fills are replaced in forced colors, so only there the preview is a dashed line.
       expect(
         declaredValue(
           forced,
           '.andes-calendar__day--in-preview::before',
-          'border-block-color',
-        ),
-      ).toBe('CanvasText');
-      expect(
-        declaredValue(
-          source,
-          '.andes-calendar__day--in-preview::before',
           'border-block',
         ),
-      ).toContain('dashed');
+      ).toBe('1px dashed CanvasText');
     });
 
     it('dims outside and disabled days with GrayText rather than opacity alone', () => {

@@ -2,13 +2,19 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { atRule, collapsed } from '../../testing/at-rule';
+import { declaredValue } from '../../testing/computed-style';
+
+const here = dirname(fileURLToPath(import.meta.url));
+
+/** The stylesheet as authored, for `declaredValue` lookups. */
+const source = readFileSync(join(here, 'date-picker.css'), 'utf-8');
+
 /** The stylesheet with comments dropped and whitespace collapsed, for contract checks. */
-const css = readFileSync(
-  join(dirname(fileURLToPath(import.meta.url)), 'date-picker.css'),
-  'utf-8',
-)
-  .replace(/\/\*[\s\S]*?\*\//g, '')
-  .replace(/\s+/g, ' ');
+const css = collapsed(source);
+
+const NO_PREFERENCE = '@media (prefers-reduced-motion: no-preference)';
+const motion = atRule(source, NO_PREFERENCE);
 
 describe('AndesDatePicker styles', () => {
   describe('clear button', () => {
@@ -50,31 +56,81 @@ describe('AndesDatePicker styles', () => {
   });
 
   describe('panel motion', () => {
-    const motion = css.slice(
-      css.indexOf('@media (prefers-reduced-motion: no-preference)'),
-    );
-
     it('animates out, mirroring the entrance, while the overlay marks it closing', () => {
       expect(css).toContain(
         '@keyframes andes-date-picker-panel-exit { from { opacity: 1; transform: none; } to { opacity: 0; transform: scale(0.97); } }',
       );
-      expect(motion).toContain(
-        '.andes-date-picker__panel[data-andes-closing] { transform-origin: top left; animation: andes-date-picker-panel-exit var(--andes-duration-fast, 120ms) var(--andes-ease-in, ease-in) forwards; }',
+      expect(
+        declaredValue(
+          motion,
+          '.andes-date-picker__panel[data-andes-closing]',
+          'animation',
+        ),
+      ).toBe(
+        'andes-date-picker-panel-exit var(--andes-motion-duration-fast, 120ms) var(--andes-motion-ease-in, cubic-bezier(0.4, 0, 1, 1)) forwards',
       );
     });
 
     it('only animates when motion is allowed', () => {
       expect(css.indexOf('[data-andes-closing]')).toBeGreaterThan(
-        css.indexOf('@media (prefers-reduced-motion: no-preference)'),
+        css.indexOf(NO_PREFERENCE),
       );
+      expect(
+        declaredValue(
+          source,
+          ".andes-date-picker__panel[data-state='open']",
+          'animation',
+        ),
+      ).toBeUndefined();
     });
 
-    it('uses the shared elevation and motion tokens with their current values as fallbacks', () => {
-      expect(css).toContain(
-        'box-shadow: var( --andes-shadow-md, 0 4px 6px -1px rgb(0 0 0 / 10%), 0 2px 4px -2px rgb(0 0 0 / 10%) );',
+    it('enters with the shared motion tokens, their current values as fallbacks', () => {
+      expect(
+        declaredValue(
+          motion,
+          ".andes-date-picker__panel[data-state='open']",
+          'animation',
+        ),
+      ).toBe(
+        'andes-date-picker-panel-enter var(--andes-motion-duration-mid, 150ms) var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1))',
       );
-      expect(motion).toContain(
-        'animation: andes-date-picker-panel-enter var(--andes-duration-base, 150ms) var(--andes-ease-out, cubic-bezier(0.2, 0, 0, 1));',
+    });
+  });
+
+  describe('panel chrome', () => {
+    const panel = '::ng-deep .andes-date-picker__panel';
+
+    it('has the transparent edge and soft three-layer elevation Select and Combobox use', () => {
+      expect(declaredValue(source, panel, 'border')).toBe(
+        '1px solid transparent',
+      );
+      const shadow = declaredValue(source, panel, 'box-shadow') ?? '';
+      expect(shadow).toContain('--andes-shadow-popover');
+      expect(shadow).toContain('0 6px 16px 0 rgb(0 0 0 / 8%)');
+      expect(shadow).not.toContain('--andes-shadow-md');
+    });
+  });
+
+  describe('motion tokens', () => {
+    it('writes no hand-made durations or eases in the field, presets or options', () => {
+      const field = declaredValue(
+        motion,
+        '.andes-date-picker__field',
+        'transition',
+      );
+      expect(field).toBe(
+        'border-color var(--andes-motion-duration-mid, 150ms) ease, box-shadow var(--andes-motion-duration-mid, 150ms) ease, background-color var(--andes-motion-duration-mid, 150ms) ease',
+      );
+      expect(
+        declaredValue(motion, '.andes-date-picker__preset', 'transition'),
+      ).toBe('background-color var(--andes-motion-duration-mid, 150ms) ease');
+    });
+
+    it('fades the time options on hover with the fast token', () => {
+      expect(
+        declaredValue(motion, '.andes-date-picker__time-option', 'transition'),
+      ).toBe(
+        'background-color var(--andes-motion-duration-fast, 120ms) var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1))',
       );
     });
   });

@@ -70,8 +70,8 @@
   font-family: inherit;
   font-size: inherit;
   cursor: pointer;
-  transition: color var(--andes-motion-duration-fast, 0.1s)
-    var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1));
+  transition: color var(--andes-motion-duration-fast, 120ms)
+    var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1));
 }
 
 .andes-calendar__caption--button:hover {
@@ -124,8 +124,8 @@
   color: var(--andes-color-muted-foreground);
   font-family: inherit;
   cursor: pointer;
-  transition: color var(--andes-motion-duration-fast, 0.1s)
-    var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1));
+  transition: color var(--andes-motion-duration-fast, 120ms)
+    var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1));
 }
 
 .andes-calendar__nav svg {
@@ -275,8 +275,8 @@
   height: var(--andes-calendar-chip);
   transform: translateY(-50%);
   content: '';
-  transition: background-color var(--andes-motion-duration-fast, 0.1s)
-    var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1));
+  transition: background-color var(--andes-motion-duration-fast, 120ms)
+    var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1));
 }
 
 /* prettier-ignore */
@@ -292,10 +292,10 @@
   border-radius: var(--andes-radius-sm);
   line-height: 1;
   transition:
-    background-color var(--andes-motion-duration-fast, 0.1s)
-      var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1)),
-    color var(--andes-motion-duration-fast, 0.1s)
-      var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1));
+    background-color var(--andes-motion-duration-fast, 120ms)
+      var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1)),
+    color var(--andes-motion-duration-fast, 120ms)
+      var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1));
 }
 
 /* prettier-ignore */

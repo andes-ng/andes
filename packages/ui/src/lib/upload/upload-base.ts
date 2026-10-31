@@ -25,6 +25,7 @@ import {
   formatFileSize,
   formatMessage,
   isImageFile,
+  isNavigableUrl,
   readDroppedFiles,
   toUploadFile,
   validateUploadFile,
@@ -300,7 +301,10 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
 
   /** A file was added, progressed, finished, failed or left the list. Not named `change`: a file input's native `change` bubbles to the host. */
   readonly changed = output<AndesUploadChangeEvent>();
-  /** The preview action; `preventDefault()` replaces opening the file's URL. */
+  /**
+   * The preview action, shown for files with an `http(s)` or `blob:` `url`; by default it opens
+   * that URL in a new tab, and `preventDefault()` replaces that (e.g. with your own viewer).
+   */
   readonly preview = output<AndesUploadItemEvent>();
   /** The download action; `preventDefault()` replaces following the link. */
   readonly download = output<AndesUploadItemEvent>();
@@ -859,7 +863,7 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
     const preview = new AndesUploadItemEvent(file, event);
     this.preview.emit(preview);
     const url = file.url;
-    if (!preview.defaultPrevented && url) {
+    if (!preview.defaultPrevented && url && this.isOpenable(url)) {
       globalThis.open?.(url, '_blank', 'noopener,noreferrer');
     }
   }
@@ -907,6 +911,11 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
   }
 
   /* ------------------------------------------------------------------ internals */
+
+  /** A URL the default preview may open: a web address or a blob, never `data:` or a script. */
+  private isOpenable(url: string | undefined): boolean {
+    return isNavigableUrl(url, this.document.baseURI || undefined);
+  }
 
   /** The row of one file, if it is rendered. */
   private itemElement(uid: string): HTMLElement | undefined {
@@ -1313,8 +1322,11 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
       icon,
       caption,
       errorText,
+      // Without an address the default preview has nothing to open, so there is no button; a
+      // thumbnail alone does not count. To preview local pictures, give the file a `blob:` or
+      // web `url`, or draw the row with `itemRender`.
       canPreview:
-        config.preview && !!(file.url || thumb) && status !== 'uploading',
+        config.preview && this.isOpenable(file.url) && status !== 'uploading',
       canDownload: config.download && !!file.url && status === 'done',
       canRetry:
         config.retry && status === 'error' && !!file.originFileObj && !disabled,

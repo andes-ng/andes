@@ -1007,6 +1007,79 @@ describe('AndesUpload', () => {
       expect(root.querySelector('ul')).toBeNull();
     });
 
+    describe('preview', () => {
+      const entry = (name: string, url?: string): AndesUploadFile => ({
+        uid: name,
+        name,
+        status: 'done',
+        url,
+        thumbUrl: 'https://cdn.test/thumb.png',
+      });
+
+      function previewButtons(root: HTMLElement) {
+        return Array.from(
+          root.querySelectorAll<HTMLButtonElement>('[data-action="preview"]'),
+        ).map((button) => button.getAttribute('aria-label'));
+      }
+
+      it('is offered only for files with a web or blob address', () => {
+        const { host, root, fixture } = setup();
+        host.listType.set('picture-card');
+        host.files.set([
+          entry('web.png', 'https://files.test/web.png'),
+          entry('relative.png', '/files/relative.png'),
+          entry('blob.png', 'blob:http://localhost/1234'),
+          entry('inline.png', 'data:image/png;base64,AAAA'),
+          entry('script.png', 'javascript:alert(1)'),
+          entry('local.png'),
+        ]);
+        fixture.detectChanges();
+
+        expect(previewButtons(root)).toEqual([
+          'Preview web.png',
+          'Preview relative.png',
+          'Preview blob.png',
+        ]);
+      });
+
+      it('never opens an address the browser refuses, but still reports the click', () => {
+        const { host, root, fixture } = setup();
+        host.files.set([entry('inline.png', 'data:image/png;base64,AAAA')]);
+        fixture.detectChanges();
+        const open = vi.fn();
+        vi.stubGlobal('open', open);
+
+        // A custom row can still ask for it through the item context.
+        const ctx = (
+          host.upload() as unknown as {
+            items(): { ctx: { preview(): void } }[];
+          }
+        ).items()[0].ctx;
+        ctx.preview();
+
+        expect(host.previews).toHaveLength(1);
+        expect(open).not.toHaveBeenCalled();
+        expect(root.querySelector('[data-action="preview"]')).toBeNull();
+      });
+
+      it('opens a blob address in a new tab', () => {
+        const { host, root, fixture } = setup();
+        host.files.set([entry('blob.png', 'blob:http://localhost/1234')]);
+        fixture.detectChanges();
+        const open = vi.fn();
+        vi.stubGlobal('open', open);
+        (
+          root.querySelector('[data-action="preview"]') as HTMLButtonElement
+        ).click();
+
+        expect(open).toHaveBeenCalledWith(
+          'blob:http://localhost/1234',
+          '_blank',
+          'noopener,noreferrer',
+        );
+      });
+    });
+
     it('links the name to the file, and emits preview and download events', () => {
       const { host, root, fixture } = setup();
       host.showList.set({ showDownloadIcon: true });
@@ -1297,9 +1370,10 @@ describe('AndesUpload', () => {
       ).toBe('25');
       requests[0].onSuccess({});
       await flush();
+      // A local picture has no address to open, so there is no preview action to be dead.
       expect(
         root.querySelector('button[aria-label="Preview a.png"]'),
-      ).not.toBeNull();
+      ).toBeNull();
       expect(
         root.querySelector('button[aria-label="Remove a.png"]'),
       ).not.toBeNull();

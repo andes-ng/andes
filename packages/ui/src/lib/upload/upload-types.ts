@@ -161,6 +161,7 @@ export class AndesUploadHttpError extends Error {
 }
 
 export interface AndesUploadListOptions {
+  /** The eye action; it only appears for files whose `url` is an `http(s)` or `blob:` address. */
   showPreviewIcon?: boolean;
   showRemoveIcon?: boolean;
   showDownloadIcon?: boolean;

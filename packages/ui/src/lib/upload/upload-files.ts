@@ -283,6 +283,30 @@ export async function readDroppedFiles(
   return (await Promise.all(pending)).flat();
 }
 
+/* ------------------------------------------------------------------------ links */
+
+/**
+ * Whether the browser may be sent to `url`: a web address (`http:` / `https:`, absolute or
+ * relative to `base`) or a `blob:` URL. `data:` (which browsers refuse to open as a page) and
+ * script URLs such as `javascript:` are not.
+ */
+export function isNavigableUrl(
+  url: string | undefined,
+  base = 'http://localhost/',
+): boolean {
+  if (!url) {
+    return false;
+  }
+  try {
+    const { protocol } = new URL(url, base);
+    return (
+      protocol === 'http:' || protocol === 'https:' || protocol === 'blob:'
+    );
+  } catch {
+    return false;
+  }
+}
+
 /* ------------------------------------------------------------------------ text */
 
 /** Replaces `{key}` placeholders. Unknown keys are left as they are. */

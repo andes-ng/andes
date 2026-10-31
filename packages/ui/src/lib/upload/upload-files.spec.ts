@@ -7,6 +7,7 @@ import {
   isFileAccepted,
   isFileSizeValid,
   isImageFile,
+  isNavigableUrl,
   parseAccept,
   readDroppedFiles,
   validateUploadFile,
@@ -116,6 +117,22 @@ describe('upload file helpers', () => {
         true,
       );
       expect(isImageFile(file('notes.txt'))).toBe(false);
+    });
+
+    it('only treats web addresses and blobs as places to navigate to', () => {
+      expect(isNavigableUrl('https://files.test/a.pdf')).toBe(true);
+      expect(isNavigableUrl('http://files.test/a.pdf')).toBe(true);
+      expect(isNavigableUrl('/files/a.pdf')).toBe(true);
+      expect(isNavigableUrl('a.pdf', 'https://app.test/docs/')).toBe(true);
+      expect(isNavigableUrl('//cdn.test/a.pdf')).toBe(true);
+      expect(isNavigableUrl('blob:https://app.test/3f2a')).toBe(true);
+      expect(isNavigableUrl('data:image/svg+xml;utf8,%3Csvg%3E')).toBe(false);
+      expect(isNavigableUrl('javascript:alert(1)')).toBe(false);
+      expect(isNavigableUrl('file:///etc/hosts')).toBe(false);
+      expect(isNavigableUrl('ftp://files.test/a.pdf')).toBe(false);
+      expect(isNavigableUrl('')).toBe(false);
+      expect(isNavigableUrl(undefined)).toBe(false);
+      expect(isNavigableUrl('http://[')).toBe(false);
     });
 
     it('fills message placeholders', () => {

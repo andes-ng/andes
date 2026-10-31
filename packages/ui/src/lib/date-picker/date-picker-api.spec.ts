@@ -743,12 +743,82 @@ describe('AndesDatePicker events', () => {
       input.dispatchEvent(
         new FocusEvent('focusout', {
           bubbles: true,
-          relatedTarget: view.root.querySelector('[data-slot="date-picker-trigger"]'),
+          relatedTarget: view.root.querySelector(
+            '[data-slot="date-picker-trigger"]',
+          ),
         }),
       );
       view.detect();
 
       expect(view.host.focusEvents).toEqual(['focus:start']);
     });
+  });
+});
+
+@Component({
+  imports: [AndesDatePicker],
+  template: `
+    <ng-template #header let-month let-setView="setView">
+      <div class="my-header">{{ month.getMonth() }}</div>
+      <button type="button" class="my-years" (click)="setView('year')">years</button>
+    </ng-template>
+    <ng-template #full let-cell="cell">
+      <span class="my-cell">{{ cell.text }}!</span>
+    </ng-template>
+    <ng-template #footer let-mode>
+      <span class="my-footer">{{ mode }}</span>
+    </ng-template>
+    <andes-date-picker
+      [picker]="picker()"
+      locale="en-US"
+      [defaultMonth]="defaultMonth"
+      [headerTemplate]="useHeader() ? header : null"
+      [fullCellTemplate]="full"
+      [extraFooter]="footer"
+      [open]="true"
+    />
+  `,
+})
+class PanelHookHost {
+  readonly picker = signal<AndesDatePickerType>('date');
+  readonly useHeader = signal(true);
+  readonly defaultMonth = d(2024, 2, 1);
+}
+
+describe('AndesDatePicker panel hooks', () => {
+  function create(setup: (host: PanelHookHost) => void = () => undefined) {
+    const fixture = TestBed.createComponent(PanelHookHost);
+    setup(fixture.componentInstance);
+    fixture.detectChanges();
+    fixture.detectChanges();
+    const panel = () =>
+      document.querySelector<HTMLElement>(
+        '[data-slot="date-picker-panel"]',
+      ) as HTMLElement;
+    return { fixture, panel, detect: () => fixture.detectChanges() };
+  }
+
+  it('passes headerTemplate and fullCellTemplate to the calendar', () => {
+    const view = create();
+    expect(view.panel().querySelector('.my-header')?.textContent).toBe('1');
+    expect(
+      view.panel().querySelector('[data-date="2024-02-15"] .my-cell')
+        ?.textContent,
+    ).toBe('15!');
+  });
+
+  it("hands the footer the grid on show, following the header's moves", () => {
+    const view = create();
+    expect(view.panel().querySelector('.my-footer')?.textContent).toBe('date');
+
+    view.panel().querySelector<HTMLElement>('.my-years')?.click();
+    view.detect();
+
+    expect(view.panel().querySelector('.my-footer')?.textContent).toBe('year');
+  });
+
+  it('hands a time picker footer "time"', () => {
+    const view = create((host) => host.picker.set('time'));
+    expect(view.panel().querySelector('.my-footer')?.textContent).toBe('time');
   });
 });

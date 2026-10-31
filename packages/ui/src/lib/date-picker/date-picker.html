@@ -392,6 +392,8 @@
           [numberOfMonths]="monthCount()"
           [showWeek]="showWeek()"
           [cellTemplate]="cellTemplate()"
+          [fullCellTemplate]="fullCellTemplate()"
+          [headerTemplate]="headerTemplate()"
           [dateDisabled]="dateDisabled()"
           [defaultMonth]="defaultMonth()"
           [month]="pickerValue()"
@@ -461,7 +463,10 @@
       <div class="andes-date-picker__footer" data-slot="date-picker-footer">
         @if (extraFooter(); as footerTemplate) {
         <div class="andes-date-picker__extra-footer">
-          <ng-container [ngTemplateOutlet]="footerTemplate" />
+          <ng-container
+            [ngTemplateOutlet]="footerTemplate"
+            [ngTemplateOutletContext]="footerContext()"
+          />
         </div>
         }
         <div class="andes-date-picker__footer-actions">

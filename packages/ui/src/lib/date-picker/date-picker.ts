@@ -38,6 +38,7 @@ import {
   coerceDisabledSides,
   type AndesCalendarCaptionLayout,
   type AndesCalendarCellContext,
+  type AndesCalendarHeaderContext,
   type AndesCalendarMode,
   type AndesCalendarPanelChange,
   type AndesCalendarRangeSide,
@@ -279,6 +280,14 @@ export type AndesTimeDisabledFn = (
  */
 export interface AndesDatePickerPanelContext {
   readonly $implicit: TemplateRef<unknown>;
+}
+
+/**
+ * Template context for `extraFooter`: `$implicit` is the grid on show (`date`, `month`,
+ * `quarter` or `year`), or `time` for a time picker, so the footer can follow the panel.
+ */
+export interface AndesDatePickerFooterContext {
+  readonly $implicit: AndesCalendarView | 'time';
 }
 
 /**
@@ -696,6 +705,20 @@ export class AndesDatePicker implements ControlValueAccessor {
   );
 
   /**
+   * Replaces the whole content of every calendar cell, the day number included, passed to
+   * the calendar. Takes precedence over `cellTemplate`.
+   */
+  readonly fullCellTemplate =
+    input<TemplateRef<AndesCalendarCellContext> | null>(null);
+
+  /**
+   * Replaces the calendar's navigation header, passed to the calendar: its context can
+   * move to a month (`goTo`) and switch the grid (`setView`).
+   */
+  readonly headerTemplate =
+    input<TemplateRef<AndesCalendarHeaderContext> | null>(null);
+
+  /**
    * Custom content of each time option (hours, minutes, seconds and AM/PM), rendered
    * inside the option in place of its text; the context says which column it is in and
    * whether it is selected or ruled out. It must not contain interactive elements.
@@ -974,7 +997,11 @@ export class AndesDatePicker implements ControlValueAccessor {
   /** Replaces the calendar icon at the end of the field. */
   readonly suffixIcon = input<TemplateRef<unknown> | null>(null);
 
-  /** Extra footer content in the panel. */
+  /**
+   * Extra footer content in the panel. Its context ({@link AndesDatePickerFooterContext})
+   * holds the grid on show (`date`, `month`, `quarter`, `year`) or `time` as `$implicit`, so
+   * it can follow the panel.
+   */
   readonly extraFooter = input<TemplateRef<unknown> | null>(null);
 
   /**
@@ -1671,6 +1698,13 @@ export class AndesDatePicker implements ControlValueAccessor {
 
   protected readonly nowText = computed(
     () => this.nowLabel() ?? (this.timeOptions() ? 'Now' : 'Today'),
+  );
+
+  /** `extraFooter`'s context: the calendar's grid, or `time` without a calendar. */
+  protected readonly footerContext = computed<AndesDatePickerFooterContext>(
+    () => ({
+      $implicit: this.calendar()?.view() ?? (this.isTimeOnly() ? 'time' : 'date'),
+    }),
   );
 
   protected readonly showFooter = computed(

@@ -3,6 +3,7 @@ export type {
   AndesDatePickerActiveIndex,
   AndesDatePickerCalendarChange,
   AndesDatePickerFocusEvent,
+  AndesDatePickerFooterContext,
   AndesDatePickerIds,
   AndesDatePickerMaxTagCount,
   AndesDatePickerMode,

@@ -733,3 +733,80 @@ describe('AndesCalendar features', () => {
     });
   });
 });
+
+@Component({
+  imports: [AndesCalendar],
+  template: `<andes-calendar
+    locale="en-US"
+    [numberOfMonths]="months()"
+    [defaultMonth]="defaultMonth"
+    [(month)]="month"
+    (panelChange)="changes.push($event)"
+  />`,
+})
+class ControlledMonthHost {
+  readonly defaultMonth = d(2024, 2, 1);
+  readonly month = signal<Date | null>(d(2024, 6, 20));
+  readonly months = signal(1);
+  readonly changes: AndesCalendarPanelChange[] = [];
+}
+
+describe('AndesCalendar controlled month', () => {
+  function create() {
+    const fixture = TestBed.createComponent(ControlledMonthHost);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    return {
+      fixture,
+      host: fixture.componentInstance,
+      captions: () =>
+        Array.from(
+          root.querySelectorAll('[data-slot="calendar-caption"]'),
+          (caption) => caption.textContent?.trim(),
+        ),
+      click: (slot: string) => {
+        root.querySelector<HTMLElement>(`[data-slot="${slot}"]`)?.click();
+        fixture.detectChanges();
+      },
+    };
+  }
+
+  it('shows the month of `month` over `defaultMonth`', () => {
+    expect(create().captions()).toEqual(['June 2024']);
+  });
+
+  it('writes the user navigation back through monthChange', () => {
+    const view = create();
+
+    view.click('calendar-next');
+
+    expect(view.captions()).toEqual(['July 2024']);
+    expect(toDateKey(view.host.month() as Date)).toBe('2024-07-01');
+  });
+
+  it('follows a month set from outside, also after the user navigated', () => {
+    const view = create();
+    view.click('calendar-next');
+
+    view.host.month.set(d(2025, 1, 9));
+    view.fixture.detectChanges();
+
+    expect(view.captions()).toEqual(['January 2025']);
+  });
+
+  it('shows the month as the first of several', () => {
+    const view = create();
+    view.host.months.set(2);
+    view.fixture.detectChanges();
+
+    expect(view.captions()).toEqual(['June 2024', 'July 2024']);
+  });
+
+  it('goes back to defaultMonth when the month is cleared', () => {
+    const view = create();
+    view.host.month.set(null);
+    view.fixture.detectChanges();
+
+    expect(view.captions()).toEqual(['February 2024']);
+  });
+});

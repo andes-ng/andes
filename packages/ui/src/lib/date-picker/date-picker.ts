@@ -390,6 +390,17 @@ function coerceMaxCount(value: unknown): number | undefined {
   return Number.isFinite(count) ? Math.max(0, Math.floor(count)) : undefined;
 }
 
+/**
+ * `defaultMonth` and `pickerValue`: a date, or a range's `[start, end]` pair, of which the
+ * first date counts (a range shows its two months side by side).
+ */
+function coercePanelMonth(value: unknown): Date | null {
+  if (Array.isArray(value)) {
+    return coerceDate(value[0]) ?? coerceDate(value[1]);
+  }
+  return coerceDate(value);
+}
+
 /** A whole number, or `undefined` when unset or not a number. */
 function coerceYear(value: unknown): number | undefined {
   if (value == null || value === '') {
@@ -585,10 +596,23 @@ export class AndesDatePicker implements ControlValueAccessor {
 
   /**
    * Month the panel opens on when there is no selection. Defaults to the selected
-   * value's month, else the current month.
+   * value's month, else the current month. A range also takes a `[start, end]` pair, of
+   * which the first date counts: its two months are always side by side.
    */
   readonly defaultMonth = input<Date | null, unknown>(null, {
-    transform: coerceDate,
+    transform: coercePanelMonth,
+  });
+
+  /**
+   * The month on show in the panel, controlled: the panel opens on (and goes back to) the
+   * month holding this date, the first of a range's two months. `[(pickerValue)]` follows
+   * the user's navigation through `pickerValueChange`, which emits the first visible
+   * month; `panelChange` reports the grid as well. Like `defaultMonth`, it takes a
+   * `[start, end]` pair, of which the first date counts. Left `null` (the default), the
+   * panel opens on the value's month each time.
+   */
+  readonly pickerValue = input<Date | null, unknown>(null, {
+    transform: coercePanelMonth,
   });
 
   /**
@@ -956,6 +980,12 @@ export class AndesDatePicker implements ControlValueAccessor {
 
   /** Re-emits the calendar's panel navigation. */
   readonly panelChange = output<AndesCalendarPanelChange>();
+
+  /**
+   * Emits the first day of the first visible month whenever the panel shows another
+   * month, so `[(pickerValue)]` keeps a controlled panel in step with the user.
+   */
+  readonly pickerValueChange = output<Date>();
 
   /** The live day-level selection, including a pending or half-finished one. */
   protected readonly selection = signal<AndesCalendarValue>(null);

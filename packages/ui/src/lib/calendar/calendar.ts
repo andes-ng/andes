@@ -539,6 +539,16 @@ export class AndesCalendar {
   });
 
   /**
+   * The month on show, controlled: the calendar shows the month holding this date (the
+   * first of several, with `numberOfMonths`) and goes back to it whenever it changes.
+   * Pair it with `monthChange` - `[(month)]` - to follow the user's navigation; left
+   * `null`, the calendar navigates on its own from `defaultMonth`.
+   */
+  readonly month = input<Date | null, unknown>(null, {
+    transform: coerceDate,
+  });
+
+  /**
    * The grid to show: `date` (days), `month`, `quarter` or `year`. Changing it
    * switches the grid; the user can still climb and drill from there, and
    * `panelChange` reports where they went. A grid finer than `picker`'s own (days
@@ -711,8 +721,12 @@ export class AndesCalendar {
     return max !== undefined && this.selectedDates().length >= max;
   });
 
-  /** The month a fresh calendar opens on. */
+  /** The month a fresh calendar opens on, or the controlled `month`. */
   private readonly anchorMonth = computed(() => {
+    const controlled = this.month();
+    if (controlled) {
+      return startOfMonth(controlled);
+    }
     const explicit = this.defaultMonth();
     if (explicit) {
       return startOfMonth(explicit);
@@ -1399,18 +1413,20 @@ export class AndesCalendar {
 
     this.focusedDate.set(cell.date);
     if (
-      cell.view === 'date' &&
-      !isWithinBounds(
-        cell.date,
-        this.visibleSpan().start,
-        this.visibleSpan().end,
-      )
+      (cell.view === 'date' &&
+        !isWithinBounds(
+          cell.date,
+          this.visibleSpan().start,
+          this.visibleSpan().end,
+        )) ||
+      (cell.outside && cell.view === 'year')
     ) {
-      // Clicking a leading/trailing cell navigates to the month it belongs to,
-      // rather than selecting a day the user can no longer see in context.
-      this.visibleMonth.set(startOfMonth(cell.date));
-    } else if (cell.outside && cell.view === 'year') {
-      this.visibleMonth.set(startOfMonth(cell.date));
+      // Clicking a leading/trailing cell navigates to the month (or decade) it belongs
+      // to, rather than selecting a day the user can no longer see in context.
+      const month = startOfMonth(cell.date);
+      this.visibleMonth.set(month);
+      this.monthChange.emit(month);
+      this.panelChange.emit({ date: month, view: this.view() });
     }
 
     const date = startOfPeriod(cell.date, this.picker(), this.weekStartsOn());

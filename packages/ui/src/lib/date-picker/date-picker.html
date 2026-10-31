@@ -380,6 +380,7 @@
           [cellTemplate]="cellTemplate()"
           [dateDisabled]="dateDisabled()"
           [defaultMonth]="defaultMonth()"
+          [month]="pickerValue()"
           [disabled]="calendarDisabled()"
           [editingSide]="calendarEditingSide()"
           [maxCount]="maxCount()"
@@ -393,6 +394,7 @@
           [fastNextIcon]="fastNextIcon()"
           (valueChange)="onCalendarValueChange($event)"
           (panelChange)="panelChange.emit($event)"
+          (monthChange)="pickerValueChange.emit($event)"
           (cellHover)="onCalendarHover($event)"
         />
         } @if (timeColumns().length) {

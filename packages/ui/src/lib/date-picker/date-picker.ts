@@ -976,6 +976,25 @@ export class AndesDatePicker implements ControlValueAccessor {
   protected readonly panelDirection = signal<'rtl' | null>(null);
 
   /**
+   * The side of the field the panel is on. The placement's own until the panel has been
+   * measured, then the real one: the overlay flips the panel to the other side when there
+   * is no room, and the entrance animation must grow from the edge facing the field.
+   */
+  protected readonly panelSide = signal<'top' | 'bottom'>('bottom');
+
+  /**
+   * Which of the field's edges the panel lines up with, in the panel's own writing
+   * direction (`start` is the left edge in an LTR panel, the right one in an RTL panel).
+   */
+  protected readonly panelAlign = signal<'start' | 'end'>('start');
+
+  /** The animation frame of a pending re-measure of the open panel, if any. */
+  private panelFrame: number | null = null;
+
+  /** The window whose scroll and resize re-measure the open panel; `null` while closed. */
+  private trackedView: Window | null = null;
+
+  /**
    * Set when focus leaving the picker closes the panel, and read once the close
    * completes. The overlay reports the close only after its exit animation, so a
    * flag held just around the `close()` call would already be gone by then: text kept
@@ -1541,7 +1560,9 @@ export class AndesDatePicker implements ControlValueAccessor {
       if (!untracked(this.open)) {
         this.open.set(true);
       }
+      this.startPanelTracking();
     });
+    this.destroyRef.onDestroy(() => this.stopPanelTracking());
 
     // `[open]` / `[(open)]`: follow the requested state once the view exists.
     afterRenderEffect(() => {
@@ -1706,12 +1727,80 @@ export class AndesDatePicker implements ControlValueAccessor {
     const direction =
       field.ownerDocument.defaultView?.getComputedStyle(field).direction;
     this.panelDirection.set(direction === 'rtl' ? 'rtl' : null);
+    const placement = PLACEMENTS[this.placement()];
+    this.panelSide.set(placement.side === 'top' ? 'top' : 'bottom');
+    this.panelAlign.set(placement.align === 'end' ? 'end' : 'start');
     this.overlay.registerAnchor(field);
     this.overlay.open(this.panel());
+    afterNextRender(() => this.measurePanel(), { injector: this.injector });
     if (focusGrid && this.isTimeOnly()) {
       // No calendar to take focus through `autoFocus`: the first time column does.
       afterNextRender(() => this.focusPanel(), { injector: this.injector });
     }
+  }
+
+  // --- Panel side and alignment ---------------------------------------------
+
+  private startPanelTracking(): void {
+    this.stopPanelTracking();
+    const view = this.field().nativeElement.ownerDocument.defaultView;
+    view?.addEventListener('scroll', this.scheduleMeasure, {
+      capture: true,
+      passive: true,
+    });
+    view?.addEventListener('resize', this.scheduleMeasure, { passive: true });
+    this.trackedView = view;
+  }
+
+  private stopPanelTracking(): void {
+    const view = this.trackedView;
+    this.trackedView = null;
+    view?.removeEventListener('scroll', this.scheduleMeasure, {
+      capture: true,
+    });
+    view?.removeEventListener('resize', this.scheduleMeasure);
+    if (this.panelFrame !== null) {
+      view?.cancelAnimationFrame(this.panelFrame);
+      this.panelFrame = null;
+    }
+  }
+
+  private readonly scheduleMeasure = (): void => {
+    const view = this.trackedView;
+    if (!view || this.panelFrame !== null) {
+      return;
+    }
+    this.panelFrame = view.requestAnimationFrame(() => {
+      this.panelFrame = null;
+      this.measurePanel();
+    });
+  };
+
+  /**
+   * Reads the side and edge the open panel really took, which differ from the placement
+   * once the overlay has flipped or shifted it. The pane is measured rather than the
+   * panel: the panel's entrance animation scales it, and `getBoundingClientRect()`
+   * includes transforms. A no-op without layout (jsdom).
+   */
+  private measurePanel(): void {
+    const pane = this.overlay.panelElement();
+    if (!pane || !this.overlay.isOpen()) {
+      return;
+    }
+    const panel = pane.getBoundingClientRect();
+    if (!panel.width && !panel.height) {
+      return;
+    }
+    const field = this.field().nativeElement.getBoundingClientRect();
+    this.panelSide.set(
+      panel.top + panel.height / 2 >= field.top + field.height / 2
+        ? 'bottom'
+        : 'top',
+    );
+    const leftAligned =
+      Math.abs(panel.left - field.left) <= Math.abs(panel.right - field.right);
+    const rtl = this.panelDirection() === 'rtl';
+    this.panelAlign.set(leftAligned !== rtl ? 'start' : 'end');
   }
 
   /** Focuses the input being edited (the start one, unless the end is active). */
@@ -2290,6 +2379,7 @@ export class AndesDatePicker implements ControlValueAccessor {
       this.applyValue(this.committed());
     }
     this.hoverText.set(null);
+    this.stopPanelTracking();
     // Text kept by `preserveInvalidOnBlur` outlives a close caused by leaving.
     if (!(this.closingForBlur && this.preserveInvalidOnBlur())) {
       this.startDraft.set(null);

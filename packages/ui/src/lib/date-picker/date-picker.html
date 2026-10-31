@@ -258,6 +258,8 @@
     data-slot="date-picker-panel"
     [class]="panelClass()"
     [attr.dir]="panelDirection()"
+    [attr.data-side]="panelSide()"
+    [attr.data-align]="panelAlign()"
     [attr.aria-label]="panelName()"
     (mousedown)="onPanelMousedown($event)"
     (pointermove)="onPanelPointerMove($event)"

@@ -97,6 +97,41 @@ describe('AndesDatePicker styles', () => {
     });
   });
 
+  describe('panel origin', () => {
+    const panel = '.andes-date-picker__panel';
+    const origin = (selector: string) =>
+      declaredValue(source, selector, '--_date-picker-origin-x');
+
+    it('grows from the field-facing edge: top by default, bottom on a top panel', () => {
+      expect(declaredValue(source, panel, '--_date-picker-origin-y')).toBe(
+        'top',
+      );
+      expect(
+        declaredValue(
+          source,
+          `${panel}[data-side='top']`,
+          '--_date-picker-origin-y',
+        ),
+      ).toBe('bottom');
+    });
+
+    it('takes the left or right edge from the alignment, swapped under dir="rtl"', () => {
+      expect(origin(panel)).toBe('left');
+      expect(origin(`${panel}[data-align='end']`)).toBe('right');
+      expect(origin(`${panel}[dir='rtl']`)).toBe('right');
+      expect(origin(`${panel}[dir='rtl'][data-align='end']`)).toBe('left');
+    });
+
+    it('uses those variables for both the entrance and the exit, and no fixed corner', () => {
+      for (const state of ["[data-state='open']", '[data-andes-closing]']) {
+        expect(
+          declaredValue(motion, `${panel}${state}`, 'transform-origin'),
+        ).toBe('var(--_date-picker-origin-y) var(--_date-picker-origin-x)');
+      }
+      expect(css.includes('transform-origin: top left')).toBe(false);
+    });
+  });
+
   describe('panel chrome', () => {
     const panel = '::ng-deep .andes-date-picker__panel';
 

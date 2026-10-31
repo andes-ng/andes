@@ -741,16 +741,43 @@
   }
 }
 
+/*
+  Where the panel grows from: the edge facing the field, on the side the field's edge it lines
+  up with. `data-side` and `data-align` are measured once the overlay has positioned the panel,
+  so a panel flipped for lack of room still grows from the edge that faces the field.
+  `data-align` is in the panel's own writing direction, so `dir="rtl"` swaps the two edges.
+*/
+.andes-date-picker__panel {
+  --_date-picker-origin-x: left;
+  --_date-picker-origin-y: top;
+}
+
+.andes-date-picker__panel[data-align='end'] {
+  --_date-picker-origin-x: right;
+}
+
+.andes-date-picker__panel[data-side='top'] {
+  --_date-picker-origin-y: bottom;
+}
+
+.andes-date-picker__panel[dir='rtl'] {
+  --_date-picker-origin-x: right;
+}
+
+.andes-date-picker__panel[dir='rtl'][data-align='end'] {
+  --_date-picker-origin-x: left;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .andes-date-picker__panel[data-state='open'] {
-    transform-origin: top left;
+    transform-origin: var(--_date-picker-origin-y) var(--_date-picker-origin-x);
     animation: andes-date-picker-panel-enter
       var(--andes-motion-duration-mid, 150ms)
       var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1));
   }
 
   .andes-date-picker__panel[data-andes-closing] {
-    transform-origin: top left;
+    transform-origin: var(--_date-picker-origin-y) var(--_date-picker-origin-x);
     animation: andes-date-picker-panel-exit
       var(--andes-motion-duration-fast, 120ms)
       var(--andes-motion-ease-in, cubic-bezier(0.4, 0, 1, 1)) forwards;

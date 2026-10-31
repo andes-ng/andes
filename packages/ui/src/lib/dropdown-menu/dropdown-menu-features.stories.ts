@@ -15,6 +15,7 @@ import {
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
+import { AndesInput } from '../input/input';
 import { AndesDropdownMenu } from './dropdown-menu';
 import { AndesDropdownMenuContent } from './dropdown-menu-content';
 import { AndesDropdownMenuItem } from './dropdown-menu-item';
@@ -48,38 +49,6 @@ const ICONS = provideIcons({
 
 const NOTE =
   'font: 0.75rem var(--andes-font-family), sans-serif; color: var(--andes-color-muted-foreground); margin: 0 0 0.75rem; max-width: 34rem;';
-
-/**
- * Demo search field styled like the library's own fields: one focus indicator (primary
- * border plus a soft 2px ring), never the browser's outline drawn as a second frame.
- */
-const FIELD_STYLES = `
-  <style>
-    .sb-field-input {
-      box-sizing: border-box;
-      width: 100%;
-      height: 2rem;
-      padding: 0 0.6875rem;
-      border: 1px solid var(--andes-color-input);
-      border-radius: var(--andes-radius-md);
-      background-color: var(--andes-color-background);
-      color: var(--andes-color-foreground);
-      font: inherit;
-      line-height: 1.375rem;
-      outline: none;
-      transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
-    }
-    .sb-field-input::placeholder { color: var(--andes-color-muted-foreground); }
-    .sb-field-input:hover {
-      border-color: color-mix(in srgb, var(--andes-color-primary) 65%, var(--andes-color-input));
-    }
-    .sb-field-input:focus {
-      border-color: var(--andes-color-primary);
-      box-shadow: 0 0 0 2px color-mix(in srgb, var(--andes-color-primary) 20%, transparent);
-      outline: none;
-    }
-  </style>
-`;
 
 /**
  * The other two ways to open the menu, side by side. `trigger="hover"` opens after 150ms of
@@ -364,6 +333,7 @@ export const CustomPopup: Story = {
   render: () => ({
     moduleMetadata: {
       imports: [
+        AndesInput,
         NgIcon,
         NgTemplateOutlet,
         AndesButton,
@@ -390,7 +360,7 @@ export const CustomPopup: Story = {
           item.label.toLowerCase().includes(query.trim().toLowerCase()),
         ),
     },
-    template: `${FIELD_STYLES}
+    template: `
       <div>
         <p style="${NOTE}">Last action: <strong>{{ last || '-' }}</strong></p>
         <andes-dropdown-menu
@@ -403,12 +373,11 @@ export const CustomPopup: Story = {
         </andes-dropdown-menu>
         <ng-template #popup let-menu let-close="close">
           <div style="padding: var(--andes-space-2); border-bottom: 1px solid var(--andes-color-border);">
-            <input
+            <andes-input
               aria-label="Filter projects"
               placeholder="Filter projects…"
-              [value]="query"
-              (input)="query = $any($event.target).value"
-              class="sb-field-input"
+              size="sm"
+              [(value)]="query"
             />
           </div>
           <ng-container *ngTemplateOutlet="menu" />

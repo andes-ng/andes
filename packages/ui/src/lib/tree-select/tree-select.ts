@@ -169,7 +169,7 @@ function toKeys(
  * A multiple select shows a tag per node. `maxTagCount` collapses the tags past a number - or,
  * `'responsive'`, past what fits on one row - into a "+ N" tag, which opens a popover listing
  * (and removing) the hidden ones; `maxTagPopover="false"` makes it plain text instead.
- * `maxTagTextLength` cuts long tags short.
+ * `maxTagTextLength` cuts long tags short, and `maxCount` caps how many nodes the value holds.
  *
  * ## Search
  *
@@ -314,6 +314,14 @@ export class AndesTreeSelect
    * tags. Off, it is plain text with the hidden titles as a native tooltip.
    */
   readonly maxTagPopover = input(true, { transform: booleanAttribute });
+  /**
+   * Most nodes a multiple or checkable select holds. Once the value reaches it, every other
+   * node in the panel is disabled until one is taken off; a check that would cascade past it
+   * is refused.
+   */
+  readonly maxCount = input<number | undefined, unknown>(undefined, {
+    transform: optionalNumber,
+  });
   /** Longest tag text, in characters, before it is cut short with "...". */
   readonly maxTagTextLength = input<number | undefined, unknown>(undefined, {
     transform: optionalNumber,
@@ -539,6 +547,24 @@ export class AndesTreeSelect
   protected readonly omittedTemplate = computed(() => {
     const placeholder = this.maxTagPlaceholder();
     return placeholder instanceof TemplateRef ? placeholder : null;
+  });
+
+  /** Whether the value holds `maxCount` nodes. */
+  private readonly atMax = computed(() => {
+    const max = this.maxCount();
+    return (
+      this.multiMode() && max !== undefined && this.valueKeys().length >= max
+    );
+  });
+  /** Every node outside the selection, locked in the tree while `maxCount` is reached. */
+  protected readonly lockedKeys = computed<AndesTreeKey[]>(() => {
+    if (!this.atMax()) {
+      return [];
+    }
+    const keep = this.checkable()
+      ? this.checkedSet()
+      : new Set(this.valueKeys());
+    return this.index().order.filter((key) => !keep.has(key));
   });
 
   protected readonly treeSelectedKeys = computed(() =>
@@ -1067,6 +1093,10 @@ export class AndesTreeSelect
 
   protected onTreeSelect(event: AndesTreeSelectEvent): void {
     if (this.multiple()) {
+      if (this.exceedsMax(event.selectedKeys)) {
+        this.tree()?.selectedKeys.set(this.treeSelectedKeys());
+        return;
+      }
       this.commit(event.selectedKeys);
     } else {
       this.commit(event.selected ? event.key : null);
@@ -1086,7 +1116,23 @@ export class AndesTreeSelect
   }
 
   protected onTreeCheck(event: AndesTreeCheckEvent): void {
-    this.commit(this.fromCheckState(new Set(event.checkedKeys)));
+    const next = this.fromCheckState(new Set(event.checkedKeys));
+    if (this.exceedsMax(next)) {
+      // A branch whose leaves would overshoot maxCount: the tree takes the check back.
+      this.tree()?.checkedKeys.set(this.treeCheckedKeys());
+      return;
+    }
+    this.commit(next);
+  }
+
+  /** Whether a new selection grows past `maxCount` (shrinking one never does). */
+  private exceedsMax(next: readonly AndesTreeKey[]): boolean {
+    const max = this.maxCount();
+    return (
+      max !== undefined &&
+      next.length > max &&
+      next.length > this.valueKeys().length
+    );
   }
 
   private fromCheckState(checked: ReadonlySet<AndesTreeKey>): AndesTreeKey[] {

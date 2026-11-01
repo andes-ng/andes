@@ -37,6 +37,7 @@ function cities(): AndesTreeNode[] {
       [maxTagCount]="maxTagCount()"
       [maxTagPopover]="maxTagPopover()"
       [maxTagTextLength]="maxTagTextLength()"
+      [maxCount]="maxCount()"
       (selectionChange)="changes.push($event)"
     />
   `,
@@ -54,6 +55,7 @@ class TagsHost {
   readonly maxTagCount = signal<AndesTreeSelectMaxTagCount | undefined>(2);
   readonly maxTagPopover = signal(true);
   readonly maxTagTextLength = signal<number | undefined>(undefined);
+  readonly maxCount = signal<number | undefined>(undefined);
   readonly changes: AndesTreeSelectModel[] = [];
 }
 
@@ -257,5 +259,92 @@ describe('AndesTreeSelect tags', () => {
     const keys: AndesTreeKey[] = ['lima'];
     setup((host) => host.value.set(keys));
     expect(tagTexts()).toEqual(['Lima']);
+  });
+
+  describe('maxCount', () => {
+    const item = (title: string) =>
+      Array.from(
+        document.querySelectorAll<HTMLElement>(
+          '.andes-tree-select__panel [role="treeitem"]',
+        ),
+      ).find(
+        (el) =>
+          el
+            .querySelector(':scope > .andes-tree__row .andes-tree__title')
+            ?.textContent?.trim() === title,
+      ) as HTMLElement;
+    const open = () => {
+      (
+        field().querySelector('.andes-tree-select__trigger') as HTMLElement
+      ).click();
+      fixture.detectChanges();
+    };
+
+    it('disables every other node once the value holds maxCount', () => {
+      const host = setup((h) => {
+        h.maxTagCount.set(undefined);
+        h.maxCount.set(2);
+        h.value.set(['lima']);
+      });
+      open();
+      expect(item('Cusco').hasAttribute('aria-disabled')).toBe(false);
+
+      (
+        item('Cusco').querySelector(':scope > .andes-tree__row') as HTMLElement
+      ).click();
+      fixture.detectChanges();
+      expect(host.value()).toEqual(['lima', 'cusco']);
+      expect(item('Arequipa').getAttribute('aria-disabled')).toBe('true');
+      // A selected node stays enabled, so it can be taken off again.
+      expect(item('Cusco').hasAttribute('aria-disabled')).toBe(false);
+
+      (
+        item('Arequipa').querySelector(
+          ':scope > .andes-tree__row',
+        ) as HTMLElement
+      ).click();
+      fixture.detectChanges();
+      expect(host.value()).toEqual(['lima', 'cusco']);
+
+      (
+        item('Cusco').querySelector(':scope > .andes-tree__row') as HTMLElement
+      ).click();
+      fixture.detectChanges();
+      expect(host.value()).toEqual(['lima']);
+      expect(item('Arequipa').hasAttribute('aria-disabled')).toBe(false);
+    });
+
+    it('refuses a check that would cascade past maxCount', () => {
+      const host = setup((h) => {
+        h.checkable.set(true);
+        h.maxTagCount.set(undefined);
+        h.maxCount.set(3);
+        h.value.set(['iquitos']);
+      });
+      open();
+      const box = (title: string) =>
+        item(title).querySelector(
+          ':scope > .andes-tree__row .andes-tree__checkbox',
+        ) as HTMLElement;
+
+      // Perú holds four leaves: with Iquitos that makes five.
+      box('Perú').click();
+      fixture.detectChanges();
+      expect(host.value()).toEqual(['iquitos']);
+      expect(box('Perú').getAttribute('data-state')).toBe('unchecked');
+
+      (
+        item('Perú').querySelector(
+          ':scope > .andes-tree__row .andes-tree__switcher',
+        ) as HTMLElement
+      ).click();
+      fixture.detectChanges();
+      box('Lima').click();
+      fixture.detectChanges();
+      box('Cusco').click();
+      fixture.detectChanges();
+      expect(host.value()).toEqual(['lima', 'cusco', 'iquitos']);
+      expect(item('Arequipa').getAttribute('aria-disabled')).toBe('true');
+    });
   });
 });

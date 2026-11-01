@@ -14,6 +14,7 @@ import {
   andesHighlightSegments,
   andesMoveTreeNode,
   andesToggleCheck,
+  andesTreeFromFlat,
   andesTreeTitleMatches,
 } from './tree-utils';
 
@@ -461,5 +462,61 @@ describe('tree utils', () => {
         (moved[0]['items'] as AndesTreeNode[]).map((n) => n['id']),
       ).toEqual([3, 2]);
     });
+  });
+});
+
+describe('andesTreeFromFlat', () => {
+  it('nests flat id / pId items, keeping the sibling order and the extra fields', () => {
+    const items = [
+      { id: 1, pId: null, title: 'Lima' },
+      { id: 2, pId: 1, title: 'Miraflores', zone: 'south' },
+      { id: 3, pId: 0, title: 'Cusco' },
+      { id: 4, pId: 1, title: 'Barranco' },
+    ];
+    const tree = andesTreeFromFlat(items, { rootPId: 0 });
+
+    expect(tree.map((node) => node.key)).toEqual([1, 3]);
+    expect(tree[0].children?.map((node) => node.title)).toEqual([
+      'Miraflores',
+      'Barranco',
+    ]);
+    expect(tree[0].children?.[0]).toMatchObject({ key: 2, zone: 'south' });
+    // A leaf gets no children array, so lazy loading and isLeaf behave as for nested data.
+    expect('children' in (tree[1] as object)).toBe(false);
+    // The input is not mutated.
+    expect(items[0]).toEqual({ id: 1, pId: null, title: 'Lima' });
+  });
+
+  it('reads other field names and keeps a key the item already has', () => {
+    const tree = andesTreeFromFlat(
+      [
+        { code: 'a', parent: undefined, key: 'root-a', title: 'A' },
+        { code: 'b', parent: 'a', title: 'B' },
+      ],
+      { id: 'code', pId: 'parent' },
+    );
+    expect(tree).toHaveLength(1);
+    expect(tree[0].key).toBe('root-a');
+    expect(tree[0].children?.[0].key).toBe('b');
+  });
+
+  it('roots an item whose parent is unknown or itself, and leaves a cycle out', () => {
+    const tree = andesTreeFromFlat([
+      { id: 'orphan', pId: 'missing', title: 'Orphan' },
+      { id: 'self', pId: 'self', title: 'Self' },
+      { id: 'x', pId: 'y', title: 'X' },
+      { id: 'y', pId: 'x', title: 'Y' },
+    ]);
+    expect(tree.map((node) => node.key)).toEqual(['orphan', 'self']);
+  });
+
+  it('feeds the tree index', () => {
+    const index = andesCreateTreeIndex(
+      andesTreeFromFlat([
+        { id: 1, pId: null, title: 'Lima' },
+        { id: 2, pId: 1, title: 'Miraflores' },
+      ]),
+    );
+    expect(index.byKey.get(2)?.parent?.key).toBe(1);
   });
 });

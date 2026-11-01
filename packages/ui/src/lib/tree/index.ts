@@ -19,6 +19,7 @@ export type {
   AndesTreeExpandEvent,
   AndesTreeFieldNames,
   AndesTreeFilterResult,
+  AndesTreeFromFlatOptions,
   AndesTreeIndex,
   AndesTreeKey,
   AndesTreeLabels,
@@ -48,5 +49,6 @@ export {
   andesIsTreeDescendantOrSelf,
   andesMoveTreeNode,
   andesToggleCheck,
+  andesTreeFromFlat,
   andesTreeTitleMatches,
 } from './tree-utils';

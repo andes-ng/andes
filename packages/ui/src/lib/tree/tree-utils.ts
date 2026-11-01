@@ -7,11 +7,65 @@ import type {
   AndesTreeEntry,
   AndesTreeFieldNames,
   AndesTreeFilterResult,
+  AndesTreeFromFlatOptions,
   AndesTreeIndex,
   AndesTreeKey,
   AndesTreeNode,
   AndesTreeTextSegment,
 } from './tree-types';
+
+/* -------------------------------------------------------------------------------------------
+ * Flat data
+ * ----------------------------------------------------------------------------------------- */
+
+/**
+ * Builds `nodes` from flat data, where each item names its parent by id (`{ id, pId, title }`)
+ * instead of holding its children - rows from a table, say.
+ *
+ * ```ts
+ * nodes = andesTreeFromFlat([
+ *   { id: 1, pId: null, title: 'Lima' },
+ *   { id: 2, pId: 1, title: 'Miraflores' },
+ * ]);
+ * ```
+ *
+ * Every item is copied with its id (unique across the list) as `key`, unless it already has a
+ * `key`, and, when it has children, a `children` array; the input is left untouched and
+ * siblings keep their order. An item whose parent id is `null`, `undefined`, `rootPId`, its own
+ * id or the id of no item is a root. Items that only lead back to each other (a cycle, with no
+ * root above them) are left out.
+ */
+export function andesTreeFromFlat<T extends Record<string, unknown>>(
+  items: readonly T[],
+  options: AndesTreeFromFlatOptions = {},
+): AndesTreeNode[] {
+  const idField = options.id ?? 'id';
+  const parentField = options.pId ?? 'pId';
+  const rootPId = options.rootPId;
+
+  const nodes = new Map<unknown, AndesTreeNode>();
+  for (const item of items) {
+    const id = item[idField];
+    nodes.set(id, { ...item, key: (item['key'] ?? id) as AndesTreeKey });
+  }
+
+  const roots: AndesTreeNode[] = [];
+  for (const item of items) {
+    const node = nodes.get(item[idField]) as AndesTreeNode;
+    const parentId = item[parentField];
+    const parent =
+      parentId === null || parentId === undefined || parentId === rootPId
+        ? undefined
+        : nodes.get(parentId);
+    if (parent && parent !== node) {
+      (parent.children ??= []).push(node);
+    } else {
+      roots.push(node);
+    }
+  }
+
+  return roots;
+}
 
 /* -------------------------------------------------------------------------------------------
  * Indexing

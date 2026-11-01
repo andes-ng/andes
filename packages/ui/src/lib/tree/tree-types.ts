@@ -62,6 +62,19 @@ export interface AndesTreeNode {
   [field: string]: unknown;
 }
 
+/** Where {@link andesTreeFromFlat} reads each item's id and its parent's id. */
+export interface AndesTreeFromFlatOptions {
+  /** The property holding an item's id, which becomes its `key`. Default `'id'`. */
+  id?: string;
+  /** The property holding the id of the item's parent. Default `'pId'`. */
+  pId?: string;
+  /**
+   * The parent id that marks a root. Items whose parent id is `null`, `undefined`, this value,
+   * or the id of no item in the list are roots.
+   */
+  rootPId?: AndesTreeKey | null;
+}
+
 /** Renames the properties the tree reads from each node object. */
 export interface AndesTreeFieldNames {
   key?: string;

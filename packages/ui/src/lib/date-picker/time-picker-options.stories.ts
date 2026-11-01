@@ -267,11 +267,10 @@ export const CustomCells: Story = {
     template: `
       <ng-template #cell let-shown let-unit="unit" let-text="text">
         @if (unit === 'hour') {
-          <span [style.font-weight]="shown >= 9 && shown <= 17 ? 700 : 400">
+          <!-- Every hour keeps a slot for the dot, so the numbers stay in one column. -->
+          <span style="display: inline-flex; align-items: center; gap: 0.25rem;" [style.font-weight]="shown >= 9 && shown <= 17 ? 700 : 400">
             {{ text }}
-            @if (shown >= 9 && shown <= 17) {
-              <span style="display: inline-block; width: 4px; height: 4px; margin-left: 2px; border-radius: 50%; background: var(--andes-color-success);"></span>
-            }
+            <span style="flex: none; width: 4px; height: 4px; border-radius: 50%;" [style.background]="shown >= 9 && shown <= 17 ? 'var(--andes-color-success)' : 'transparent'"></span>
           </span>
         } @else if (unit === 'minute') {
           <span [style.font-weight]="shown % 15 === 0 ? 700 : 400">{{ text }}</span>
@@ -281,7 +280,7 @@ export const CustomCells: Story = {
       </ng-template>
       <ng-template #twelveCell let-shown let-unit="unit" let-text="text">
         @if (unit === 'meridiem') {
-          <span style="font-size: 0.75rem;">{{ shown === 0 ? 'Morning' : 'Afternoon' }}</span>
+          <span>{{ shown === 0 ? 'Morning' : 'Afternoon' }}</span>
         } @else {
           <span>{{ text }}</span>
         }

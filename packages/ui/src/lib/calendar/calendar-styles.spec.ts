@@ -264,4 +264,68 @@ describe('AndesCalendar styles', () => {
       ).toBe('SelectedItemText');
     });
   });
+
+  describe('cell chip and band', () => {
+    // Each part of the shared day and period rules.
+    const cell = '.andes-calendar__period';
+    const band = '.andes-calendar__period::before';
+    const content =
+      ':is(.andes-calendar__day, .andes-calendar__period) > .andes-calendar__cell-content';
+
+    it('centres one chip-tall track in the cell, which the band shares', () => {
+      expect(declaredValue(source, cell, 'display')).toBe('inline-grid');
+      expect(declaredValue(source, cell, 'grid-template-columns')).toBe('100%');
+      expect(declaredValue(source, cell, 'align-content')).toBe('center');
+      expect(declaredValue(source, cell, 'justify-items')).toBe('center');
+      // The band fills that track, so it is as tall as the chip whatever the chip holds.
+      expect(declaredValue(source, band, 'position')).toBe('absolute');
+      expect(declaredValue(source, band, 'grid-area')).toBe('1 / 1 / 2 / 2');
+      expect(declaredValue(source, band, 'inset-block')).toBe('0');
+      expect(declaredValue(source, band, 'inset-inline')).toBe('0');
+      expect(declaredValue(source, band, 'height')).toBeUndefined();
+      expect(declaredValue(source, band, 'transform')).toBeUndefined();
+    });
+
+    it('grows a cellTemplate chip to its content, 4px clear of it, never under 24px', () => {
+      expect(declaredValue(source, content, 'height')).toBe('auto');
+      expect(declaredValue(source, content, 'min-height')).toBe(
+        'var(--andes-calendar-chip)',
+      );
+      expect(declaredValue(source, content, 'padding-block')).toBe(
+        'var(--andes-space-1)',
+      );
+      // The default chip, the day number alone, stays a fixed 24px square.
+      expect(
+        declaredValue(
+          source,
+          ':is(.andes-calendar__day, .andes-calendar__period) > :is(.andes-calendar__cell-text, .andes-calendar__cell-content)',
+          'height',
+        ),
+      ).toBe('var(--andes-calendar-chip)');
+    });
+
+    it('lets a fullCellTemplate fill the whole cell', () => {
+      expect(
+        declaredValue(
+          source,
+          ':is(.andes-calendar__day, .andes-calendar__period):has(> .andes-calendar__cell-content--full)',
+          'align-content',
+        ),
+      ).toBe('stretch');
+      const full =
+        ':is(.andes-calendar__day, .andes-calendar__period) > .andes-calendar__cell-content--full';
+      expect(declaredValue(source, full, 'height')).toBe('100%');
+      expect(declaredValue(source, full, 'padding-block')).toBe('0');
+    });
+
+    it('keeps the fullscreen cells a column of their own', () => {
+      expect(
+        declaredValue(
+          source,
+          '.andes-calendar--fullscreen .andes-calendar__day',
+          'display',
+        ),
+      ).toBe('inline-flex');
+    });
+  });
 });

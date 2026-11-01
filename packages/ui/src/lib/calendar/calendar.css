@@ -272,14 +272,18 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-/* Cells: the button is the 36px hit area; its text span is the visible chip. */
+/* Cells: the button is the 36px hit area; its text span is the visible chip. The button is a
+   one-track grid whose row is as tall as the chip and centred, so the band (the `::before`,
+   placed in that same track) is always exactly as tall as the chip, also when a cellTemplate
+   grows the chip past its 24px. */
 
 .andes-calendar__day,
 .andes-calendar__period {
   position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: inline-grid;
+  grid-template-columns: 100%;
+  align-content: center;
+  justify-items: center;
   height: var(--andes-calendar-cell);
   padding: 0;
   border: 0;
@@ -297,15 +301,15 @@
   height: 4.125rem;
 }
 
-/* The band behind the chip: drawn only for range / preview / week states. */
+/* The band behind the chip: drawn only for range / preview / week states. Absolutely placed in
+   the cell's one grid area, it spans the cell's width and the chip's height. */
 .andes-calendar__day::before,
 .andes-calendar__period::before {
   position: absolute;
+  grid-area: 1 / 1 / 2 / 2;
+  inset-block: 0;
   inset-inline: 0;
-  top: 50%;
   box-sizing: border-box;
-  height: var(--andes-calendar-chip);
-  transform: translateY(-50%);
   content: '';
   transition: background-color var(--andes-motion-duration-fast, 120ms)
     var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1));
@@ -336,15 +340,30 @@
   padding-inline: var(--andes-space-2);
 }
 
+/* A cellTemplate's content (a second line, a dot, a price) sets the chip's height: at least
+   the 24px chip, and 4px clear of its content above and below. */
 .andes-calendar__cell-content {
   min-width: 0;
 }
 
-/* fullCellTemplate owns the whole cell, the number included. */
+/* prettier-ignore */
+:is(.andes-calendar__day, .andes-calendar__period) > .andes-calendar__cell-content {
+  height: auto;
+  min-height: var(--andes-calendar-chip);
+  padding-block: var(--andes-space-1);
+}
+
+/* fullCellTemplate owns the whole cell, the number included: the row stretches to the cell. */
+/* prettier-ignore */
+:is(.andes-calendar__day, .andes-calendar__period):has(> .andes-calendar__cell-content--full) {
+  align-content: stretch;
+}
+
 /* prettier-ignore */
 :is(.andes-calendar__day, .andes-calendar__period) > .andes-calendar__cell-content--full {
   width: 100%;
   height: 100%;
+  padding-block: 0;
 }
 
 /* `accent-hover`, not `accent`: in the dark theme accent is the popover color itself, so
@@ -606,6 +625,7 @@
 
 .andes-calendar--fullscreen .andes-calendar__day,
 .andes-calendar--fullscreen .andes-calendar__period {
+  display: inline-flex;
   flex-direction: column;
   align-items: stretch;
   justify-content: flex-start;
@@ -667,6 +687,7 @@
 .andes-calendar--fullscreen :is(.andes-calendar__day, .andes-calendar__period):hover:not([aria-disabled='true']) > *,
 .andes-calendar--fullscreen .andes-calendar__day--selected > * {
   min-width: 0;
+  min-height: 0;
   height: auto;
   padding: 0;
   border: 0;

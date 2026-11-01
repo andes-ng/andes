@@ -4,7 +4,7 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 
-import { declaredValue } from '../../testing/computed-style';
+import { atRuleBody, declaredValue } from '../../testing/computed-style';
 import { AndesForm } from './form';
 import { AndesFormControl } from './form-control';
 import { AndesFormField } from './form-field';
@@ -13,24 +13,6 @@ const CSS = readFileSync(
   'packages/ui/src/lib/form-field/form-field.css',
   'utf8',
 );
-
-/** The body of the first at-rule whose prelude is `prelude`, braces matched. jsdom evaluates
- *  neither container nor media queries, so the specs read the declared rules instead. */
-function atRuleBody(css: string, prelude: string): string {
-  const start = css.indexOf(`${prelude} {`);
-  if (start < 0) {
-    throw new Error(`no "${prelude}" block`);
-  }
-  let depth = 0;
-  for (let i = css.indexOf('{', start); i < css.length; i++) {
-    if (css[i] === '{') {
-      depth++;
-    } else if (css[i] === '}' && --depth === 0) {
-      return css.slice(css.indexOf('{', start) + 1, i);
-    }
-  }
-  throw new Error(`unclosed "${prelude}" block`);
-}
 
 const NARROW = atRuleBody(CSS, '@media (max-width: 575px)');
 

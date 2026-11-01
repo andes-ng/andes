@@ -31,6 +31,7 @@ import { filter, first, map, of } from 'rxjs';
 import {
   ANDES_FORM,
   type AndesFormApi,
+  type AndesFormClassNames,
   type AndesFormColumn,
   type AndesFormErrorMessages,
   type AndesFormFeedbackIconContext,
@@ -40,9 +41,11 @@ import {
   type AndesFormLayout,
   type AndesFormMessageMode,
   type AndesFormRequiredMark,
+  type AndesFormRequiredMarkPosition,
   type AndesFormScrollOptions,
   type AndesFormShowErrorsOn,
   type AndesFormSize,
+  type AndesFormStyles,
   type AndesFormVariant,
 } from './form-field-tokens';
 import { ANDES_FORM_LOCALE, ANDES_FORM_LOCALE_EN } from './form-locale';
@@ -98,10 +101,11 @@ export function collectAndesFormErrors(
 
 /**
  * Form-wide layout and presentation defaults for every `AndesFormField` inside it (`layout`,
- * `labelCol`, `wrapperCol`, `labelAlign`, `labelWrap`, `colon`, `requiredMark`, `size`,
- * `variant`, `showErrorsOn`, `feedbackIcons`, `errorMessages`, `scrollToFirstError`), plus a
+ * `labelCol`, `wrapperCol`, `labelAlign`, `labelWrap`, `colon`, `requiredMark`,
+ * `requiredMarkPosition`, `size`, `variant`, `showErrorsOn`, `feedbackIcons`, `errorMessages`,
+ * `messageMode`, `validateDebounce`, `classNames`, `styles`, `scrollToFirstError`), plus a
  * few thin conveniences over the Angular form on the same element: `disabled`,
- * `validSubmit` / `invalidSubmit` and `scrollToField()`.
+ * `validSubmit` / `invalidSubmit`, `canSubmit` and `scrollToField()`.
  *
  * It is an attribute directive, not a component, so it composes with - rather than replaces -
  * Angular's own form directives on the same element:
@@ -135,6 +139,8 @@ export function collectAndesFormErrors(
     '[attr.data-size]': 'size() ?? null',
     '[attr.data-variant]': 'variant() ?? null',
     '[attr.data-disabled]': 'disabled() ? "" : null',
+    '[class]': 'classNames().root ?? ""',
+    '[style]': 'styles().root ?? null',
     '(submit)': 'onSubmit()',
     '(reset)': 'onNativeReset()',
   },
@@ -169,6 +175,11 @@ export class AndesForm implements AndesFormApi {
   /** Trailing colon after each label. Only ever drawn in `horizontal` layout. */
   readonly colon = input(true, { transform: booleanAttribute });
   readonly requiredMark = input<AndesFormRequiredMark>(true);
+  /** Where the asterisk of a required field sits in its label: `start` (before the text, the
+   *  default) or `end` (after it, before the colon and the tooltip). Each field's own
+   *  `requiredMarkPosition` wins. A horizontal label cut short with an ellipsis takes an `end`
+   *  asterisk with the rest of its text: let long labels wrap (`labelWrap`) to keep it. */
+  readonly requiredMarkPosition = input<AndesFormRequiredMarkPosition>('start');
   /** Suffix used by `requiredMark="optional"`. Defaults to the provided locale's
    *  (`provideAndesFormLocale()`), else `(optional)`. */
   readonly optionalText = input(
@@ -208,6 +219,11 @@ export class AndesForm implements AndesFormApi {
   /** Every failing validator's message (`all`), or only the first; each field's own
    *  `messageMode` wins. */
   readonly messageMode = input<AndesFormMessageMode>('all');
+  /** Classes for the parts of the form: `root` is this element, the others are the default
+   *  for every field inside, before the field's own. */
+  readonly classNames = input<AndesFormClassNames>({});
+  /** Inline styles for the same parts as {@link classNames}. */
+  readonly styles = input<AndesFormStyles>({});
   /**
    * Prefix of the ids the fields generate: a field whose control sits at `address.city` gets
    * `<name>_address_city`, stable across renders and server-side rendering, instead of a

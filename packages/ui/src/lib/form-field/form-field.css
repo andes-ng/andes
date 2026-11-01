@@ -273,6 +273,13 @@ andes-form-label {
   color: var(--andes-color-danger-text, var(--andes-color-danger));
 }
 
+/* requiredMarkPosition="end": the asterisk follows the text, so its gap moves to the other side
+   (logical properties, so it mirrors in right-to-left text). */
+.andes-form-label__required--end {
+  margin-inline-start: var(--andes-space-1);
+  margin-inline-end: 0;
+}
+
 .andes-form-label__optional {
   margin-inline-start: var(--andes-space-1);
   font-weight: normal;

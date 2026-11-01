@@ -106,6 +106,8 @@ export function injectAndesControlErrors(
     <p
       class="andes-form-error"
       [id]="elementId()"
+      [class]="field?.partClass('error') ?? ''"
+      [style]="field?.partStyle('error') ?? null"
       role="alert"
       animate.leave="andes-form-field__message--leave"
     >

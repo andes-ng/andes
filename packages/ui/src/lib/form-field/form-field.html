@@ -13,16 +13,26 @@
   [class.andes-form-field--label-wrap]="resolvedLabelWrap()"
   [attr.data-status]="status()"
   [attr.data-path]="controlPath()"
+  [class]="partClass('root')"
+  [style]="partStyle('root')"
   [style.grid-template-columns]="gridColumns()"
 >
-  <div class="andes-form-field__label">
+  <div
+    class="andes-form-field__label"
+    [class]="partClass('label')"
+    [style]="partStyle('label')"
+  >
     <ng-content select="andes-form-label" />
     @if (label() && !projectedLabel()) {
     <andes-form-label>{{ label() }}</andes-form-label>
     }
   </div>
 
-  <div class="andes-form-field__control">
+  <div
+    class="andes-form-field__control"
+    [class]="partClass('control')"
+    [style]="partStyle('control')"
+  >
     <ng-content />
     @if (feedbackIcon(); as icon) {
     <span
@@ -97,6 +107,8 @@
     @if (helpMessages().length > 0) {
     <div
       class="andes-form-field__help"
+      [class]="partClass(messagesPart())"
+      [style]="partStyle(messagesPart())"
       [id]="helpId()"
       [attr.role]="helpRole()"
       animate.leave="andes-form-field__message--leave"
@@ -106,7 +118,14 @@
       }
     </div>
     } @if (extra()) {
-    <div class="andes-form-field__extra" [id]="extraId()">{{ extra() }}</div>
+    <div
+      class="andes-form-field__extra"
+      [class]="partClass('extra')"
+      [style]="partStyle('extra')"
+      [id]="extraId()"
+    >
+      {{ extra() }}
+    </div>
     }
   </div>
 </div>

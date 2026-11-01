@@ -38,6 +38,7 @@ export {
 } from './form-field-tokens';
 export type {
   AndesFormApi,
+  AndesFormClassNames,
   AndesFormColumn,
   AndesFormErrorContext,
   AndesFormErrorMessage,
@@ -49,11 +50,14 @@ export type {
   AndesFormLabelAlign,
   AndesFormLayout,
   AndesFormMessageMode,
+  AndesFormPart,
   AndesFormRequiredMark,
   AndesFormRequiredMarkContext,
+  AndesFormRequiredMarkPosition,
   AndesFormScrollOptions,
   AndesFormShowErrorsOn,
   AndesFormSize,
+  AndesFormStyles,
   AndesFormValidateStatus,
   AndesFormVariant,
 } from './form-field-tokens';

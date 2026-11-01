@@ -36,6 +36,31 @@ export interface AndesFormRequiredMarkContext {
 export type AndesFormRequiredMark =
   boolean | 'optional' | TemplateRef<AndesFormRequiredMarkContext>;
 
+/** Where the asterisk of a required field sits in its label: before the text (`start`, the
+ *  default) or after it (`end`). It follows the writing direction, so it flips in right-to-left
+ *  text. Only the asterisk moves; the `'optional'` suffix and a custom template keep their
+ *  place after the text. */
+export type AndesFormRequiredMarkPosition = 'start' | 'end';
+
+/** The parts of a form field that take a consumer's classes and inline styles. */
+export type AndesFormPart =
+  'root' | 'label' | 'control' | 'help' | 'extra' | 'error';
+
+/**
+ * Classes added to the parts of a field: `root` the field box, `label` the label cell,
+ * `control` the cell holding the control, `help` the `help` text and the warning lines,
+ * `extra` the `extra` text and `error` the generated validation messages and an
+ * `<andes-form-error>`. On an `AndesForm`, `root` is the `<form>` itself and the other parts
+ * are the default for every field inside it (a field adds its own to them).
+ */
+export type AndesFormClassNames = Partial<Record<AndesFormPart, string>>;
+
+/** Inline styles set on each part, keyed like {@link AndesFormClassNames}; a field's own win
+ *  over its form's. */
+export type AndesFormStyles = Partial<
+  Record<AndesFormPart, Record<string, string | number>>
+>;
+
 /**
  * When a field starts showing its derived status (error, warning, validating, success):
  * - `interacted` (default) - once the control is touched or dirty, or the form submitted;
@@ -153,6 +178,14 @@ export interface AndesFormFieldApi {
   readonly showOptionalMark: () => boolean;
   readonly optionalText: () => string;
   readonly showColon: () => boolean;
+  /** Where the asterisk of a required field sits in the label. */
+  readonly resolvedRequiredMarkPosition: () => AndesFormRequiredMarkPosition;
+  /** The classes of a part: the form's, then the field's own. */
+  readonly partClass: (part: AndesFormPart) => string;
+  /** The inline styles of a part: the form's, overridden by the field's own. */
+  readonly partStyle: (
+    part: AndesFormPart,
+  ) => Record<string, string | number> | null;
   /** A custom required-mark template, when the resolved `requiredMark` is one. */
   readonly requiredMarkTemplate: () => TemplateRef<AndesFormRequiredMarkContext> | null;
   /** Whether the field counts as required (the `required` input, else the control). */
@@ -237,6 +270,7 @@ export interface AndesFormApi {
   readonly labelWrap: Signal<boolean>;
   readonly colon: Signal<boolean>;
   readonly requiredMark: Signal<AndesFormRequiredMark>;
+  readonly requiredMarkPosition: Signal<AndesFormRequiredMarkPosition>;
   readonly optionalText: Signal<string>;
   readonly size: Signal<AndesFormSize | undefined>;
   readonly variant: Signal<AndesFormVariant | undefined>;
@@ -247,6 +281,8 @@ export interface AndesFormApi {
   >;
   readonly errorMessages: Signal<AndesFormErrorMessages | undefined>;
   readonly messageMode: Signal<AndesFormMessageMode>;
+  readonly classNames: Signal<AndesFormClassNames>;
+  readonly styles: Signal<AndesFormStyles>;
   /** Prefix of the field ids the form generates from control paths, when set. */
   readonly name: Signal<string | undefined>;
   /** Whether the form was submitted and not reset since. */

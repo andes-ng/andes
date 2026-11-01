@@ -25,7 +25,8 @@ import { ANDES_FORM_FIELD, ANDES_FORM_LABEL } from './form-field-tokens';
  * advertises that id when a label was actually authored.
  *
  * Decorations, all resolved by the enclosing field (and its `AndesForm`):
- * - required mark - a leading `*`, `aria-hidden` because `aria-required` on the control
+ * - required mark - a leading `*` (a trailing one with `requiredMarkPosition="end"`),
+ *   `aria-hidden` because `aria-required` on the control
  *   already says it to assistive technology; or, with `requiredMark="optional"`, a visible
  *   "(optional)" suffix on the fields that are NOT required; or a custom template after the
  *   label text, given whether the field is required.
@@ -49,10 +50,23 @@ import { ANDES_FORM_FIELD, ANDES_FORM_LABEL } from './form-field-tokens';
       [attr.id]="field?.labelId() ?? null"
       [attr.for]="field?.labelFor() ?? null"
     >
-      @if (field?.showRequiredMark()) {
+      @if (
+        field?.showRequiredMark() &&
+        field.resolvedRequiredMarkPosition() !== 'end'
+      ) {
         <span class="andes-form-label__required" aria-hidden="true">*</span>
       }
       <ng-content />
+      @if (
+        field?.showRequiredMark() &&
+        field.resolvedRequiredMarkPosition() === 'end'
+      ) {
+        <span
+          class="andes-form-label__required andes-form-label__required--end"
+          aria-hidden="true"
+          >*</span
+        >
+      }
       @if (field?.showOptionalMark()) {
         <span class="andes-form-label__optional">{{
           field.optionalText()

@@ -38,10 +38,14 @@ import {
   type AndesFormFieldChildApi,
   type AndesFormLabelAlign,
   type AndesFormLayout,
+  type AndesFormClassNames,
   type AndesFormMessageMode,
+  type AndesFormPart,
   type AndesFormRequiredMark,
   type AndesFormRequiredMarkContext,
+  type AndesFormRequiredMarkPosition,
   type AndesFormShowErrorsOn,
+  type AndesFormStyles,
   type AndesFormValidateStatus,
 } from './form-field-tokens';
 import { AndesFormLabel } from './form-label';
@@ -193,6 +197,12 @@ export class AndesFormField implements AndesFormFieldApi {
   /** Overrides the form's `requiredMark` for this field. */
   readonly requiredMark = input<AndesFormRequiredMark | undefined>(undefined);
 
+  /** Overrides the form's `requiredMarkPosition` for this field: the asterisk before the
+   *  label text (`start`, the default) or after it (`end`). */
+  readonly requiredMarkPosition = input<
+    AndesFormRequiredMarkPosition | undefined
+  >(undefined);
+
   /** Overrides the form's `colon` for this field. */
   readonly colon = input<boolean | undefined, unknown>(undefined, {
     transform: optionalBoolean,
@@ -219,6 +229,13 @@ export class AndesFormField implements AndesFormFieldApi {
    * Reactive and template-driven forms only; signal forms re-validate on their own.
    */
   readonly dependsOn = input<string | readonly string[] | undefined>(undefined);
+
+  /** Classes for the parts of this field - `root`, `label`, `control`, `help`, `extra` and
+   *  `error` - added to the form's. */
+  readonly classNames = input<AndesFormClassNames>({});
+
+  /** Inline styles for the same parts as {@link classNames}, over the form's. */
+  readonly styles = input<AndesFormStyles>({});
 
   /** Overrides the form's `showErrorsOn` - when this field starts showing its status. */
   readonly showErrorsOn = input<AndesFormShowErrorsOn | undefined>(undefined);
@@ -531,6 +548,14 @@ export class AndesFormField implements AndesFormFieldApi {
     () => this.requiredMark() ?? this.form?.requiredMark() ?? true,
   );
 
+  readonly resolvedRequiredMarkPosition =
+    computed<AndesFormRequiredMarkPosition>(
+      () =>
+        this.requiredMarkPosition() ??
+        this.form?.requiredMarkPosition() ??
+        'start',
+    );
+
   readonly showRequiredMark = computed(
     () => this.resolvedRequiredMark() === true && this.isRequired(),
   );
@@ -566,6 +591,27 @@ export class AndesFormField implements AndesFormFieldApi {
       (!!this.errorPresent() && this.showError()) ||
       this.helpMessages().length > 0 ||
       !!this.extra(),
+  );
+
+  /** The classes of a part: the form's for it, then this field's own. */
+  partClass(part: AndesFormPart): string {
+    // The form's `root` is the form element itself, not a default for its fields' roots.
+    const inherited =
+      part === 'root' ? undefined : this.form?.classNames()[part];
+    return [inherited, this.classNames()[part]].filter(Boolean).join(' ');
+  }
+
+  /** The inline styles of a part: the form's for it, overridden by this field's own. */
+  partStyle(part: AndesFormPart): Record<string, string | number> | null {
+    const own = this.styles()[part];
+    const inherited = part === 'root' ? undefined : this.form?.styles()[part];
+    return own || inherited ? { ...inherited, ...own } : null;
+  }
+
+  /** Which part the generated messages block is: `error` while it lists validation errors,
+   *  otherwise `help` (the `help` text and the warnings). */
+  protected readonly messagesPart = computed<AndesFormPart>(() =>
+    this.help() === undefined && this.showError() ? 'error' : 'help',
   );
 
   readonly describedBy = computed(() => {

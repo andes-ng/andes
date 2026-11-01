@@ -72,6 +72,7 @@ function sample(): AndesTreeNode[] {
       [density]="density()"
       [expandAction]="expandAction()"
       [draggable]="draggable()"
+      [dragHandle]="dragHandle()"
       [allowDrop]="allowDrop()"
       [loadData]="loadData()"
       [loading]="loading()"
@@ -129,6 +130,7 @@ class HostComponent {
     undefined,
   );
   readonly draggable = signal(false);
+  readonly dragHandle = signal(true);
   readonly allowDrop = signal<
     | ((info: { dragKey: AndesTreeKey; targetKey: AndesTreeKey }) => boolean)
     | undefined
@@ -1560,6 +1562,102 @@ describe('AndesTree', () => {
       expect(
         fixture.componentInstance.dragLog.filter((e) => e.startsWith('leave')),
       ).toEqual([]);
+    });
+
+    describe('grips', () => {
+      const handle = (fixture: Fixture, title: string) =>
+        row(node(fixture, title)).querySelector(
+          ':scope > .andes-tree__handle',
+        ) as HTMLElement | null;
+
+      it('opens every row of a draggable tree with a six-dot grip, before the indentation', () => {
+        const fixture = setup((h) => h.expanded.set(['a']));
+        expect(handle(fixture, 'Archivo')).toBeNull();
+        fixture.componentInstance.draggable.set(true);
+        fixture.detectChanges();
+
+        const grip = handle(fixture, 'Pasillo 1') as HTMLElement;
+        expect(grip.getAttribute('aria-hidden')).toBe('true');
+        expect(grip.getAttribute('draggable')).toBe('true');
+        expect(grip.querySelectorAll('svg circle')).toHaveLength(6);
+        expect(row(node(fixture, 'Pasillo 1')).firstElementChild).toBe(grip);
+        expect(grip.nextElementSibling?.classList).toContain(
+          'andes-tree__indent',
+        );
+        expect(
+          fixture.nativeElement
+            .querySelector('.andes-tree')
+            .hasAttribute('data-handles'),
+        ).toBe(true);
+      });
+
+      it('keeps the column but draws no grip for a node that cannot move', () => {
+        const fixture = setup((h) => {
+          h.draggable.set(true);
+          h.expanded.set(['a']);
+        });
+        const locked = handle(fixture, 'Pasillo 2') as HTMLElement;
+        expect(locked.hasAttribute('data-disabled')).toBe(true);
+        expect(locked.hasAttribute('draggable')).toBe(false);
+        expect(locked.querySelector('svg')).toBeNull();
+      });
+
+      it('starts a drag from the grip as from the content', () => {
+        const fixture = setup((h) => h.draggable.set(true));
+        (handle(fixture, 'Archivo') as HTMLElement).dispatchEvent(
+          dragEvent('dragstart'),
+        );
+        expect(fixture.componentInstance.dragLog).toEqual(['start:c:c:-']);
+      });
+
+      it('hides the grips with dragHandle false and keeps dragging', () => {
+        const fixture = setup((h) => {
+          h.draggable.set(true);
+          h.dragHandle.set(false);
+        });
+        expect(handle(fixture, 'Archivo')).toBeNull();
+        expect(
+          fixture.nativeElement
+            .querySelector('.andes-tree')
+            .hasAttribute('data-handles'),
+        ).toBe(false);
+        expect(
+          row(node(fixture, 'Archivo'))
+            .querySelector('.andes-tree__content')
+            ?.getAttribute('draggable'),
+        ).toBe('true');
+      });
+
+      it('sizes the grip column like an indent step and the dots like the line box', () => {
+        const css = cssText();
+        expect(declaredValue(css, '.andes-tree', '--_lead')).toBe('0rem');
+        expect(declaredValue(css, '.andes-tree[data-handles]', '--_lead')).toBe(
+          'var(--_indent)',
+        );
+        expect(treeLength(css, 'var(--_indent)')).toBe(24);
+        expect(declaredValue(css, '.andes-tree__handle', 'width')).toBe(
+          'var(--_lead)',
+        );
+        expect(declaredValue(css, '.andes-tree__handle', 'height')).toBe(
+          'var(--_title-height)',
+        );
+        expect(declaredValue(css, '.andes-tree__handle > svg', 'width')).toBe(
+          'var(--_box)',
+        );
+        expect(declaredValue(css, '.andes-tree__handle', 'cursor')).toBe(
+          'grab',
+        );
+        expect(declaredValue(css, '.andes-tree__handle', 'color')).toBe(
+          'color-mix( in srgb, var(--andes-color-muted-foreground, #64748b) 55%, transparent )',
+        );
+        expect(
+          declaredValue(
+            css,
+            '.andes-tree__row:hover > .andes-tree__handle',
+            'color',
+          ),
+        ).toBe('var(--andes-color-muted-foreground, #64748b)');
+      });
     });
 
     it('only offers dragging for draggable trees and skips disabled nodes', () => {

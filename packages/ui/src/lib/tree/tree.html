@@ -47,7 +47,25 @@
       (drop)="onDrop($event, row)"
       (dragend)="onDragEnd($event, row)"
     >
-      @for (line of row.connectors; track $index) {
+      @if (handlesShown()) { @let rowDraggable = isDraggable(row);
+      <span
+        class="andes-tree__handle"
+        aria-hidden="true"
+        [attr.draggable]="rowDraggable ? 'true' : null"
+        [attr.data-disabled]="rowDraggable ? null : ''"
+      >
+        @if (rowDraggable) {
+        <svg viewBox="0 0 14 14" fill="currentColor">
+          <circle cx="4.75" cy="2.75" r="1.125" />
+          <circle cx="9.25" cy="2.75" r="1.125" />
+          <circle cx="4.75" cy="7" r="1.125" />
+          <circle cx="9.25" cy="7" r="1.125" />
+          <circle cx="4.75" cy="11.25" r="1.125" />
+          <circle cx="9.25" cy="11.25" r="1.125" />
+        </svg>
+        }
+      </span>
+      } @for (line of row.connectors; track $index) {
       <span
         class="andes-tree__indent"
         aria-hidden="true"
@@ -247,6 +265,7 @@
   [attr.data-directory]="directory() ? '' : null"
   [attr.data-virtual]="virtualScroll() ? '' : null"
   [attr.data-dragging]="dragKey() !== null ? '' : null"
+  [attr.data-handles]="handlesShown() ? '' : null"
 >
   @if (hasRows()) {
   <div

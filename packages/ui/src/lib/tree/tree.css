@@ -15,6 +15,8 @@
   --_gap: 0.25rem;
   --_switcher-gap: 0.25rem;
   --_box: 0.875rem;
+  /* The drag grip column that opens every row of a draggable tree. */
+  --_lead: 0rem;
   --_row-height: calc(var(--_title-height) + var(--_gap));
   --_dir: 1;
   --_line: var(--andes-color-border, #e2e8f0);
@@ -49,6 +51,10 @@
   --_gap: 0rem;
 }
 
+.andes-tree[data-handles] {
+  --_lead: var(--_indent);
+}
+
 .andes-tree__list {
   display: block;
 }
@@ -80,6 +86,42 @@
   min-height: var(--_row-height);
   align-items: flex-start;
   padding-block-end: var(--_gap);
+}
+
+/*
+  Drag grip: six dots in a 24px column before the indentation, so the grips line up down the
+  tree and the connector lines keep their columns. Quiet until the row is hovered or focused.
+*/
+.andes-tree__handle {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--_lead);
+  height: var(--_title-height);
+  color: color-mix(
+    in srgb,
+    var(--andes-color-muted-foreground, #64748b) 55%,
+    transparent
+  );
+  cursor: grab;
+  user-select: none;
+  transition: color var(--andes-motion-duration-mid, 150ms) ease;
+}
+
+.andes-tree__handle[data-disabled] {
+  cursor: default;
+}
+
+.andes-tree__handle > svg {
+  width: var(--_box);
+  height: var(--_box);
+}
+
+/* prettier-ignore */
+.andes-tree__row:hover > .andes-tree__handle,
+.andes-tree__item:focus-visible > .andes-tree__row > .andes-tree__handle {
+  color: var(--andes-color-muted-foreground, #64748b);
 }
 
 /* Indentation: one cell per ancestor level. */
@@ -437,6 +479,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .andes-tree__chevron,
+  .andes-tree__handle,
   .andes-tree__switcher,
   .andes-tree__content,
   .andes-tree__checkbox {
@@ -462,7 +505,9 @@
 
 /* Drag and drop */
 
-.andes-tree[data-dragging] .andes-tree__content {
+/* prettier-ignore */
+.andes-tree[data-dragging] .andes-tree__content,
+.andes-tree[data-dragging] .andes-tree__handle {
   cursor: grabbing;
 }
 
@@ -478,7 +523,7 @@
 .andes-tree__drop-indicator {
   position: absolute;
   z-index: 2;
-  inset-inline: calc(var(--_drop-level, 1) * var(--_indent)) 0;
+  inset-inline: calc(var(--_lead) + var(--_drop-level, 1) * var(--_indent)) 0;
   height: 2px;
   border-radius: 1px;
   background-color: var(--andes-color-primary, #2563eb);

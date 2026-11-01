@@ -252,6 +252,11 @@ export class AndesTree {
   >(false, {
     transform: draggableAttribute,
   });
+  /**
+   * Draws a grip of six dots at the start of every row while dragging is on, so rows read as
+   * movable; the grip and the node's content both start a drag. `false` hides the grips.
+   */
+  readonly dragHandle = input(true, { transform: booleanAttribute });
   /** Veto a drop; the default allows every drop that is not into the node's own subtree. */
   readonly allowDrop = input<AndesTreeAllowDrop | undefined>(undefined);
 
@@ -519,6 +524,10 @@ export class AndesTree {
 
   protected readonly effectiveExpandAction = computed(
     () => this.expandAction() ?? (this.directory() ? 'click' : false),
+  );
+  /** Whether the rows open with a drag grip column. */
+  protected readonly handlesShown = computed(
+    () => !!this.draggable() && this.dragHandle(),
   );
   protected readonly iconsShown = computed(
     () => this.showIcon() || this.directory(),

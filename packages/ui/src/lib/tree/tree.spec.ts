@@ -7,7 +7,7 @@ import { Component, signal, viewChild } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { Subject } from 'rxjs';
 
-import { declaredValue } from '../../testing/computed-style';
+import { declaredValue, toPx } from '../../testing/computed-style';
 import { AndesTree } from './tree';
 import { AndesTreeNodeTemplate } from './tree-node-template';
 import type {
@@ -209,6 +209,25 @@ function titles(fixture: Fixture): string[] {
 
 function cssText(name = 'tree.css'): string {
   return readFileSync(join(__dirname, name), 'utf8');
+}
+
+/**
+ * Resolves a length written with the tree's private sizes (`var(--_indent)`, `var(--_gap)`...)
+ * to pixels, reading each size from the `.andes-tree` rule. jsdom reports a `var()` longhand
+ * verbatim, so geometry built on them is summed here, the way the browser would.
+ */
+function treeLength(css: string, expression: string): number {
+  const resolved = expression.replace(
+    /var\((--_[a-z-]+)\)/g,
+    (_match, name: string) => {
+      const value = declaredValue(css, '.andes-tree', name);
+      if (value === undefined) {
+        throw new Error(`.andes-tree declares no ${name}`);
+      }
+      return `(${value})`;
+    },
+  );
+  return toPx(resolved.includes('var(') ? resolved : `calc(${resolved})`);
 }
 
 describe('AndesTree', () => {
@@ -1171,6 +1190,95 @@ describe('AndesTree', () => {
         '.andes-tree__indent',
       ) as HTMLElement;
       expect(last.hasAttribute('data-line')).toBe(false);
+    });
+
+    it('draws the boxed +/- at 14px and marks leaf rows for their longer tick', () => {
+      const fixture = setup((h) => {
+        h.showLine.set(true);
+        h.expanded.set(['a', 'a1']);
+      });
+      const box = switcher(node(fixture, 'Almacén central')).querySelector(
+        '.andes-tree__box',
+      ) as SVGElement;
+      expect(box.getAttribute('viewBox')).toBe('0 0 14 14');
+      expect(row(node(fixture, 'Estante X')).hasAttribute('data-leaf')).toBe(
+        true,
+      );
+      expect(row(node(fixture, 'Pasillo 1')).hasAttribute('data-leaf')).toBe(
+        false,
+      );
+    });
+  });
+
+  describe('connector line geometry', () => {
+    const css = cssText();
+    const vertical =
+      '.andes-tree[data-line] .andes-tree__indent[data-line]::before';
+    const elbow =
+      '.andes-tree[data-line] .andes-tree__indent[data-elbow]::after';
+    const leafElbow =
+      '.andes-tree[data-line] .andes-tree__row[data-leaf] .andes-tree__indent[data-elbow]::after';
+    const stem =
+      ".andes-tree[data-line] .andes-tree__row[data-state='open'] .andes-tree__switcher::after";
+
+    it('keeps the measured proportions: 24px indent, switcher and title, 4px gaps, 14px box', () => {
+      expect(treeLength(css, 'var(--_indent)')).toBe(24);
+      expect(treeLength(css, 'var(--_title-height)')).toBe(24);
+      expect(treeLength(css, 'var(--_gap)')).toBe(4);
+      expect(treeLength(css, 'var(--_switcher-gap)')).toBe(4);
+      expect(treeLength(css, 'var(--_box)')).toBe(14);
+      expect(declaredValue(css, '.andes-tree__switcher', 'width')).toBe(
+        'var(--_indent)',
+      );
+      expect(
+        declaredValue(css, '.andes-tree__switcher', 'margin-inline-end'),
+      ).toBe('var(--_switcher-gap)');
+    });
+
+    it('runs every vertical through the gap below its row, so rows join without a break', () => {
+      const inset = declaredValue(css, vertical, 'inset-block') as string;
+      const top = inset.slice(0, inset.indexOf(' '));
+      const bottom = inset.slice(inset.indexOf(' ') + 1);
+      expect(top).toBe('0');
+      // The cell is the title's height; reaching -gap below it touches the next row's line.
+      expect(treeLength(css, bottom)).toBe(-4);
+      expect(declaredValue(css, vertical, 'border-inline-start')).toBe(
+        '1px solid var(--_line)',
+      );
+    });
+
+    it("starts the open box's stem at the box's lower edge and carries it into the gap", () => {
+      const inset = declaredValue(css, stem, 'inset-block') as string;
+      const split = inset.lastIndexOf(' calc(');
+      const top = treeLength(css, inset.slice(0, split));
+      const bottom = treeLength(css, inset.slice(split + 1));
+      const boxBottom =
+        (treeLength(css, 'var(--_title-height)') +
+          treeLength(css, 'var(--_box)')) /
+        2;
+      expect(top).toBe(boxBottom);
+      expect(bottom).toBe(-4);
+    });
+
+    it("ends a parent's tick on its box and a leaf's tick where the content starts", () => {
+      const indent = treeLength(css, 'var(--_indent)');
+      const box = treeLength(css, 'var(--_box)');
+      // The tick starts on the elbow's line, half a cell in.
+      const start = indent / 2;
+      const parentEnd =
+        start + treeLength(css, declaredValue(css, elbow, 'width') as string);
+      const leafEnd =
+        start +
+        treeLength(css, declaredValue(css, leafElbow, 'width') as string);
+      // The next cell is the row's switcher, with the box centred in it.
+      expect(parentEnd).toBe(indent + (indent - box) / 2);
+      // Past the empty switcher and its gap: the first pixel of the content.
+      expect(leafEnd).toBe(
+        indent + indent + treeLength(css, 'var(--_switcher-gap)'),
+      );
+      expect(declaredValue(css, elbow, 'top')).toBe(
+        'calc(var(--_title-height) / 2)',
+      );
     });
   });
 

@@ -301,7 +301,10 @@ export class AndesImagePreview {
       : null;
   });
   protected readonly zoomed = computed(() => isZoomed(this.transform()));
-  protected readonly canPan = computed(
+  /** The image follows a drag at any zoom (and springs back when it is let go off-centre). */
+  protected readonly canPan = computed(() => this.cfg().movable);
+  /** The arrow keys pan only a zoomed image; on a fitted one they page through the items. */
+  protected readonly canPanByKey = computed(
     () => this.zoomed() && this.cfg().movable,
   );
   protected readonly canPrevious = computed(
@@ -717,7 +720,7 @@ export class AndesImagePreview {
       case 'ArrowRight':
       case 'ArrowUp':
       case 'ArrowDown': {
-        if (this.canPan()) {
+        if (this.canPanByKey()) {
           const dx =
             lower === 'ArrowLeft'
               ? KEY_PAN_STEP
@@ -835,20 +838,27 @@ export class AndesImagePreview {
       return;
     }
 
-    if (this.canPan()) {
-      const settled = this.rebound(this.transform());
-      this.transform.set(settled);
-      this.transformChange.emit({ transform: settled, action: 'move' });
-      return;
-    }
-    if (event.type !== 'pointerup' || this.zoomed()) {
-      return;
-    }
     const dx = event.clientX - drag.startX;
     const dy = event.clientY - drag.startY;
-    if (Math.abs(dx) >= SWIPE_DISTANCE && Math.abs(dx) > Math.abs(dy) * 1.5) {
+    if (
+      event.type === 'pointerup' &&
+      !this.zoomed() &&
+      Math.abs(dx) >= SWIPE_DISTANCE &&
+      Math.abs(dx) > Math.abs(dy) * 1.5
+    ) {
+      // A swipe of a fitted image pages through the items, and the next one starts centred.
       const rtl = this.directionality.value === 'rtl';
       this.step(dx > 0 !== rtl ? -1 : 1);
+      return;
+    }
+    if (this.canPan()) {
+      // A fitted image always goes back to the centre; a zoomed one only as far as it must
+      // to keep covering the viewport.
+      const settled = this.zoomed()
+        ? this.rebound(this.transform())
+        : { ...this.transform(), x: 0, y: 0 };
+      this.transform.set(settled);
+      this.transformChange.emit({ transform: settled, action: 'move' });
     }
   }
 

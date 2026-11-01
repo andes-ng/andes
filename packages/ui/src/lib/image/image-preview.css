@@ -4,8 +4,8 @@
  * every class is namespaced `andes-image-preview*`.
  *
  * The viewer always sits on the dark scrim, whatever the page theme, so its controls are
- * light icons on translucent dark discs: `--andes-color-ghost` is the library's fixed light
- * ink for dark backdrops, and the discs reuse the scrim colour so they deepen with it.
+ * light icons on see-through discs: `--andes-color-ghost` is the library's fixed light ink
+ * for dark backdrops, and the discs are a faint black or white veil over the picture.
  */
 
 .andes-image-preview {
@@ -26,14 +26,16 @@
     var(--andes-color-ghost, #fff) 32%,
     transparent
   );
-  --andes-image-preview-control-background: var(
-    --andes-color-overlay,
-    rgb(15 23 42 / 45%)
+  /* Light, see-through discs: the picture and the scrim show through them. */
+  --andes-image-preview-control-background: color-mix(
+    in srgb,
+    var(--andes-color-overlay, rgb(15 23 42 / 45%)) 22%,
+    transparent
   );
   --andes-image-preview-control-background-hover: color-mix(
     in srgb,
-    var(--andes-color-ghost, #fff) 14%,
-    var(--andes-color-overlay, rgb(15 23 42 / 45%))
+    var(--andes-color-ghost, #fff) 12%,
+    transparent
   );
 
   position: relative;

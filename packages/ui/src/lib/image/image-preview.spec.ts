@@ -645,13 +645,15 @@ describe('AndesImagePreview', () => {
       expect(translateOf()).toEqual([0, 0]);
     });
 
-    it('does not move an image that is not zoomed', () => {
+    it('lets a drag move an image that is not zoomed, and brings it back to the centre', () => {
       const f = openPreview();
       pointer('pointerdown', shownImage() as Element, 0, 0);
       pointer('pointermove', stage(), 20, 20);
       f.detectChanges();
-      expect(translateOf()).toEqual([0, 0]);
+      expect(translateOf()).toEqual([20, 20]);
       pointer('pointerup', stage(), 20, 20);
+      f.detectChanges();
+      expect(translateOf()).toEqual([0, 0]);
     });
 
     it('does not pan when movable is off', () => {

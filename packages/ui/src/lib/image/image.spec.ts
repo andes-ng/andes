@@ -689,12 +689,12 @@ describe('AndesImage', () => {
       );
     });
 
-    it('draws the viewer with light icons on dark discs, whatever the theme', () => {
+    it('draws the viewer with light icons on see-through discs, whatever the theme', () => {
       expect(previewCss).toMatch(
         /--andes-image-preview-control-color-hover: var\(--andes-color-ghost, #fff\)/,
       );
       expect(previewCss).toMatch(
-        /--andes-image-preview-control-background: var\(\s*--andes-color-overlay/,
+        /--andes-image-preview-control-background: color-mix\(\s*in srgb,\s*var\(--andes-color-overlay/,
       );
       expect(previewCss).toMatch(
         /\.andes-image-preview__nav\s*\{[^}]*inset-block-start: 50%/,

@@ -3,8 +3,8 @@
   role="group"
   [class]="classes()"
   [attr.aria-label]="ariaLabel()"
-  [attr.aria-labelledby]="ariaLabelledby()"
-  [attr.aria-describedby]="ariaDescribedby()"
+  [attr.aria-labelledby]="labelledBy()"
+  [attr.aria-describedby]="describedBy()"
   (focusout)="onFocusOut($event, group)"
 >
   @for (character of cells(); track $index; let index = $index, last = $last) {
@@ -12,11 +12,12 @@
     #cell
     type="text"
     class="andes-input-otp__cell"
-    [attr.id]="index === 0 ? id() : null"
+    [attr.id]="index === 0 ? controlId() : null"
     [attr.autocomplete]="index === 0 ? autocomplete() : 'off'"
     [attr.inputmode]="inputMode()"
     [attr.aria-label]="cellLabel(index)"
     [attr.aria-invalid]="isInvalid() || null"
+    [attr.aria-required]="isRequired() || null"
     [disabled]="isDisabled()"
     [value]="display(index)"
     (focus)="onCellFocus($event)"

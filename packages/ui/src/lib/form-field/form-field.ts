@@ -45,6 +45,7 @@ import {
   type AndesFormValidateStatus,
 } from './form-field-tokens';
 import { AndesFormLabel } from './form-label';
+import { ANDES_FORM_LOCALE, ANDES_FORM_LOCALE_EN } from './form-locale';
 
 let nextFieldId = 0;
 
@@ -129,6 +130,7 @@ export class AndesFormField implements AndesFormFieldApi {
   private readonly providedMessages = inject(ANDES_FORM_ERROR_MESSAGES, {
     optional: true,
   });
+  private readonly locale = inject(ANDES_FORM_LOCALE, { optional: true });
   /** The field this one is nested in, if any - only meaningful for a `noStyle` field. */
   private readonly parent = inject(ANDES_FORM_FIELD, {
     optional: true,
@@ -176,8 +178,11 @@ export class AndesFormField implements AndesFormFieldApi {
    *  content (keep it to non-interactive content: the bubble only opens on hover/focus). */
   readonly tooltip = input<string | TemplateRef<void> | undefined>(undefined);
 
-  /** Accessible name of the tooltip's trigger button - override to localize. */
-  readonly tooltipLabel = input('More information');
+  /** Accessible name of the tooltip's trigger button. Defaults to the provided locale's
+   *  (`provideAndesFormLocale()`), else `More information`. */
+  readonly tooltipLabel = input(
+    this.locale?.tooltipLabel ?? ANDES_FORM_LOCALE_EN.tooltipLabel,
+  );
 
   /** Forces the required mark on or off, instead of detecting `Validators.required`. Purely
    *  visual - it does not add a validator. */
@@ -542,7 +547,10 @@ export class AndesFormField implements AndesFormFieldApi {
   });
 
   readonly optionalText = computed(
-    () => this.form?.optionalText() ?? '(optional)',
+    () =>
+      this.form?.optionalText() ??
+      this.locale?.optionalText ??
+      ANDES_FORM_LOCALE_EN.optionalText,
   );
 
   /** The colon is a horizontal-layout device only; stacked labels don't need a separator. */

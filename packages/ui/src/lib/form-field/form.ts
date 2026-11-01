@@ -45,6 +45,7 @@ import {
   type AndesFormSize,
   type AndesFormVariant,
 } from './form-field-tokens';
+import { ANDES_FORM_LOCALE, ANDES_FORM_LOCALE_EN } from './form-locale';
 
 /** Elements `scrollToFirstError` may move focus to, in the invalid field's control slot. */
 const FOCUSABLE =
@@ -168,8 +169,12 @@ export class AndesForm implements AndesFormApi {
   /** Trailing colon after each label. Only ever drawn in `horizontal` layout. */
   readonly colon = input(true, { transform: booleanAttribute });
   readonly requiredMark = input<AndesFormRequiredMark>(true);
-  /** Suffix used by `requiredMark="optional"` - override it to localize. */
-  readonly optionalText = input('(optional)');
+  /** Suffix used by `requiredMark="optional"`. Defaults to the provided locale's
+   *  (`provideAndesFormLocale()`), else `(optional)`. */
+  readonly optionalText = input(
+    inject(ANDES_FORM_LOCALE, { optional: true })?.optionalText ??
+      ANDES_FORM_LOCALE_EN.optionalText,
+  );
   /**
    * Size hint for the controls inside. Fields do not resize anything themselves; controls
    * read it through {@link injectAndesFormSize}. Also reflected

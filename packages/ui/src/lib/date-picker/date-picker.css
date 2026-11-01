@@ -1076,25 +1076,28 @@
 
 /* `height: 0` + `min-height: 100%` makes each column exactly as tall as the
    calendar beside it (the stretched flex row), however many options it holds.
-   That height is also the column's own size container, which the closing spacer reads. */
+   As wide as its widest option, and never narrower than 3.5rem: two digits sit in the
+   minimum, a spelled-out day period ("Afternoon", "Vormittag") widens its column. */
 .andes-date-picker__time-column {
   position: relative;
+  flex: none;
   box-sizing: border-box;
-  width: 3.5rem;
+  width: auto;
+  min-width: 3.5rem;
   height: 0;
   min-height: 100%;
   margin: 0;
   padding: var(--andes-space-1);
   overflow-y: auto;
-  container-type: size;
   scrollbar-width: thin;
 }
 
 /* Room after the last option so that every option, the last one included, can scroll up
-   to the top: the column's height less one option. */
+   to the top: the column's height (the percentage reads the stretched height) less one
+   option. */
 .andes-date-picker__time-column::after {
   display: block;
-  height: calc(100cqh - 1.75rem);
+  height: calc(100% - 1.75rem);
   content: '';
 }
 
@@ -1107,12 +1110,17 @@
   outline-offset: -2px;
 }
 
+/* Each option spans the column, so the hover and the selected chip are as wide as the column
+   whatever the option holds; the text stays on one line, with room on either side. */
 .andes-date-picker__time-option {
   display: flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
   height: 1.75rem;
+  padding-inline: var(--andes-space-2);
   border-radius: var(--andes-radius-sm);
+  white-space: nowrap;
   cursor: pointer;
 }
 

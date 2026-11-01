@@ -261,18 +261,36 @@ describe('AndesDatePicker styles', () => {
     const column = '.andes-date-picker__time-column';
 
     it('leaves room after the last option so any option can scroll to the top', () => {
-      // The column's own height is the size container the spacer is measured against.
-      expect(declaredValue(source, column, 'container-type')).toBe('size');
       const spacer = `${column}::after`;
       expect(declaredValue(source, spacer, 'content')).toBe("''");
       expect(declaredValue(source, spacer, 'display')).toBe('block');
-      // The column's height less one 1.75rem option.
+      // The column's (stretched, definite) height less one 1.75rem option.
       expect(declaredValue(source, spacer, 'height')).toBe(
-        'calc(100cqh - 1.75rem)',
+        'calc(100% - 1.75rem)',
       );
       expect(
         declaredValue(source, '.andes-date-picker__time-option', 'height'),
       ).toBe('1.75rem');
+    });
+
+    it('sizes each column to its widest option, never under 3.5rem', () => {
+      // No size containment: it would make the column ignore its options' width.
+      expect(declaredValue(source, column, 'container-type')).toBeUndefined();
+      expect(declaredValue(source, column, 'width')).toBe('auto');
+      expect(declaredValue(source, column, 'min-width')).toBe('3.5rem');
+      expect(declaredValue(source, column, 'flex')).toBe('none');
+    });
+
+    it('keeps an option on one line, padded, and as wide as its column', () => {
+      const option = '.andes-date-picker__time-option';
+      expect(declaredValue(source, option, 'white-space')).toBe('nowrap');
+      expect(declaredValue(source, option, 'padding-inline')).toBe(
+        'var(--andes-space-2)',
+      );
+      expect(declaredValue(source, option, 'box-sizing')).toBe('border-box');
+      // A block-level flex row: it fills the column, so the selected chip does too.
+      expect(declaredValue(source, option, 'display')).toBe('flex');
+      expect(declaredValue(source, option, 'width')).toBeUndefined();
     });
   });
 

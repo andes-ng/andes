@@ -627,6 +627,21 @@ describe('AndesImage', () => {
       'utf8',
     );
 
+    it('fits a phone: smaller controls, no zoom ratio and a toolbar that stays one pill', () => {
+      const narrow = previewCss.slice(
+        previewCss.indexOf('@media (max-width: 32rem)'),
+      );
+      expect(narrow).toMatch(
+        /\.andes-image-preview\s*\{\s*--andes-image-preview-control-size: 2\.25rem/,
+      );
+      expect(narrow).toMatch(
+        /\.andes-image-preview__ratio\s*\{\s*display: none/,
+      );
+      expect(narrow).toMatch(
+        /\.andes-image-preview__counter\s*\{\s*white-space: nowrap/,
+      );
+    });
+
     it('reveals the thumbnail label on hover and keyboard focus with the focus ring', () => {
       expect(css).toMatch(
         /\.andes-image__mask:hover,\s*\.andes-image__mask:focus-visible\s*\{[^}]*opacity: 1/,

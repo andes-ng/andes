@@ -410,6 +410,27 @@
   }
 }
 
+/* A phone's width: smaller controls and no zoom ratio, so the toolbar stays one pill on one row
+   instead of wrapping into a box, and the counter keeps to one line. */
+@media (max-width: 32rem) {
+  .andes-image-preview {
+    --andes-image-preview-control-size: 2.25rem;
+  }
+
+  .andes-image-preview__ratio {
+    display: none;
+  }
+
+  .andes-image-preview__toolbar {
+    padding-inline: var(--andes-space-2, 0.5rem);
+    gap: 0;
+  }
+
+  .andes-image-preview__counter {
+    white-space: nowrap;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .andes-image-preview,
   .andes-image-preview__stage,

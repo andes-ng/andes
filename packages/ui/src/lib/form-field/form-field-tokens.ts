@@ -124,9 +124,9 @@ export type AndesFormErrorMessages = Readonly<
  * injection token, rather than each of those parts importing the concrete `AndesFormField`
  * class directly, so that `form-field.ts` and `form-control.ts`/`form-label.ts`/etc. don't
  * end up in a circular import (the field also needs to look up `AndesFormControl` and the
- * description/error parts by their own tokens below, going the other direction). Mirrors
- * how `@angular/material`'s `MAT_FORM_FIELD` token decouples `MatFormField` from every
- * control that plugs into it.
+ * description/error parts by their own tokens below, going the other direction). The token
+ * is also what decouples the field from every control that plugs into it
+ * (`injectAndesFieldBinding()`).
  *
  * It doubles as a status hook for custom controls: any control can
  * `inject(ANDES_FORM_FIELD, { optional: true })` and read `status()`/`hasFeedback()` to draw

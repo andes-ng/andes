@@ -895,14 +895,12 @@ describe('AndesDatePicker mask format', () => {
         ),
       leave: () => {
         const outside = root.querySelector<HTMLElement>('#outside');
-        root
-          .querySelector('[data-slot="date-picker-trigger"]')
-          ?.dispatchEvent(
-            new FocusEvent('focusout', {
-              bubbles: true,
-              relatedTarget: outside,
-            }),
-          );
+        root.querySelector('[data-slot="date-picker-trigger"]')?.dispatchEvent(
+          new FocusEvent('focusout', {
+            bubbles: true,
+            relatedTarget: outside,
+          }),
+        );
         outside?.focus();
         detect();
       },
@@ -1041,5 +1039,103 @@ describe('AndesDatePicker mask format', () => {
     view.focus();
     expect(view.input().placeholder).toBe('Select a date');
     expect(view.key('1').defaultPrevented).toBe(false);
+  });
+});
+
+@Component({
+  imports: [AndesDatePicker],
+  template: `<andes-date-picker
+    [picker]="picker()"
+    locale="en-GB"
+    [(value)]="value"
+  />`,
+})
+class SwitchHost {
+  readonly picker = signal<AndesDatePickerType>('date');
+  readonly value = signal<AndesDatePickerValue | undefined>(
+    new Date(2024, 1, 15),
+  );
+}
+
+describe('AndesDatePicker switching picker', () => {
+  it('shows one value in each picker on the same component, without changing it', () => {
+    const fixture = TestBed.createComponent(SwitchHost);
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    const picker = element.querySelector('andes-date-picker');
+    const text = (type: AndesDatePickerType) => {
+      fixture.componentInstance.picker.set(type);
+      fixture.detectChanges();
+      return element.querySelector('input')?.value;
+    };
+
+    expect(
+      (['date', 'week', 'month', 'quarter', 'year', 'time', 'date'] as const).map(
+        text,
+      ),
+    ).toEqual([
+      '15 Feb 2024',
+      '2024-W07',
+      'Feb 2024',
+      '2024-Q1',
+      '2024',
+      '00:00',
+      '15 Feb 2024',
+    ]);
+    // The same element throughout, and the value as it was.
+    expect(element.querySelector('andes-date-picker')).toBe(picker);
+    expect(toDateKey(fixture.componentInstance.value() as Date)).toBe(
+      '2024-02-15',
+    );
+  });
+
+  it('picks in the new picker once switched', () => {
+    const fixture = TestBed.createComponent(SwitchHost);
+    fixture.detectChanges();
+    fixture.componentInstance.picker.set('month');
+    fixture.detectChanges();
+    const input = (fixture.nativeElement as HTMLElement).querySelector(
+      'input',
+    ) as HTMLInputElement;
+    input.focus();
+    input.click();
+    fixture.detectChanges();
+
+    document
+      .querySelector<HTMLElement>(
+        '[data-slot="date-picker-panel"] [data-date="2024-06-01"]',
+      )
+      ?.click();
+    fixture.detectChanges();
+
+    expect(toDateKey(fixture.componentInstance.value() as Date)).toBe(
+      '2024-06-01',
+    );
+    expect(input.value).toBe('Jun 2024');
+  });
+});
+
+describe('AndesDatePicker mask format without key events', () => {
+  it('takes digits a phone keyboard inserts over the selected number', () => {
+    const fixture = TestBed.createComponent(MaskHost);
+    fixture.componentInstance.value.set(d(2024, 2, 15));
+    fixture.detectChanges();
+    const input = (fixture.nativeElement as HTMLElement).querySelector(
+      'input',
+    ) as HTMLInputElement;
+    input.focus();
+    fixture.detectChanges();
+
+    // The day is selected; an insertText replaces it with "2" without a keydown.
+    input.value = '2/02/2024';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+    expect(input.value).toBe('02/02/2024');
+
+    input.value = '02/02/20248';
+    input.setSelectionRange(0, 0);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+    expect(input.value).toBe('28/02/2024');
   });
 });

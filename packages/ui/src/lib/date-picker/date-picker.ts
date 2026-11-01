@@ -2540,7 +2540,33 @@ export class AndesDatePicker implements ControlValueAccessor {
     const mask = this.mask();
     if (mask && text && !mask.fits(text)) {
       // Text that reached a mask without a key it could handle (a phone keyboard, a cut, a
-      // drop): a date it can read is put into the mask's shape, anything else is undone.
+      // drop). Digits typed over the selected number are typed into the mask as keys
+      // would be; a whole date it can read is put into its shape; anything else is undone.
+      const before = this.maskText(side);
+      let head = 0;
+      while (head < before.length && before[head] === text[head]) {
+        head++;
+      }
+      let tail = 0;
+      while (
+        tail < before.length - head &&
+        tail < text.length - head &&
+        before[before.length - 1 - tail] === text[text.length - 1 - tail]
+      ) {
+        tail++;
+      }
+      const inserted = text.slice(head, text.length - tail);
+      if (inserted && Array.from(inserted).every((c) => c >= '0' && c <= '9')) {
+        const state = this.maskState?.side === side ? this.maskState : null;
+        this.typeMaskDigits(
+          side,
+          input,
+          before,
+          state?.cell ?? mask.cellAt(head),
+          inserted,
+        );
+        return;
+      }
       const parsed = this.parse(text, side);
       this.writeMask(
         side,
@@ -2611,14 +2637,7 @@ export class AndesDatePicker implements ControlValueAccessor {
     const key = event.key;
 
     if (key.length === 1 && key >= '0' && key <= '9') {
-      const width = mask.cells[cell].end - mask.cells[cell].start;
-      let typed = (state?.cell === cell ? state.typed : '') + key;
-      if (typed.length > width) {
-        typed = key;
-      }
-      const filled = mask.fill(text, cell, typed);
-      const next = filled.done ? Math.min(cell + 1, last) : cell;
-      this.writeMask(side, input, filled.text, next, filled.done ? '' : typed);
+      this.typeMaskDigits(side, input, text, cell, key);
       return true;
     }
     switch (key) {
@@ -2666,6 +2685,40 @@ export class AndesDatePicker implements ControlValueAccessor {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Types `digits` into a mask from `cell` on, as the digit keys do: each fills the cell
+   * and moves on once it is complete.
+   */
+  private typeMaskDigits(
+    side: Side,
+    input: HTMLInputElement,
+    text: string,
+    cell: number,
+    digits: string,
+  ): void {
+    const mask = this.mask();
+    if (!mask) {
+      return;
+    }
+    const last = mask.cells.length - 1;
+    const state = this.maskState?.side === side ? this.maskState : null;
+    let typed = state?.cell === cell ? state.typed : '';
+    for (const digit of digits) {
+      const width = mask.cells[cell].end - mask.cells[cell].start;
+      typed += digit;
+      if (typed.length > width) {
+        typed = digit;
+      }
+      const filled = mask.fill(text, cell, typed);
+      text = filled.text;
+      if (filled.done) {
+        cell = Math.min(cell + 1, last);
+        typed = '';
+      }
+    }
+    this.writeMask(side, input, text, cell, typed);
   }
 
   /** A pointer press in a masked input selects the cell it landed on. */
@@ -2738,6 +2791,17 @@ export class AndesDatePicker implements ControlValueAccessor {
     this.maskState = { side, cell, typed };
     if (!empty) {
       this.selectMaskCell(input, cell);
+      // Some input paths (a phone keyboard's text) move the caret again after the event:
+      // select the cell once more after the render.
+      this.afterRender(() => {
+        if (
+          input.ownerDocument.activeElement === input &&
+          this.maskState?.side === side &&
+          this.maskState.cell === cell
+        ) {
+          this.selectMaskCell(input, cell);
+        }
+      });
     }
     if (mask.isComplete(text)) {
       const parsed = this.parse(text, side);

@@ -982,6 +982,26 @@ describe('AndesGallery', () => {
   describe('stylesheet', () => {
     const css = readFileSync('packages/ui/src/lib/gallery/gallery.css', 'utf8');
 
+    it('fits a phone: one counter line, the toolbar on one row of smaller buttons, nearly opaque lightbox', () => {
+      const narrow = css.slice(css.indexOf('@container andes-gallery'));
+      expect(css).toMatch(
+        /\.andes-gallery \{\s*container: andes-gallery \/ inline-size/,
+      );
+      expect(narrow).toMatch(
+        /\.andes-gallery__counter\s*\{[^}]*white-space: nowrap/,
+      );
+      expect(narrow).toMatch(
+        /\.andes-gallery__toolbar\s*\{[^}]*flex: 1 1 100%;[^}]*order: 2;[^}]*justify-content: center/,
+      );
+      expect(narrow).toMatch(/\.andes-gallery__ratio\s*\{\s*display: none/);
+      expect(narrow).toMatch(
+        /\.andes-gallery__header\s*\{\s*--andes-gallery-button-size: 2rem/,
+      );
+      expect(narrow).toMatch(
+        /@media \(max-width: 32rem\)\s*\{\s*\.andes-gallery--lightbox\s*\{[^}]*96%/,
+      );
+    });
+
     it('lays the strip out on every side, mirroring start and end with the direction', () => {
       expect(css).toMatch(
         /\[data-position='top'\]\s*\{[^}]*grid-template-areas: 'header' 'strip' 'stage' 'footer'/,

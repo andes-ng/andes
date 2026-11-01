@@ -57,6 +57,7 @@
 }
 
 .andes-gallery {
+  container: andes-gallery / inline-size;
   position: relative;
   display: grid;
   grid-template-areas: 'header' 'stage' 'strip' 'footer';
@@ -565,6 +566,56 @@
 @keyframes andes-gallery-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* --- Narrow: a phone's width, or a gallery in a narrow column --------------------------- */
+
+@container andes-gallery (max-width: 32rem) {
+  .andes-gallery__header,
+  .andes-gallery--lightbox .andes-gallery__header {
+    flex-wrap: wrap;
+    padding: var(--andes-space-2, 0.5rem) var(--andes-space-3, 0.75rem);
+  }
+
+  /* "3 / 30" never breaks onto two lines. */
+  .andes-gallery__counter {
+    white-space: nowrap;
+  }
+
+  /* The toolbar takes a row of its own under the counter, centred, instead of squeezing both. */
+  .andes-gallery__toolbar {
+    flex: 1 1 100%;
+    order: 2;
+    justify-content: center;
+  }
+
+  /* Smaller buttons and no zoom ratio, so the whole toolbar fits one row of a phone. */
+  .andes-gallery__ratio {
+    display: none;
+  }
+
+  .andes-gallery__header {
+    --andes-gallery-button-size: 2rem;
+  }
+
+  .andes-gallery__strip {
+    --andes-gallery-thumbnail-width: 3.75rem;
+    --andes-gallery-thumbnail-height: 2.5rem;
+  }
+}
+
+/* On a phone the page behind a lightbox is a distraction: it is nearly opaque, and keeps clear
+   of the home indicator. (The lightbox is the size of the viewport; the container query above
+   cannot style the container itself.) */
+@media (max-width: 32rem) {
+  .andes-gallery--lightbox {
+    background: color-mix(
+      in srgb,
+      var(--andes-gallery-surface) 96%,
+      transparent
+    );
+    padding-block-end: env(safe-area-inset-bottom, 0px);
   }
 }
 

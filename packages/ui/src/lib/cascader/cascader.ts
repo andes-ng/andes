@@ -78,6 +78,11 @@ export type AndesCascaderModel =
   | undefined;
 
 type CheckState = 'checked' | 'indeterminate' | 'unchecked';
+/** The one-shot animation a check box plays after a click changed it (check-motion.css). */
+type CheckMotion = 'check' | 'uncheck' | 'indeterminate';
+
+/** How long a check box keeps its `data-motion`: the click ring's length. */
+const CHECK_MOTION_MS = 1000;
 
 const NAVIGATION_KEYS: ReadonlySet<string> = new Set([
   'ArrowDown',
@@ -171,7 +176,8 @@ interface Column {
     NgTemplateOutlet,
   ],
   templateUrl: './cascader.html',
-  styleUrl: './cascader.css',
+  // The checkbox's shared check motion (pop, drawn tick, click ring) for the option boxes.
+  styleUrls: ['./cascader.css', '../checkbox/check-motion.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     provideAndesOverlay(),
@@ -504,6 +510,16 @@ export class AndesCascader implements ControlValueAccessor {
           : (this.entries()[0]?.nodes?.map((node) => node.key) ?? []),
       ),
   );
+
+  /**
+   * The check boxes a click just changed - the clicked one, the options it cascaded to and the
+   * parents it turned mixed - and the motion each plays. Emptied once the ring has played, so
+   * a box shown checked from the value never animates.
+   */
+  protected readonly checkMotion = signal<ReadonlyMap<string, CheckMotion>>(
+    new Map(),
+  );
+  private checkMotionTimer: ReturnType<typeof setTimeout> | null = null;
 
   protected checkState(node: AndesCascaderNode): CheckState {
     const checked = this.checkedKeys();
@@ -912,7 +928,12 @@ export class AndesCascader implements ControlValueAccessor {
       this.onTouched();
     });
 
-    inject(DestroyRef).onDestroy(() => (this.destroyed = true));
+    inject(DestroyRef).onDestroy(() => {
+      this.destroyed = true;
+      if (this.checkMotionTimer !== null) {
+        clearTimeout(this.checkMotionTimer);
+      }
+    });
 
     afterNextRender(() => {
       if (this.autoFocus()) {
@@ -1539,7 +1560,46 @@ export class AndesCascader implements ControlValueAccessor {
           ...checked,
           ...terminals.map((t) => t.key).filter((key) => !checked.has(key)),
         ];
+    const before = this.shownCheckStates();
     this.commitChecked(keys);
+    this.playCheckMotion(before);
+  }
+
+  /** The drawn state of every check box on show: the open columns, or the search results. */
+  private shownCheckStates(): Map<string, CheckState> {
+    const states = new Map<string, CheckState>();
+    const nodes = this.searching()
+      ? this.results().map((result) => result.nodes[result.nodes.length - 1])
+      : this.columns().flatMap((column) => column.nodes);
+    for (const node of nodes) {
+      states.set(node.key, this.checkState(node));
+    }
+    return states;
+  }
+
+  /** Animates every box on show whose drawn state the click changed, for one ring's length. */
+  private playCheckMotion(before: ReadonlyMap<string, CheckState>): void {
+    const motion = new Map<string, CheckMotion>();
+    for (const [key, state] of this.shownCheckStates()) {
+      if (before.has(key) && before.get(key) !== state) {
+        motion.set(
+          key,
+          state === 'checked'
+            ? 'check'
+            : state === 'indeterminate'
+              ? 'indeterminate'
+              : 'uncheck',
+        );
+      }
+    }
+    if (this.checkMotionTimer !== null) {
+      clearTimeout(this.checkMotionTimer);
+    }
+    this.checkMotion.set(motion);
+    this.checkMotionTimer = setTimeout(() => {
+      this.checkMotionTimer = null;
+      this.checkMotion.set(new Map());
+    }, CHECK_MOTION_MS);
   }
 
   private removeEntry(entry: SelectedEntry): void {

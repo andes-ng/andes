@@ -237,6 +237,41 @@
   } }
 </div>
 
+<!--
+  The check box in front of an option with `multiple`: presentational (the treeitem carries
+  aria-checked), drawn with the checkbox's own tick and dash so it takes the shared check
+  motion (`andes-check-motion`, keyed off `data-motion` when a click changed it).
+-->
+<ng-template #checkBox let-state let-motion="motion">
+  <span
+    class="andes-cascader__check andes-check-motion"
+    aria-hidden="true"
+    [attr.data-state]="state"
+    [attr.data-motion]="motion ?? null"
+  >
+    @if (state === 'checked') {
+    <svg class="andes-check-motion__tick" viewBox="0 0 16 16" fill="none">
+      <path
+        d="m3.5 8.5 3 3 6-6.5"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </svg>
+    } @else if (state === 'indeterminate') {
+    <svg class="andes-check-motion__dash" viewBox="0 0 16 16" fill="none">
+      <path
+        d="M4 8h8"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+      />
+    </svg>
+    }
+  </span>
+</ng-template>
+
 <ng-template #panel>
   <!--
     A press inside the panel never takes focus from the combobox: the options are reached
@@ -294,11 +329,13 @@
         (pointermove)="onResultPointerMove(i, $event)"
       >
         @if (multiple()) {
-        <span
-          class="andes-cascader__check"
-          aria-hidden="true"
-          [attr.data-state]="resultChecked(result) ? 'checked' : 'unchecked'"
-        ></span>
+        <ng-container
+          [ngTemplateOutlet]="checkBox"
+          [ngTemplateOutletContext]="{
+            $implicit: resultChecked(result) ? 'checked' : 'unchecked',
+            motion: checkMotion().get(result.key)
+          }"
+        />
         }
         <span class="andes-cascader__label">
           @if (optionTemplate(); as template) {
@@ -358,11 +395,17 @@
         >
           @if (multiple()) {
           <span
-            class="andes-cascader__check"
-            aria-hidden="true"
-            [attr.data-state]="checkState(node)"
+            class="andes-cascader__check-hit"
             (click)="onItemCheckboxClick(node, $event)"
-          ></span>
+          >
+            <ng-container
+              [ngTemplateOutlet]="checkBox"
+              [ngTemplateOutletContext]="{
+                $implicit: checkState(node),
+                motion: checkMotion().get(node.key)
+              }"
+            />
+          </span>
           }
           <span class="andes-cascader__label" [attr.title]="node.label">
             @if (optionTemplate(); as template) {

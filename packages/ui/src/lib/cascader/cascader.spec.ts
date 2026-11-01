@@ -1983,17 +1983,27 @@ describe('AndesCascader', () => {
       expect(
         declaredInAtRule(source, forced, checked, 'background-color'),
       ).toBe('Highlight');
-      expect(
-        declaredInAtRule(source, forced, `${checked}::after`, 'border-color'),
-      ).toBe('HighlightText');
+      // The tick and the dash are drawn in currentColor.
+      expect(declaredInAtRule(source, forced, checked, 'color')).toBe(
+        'HighlightText',
+      );
       expect(
         declaredInAtRule(
           source,
           forced,
-          ".andes-cascader__check[data-state='indeterminate']::after",
-          'background-color',
+          ".andes-cascader__check[data-state='indeterminate']",
+          'color',
         ),
       ).toBe('HighlightText');
+    });
+
+    it('draws the check with the checkbox tick and takes the shared check motion', () => {
+      expect(source).not.toContain('::after');
+      const shared = stylesheet('../checkbox/check-motion.css');
+      expect(shared).toContain(".andes-check-motion[data-motion='check']");
+      expect(shared).toContain(
+        '@media (prefers-reduced-motion: no-preference) and (forced-colors: none)',
+      );
     });
 
     it('slows the spinner instead of freezing it under reduced motion', () => {

@@ -713,6 +713,60 @@ describe('AndesCascader features', () => {
     });
   });
 
+  describe('check motion', () => {
+    afterEach(() => vi.useRealTimers());
+
+    it('plays the checkbox motion on the boxes a click changed, then lets go', () => {
+      vi.useFakeTimers();
+      const { host, item, openWithPointer, detect } = setup((h) =>
+        h.multiple.set(true),
+      );
+      openWithPointer();
+      const motion = () =>
+        Array.from(
+          document.querySelectorAll<HTMLElement>(
+            '.andes-cascader__check[data-motion]',
+          ),
+        ).map(
+          (box) =>
+            `${box.closest('[role="treeitem"]')?.textContent?.trim()}:${box.getAttribute('data-motion')}`,
+        );
+      expect(motion()).toEqual([]);
+
+      item('Cusco').click();
+      detect();
+      (
+        item('Wanchaq').querySelector('.andes-cascader__check') as HTMLElement
+      ).click();
+      detect();
+      expect(host.value()).toEqual([['cusco', 'wanchaq']]);
+      expect(motion()).toEqual(['Cusco:indeterminate', 'Wanchaq:check']);
+      const tick = item('Wanchaq').querySelector('svg');
+      expect(tick?.classList).toContain('andes-check-motion__tick');
+      expect(
+        item('Cusco').querySelector('.andes-cascader__check svg')?.classList,
+      ).toContain('andes-check-motion__dash');
+
+      vi.advanceTimersByTime(1000);
+      detect();
+      expect(motion()).toEqual([]);
+    });
+
+    it('never animates a box shown checked from the value', () => {
+      const { openWithPointer } = setup((h) => {
+        h.multiple.set(true);
+        h.value.set([['callao']]);
+      });
+      openWithPointer();
+      expect(
+        document.querySelector('.andes-cascader__check[data-state="checked"]'),
+      ).not.toBeNull();
+      expect(
+        document.querySelector('.andes-cascader__check[data-motion]'),
+      ).toBeNull();
+    });
+  });
+
   describe('templates', () => {
     it('renders a tagTemplate per path, and onClose removes it', () => {
       const { root, host, detect } = setup((h) => {

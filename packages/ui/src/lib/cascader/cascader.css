@@ -782,11 +782,19 @@ button.andes-cascader__combobox {
   color: var(--andes-color-muted-foreground);
 }
 
-/* The checkbox drawn in front of an option with `multiple`. */
+/* The checkbox drawn in front of an option with `multiple`: the checkbox's own tick and dash,
+   so it plays the shared check motion (check-motion.css) when a click changes it. The hit
+   wrapper only carries the click. */
+.andes-cascader__check-hit {
+  display: contents;
+}
+
 .andes-cascader__check {
   position: relative;
-  display: inline-block;
+  display: inline-flex;
   flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
   box-sizing: border-box;
   width: 1rem;
   height: 1rem;
@@ -801,13 +809,19 @@ button.andes-cascader__combobox {
     );
   border-radius: var(--andes-radius-sm);
   background-color: var(--andes-color-background);
+  color: var(--andes-color-primary-foreground);
   transition:
     background-color 150ms ease,
     border-color 150ms ease;
 }
 
-.andes-cascader__option[data-highlighted]:not([data-disabled])
-  .andes-cascader__check[data-state='unchecked'] {
+.andes-cascader__check > svg {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+/* prettier-ignore */
+.andes-cascader__option[data-highlighted]:not([data-disabled]) .andes-cascader__check[data-state='unchecked'] {
   border-color: var(--andes-color-primary);
 }
 
@@ -815,27 +829,6 @@ button.andes-cascader__combobox {
 .andes-cascader__check[data-state='indeterminate'] {
   border-color: var(--andes-color-primary);
   background-color: var(--andes-color-primary);
-}
-
-.andes-cascader__check[data-state='checked']::after {
-  content: '';
-  position: absolute;
-  inset-block-start: 1px;
-  inset-inline-start: 4px;
-  width: 4px;
-  height: 8px;
-  border: solid var(--andes-color-primary-foreground);
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
-}
-
-.andes-cascader__check[data-state='indeterminate']::after {
-  content: '';
-  position: absolute;
-  inset-block-start: 6px;
-  inset-inline: 3px;
-  height: 2px;
-  background-color: var(--andes-color-primary-foreground);
 }
 
 /* System colours paint the box, the fill and the mark by state: backgrounds are replaced in
@@ -851,14 +844,7 @@ button.andes-cascader__combobox {
   .andes-cascader__check[data-state='indeterminate'] {
     border-color: Highlight;
     background-color: Highlight;
-  }
-
-  .andes-cascader__check[data-state='checked']::after {
-    border-color: HighlightText;
-  }
-
-  .andes-cascader__check[data-state='indeterminate']::after {
-    background-color: HighlightText;
+    color: HighlightText;
   }
 }
 

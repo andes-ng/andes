@@ -1028,7 +1028,25 @@ describe('AndesGallery', () => {
 
     it('rings the active thumbnail', () => {
       expect(css).toMatch(
-        /\.andes-gallery__thumbnail\[aria-current='true'\]::after\s*\{[^}]*box-shadow: inset 0 0 0 2px var\(--andes-gallery-color-strong\)/,
+        /\.andes-gallery__thumbnail\[aria-current='true'\]::after\s*\{[^}]*box-shadow: inset 0 0 0 2px var\(--andes-gallery-ring\)/,
+      );
+    });
+
+    it('takes the page theme inline and keeps the dark surface for the lightbox', () => {
+      const inline = css.match(
+        /\.andes-gallery:not\(\.andes-gallery--lightbox\)\s*\{[^}]*\}/,
+      )?.[0];
+      expect(inline).toContain(
+        '--andes-gallery-surface: var(--andes-color-background',
+      );
+      expect(inline).toContain(
+        '--andes-gallery-color-strong: var(--andes-color-foreground',
+      );
+      expect(inline).toContain(
+        '--andes-gallery-ring: var(--andes-color-primary',
+      );
+      expect(css).toMatch(
+        /\.andes-gallery,\s*\.andes-gallery-lightbox\s*\{[^}]*--andes-gallery-surface: var\(--andes-color-ghost-foreground/,
       );
     });
 

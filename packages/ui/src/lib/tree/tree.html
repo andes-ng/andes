@@ -106,14 +106,15 @@
       </span>
       @if (checkboxRow) {
       <span
-        class="andes-tree__checkbox"
+        class="andes-tree__checkbox andes-check-motion"
         aria-hidden="true"
         [attr.data-state]="isChecked(key) ? 'checked' : isIndeterminate(key) ? 'indeterminate' : 'unchecked'"
         [attr.data-disabled]="row.entry.disableCheckbox ? '' : null"
+        [attr.data-motion]="checkMotion().get(key) ?? null"
         (click)="onCheckboxClick($event, row)"
       >
         @if (isChecked(key)) {
-        <svg viewBox="0 0 16 16" fill="none">
+        <svg class="andes-check-motion__tick" viewBox="0 0 16 16" fill="none">
           <path
             d="m3.5 8.5 3 3 6-6.5"
             stroke="currentColor"
@@ -123,7 +124,7 @@
           />
         </svg>
         } @else if (isIndeterminate(key)) {
-        <svg viewBox="0 0 16 16" fill="none">
+        <svg class="andes-check-motion__dash" viewBox="0 0 16 16" fill="none">
           <path
             d="M4 8h8"
             stroke="currentColor"

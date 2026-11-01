@@ -34,6 +34,7 @@ import type {
   AndesFlatTreeNode,
   AndesTreeAllowDrop,
   AndesTreeCheckEvent,
+  AndesTreeCheckState,
   AndesTreeDropEvent,
   AndesTreeDropInfo,
   AndesTreeDropPosition,
@@ -81,6 +82,22 @@ const DEFAULT_LABELS: AndesTreeLabels = {
 const DRAG_EXPAND_DELAY_MS = 600;
 /** How long typed characters keep building one type-ahead search. */
 const TYPEAHEAD_RESET_MS = 500;
+/** How long a check box keeps its `data-motion`: the click ring's length (check-motion.css). */
+const CHECK_MOTION_MS = 1000;
+
+/** The one-shot animation a check box plays after a click changed it. */
+type AndesTreeCheckMotion = 'check' | 'uncheck' | 'indeterminate';
+
+function visualCheck(
+  state: AndesTreeCheckState,
+  key: AndesTreeKey,
+): AndesTreeCheckMotion {
+  return state.checked.has(key)
+    ? 'check'
+    : state.halfChecked.has(key)
+      ? 'indeterminate'
+      : 'uncheck';
+}
 
 let nextTreeId = 0;
 
@@ -141,7 +158,8 @@ function draggableAttribute(
     CdkVirtualForOf,
   ],
   templateUrl: './tree.html',
-  styleUrl: './tree.css',
+  // The checkbox's shared check motion (pop, drawn tick, click ring) for the row check boxes.
+  styleUrls: ['./tree.css', '../checkbox/check-motion.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     'data-slot': 'tree',
@@ -281,6 +299,16 @@ export class AndesTree {
   } | null>(null);
   /** Branches whose next open or close should animate (the ones just toggled). */
   protected readonly animateKeys = signal<ReadonlySet<AndesTreeKey>>(new Set());
+  /**
+   * The check boxes a click just changed - the clicked one and those it cascaded to - and the
+   * motion each plays (the row's `data-motion`). Keyed by node rather than kept on the
+   * element, and emptied once the ring has played, so a virtual row recycled for another node
+   * never replays it and a box rendered checked from data never animates.
+   */
+  protected readonly checkMotion = signal<
+    ReadonlyMap<AndesTreeKey, AndesTreeCheckMotion>
+  >(new Map());
+  private checkMotionTimer: ReturnType<typeof setTimeout> | null = null;
 
   private selectionAnchor: AndesTreeKey | null = null;
   private typeahead = '';
@@ -450,6 +478,7 @@ export class AndesTree {
     this.destroyRef.onDestroy(() => {
       this.clearTypeahead();
       this.clearDragExpand();
+      this.clearCheckMotion();
     });
 
     effect(() => {
@@ -978,15 +1007,17 @@ export class AndesTree {
       return;
     }
     const index = this.index();
-    const checked = !this.checkState().checked.has(row.key);
+    const before = this.checkState();
+    const checked = !before.checked.has(row.key);
     const state = andesToggleCheck(
-      this.checkState().checked,
+      before.checked,
       index,
       row.key,
       checked,
       this.checkStrictly(),
     );
     const keys = index.order.filter((key) => state.checked.has(key));
+    this.playCheckMotion(before, state);
     this.checkedKeys.set(keys);
     this.nodeCheck.emit({
       node: row.node,
@@ -998,6 +1029,33 @@ export class AndesTree {
         .map((key) => index.byKey.get(key)?.node)
         .filter((node): node is AndesTreeNode => !!node),
     });
+  }
+
+  /** Animates every check box whose drawn state the click changed, for one ring's length. */
+  private playCheckMotion(
+    before: AndesTreeCheckState,
+    after: AndesTreeCheckState,
+  ): void {
+    const motion = new Map<AndesTreeKey, AndesTreeCheckMotion>();
+    for (const key of this.index().order) {
+      const next = visualCheck(after, key);
+      if (next !== visualCheck(before, key)) {
+        motion.set(key, next);
+      }
+    }
+    this.clearCheckMotion();
+    this.checkMotion.set(motion);
+    this.checkMotionTimer = setTimeout(() => {
+      this.checkMotionTimer = null;
+      this.checkMotion.set(new Map());
+    }, CHECK_MOTION_MS);
+  }
+
+  private clearCheckMotion(): void {
+    if (this.checkMotionTimer !== null) {
+      clearTimeout(this.checkMotionTimer);
+      this.checkMotionTimer = null;
+    }
   }
 
   /* ---------------------------------------------------------------------------------------

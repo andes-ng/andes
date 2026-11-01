@@ -589,6 +589,97 @@ describe('AndesTree', () => {
       fixture.detectChanges();
     }
 
+    describe('check motion', () => {
+      afterEach(() => vi.useRealTimers());
+
+      it('plays the checkbox motion on the boxes a click changed, and only on those', () => {
+        vi.useFakeTimers();
+        const fixture = setup();
+        checkable(fixture);
+        expect(
+          fixture.nativeElement.querySelector(
+            '.andes-tree__checkbox[data-motion]',
+          ),
+        ).toBeNull();
+
+        checkbox(node(fixture, 'Estante X')).click();
+        fixture.detectChanges();
+
+        expect(
+          checkbox(node(fixture, 'Estante X')).getAttribute('data-motion'),
+        ).toBe('check');
+        // The parents it cascaded to turn mixed, and play the dash.
+        expect(
+          checkbox(node(fixture, 'Pasillo 1')).getAttribute('data-motion'),
+        ).toBe('indeterminate');
+        expect(
+          checkbox(node(fixture, 'Almacén central')).getAttribute(
+            'data-motion',
+          ),
+        ).toBe('indeterminate');
+        // An unchanged box stays still.
+        expect(
+          checkbox(node(fixture, 'Estante Y')).hasAttribute('data-motion'),
+        ).toBe(false);
+        expect(checkbox(node(fixture, 'Estante X')).classList).toContain(
+          'andes-check-motion',
+        );
+        expect(
+          checkbox(node(fixture, 'Estante X')).querySelector('svg')?.classList,
+        ).toContain('andes-check-motion__tick');
+        expect(
+          checkbox(node(fixture, 'Pasillo 1')).querySelector('svg')?.classList,
+        ).toContain('andes-check-motion__dash');
+      });
+
+      it('plays the uncheck ring and drops every hook once the ring has played', () => {
+        vi.useFakeTimers();
+        const fixture = setup();
+        checkable(fixture);
+        checkbox(node(fixture, 'Estante X')).click();
+        fixture.detectChanges();
+        checkbox(node(fixture, 'Estante X')).click();
+        fixture.detectChanges();
+
+        expect(
+          checkbox(node(fixture, 'Estante X')).getAttribute('data-motion'),
+        ).toBe('uncheck');
+
+        vi.advanceTimersByTime(1000);
+        fixture.detectChanges();
+        expect(
+          fixture.nativeElement.querySelector(
+            '.andes-tree__checkbox[data-motion]',
+          ),
+        ).toBeNull();
+      });
+
+      it('never animates a box rendered checked from data', () => {
+        const fixture = setup((h) => h.checked.set(['a1x']));
+        checkable(fixture);
+        expect(
+          checkbox(node(fixture, 'Estante X')).getAttribute('data-state'),
+        ).toBe('checked');
+        expect(
+          fixture.nativeElement.querySelector(
+            '.andes-tree__checkbox[data-motion]',
+          ),
+        ).toBeNull();
+      });
+
+      it('takes the motion from the shared checkbox stylesheet', () => {
+        const shared = readFileSync(
+          join(__dirname, '../checkbox/check-motion.css'),
+          'utf8',
+        );
+        expect(shared).toContain(
+          '@media (prefers-reduced-motion: no-preference) and (forced-colors: none)',
+        );
+        expect(shared).toContain(".andes-check-motion[data-motion='check']");
+        expect(shared).toContain('@keyframes andes-checkbox-ripple');
+      });
+    });
+
     it('renders a checkbox per node with aria-checked on the treeitem', () => {
       const fixture = setup();
       checkable(fixture);

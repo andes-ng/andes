@@ -1,13 +1,12 @@
+import { AndesOverlayPrimitive } from '@andes-ng/primitives';
+import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
 import {
-  andesOverlayPreset,
-  AndesOverlayPrimitive,
-} from '@andes-ng/primitives';
-import { NgTemplateOutlet } from '@angular/common';
-import {
+  afterNextRender,
   afterRenderEffect,
   ApplicationRef,
   booleanAttribute,
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   computed,
   DestroyRef,
@@ -23,6 +22,7 @@ import {
   numberAttribute,
   output,
   Renderer2,
+  signal,
   type Signal,
   TemplateRef,
   untracked,
@@ -36,7 +36,9 @@ import { AndesDropdownMenuItem } from '../dropdown-menu/dropdown-menu-item';
 import { AndesDropdownMenuLabel } from '../dropdown-menu/dropdown-menu-label';
 import { AndesDropdownMenuSeparator } from '../dropdown-menu/dropdown-menu-separator';
 import { AndesDropdownMenuTrigger } from '../dropdown-menu/dropdown-menu-trigger';
+import type { AndesDropdownMenuPlacement } from '../dropdown-menu/dropdown-menu-types';
 import {
+  type AndesBreadcrumbClassNames,
   type AndesBreadcrumbDropdownAlign,
   type AndesBreadcrumbDropdownSide,
   type AndesBreadcrumbItemClickEvent,
@@ -49,6 +51,7 @@ import {
   type AndesBreadcrumbParams,
   type AndesBreadcrumbResolvedCrumb,
   type AndesBreadcrumbSeparatorContent,
+  type AndesBreadcrumbStyles,
   buildBreadcrumbNodes,
 } from './breadcrumb-items';
 
@@ -96,25 +99,45 @@ import {
  */
 interface AndesBreadcrumbContext {
   readonly separator: Signal<AndesBreadcrumbSeparatorContent | undefined>;
+  readonly classNames: Signal<AndesBreadcrumbClassNames | null>;
+  readonly styles: Signal<AndesBreadcrumbStyles | null>;
 }
 
 const ANDES_BREADCRUMB = new InjectionToken<AndesBreadcrumbContext>(
   'ANDES_BREADCRUMB',
 );
 
+/*
+ * Every part below binds its slice of the root's `classNames` / `styles` beside the classes it
+ * already has. They are directives on the consumer's own elements, so each reads them from the
+ * root it sits under (nothing outside a root).
+ */
+
 /** The `<ol>` that lays out crumbs in a row and wraps them on overflow. */
 @Directive({
   selector: 'ol[andesBreadcrumbList]',
-  host: { class: 'andes-breadcrumb-list' },
+  host: {
+    class: 'andes-breadcrumb-list',
+    '[class]': 'root?.classNames()?.list ?? ""',
+    '[style]': 'root?.styles()?.list ?? null',
+  },
 })
-export class AndesBreadcrumbList {}
+export class AndesBreadcrumbList {
+  protected readonly root = inject(ANDES_BREADCRUMB, { optional: true });
+}
 
 /** An `<li>` wrapping one crumb - a link, the current page, a separator, or an ellipsis. */
 @Directive({
   selector: 'li[andesBreadcrumbItem]',
-  host: { class: 'andes-breadcrumb-item' },
+  host: {
+    class: 'andes-breadcrumb-item',
+    '[class]': 'root?.classNames()?.item ?? ""',
+    '[style]': 'root?.styles()?.item ?? null',
+  },
 })
-export class AndesBreadcrumbItem {}
+export class AndesBreadcrumbItem {
+  protected readonly root = inject(ANDES_BREADCRUMB, { optional: true });
+}
 
 /**
  * The clickable `<a>` for a non-current crumb. A plain styling attribute, deliberately not a
@@ -123,9 +146,15 @@ export class AndesBreadcrumbItem {}
  */
 @Directive({
   selector: 'a[andesBreadcrumbLink]',
-  host: { class: 'andes-breadcrumb-link' },
+  host: {
+    class: 'andes-breadcrumb-link',
+    '[class]': 'root?.classNames()?.link ?? ""',
+    '[style]': 'root?.styles()?.link ?? null',
+  },
 })
-export class AndesBreadcrumbLink {}
+export class AndesBreadcrumbLink {
+  protected readonly root = inject(ANDES_BREADCRUMB, { optional: true });
+}
 
 /**
  * A non-interactive `<span>` representing the current/last crumb. Carries `role="link"`,
@@ -140,9 +169,13 @@ export class AndesBreadcrumbLink {}
     role: 'link',
     '[attr.aria-disabled]': 'true',
     '[attr.aria-current]': "'page'",
+    '[class]': 'root?.classNames()?.link ?? ""',
+    '[style]': 'root?.styles()?.link ?? null',
   },
 })
-export class AndesBreadcrumbPage {}
+export class AndesBreadcrumbPage {
+  protected readonly root = inject(ANDES_BREADCRUMB, { optional: true });
+}
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -167,6 +200,8 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
     class: 'andes-breadcrumb-separator',
     role: 'presentation',
     '[attr.aria-hidden]': 'true',
+    '[class]': 'root?.classNames()?.separator ?? ""',
+    '[style]': 'root?.styles()?.separator ?? null',
   },
 })
 export class AndesBreadcrumbSeparator {
@@ -179,7 +214,7 @@ export class AndesBreadcrumbSeparator {
     { alias: 'andesBreadcrumbSeparator' },
   );
 
-  private readonly root = inject(ANDES_BREADCRUMB, { optional: true });
+  protected readonly root = inject(ANDES_BREADCRUMB, { optional: true });
   private readonly host =
     inject<ElementRef<HTMLLIElement>>(ElementRef).nativeElement;
   private readonly renderer = inject(Renderer2);
@@ -288,6 +323,48 @@ interface AndesBreadcrumbDropdownSelection {
   readonly event: MouseEvent;
 }
 
+type TextDirection = 'ltr' | 'rtl';
+
+/** The direction of the text around `element`: the nearest `dir`, else the computed one. */
+function textDirection(element: Element): TextDirection {
+  const dir = element.closest('[dir]')?.getAttribute('dir');
+  if (dir === 'rtl' || dir === 'ltr') {
+    return dir;
+  }
+  return getComputedStyle(element).direction === 'rtl' ? 'rtl' : 'ltr';
+}
+
+/** The direction the overlay lays `start` / `end` out by: the `dir` of `<body>`, else `<html>`. */
+function documentDirection(document: Document): TextDirection {
+  return (document.body?.dir || document.documentElement.dir) === 'rtl'
+    ? 'rtl'
+    : 'ltr';
+}
+
+/** The menu's own name for each side and alignment (what its `placement` input takes). */
+const PLACEMENTS: Readonly<
+  Record<
+    AndesBreadcrumbDropdownSide,
+    Record<AndesBreadcrumbDropdownAlign, AndesDropdownMenuPlacement>
+  >
+> = {
+  top: { start: 'topLeft', center: 'top', end: 'topRight' },
+  bottom: { start: 'bottomLeft', center: 'bottom', end: 'bottomRight' },
+  left: { start: 'leftTop', center: 'left', end: 'leftBottom' },
+  right: { start: 'rightTop', center: 'right', end: 'rightBottom' },
+};
+
+/** The side and alignment as seen from the other writing direction. */
+function mirrorPlacement(
+  side: AndesBreadcrumbDropdownSide,
+  align: AndesBreadcrumbDropdownAlign,
+): [AndesBreadcrumbDropdownSide, AndesBreadcrumbDropdownAlign] {
+  return [
+    side === 'left' ? 'right' : side === 'right' ? 'left' : side,
+    align === 'start' ? 'end' : align === 'end' ? 'start' : align,
+  ];
+}
+
 /** @internal One row of the open dropdown: an entry, a divider, or a group heading. */
 type MenuRow =
   | { readonly kind: 'item'; readonly item: AndesBreadcrumbMenuItem }
@@ -340,17 +417,24 @@ function toMenuRows(entries: readonly AndesBreadcrumbMenuEntry[]): MenuRow[] {
     AndesBreadcrumbLink,
   ],
   template: `
-    <andes-dropdown-menu>
+    <andes-dropdown-menu [placement]="placement()">
       <button
         type="button"
         andesDropdownMenuTrigger
         [class]="triggerClass()"
+        [style]="triggerStyle()"
         [disabled]="disabled()"
         [attr.aria-current]="current() ? 'page' : null"
       >
         <ng-content />
       </button>
-      <andes-dropdown-menu-content>
+      <!-- The panel renders in the overlay container, outside any dir="rtl" ancestor of the trail,
+           so it gets the trail's direction explicitly. -->
+      <andes-dropdown-menu-content
+        [class]="root?.classNames()?.menu ?? ''"
+        [style]="root?.styles()?.menu ?? null"
+        [attr.dir]="direction()"
+      >
         @for (row of rows(); track $index) {
           @if (row.kind === 'divider') {
             <andes-dropdown-menu-separator />
@@ -430,6 +514,8 @@ function toMenuRows(entries: readonly AndesBreadcrumbMenuEntry[]): MenuRow[] {
 export class AndesBreadcrumbDropdown {
   readonly items = input.required<readonly AndesBreadcrumbMenuEntry[]>();
   readonly triggerClass = input('');
+  /** Inline styles for the trigger. */
+  readonly triggerStyle = input<Record<string, string | number> | null>(null);
   /** Marks the trigger as the current page (a last crumb that has a menu). */
   readonly current = input(false, { transform: booleanAttribute });
   /** Side of the trigger the panel opens on. Unset keeps the menu's own default. */
@@ -445,6 +531,32 @@ export class AndesBreadcrumbDropdown {
   readonly openChange = output<boolean>();
 
   protected readonly rows = computed(() => toMenuRows(this.items()));
+
+  protected readonly root = inject(ANDES_BREADCRUMB, { optional: true });
+  private readonly host =
+    inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+  private readonly document = inject(DOCUMENT);
+  private readonly changeDetector = inject(ChangeDetectorRef);
+
+  /** The text direction of the trail, as the panel must repeat it (set when the menu opens). */
+  protected readonly direction = signal<'ltr' | 'rtl' | null>(null);
+
+  /**
+   * Whether the trail's direction differs from the page's. The overlay lays `start` / `end` out
+   * by the page's, so a trail inside a `dir` of its own would open the panel on the wrong edge:
+   * its placement is mirrored to land where the trail's own direction puts it.
+   */
+  private readonly mirrored = signal(false);
+
+  /** The menu's `placement`: `side` and `align`, defaulting to below and at the start. */
+  protected readonly placement = computed<AndesDropdownMenuPlacement>(() => {
+    const side = this.side() ?? 'bottom';
+    const align = this.align() ?? 'start';
+    const [placedSide, placedAlign] = this.mirrored()
+      ? mirrorPlacement(side, align)
+      : [side, align];
+    return PLACEMENTS[placedSide][placedAlign];
+  });
 
   /**
    * The overlay `AndesDropdownMenu` provides on its own element - a component's `providers` are
@@ -465,27 +577,37 @@ export class AndesBreadcrumbDropdown {
   constructor() {
     effect(() => {
       const overlay = this.overlay();
-      const side = this.side();
-      const align = this.align();
       const panelClass = this.panelClass();
       if (!overlay) {
         return;
       }
-      untracked(() => {
-        const base = andesOverlayPreset('menu').positioning;
+      untracked(() =>
         overlay.configure({
-          positioning:
-            base?.kind === 'anchored'
-              ? { ...base, side: side ?? base.side, align: align ?? base.align }
-              : base,
           // The panel renders at the end of <body>, outside every Breadcrumb ancestor, so its own
           // class carries the typography (see breadcrumb.css).
           panelClass: [
             'andes-breadcrumb-dropdown-panel',
             ...panelClass.split(/\s+/).filter(Boolean),
           ],
-        });
-      });
+        }),
+      );
+    });
+
+    // The trail's direction is only reliable once it is in the page with its `dir` bound, so it
+    // is read after the first render, and again just before a pointer or the keyboard can open
+    // the menu (capturing, so ahead of the trigger): `dir` may have changed since.
+    afterNextRender(() => this.readDirection());
+    const refresh = () => {
+      if (this.readDirection()) {
+        // The menu reads its `placement` when it opens, which is within this very event.
+        this.changeDetector.detectChanges();
+      }
+    };
+    this.host.addEventListener('click', refresh, true);
+    this.host.addEventListener('keydown', refresh, true);
+    inject(DestroyRef).onDestroy(() => {
+      this.host.removeEventListener('click', refresh, true);
+      this.host.removeEventListener('keydown', refresh, true);
     });
 
     // Subscribed rather than derived from `isOpen` in an effect, so an open immediately followed
@@ -495,7 +617,10 @@ export class AndesBreadcrumbDropdown {
       if (!overlay) {
         return;
       }
-      const opened = overlay.opened.subscribe(() => this.openChange.emit(true));
+      const opened = overlay.opened.subscribe(() => {
+        this.direction.set(textDirection(this.host));
+        this.openChange.emit(true);
+      });
       const closed = overlay.closed.subscribe(() =>
         this.openChange.emit(false),
       );
@@ -504,6 +629,15 @@ export class AndesBreadcrumbDropdown {
         closed.unsubscribe();
       });
     });
+  }
+
+  /** Takes the trail's direction; whether that changed what the placement must be. */
+  private readDirection(): boolean {
+    const mirrored =
+      textDirection(this.host) !== documentDirection(this.document);
+    const changed = mirrored !== this.mirrored();
+    this.mirrored.set(mirrored);
+    return changed;
   }
 
   protected onEntryClick(
@@ -604,9 +738,13 @@ export class AndesBreadcrumbDropdown {
     // attribute entirely rather than writing `role=""`/`aria-hidden="false"`.
     '[attr.role]': 'hasMenu() ? null : "presentation"',
     '[attr.aria-hidden]': 'hasMenu() ? null : true',
+    '[class]': 'root?.classNames()?.ellipsis ?? ""',
+    '[style]': 'root?.styles()?.ellipsis ?? null',
   },
 })
 export class AndesBreadcrumbEllipsis {
+  protected readonly root = inject(ANDES_BREADCRUMB, { optional: true });
+
   /**
    * The crumbs collapsed behind this "...". Empty (the default) keeps the static, non-interactive
    * glyph; anything else turns it into a dropdown menu trigger.
@@ -629,6 +767,8 @@ export class AndesBreadcrumbEllipsis {
 /** @internal A resolved crumb plus what the root template needs to render it. */
 interface CrumbView extends AndesBreadcrumbResolvedCrumb {
   readonly menuItems: readonly AndesBreadcrumbMenuEntry[] | undefined;
+  /** What names the caret button: the title text, or the `ariaLabel` of a template title. */
+  readonly menuName: string;
   /** A link plus a separate caret button: the crumb has a menu AND somewhere to navigate. */
   readonly split: boolean;
   readonly context: AndesBreadcrumbItemRenderContext;
@@ -667,6 +807,9 @@ function optionalNumberAttribute(value: unknown): number | undefined {
  *   and the root renders the list, marks the last crumb as the current page, and collapses long
  *   trails into an ellipsis dropdown when `maxItems` is set. Projected content is ignored while
  *   `items` is set.
+ *
+ * `classNames` and `styles` add classes and inline styles to the trail's parts (`root`, `list`,
+ * `item`, `link`, `separator`, `ellipsis`, `menu`), in either mode.
  *
  * @example Projected parts
  * <andes-breadcrumb>
@@ -764,7 +907,11 @@ function optionalNumberAttribute(value: unknown): number | undefined {
                   </span>
                 } @else if (node.crumb.item.disabled) {
                   <span
-                    class="andes-breadcrumb-text andes-breadcrumb-text--disabled"
+                    [class]="
+                      'andes-breadcrumb-text andes-breadcrumb-text--disabled ' +
+                      linkClass()
+                    "
+                    [style]="linkStyle()"
                     aria-disabled="true"
                     [class.andes-breadcrumb-has-icon]="!!node.crumb.item.icon"
                   >
@@ -794,7 +941,11 @@ function optionalNumberAttribute(value: unknown): number | undefined {
                 } @else if (node.crumb.item.onClick) {
                   <button
                     type="button"
-                    class="andes-breadcrumb-link andes-breadcrumb-link--button"
+                    [class]="
+                      'andes-breadcrumb-link andes-breadcrumb-link--button ' +
+                      linkClass()
+                    "
+                    [style]="linkStyle()"
                     [class.andes-breadcrumb-has-icon]="!!node.crumb.item.icon"
                     (click)="onCrumbClick(node.crumb, $event)"
                   >
@@ -805,7 +956,8 @@ function optionalNumberAttribute(value: unknown): number | undefined {
                   </button>
                 } @else {
                   <span
-                    class="andes-breadcrumb-text"
+                    [class]="'andes-breadcrumb-text ' + linkClass()"
+                    [style]="linkStyle()"
                     [class.andes-breadcrumb-has-icon]="!!node.crumb.item.icon"
                   >
                     <ng-container
@@ -828,10 +980,11 @@ function optionalNumberAttribute(value: unknown): number | undefined {
     <ng-template #crumbMenu let-crumb let-caretOnly="caretOnly">
       <andes-breadcrumb-dropdown
         [triggerClass]="
-          caretOnly
-            ? 'andes-breadcrumb-menu-trigger andes-breadcrumb-menu-trigger--caret'
-            : 'andes-breadcrumb-menu-trigger'
+          (caretOnly
+            ? 'andes-breadcrumb-menu-trigger andes-breadcrumb-menu-trigger--caret '
+            : 'andes-breadcrumb-menu-trigger ') + linkClass()
         "
+        [triggerStyle]="linkStyle()"
         [current]="crumb.last"
         [items]="crumb.menuItems"
         [side]="crumb.item.dropdownProps?.side"
@@ -846,7 +999,7 @@ function optionalNumberAttribute(value: unknown): number | undefined {
       >
         @if (caretOnly) {
           <span class="andes-breadcrumb-sr-only">{{
-            crumb.title ? crumb.title + ': ' + menuLabel() : menuLabel()
+            crumb.menuName ? crumb.menuName + ': ' + menuLabel() : menuLabel()
           }}</span>
         } @else {
           <ng-container
@@ -898,7 +1051,12 @@ function optionalNumberAttribute(value: unknown): number | undefined {
           <ng-container [ngTemplateOutlet]="crumb.item.icon" />
         </span>
       }
-      @if (crumb.title) {
+      @if (crumb.titleTemplate; as template) {
+        <ng-container
+          [ngTemplateOutlet]="template"
+          [ngTemplateOutletContext]="crumb.context"
+        />
+      } @else if (crumb.title) {
         <ng-container>{{ crumb.title }}</ng-container>
       } @else if (crumb.item.ariaLabel) {
         <span class="andes-breadcrumb-sr-only">{{ crumb.item.ariaLabel }}</span>
@@ -917,6 +1075,8 @@ function optionalNumberAttribute(value: unknown): number | undefined {
   ],
   host: {
     class: 'andes-breadcrumb',
+    '[class]': 'classNames()?.root ?? ""',
+    '[style]': 'styles()?.root ?? null',
     // The `aria-label` input is forwarded onto the real `<nav>` in the template below. Without
     // this, Angular would ALSO write the same static/bound value onto this host element (any
     // attribute matching an input's alias lands on both), producing two elements in the a11y
@@ -957,6 +1117,16 @@ export class AndesBreadcrumb implements AndesBreadcrumbContext {
   readonly itemRender = input<
     TemplateRef<AndesBreadcrumbItemRenderContext> | undefined
   >(undefined);
+
+  /**
+   * Classes for the parts: `root` (this element), `list`, `item`, `link`, `separator`,
+   * `ellipsis` and the dropdown's `menu`, as `{ link: 'my-link', separator: 'my-sep' }`. They
+   * add to a part's own classes and to an item's `className`.
+   */
+  readonly classNames = input<AndesBreadcrumbClassNames | null>(null);
+
+  /** Inline styles for the same parts, as `{ link: { fontWeight: 600 } }`. */
+  readonly styles = input<AndesBreadcrumbStyles | null>(null);
 
   /** Replaces the caret of crumbs that have a `menu`. */
   readonly dropdownIcon = input<TemplateRef<unknown> | undefined>(undefined);
@@ -999,6 +1169,10 @@ export class AndesBreadcrumb implements AndesBreadcrumbContext {
    */
   readonly menuOpenChange = output<AndesBreadcrumbMenuOpenChangeEvent>();
 
+  /** The `link` part, for the crumbs this template draws without an `andesBreadcrumbLink`. */
+  protected readonly linkClass = computed(() => this.classNames()?.link ?? '');
+  protected readonly linkStyle = computed(() => this.styles()?.link ?? null);
+
   protected readonly nodes = computed<NodeView[]>(() => {
     const items = this.items() ?? [];
     const params = this.params();
@@ -1010,6 +1184,9 @@ export class AndesBreadcrumb implements AndesBreadcrumbContext {
       return {
         ...crumb,
         menuItems,
+        menuName:
+          crumb.title ||
+          (crumb.titleTemplate ? (crumb.item.ariaLabel ?? '') : ''),
         // `itemRender` owns the whole crumb, a disabled crumb has no link to keep, and the last
         // crumb is the current page: all three stay a single trigger.
         split:

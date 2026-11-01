@@ -98,17 +98,22 @@ export interface AndesBreadcrumbDropdownProps {
 /** A crumb of the `[items]` input. */
 export interface AndesBreadcrumbRouteItem {
   readonly type?: 'item';
-  /** Visible text. `:param` placeholders are replaced from the root's `params`. */
-  readonly title?: string;
+  /**
+   * Visible content: text, whose `:param` placeholders are replaced from the root's `params`, or
+   * a template for markup (a badge, a bold word...), which receives
+   * {@link AndesBreadcrumbItemRenderContext} with an empty `title`. The collapse dropdown and
+   * the name of a menu button need plain text, so give a template crumb an `ariaLabel` too.
+   */
+  readonly title?: string | TemplateRef<AndesBreadcrumbItemRenderContext>;
   /**
    * A leading icon (a template, e.g. an `<svg>`), rendered before `title` inside the crumb's link,
    * page or text. Decorative - pair an icon-only crumb with `ariaLabel`.
    */
   readonly icon?: TemplateRef<unknown>;
   /**
-   * Accessible name of a crumb without a `title` (typically an icon-only "home" crumb), rendered
-   * as visually hidden text so it is read out wherever the crumb is - also used as its label in
-   * the collapse ellipsis' dropdown. Ignored when `title` is set.
+   * Accessible name of an icon-only crumb (no `title`), rendered as visually hidden text so it is
+   * read out wherever the crumb is. Also the label of a crumb whose `title` is a template in the
+   * collapse ellipsis' dropdown and in the name of its menu button. Ignored when `title` is text.
    */
   readonly ariaLabel?: string;
   /** Target of the crumb's link. Ignored when `path` is set. */
@@ -158,6 +163,30 @@ export interface AndesBreadcrumbSeparatorItem {
 
 export type AndesBreadcrumbItemType =
   AndesBreadcrumbRouteItem | AndesBreadcrumbSeparatorItem;
+
+/**
+ * The parts of a breadcrumb that take a consumer's classes and inline styles: `root` the
+ * `andes-breadcrumb` host, `list` the `<ol>`, `item` every crumb's `<li>`, `link` what each crumb
+ * renders (link, current page, button, plain text or menu trigger), `separator` every separator
+ * `<li>`, `ellipsis` the collapse "..." and `menu` the dropdown panel of a crumb or of the
+ * ellipsis.
+ */
+export type AndesBreadcrumbPart =
+  'root' | 'list' | 'item' | 'link' | 'separator' | 'ellipsis' | 'menu';
+
+/**
+ * Classes added beside each part's own. They reach the parts of a projected trail too. The
+ * dropdown panel renders in the overlay container, so style its class from a global stylesheet;
+ * `styles` reaches it from anywhere.
+ */
+export type AndesBreadcrumbClassNames = Partial<
+  Record<AndesBreadcrumbPart, string>
+>;
+
+/** Inline styles set on each part, keyed like {@link AndesBreadcrumbClassNames}. */
+export type AndesBreadcrumbStyles = Partial<
+  Record<AndesBreadcrumbPart, Record<string, string | number>>
+>;
 
 /** Template context of the root's `itemRender` template. */
 export interface AndesBreadcrumbItemRenderContext {
@@ -214,7 +243,11 @@ export interface AndesBreadcrumbResolvedCrumb {
   readonly item: AndesBreadcrumbRouteItem;
   readonly index: number;
   readonly key: string | number;
+  /** The interpolated text; empty for a template `title`. */
   readonly title: string;
+  /** The template `title`, if the item has one. */
+  readonly titleTemplate:
+    TemplateRef<AndesBreadcrumbItemRenderContext> | undefined;
   readonly href: string | undefined;
   readonly paths: readonly string[];
   readonly last: boolean;
@@ -319,7 +352,11 @@ export function buildBreadcrumbNodes(
         item,
         index,
         key: item.key ?? index,
-        title: interpolateBreadcrumbParams(item.title ?? '', params),
+        title:
+          typeof item.title === 'string'
+            ? interpolateBreadcrumbParams(item.title, params)
+            : '',
+        titleTemplate: typeof item.title === 'string' ? undefined : item.title,
         href,
         paths: [...paths],
         last: index === lastCrumbIndex,

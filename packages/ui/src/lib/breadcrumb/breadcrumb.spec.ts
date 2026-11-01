@@ -17,12 +17,14 @@ import {
   AndesBreadcrumbSeparator,
 } from './breadcrumb';
 import type {
+  AndesBreadcrumbClassNames,
   AndesBreadcrumbItemClickEvent,
   AndesBreadcrumbItemRenderContext,
   AndesBreadcrumbItemType,
   AndesBreadcrumbMenuClickEvent,
   AndesBreadcrumbMenuOpenChangeEvent,
   AndesBreadcrumbSeparatorContent,
+  AndesBreadcrumbStyles,
 } from './breadcrumb-items';
 
 /**
@@ -2076,6 +2078,772 @@ describe('Breadcrumb', () => {
       ]) {
         expect(css).not.toContain(physical);
       }
+    });
+  });
+
+  // Semantic parts: `classNames` / `styles` reach the root, the list, every item, link,
+  // separator, the collapse ellipsis and the dropdown panel.
+  describe('semantic parts (classNames / styles)', () => {
+    withElementGeometry();
+
+    @Component({
+      imports: [AndesBreadcrumb],
+      template: `
+        <andes-breadcrumb
+          [items]="items()"
+          [classNames]="classNames()"
+          [styles]="styles()"
+          [maxItems]="maxItems()"
+          [separator]="separator()"
+        />
+      `,
+    })
+    class PartsHost {
+      readonly items = signal<AndesBreadcrumbItemType[]>([
+        { title: 'Home', href: '/', className: 'own-item' },
+        { title: 'Action', onClick: () => undefined },
+        { title: 'Text' },
+        { title: 'Off', href: '/off', disabled: true },
+        { title: 'Here' },
+      ]);
+      readonly classNames = signal<AndesBreadcrumbClassNames | null>({
+        root: 'my-root',
+        list: 'my-list',
+        item: 'my-item',
+        link: 'my-link',
+        separator: 'my-separator',
+        ellipsis: 'my-ellipsis',
+        menu: 'my-menu',
+      });
+      readonly styles = signal<AndesBreadcrumbStyles | null>({
+        root: { outline: '3px solid red' },
+        list: { 'column-gap': '9px' },
+        item: { 'letter-spacing': '1px' },
+        link: { 'font-weight': '700' },
+        separator: { opacity: '0.5' },
+        ellipsis: { 'border-radius': '4px' },
+        menu: { 'border-width': '5px' },
+      });
+      readonly maxItems = signal<number | undefined>(undefined);
+      readonly separator = signal<AndesBreadcrumbSeparatorContent | undefined>(
+        undefined,
+      );
+    }
+
+    async function renderParts(setup?: (host: PartsHost) => void) {
+      const fixture = TestBed.createComponent(PartsHost);
+      setup?.(fixture.componentInstance);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const root = fixture.nativeElement as HTMLElement;
+      return {
+        fixture,
+        host: fixture.componentInstance,
+        root,
+        el: (selector: string) => root.querySelector(selector) as HTMLElement,
+        all: (selector: string) =>
+          Array.from(root.querySelectorAll(selector)) as HTMLElement[],
+        update: async () => {
+          fixture.detectChanges();
+          await fixture.whenStable();
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          fixture.detectChanges();
+        },
+      };
+    }
+
+    it('adds classes and styles to the root, the list, the items and the separators', async () => {
+      const { el, all } = await renderParts();
+      const rootEl = el('andes-breadcrumb');
+
+      expect(rootEl.classList).toContain('my-root');
+      expect(rootEl.classList).toContain('andes-breadcrumb');
+      expect(rootEl.style.outline).toBe('3px solid red');
+
+      const list = el('ol');
+      expect(list.classList).toContain('my-list');
+      expect(list.classList).toContain('andes-breadcrumb-list');
+      expect(list.style.columnGap).toBe('9px');
+
+      const items = all('li.andes-breadcrumb-item');
+      expect(items).toHaveLength(5);
+      for (const item of items) {
+        expect(item.classList).toContain('my-item');
+        expect(item.style.letterSpacing).toBe('1px');
+      }
+      // The item's own `className` stays next to the part's class.
+      expect(items[0].classList).toContain('own-item');
+
+      const separators = all('li.andes-breadcrumb-separator');
+      expect(separators).toHaveLength(4);
+      for (const separator of separators) {
+        expect(separator.classList).toContain('my-separator');
+        expect(separator.style.opacity).toBe('0.5');
+      }
+    });
+
+    it('adds the link part to whatever a crumb renders', async () => {
+      const { all, el } = await renderParts();
+
+      const link = el('a.andes-breadcrumb-link');
+      const button = el('button.andes-breadcrumb-link--button');
+      const text = el(
+        '.andes-breadcrumb-text:not(.andes-breadcrumb-text--disabled)',
+      );
+      const disabled = el('.andes-breadcrumb-text--disabled');
+      const page = el('.andes-breadcrumb-page');
+
+      for (const crumb of [link, button, text, disabled, page]) {
+        expect(crumb.classList).toContain('my-link');
+        expect(crumb.style.fontWeight).toBe('700');
+      }
+      // Each keeps its own class: the part adds, never replaces.
+      expect(button.classList).toContain('andes-breadcrumb-link');
+      expect(disabled.classList).toContain('andes-breadcrumb-text');
+      expect(disabled.getAttribute('aria-disabled')).toBe('true');
+      expect(page.getAttribute('aria-current')).toBe('page');
+      // Nothing outside the crumbs picks it up.
+      expect(all('.my-link')).toHaveLength(5);
+    });
+
+    it('adds the link part to a crumb menu trigger and its caret-only button', async () => {
+      const { host, all, update } = await renderParts();
+      host.items.set([
+        { title: 'Home', href: '/' },
+        {
+          title: 'Components',
+          href: '/components',
+          menu: { items: [{ label: 'General' }] },
+        },
+        { title: 'Group', menu: { items: [{ label: 'Layout' }] } },
+        { title: 'Here' },
+      ]);
+      await update();
+
+      const triggers = all('button.andes-breadcrumb-menu-trigger');
+      expect(triggers).toHaveLength(2);
+      for (const trigger of triggers) {
+        expect(trigger.classList).toContain('my-link');
+        expect(trigger.style.fontWeight).toBe('700');
+      }
+      expect(triggers[0].classList).toContain(
+        'andes-breadcrumb-menu-trigger--caret',
+      );
+      // The link beside the caret is a link too.
+      expect(all('a.my-link')).toHaveLength(2);
+    });
+
+    it('adds the ellipsis part to the collapse dots and the menu part to its panel', async () => {
+      const { host, el, update } = await renderParts((h) => h.maxItems.set(3));
+      const ellipsis = el('andes-breadcrumb-ellipsis');
+
+      expect(ellipsis.classList).toContain('my-ellipsis');
+      expect(ellipsis.classList).toContain('andes-breadcrumb-ellipsis');
+      expect(ellipsis.style.borderRadius).toBe('4px');
+
+      (
+        ellipsis.querySelector(
+          '.andes-breadcrumb-ellipsis__trigger',
+        ) as HTMLElement
+      ).click();
+      await update();
+
+      const panel = document.querySelector(
+        '.andes-dropdown-menu__content',
+      ) as HTMLElement;
+      expect(panel.classList).toContain('my-menu');
+      expect(panel.classList).toContain('andes-dropdown-menu__content');
+      expect(panel.style.borderWidth).toBe('5px');
+      // The classes of the part never leak onto the trail.
+      expect(host.items().length).toBeGreaterThan(3);
+      expect(el('ol').classList).not.toContain('my-menu');
+    });
+
+    it('adds the menu part to the panel of a crumb menu', async () => {
+      const { host, el, update } = await renderParts();
+      host.items.set([
+        { title: 'Home', href: '/' },
+        { title: 'Group', menu: { items: [{ label: 'Layout' }] } },
+        { title: 'Here' },
+      ]);
+      await update();
+      el('.andes-breadcrumb-menu-trigger').click();
+      await update();
+
+      const panel = document.querySelector(
+        '.andes-dropdown-menu__content',
+      ) as HTMLElement;
+      expect(panel.classList).toContain('my-menu');
+      expect(panel.style.borderWidth).toBe('5px');
+    });
+
+    it('follows the inputs and leaves only the library classes when they are cleared', async () => {
+      const { host, el, update } = await renderParts();
+      host.classNames.set({ link: 'other-link' });
+      host.styles.set({ link: { 'font-style': 'italic' } });
+      await update();
+
+      expect(el('a.andes-breadcrumb-link').classList).toContain('other-link');
+      expect(el('a.andes-breadcrumb-link').classList).not.toContain('my-link');
+      expect(el('a.andes-breadcrumb-link').style.fontStyle).toBe('italic');
+      expect(el('a.andes-breadcrumb-link').style.fontWeight).toBe('');
+      expect(el('andes-breadcrumb').classList).not.toContain('my-root');
+      expect(el('andes-breadcrumb').style.outline).toBe('');
+
+      host.classNames.set(null);
+      host.styles.set(null);
+      await update();
+
+      expect(el('andes-breadcrumb').className.trim()).toBe('andes-breadcrumb');
+      expect(el('ol').className.trim()).toBe('andes-breadcrumb-list');
+      expect(el('a.andes-breadcrumb-link').className.trim()).toBe(
+        'andes-breadcrumb-link',
+      );
+      expect(el('andes-breadcrumb').getAttribute('style') ?? '').toBe('');
+      expect(el('ol').getAttribute('style') ?? '').toBe('');
+      expect(el('a.andes-breadcrumb-link').getAttribute('style') ?? '').toBe(
+        '',
+      );
+    });
+
+    it('reaches the parts of a projected trail', async () => {
+      @Component({
+        imports: [
+          AndesBreadcrumb,
+          AndesBreadcrumbList,
+          AndesBreadcrumbItem,
+          AndesBreadcrumbLink,
+          AndesBreadcrumbPage,
+          AndesBreadcrumbSeparator,
+          AndesBreadcrumbEllipsis,
+        ],
+        template: `
+          <andes-breadcrumb
+            [classNames]="{
+              root: 'p-root',
+              list: 'p-list',
+              item: 'p-item',
+              link: 'p-link',
+              separator: 'p-sep',
+              ellipsis: 'p-dots',
+            }"
+            [styles]="{ link: { 'font-weight': '700' } }"
+          >
+            <ol andesBreadcrumbList class="mine">
+              <li andesBreadcrumbItem>
+                <a andesBreadcrumbLink href="/" class="mine-link">Home</a>
+              </li>
+              <li andesBreadcrumbSeparator></li>
+              <li andesBreadcrumbItem><andes-breadcrumb-ellipsis /></li>
+              <li andesBreadcrumbSeparator></li>
+              <li andesBreadcrumbItem>
+                <span andesBreadcrumbPage>Here</span>
+              </li>
+            </ol>
+          </andes-breadcrumb>
+        `,
+      })
+      class ProjectedHost {}
+
+      const fixture = TestBed.createComponent(ProjectedHost);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const root = fixture.nativeElement as HTMLElement;
+      const q = (selector: string) =>
+        root.querySelector(selector) as HTMLElement;
+
+      expect(q('andes-breadcrumb').classList).toContain('p-root');
+      expect(q('ol').classList).toContain('p-list');
+      // The consumer's own class stays beside the part's.
+      expect(q('ol').classList).toContain('mine');
+      expect(q('a').classList).toContain('p-link');
+      expect(q('a').classList).toContain('mine-link');
+      expect(q('a').style.fontWeight).toBe('700');
+      expect(q('.andes-breadcrumb-page').classList).toContain('p-link');
+      expect(q('li.andes-breadcrumb-item').classList).toContain('p-item');
+      expect(q('li.andes-breadcrumb-separator').classList).toContain('p-sep');
+      expect(q('andes-breadcrumb-ellipsis').classList).toContain('p-dots');
+    });
+
+    it('leaves a part alone outside a breadcrumb root', () => {
+      @Component({
+        imports: [AndesBreadcrumbList, AndesBreadcrumbLink],
+        template: `
+          <ol andesBreadcrumbList>
+            <li><a andesBreadcrumbLink href="/">Home</a></li>
+          </ol>
+        `,
+      })
+      class LooseHost {}
+
+      const fixture = TestBed.createComponent(LooseHost);
+      fixture.detectChanges();
+      const root = fixture.nativeElement as HTMLElement;
+
+      expect(root.querySelector('ol')?.className.trim()).toBe(
+        'andes-breadcrumb-list',
+      );
+      expect(root.querySelector('a')?.className.trim()).toBe(
+        'andes-breadcrumb-link',
+      );
+    });
+  });
+
+  describe('title as a template', () => {
+    withElementGeometry();
+
+    @Component({
+      imports: [AndesBreadcrumb],
+      template: `
+        <ng-template #bold let-item="item" let-last="last" let-params="params">
+          <strong
+            class="bold"
+            [attr.data-last]="last"
+            [attr.data-id]="params.id"
+            >{{ item.ariaLabel }}</strong
+          >
+        </ng-template>
+        <andes-breadcrumb
+          [items]="[
+            { title: bold, ariaLabel: 'Start', href: '/' },
+            {
+              title: bold,
+              ariaLabel: 'Menu crumb',
+              menu: { items: [{ label: 'Sibling' }] },
+              href: '/menu',
+            },
+            { title: bold, ariaLabel: 'Hidden', href: '/hidden' },
+            { title: bold, ariaLabel: 'Also hidden', href: '/also' },
+            { title: bold, ariaLabel: 'Here' },
+          ]"
+          [params]="{ id: 7 }"
+          [maxItems]="maxItems()"
+          menuLabel="Show menu"
+        />
+      `,
+    })
+    class TemplateTitleHost {
+      readonly maxItems = signal<number | undefined>(undefined);
+    }
+
+    async function renderTemplateTitles(maxItems?: number) {
+      const fixture = TestBed.createComponent(TemplateTitleHost);
+      fixture.componentInstance.maxItems.set(maxItems);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      return {
+        fixture,
+        root: fixture.nativeElement as HTMLElement,
+        update: async () => {
+          fixture.detectChanges();
+          await fixture.whenStable();
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          fixture.detectChanges();
+        },
+      };
+    }
+
+    it('renders the template inside the link and the page with the render context', async () => {
+      const { root } = await renderTemplateTitles();
+      const link = root.querySelector('a.andes-breadcrumb-link') as HTMLElement;
+      const page = root.querySelector('.andes-breadcrumb-page') as HTMLElement;
+
+      expect(link.querySelector('strong.bold')?.textContent).toBe('Start');
+      expect(link.querySelector('strong.bold')?.getAttribute('data-id')).toBe(
+        '7',
+      );
+      expect(page.querySelector('strong.bold')?.textContent).toBe('Here');
+      expect(page.querySelector('strong.bold')?.getAttribute('data-last')).toBe(
+        'true',
+      );
+      // The template is the content: the ariaLabel is not added as a second, hidden copy.
+      expect(root.querySelector('.andes-breadcrumb-sr-only')?.textContent).toBe(
+        'Menu crumb: Show menu',
+      );
+    });
+
+    it('names the caret button of a crumb with a menu by its ariaLabel', async () => {
+      const { root } = await renderTemplateTitles();
+      const caret = root.querySelector(
+        '.andes-breadcrumb-menu-trigger--caret',
+      ) as HTMLElement;
+
+      expect(caret.textContent?.trim()).toBe('Menu crumb: Show menu');
+    });
+
+    it('labels a collapsed template crumb by its ariaLabel in the ellipsis dropdown', async () => {
+      const { root, update } = await renderTemplateTitles(3);
+      (
+        root.querySelector('.andes-breadcrumb-ellipsis__trigger') as HTMLElement
+      ).click();
+      await update();
+
+      const entries = Array.from(
+        document.querySelectorAll('[role="menuitem"]'),
+      ).map((entry) => entry.textContent?.trim());
+      expect(entries.length).toBeGreaterThan(0);
+      expect(
+        entries.every(
+          (label) =>
+            label === 'Hidden' ||
+            label === 'Also hidden' ||
+            label === 'Menu crumb',
+        ),
+      ).toBe(true);
+    });
+  });
+
+  // Right-to-left: the trail flows from the right, the separator chevron points left, and the
+  // dropdown panel repeats the trail's direction and opens on the edge the trail's start is on.
+  describe('right-to-left text', () => {
+    withElementGeometry();
+
+    const css = readFileSync(
+      'packages/ui/src/lib/breadcrumb/breadcrumb.css',
+      'utf8',
+    );
+
+    @Component({
+      imports: [AndesBreadcrumb],
+      template: `
+        <div [attr.dir]="dir()">
+          <andes-breadcrumb [items]="items" />
+          <andes-breadcrumb [items]="longItems" [maxItems]="3" />
+        </div>
+      `,
+    })
+    class DirectionHost {
+      readonly dir = signal<'rtl' | 'ltr' | null>('rtl');
+      readonly items: AndesBreadcrumbItemType[] = [
+        { title: 'Home', href: '/' },
+        { title: 'Docs', href: '/docs' },
+        {
+          title: 'Forms',
+          href: '/forms',
+          menu: { items: [{ label: 'Validation' }, { label: 'Layout' }] },
+          dropdownProps: { side: 'right' },
+        },
+        { title: 'Fields', menu: { items: [{ label: 'Text' }] } },
+        { title: 'Here' },
+      ];
+      readonly longItems: AndesBreadcrumbItemType[] = [
+        { title: 'Home', href: '/' },
+        { title: 'Docs', href: '/docs' },
+        { title: 'Guides', href: '/guides' },
+        { title: 'Here' },
+      ];
+    }
+
+    async function renderDirection(dir: 'rtl' | 'ltr' | null) {
+      const fixture = TestBed.createComponent(DirectionHost);
+      fixture.componentInstance.dir.set(dir);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const root = fixture.nativeElement as HTMLElement;
+      // The split "Forms" caret, then "Fields", then the collapse ellipsis of the second trail.
+      const overlays = fixture.debugElement
+        .queryAll(By.directive(AndesDropdownMenu))
+        .map((node) => node.injector.get(AndesOverlayPrimitive));
+      return {
+        fixture,
+        root,
+        overlays,
+        first: root.querySelector('andes-breadcrumb') as HTMLElement,
+        update: async () => {
+          fixture.detectChanges();
+          await fixture.whenStable();
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          fixture.detectChanges();
+        },
+      };
+    }
+
+    it('keeps the crumbs in reading order and puts a chevron between each pair', async () => {
+      const { first } = await renderDirection('rtl');
+      const list = first.querySelector('ol') as HTMLElement;
+
+      expect(list.closest('[dir]')?.getAttribute('dir')).toBe('rtl');
+      // DOM order is reading order; the flex row starts from the right on its own.
+      const kinds = Array.from(list.children).map((li) =>
+        li.classList.contains('andes-breadcrumb-separator') ? 'sep' : 'crumb',
+      );
+      expect(kinds).toEqual([
+        'crumb',
+        'sep',
+        'crumb',
+        'sep',
+        'crumb',
+        'sep',
+        'crumb',
+        'sep',
+        'crumb',
+      ]);
+      expect(list.firstElementChild?.textContent?.trim()).toBe('Home');
+      expect(
+        first.querySelectorAll('.andes-breadcrumb-separator__icon'),
+      ).toHaveLength(4);
+    });
+
+    it('mirrors the default chevron so it points toward the next crumb', async () => {
+      const { first } = await renderDirection('rtl');
+      const chevron = first.querySelector(
+        '.andes-breadcrumb-separator__icon',
+      ) as SVGElement;
+
+      // The chevron is drawn pointing right, so the stylesheet flips it in right-to-left text...
+      expect(chevron.querySelector('path')?.getAttribute('d')).toBe(
+        'm9 18 6-6-6-6',
+      );
+      expect(
+        declaredValue(
+          css,
+          '.andes-breadcrumb-separator__icon:dir(rtl)',
+          'transform',
+        ),
+      ).toBe('scaleX(-1)');
+      // ...and only that glyph: the caret and the dots are symmetric.
+      expect(css.match(/scaleX\(-1\)/g)).toHaveLength(1);
+      expect(css).not.toContain('menu-trigger__icon:dir');
+      expect(css).not.toContain('ellipsis__icon:dir');
+      expect(css).not.toContain('[dir=');
+    });
+
+    it('draws the menu caret after the label and the ellipsis as one centered box', async () => {
+      const { root } = await renderDirection('rtl');
+      const ellipsis = root.querySelector(
+        'andes-breadcrumb-ellipsis',
+      ) as HTMLElement;
+      const trigger = root.querySelector(
+        '.andes-breadcrumb-menu-trigger:not(.andes-breadcrumb-menu-trigger--caret)',
+      ) as HTMLElement;
+
+      expect(ellipsis.querySelector('button')?.textContent?.trim()).toBe(
+        'More',
+      );
+      // The caret follows the label in the markup, so in right-to-left text it sits to its left.
+      expect(trigger.textContent?.trim()).toBe('Fields');
+      expect(trigger.lastElementChild?.classList).toContain(
+        'andes-breadcrumb-menu-trigger__icon',
+      );
+    });
+
+    it('repeats the trail direction on the dropdown panel it renders outside the trail', async () => {
+      const { root, update } = await renderDirection('rtl');
+      (
+        root.querySelector('.andes-breadcrumb-ellipsis__trigger') as HTMLElement
+      ).click();
+      await update();
+
+      const panel = document.querySelector(
+        '.andes-dropdown-menu__content',
+      ) as HTMLElement;
+      expect(panel.getAttribute('dir')).toBe('rtl');
+      expect(panel.closest('andes-breadcrumb')).toBeNull();
+    });
+
+    it('gives a left-to-right trail a left-to-right panel', async () => {
+      const { root, update } = await renderDirection('ltr');
+      (
+        root.querySelector('.andes-breadcrumb-ellipsis__trigger') as HTMLElement
+      ).click();
+      await update();
+
+      expect(
+        document
+          .querySelector('.andes-dropdown-menu__content')
+          ?.getAttribute('dir'),
+      ).toBe('ltr');
+    });
+
+    it('opens on the start edge of a right-to-left trail inside a left-to-right page', async () => {
+      const { overlays } = await renderDirection('rtl');
+
+      // `side: 'right'` is the end of the text, which here is the left; the page is
+      // left-to-right, so the overlay's `start` would be the left: mirrored to `end` it sits on
+      // the right, where this trail starts.
+      expect(overlays[0].config().positioning).toMatchObject({
+        side: 'left',
+        align: 'end',
+      });
+      expect(overlays[1].config().positioning).toMatchObject({
+        side: 'bottom',
+        align: 'end',
+      });
+    });
+
+    it('takes the placement again, before the menu opens, when the direction changes', async () => {
+      const { fixture, overlays, root, update } = await renderDirection('ltr');
+      expect(overlays[1].config().positioning).toMatchObject({
+        align: 'start',
+      });
+
+      fixture.componentInstance.dir.set('rtl');
+      await update();
+      (
+        root.querySelectorAll(
+          '.andes-breadcrumb-menu-trigger',
+        )[1] as HTMLElement
+      ).click();
+      await update();
+
+      expect(overlays[1].config().positioning).toMatchObject({
+        side: 'bottom',
+        align: 'end',
+      });
+      expect(
+        document
+          .querySelector('.andes-dropdown-menu__content')
+          ?.getAttribute('dir'),
+      ).toBe('rtl');
+    });
+
+    it('does not mirror the placement of a left-to-right trail', async () => {
+      const { overlays } = await renderDirection('ltr');
+
+      expect(overlays[0].config().positioning).toMatchObject({
+        side: 'right',
+        align: 'start',
+      });
+      expect(overlays[1].config().positioning).toMatchObject({
+        side: 'bottom',
+        align: 'start',
+      });
+    });
+
+    describe('when the whole page is right-to-left', () => {
+      beforeEach(() => document.body.setAttribute('dir', 'rtl'));
+      afterEach(() => document.body.removeAttribute('dir'));
+
+      it('leaves the placement to the overlay, which already lays start and end out by it', async () => {
+        const { overlays } = await renderDirection(null);
+
+        expect(overlays[0].config().positioning).toMatchObject({
+          side: 'right',
+          align: 'start',
+        });
+        expect(overlays[1].config().positioning).toMatchObject({
+          side: 'bottom',
+          align: 'start',
+        });
+      });
+
+      it('gives the panel the page direction', async () => {
+        const { root, update } = await renderDirection(null);
+        (
+          root.querySelector(
+            '.andes-breadcrumb-ellipsis__trigger',
+          ) as HTMLElement
+        ).click();
+        await update();
+
+        expect(
+          document
+            .querySelector('.andes-dropdown-menu__content')
+            ?.getAttribute('dir'),
+        ).toBe('rtl');
+      });
+    });
+  });
+
+  describe('keyboard on a crumb menu trigger', () => {
+    withElementGeometry();
+
+    async function renderTrigger() {
+      @Component({
+        imports: [AndesBreadcrumb],
+        template: `
+          <andes-breadcrumb
+            [items]="[
+              { title: 'Home', href: '/' },
+              {
+                title: 'Group',
+                menu: { items: [{ label: 'Layout' }, { label: 'Form' }] },
+              },
+              { title: 'Here' },
+            ]"
+          />
+        `,
+      })
+      class TriggerHost {}
+
+      const fixture = TestBed.createComponent(TriggerHost);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const trigger = (fixture.nativeElement as HTMLElement).querySelector(
+        '.andes-breadcrumb-menu-trigger',
+      ) as HTMLButtonElement;
+      return {
+        fixture,
+        trigger,
+        update: async () => {
+          fixture.detectChanges();
+          await fixture.whenStable();
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          fixture.detectChanges();
+        },
+      };
+    }
+
+    it('is a focusable native button, so Tab reaches it and Enter or Space press it', async () => {
+      const { trigger } = await renderTrigger();
+
+      expect(trigger.tagName).toBe('BUTTON');
+      expect(trigger.type).toBe('button');
+      expect(trigger.tabIndex).toBe(0);
+      expect(trigger.hasAttribute('tabindex')).toBe(false);
+    });
+
+    it('opens on ArrowDown, moves through the entries and closes on Escape back onto the trigger', async () => {
+      const { trigger, update } = await renderTrigger();
+      trigger.focus();
+      pressKey(trigger, 'ArrowDown');
+      await update();
+
+      expect(trigger.getAttribute('aria-expanded')).toBe('true');
+      const entries = () =>
+        Array.from(
+          document.querySelectorAll('[role="menuitem"]'),
+        ) as HTMLElement[];
+      expect(entries().map((entry) => entry.textContent?.trim())).toEqual([
+        'Layout',
+        'Form',
+      ]);
+
+      pressKey(document.activeElement ?? document.body, 'Escape');
+      await update();
+      expect(trigger.getAttribute('aria-expanded')).toBe('false');
+      expect(document.activeElement).toBe(trigger);
+    });
+
+    it('opens when it is pressed, which is what Enter and Space do on a button', async () => {
+      const { trigger, update } = await renderTrigger();
+      trigger.click();
+      await update();
+
+      expect(trigger.getAttribute('aria-expanded')).toBe('true');
+    });
+  });
+
+  describe('dark mode and tokens', () => {
+    const css = readFileSync(
+      'packages/ui/src/lib/breadcrumb/breadcrumb.css',
+      'utf8',
+    );
+
+    it('takes every color from a library token or the forced-colors system palette', () => {
+      const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '');
+      // No literal color: a hex, an rgb()/hsl() or a named color would stay put in dark mode.
+      expect(withoutComments).not.toMatch(/#[0-9a-f]{3,8}\b/i);
+      expect(withoutComments).not.toMatch(/\b(?:rgb|rgba|hsl|hsla|oklch)\(/);
+      for (const named of ['white', 'black', 'gray', 'red', 'blue']) {
+        expect(withoutComments).not.toMatch(
+          new RegExp(`(?:color|background(?:-color)?)\\s*:\\s*${named}\\b`),
+        );
+      }
+      // Every `--andes-*` the stylesheet reads, so a theme can override it.
+      expect(withoutComments).toContain('var(--andes-color-muted-foreground)');
+      expect(withoutComments).toContain('var(--andes-color-foreground)');
+      expect(withoutComments).toContain('var(--andes-color-accent)');
     });
   });
 });

@@ -170,6 +170,41 @@ export const ItemsWithIcons: Story = {
 };
 
 /**
+ * An item's `title` can be a template instead of text, for markup inside a crumb. It receives the
+ * same context as `[itemRender]` (`item`, `params`, `last`...) and replaces the text only: the
+ * crumb keeps its link, page or menu behavior. Give it an `ariaLabel`, the plain-text name the
+ * ellipsis dropdown and a menu button need.
+ */
+export const TitleTemplates: Story = {
+  render: () => ({
+    moduleMetadata: { imports },
+    template: `
+      <ng-template #strong let-item="item">
+        <strong>{{ item.ariaLabel }}</strong>
+      </ng-template>
+      <ng-template #beta let-item="item">
+        {{ item.ariaLabel }}
+        <span style="margin-inline-start: 0.375rem; padding: 0 0.375rem; border-radius: var(--andes-radius-sm); background: var(--andes-color-accent); font-size: 0.75rem;">beta</span>
+      </ng-template>
+      <div style="display: grid; gap: 1rem;">
+        <andes-breadcrumb [items]="[
+          { title: strong, ariaLabel: 'Home', href: '/' },
+          { title: 'Documentation', href: '/docs' },
+          { title: beta, ariaLabel: 'Experiments', href: '/docs/experiments' },
+          { title: strong, ariaLabel: 'Revalidating' },
+        ]" />
+        <andes-breadcrumb [maxItems]="3" [items]="[
+          { title: strong, ariaLabel: 'Home', href: '/' },
+          { title: 'Documentation', href: '/docs' },
+          { title: beta, ariaLabel: 'Experiments', href: '/docs/experiments' },
+          { title: strong, ariaLabel: 'Revalidating' },
+        ]" />
+      </div>
+    `,
+  }),
+};
+
+/**
  * `maxItems` collapses the middle of a long trail into the ellipsis dropdown, keeping
  * `itemsBeforeCollapse` crumbs before it and `itemsAfterCollapse` after it.
  */

@@ -9,6 +9,7 @@ export {
 } from './breadcrumb';
 export type { AndesBreadcrumbEllipsisItem } from './breadcrumb';
 export type {
+  AndesBreadcrumbClassNames,
   AndesBreadcrumbDropdownAlign,
   AndesBreadcrumbDropdownProps,
   AndesBreadcrumbDropdownSide,
@@ -22,7 +23,9 @@ export type {
   AndesBreadcrumbMenuItem,
   AndesBreadcrumbMenuOpenChangeEvent,
   AndesBreadcrumbParams,
+  AndesBreadcrumbPart,
   AndesBreadcrumbRouteItem,
   AndesBreadcrumbSeparatorContent,
   AndesBreadcrumbSeparatorItem,
+  AndesBreadcrumbStyles,
 } from './breadcrumb-items';

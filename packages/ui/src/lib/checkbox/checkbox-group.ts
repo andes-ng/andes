@@ -26,6 +26,10 @@ import {
 } from '@angular/forms';
 import clsx from 'clsx';
 
+import {
+  andesIdRefs,
+  injectAndesFieldBinding,
+} from '../form-field/field-binding';
 import { AndesCheckbox } from './checkbox';
 import {
   AndesCheckboxGroupState,
@@ -103,12 +107,15 @@ function columnsAttribute(value: unknown): number | undefined {
     // the relationship announced at all.
     role: 'group',
     '[class]': 'classes()',
+    '[attr.id]': 'controlId() ?? null',
     '[attr.aria-label]': 'ariaLabel()',
-    '[attr.aria-labelledby]': 'ariaLabelledby()',
+    '[attr.aria-labelledby]': 'labelledBy() ?? null',
+    '[attr.aria-describedby]': 'describedBy() ?? null',
     '[attr.aria-disabled]': 'isDisabled() || null',
     '[attr.data-disabled]': 'isDisabled() ? "" : null',
     '[attr.data-orientation]': 'resolvedOrientation()',
-    '[attr.data-required]': 'required() ? "" : null',
+    '[attr.data-required]': 'isRequired() ? "" : null',
+    '[attr.data-status]': 'resolvedStatus() ?? null',
     // Leaving the group - not moving between its checkboxes - marks it touched.
     '(focusout)': 'onFocusOut($event)',
     '[attr.data-readonly]': 'readOnly() ? "" : null',
@@ -268,6 +275,41 @@ export class AndesCheckboxGroup<T extends AndesCheckboxValue = string>
   readonly ariaLabelledby = input<string | undefined>(undefined, {
     alias: 'aria-labelledby',
   });
+  /** Ids describing the whole group; merged with the enclosing field's hint and messages. */
+  readonly ariaDescribedby = input<string | undefined>(undefined, {
+    alias: 'aria-describedby',
+  });
+  /** Id of the group element. Defaults to the enclosing field's control id. */
+  readonly id = input<string | undefined>(undefined);
+
+  /** The enclosing form field and form: id, ARIA, status, size and disabled. */
+  protected readonly field = injectAndesFieldBinding();
+
+  protected readonly controlId = computed(() => this.id() ?? this.field.id());
+
+  /** `aria-labelledby`, else the field's label - unless an `aria-label` names the group. */
+  protected readonly labelledBy = computed(
+    () =>
+      this.ariaLabelledby() ??
+      (this.ariaLabel() ? undefined : this.field.labelledBy()),
+  );
+
+  protected readonly describedBy = computed(() =>
+    andesIdRefs(this.ariaDescribedby(), this.field.describedBy()),
+  );
+
+  protected readonly isRequired = computed(
+    () => this.required() || this.field.required(),
+  );
+
+  /** The size in effect: `size`, else the form's (the items default to `md`). */
+  readonly resolvedSize = computed(() => this.size() ?? this.field.size());
+
+  /** The status in effect: `status`, else the enclosing field's error or warning. Every item
+   *  takes it, and an error marks each one `aria-invalid` (a group cannot carry it). */
+  readonly resolvedStatus = computed(
+    () => this.status() ?? this.field.status(),
+  );
 
   /** Set through `setDisabledState()` by `[formControl]`/`[(ngModel)]`; distinct from the
    *  `disabled` input, which is the group's own template-authored state. Either disables the
@@ -275,7 +317,7 @@ export class AndesCheckboxGroup<T extends AndesCheckboxValue = string>
   private readonly cvaDisabled = signal(false);
 
   protected readonly isDisabled = computed(
-    () => this.disabled() || this.cvaDisabled(),
+    () => this.disabled() || this.cvaDisabled() || this.field.disabled(),
   );
 
   protected readonly resolvedOrientation = computed(
@@ -302,8 +344,8 @@ export class AndesCheckboxGroup<T extends AndesCheckboxValue = string>
   constructor() {
     this.state.connect({
       readOnly: this.readOnly,
-      size: this.size,
-      status: this.status,
+      size: this.resolvedSize,
+      status: this.resolvedStatus,
       variant: this.variant,
       indicator: this.indicator,
       orientation: this.resolvedOrientation,

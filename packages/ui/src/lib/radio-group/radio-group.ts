@@ -17,6 +17,10 @@ import {
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import clsx from 'clsx';
 
+import {
+  andesIdRefs,
+  injectAndesFieldBinding,
+} from '../form-field/field-binding';
 import { AndesRadio } from './radio';
 import {
   AndesRadioButtonStyle,
@@ -106,10 +110,12 @@ function noop(): void {
   host: {
     role: 'radiogroup',
     '[class]': 'classes()',
+    '[attr.id]': 'controlId() ?? null',
     '[attr.aria-label]': 'ariaLabel()',
-    '[attr.aria-labelledby]': 'ariaLabelledby()',
+    '[attr.aria-labelledby]': 'labelledBy() ?? null',
+    '[attr.aria-describedby]': 'describedBy() ?? null',
     '[attr.aria-disabled]': 'isDisabled() || null',
-    '[attr.aria-required]': 'required() || null',
+    '[attr.aria-required]': 'isRequired() || null',
     // Kept on the group host rather than forwarded to the native inputs: WAI-ARIA supports
     // aria-invalid on the radiogroup role but not on the individual radio role.
     '[attr.aria-invalid]': 'isInvalid() || null',
@@ -119,6 +125,7 @@ function noop(): void {
     '[style.--andes-radio-group-columns]': 'columns() ?? null',
     '[attr.data-disabled]': 'isDisabled() ? "" : null',
     '[attr.data-orientation]': 'resolvedOrientation()',
+    '[attr.data-size]': 'resolvedSize()',
     '[attr.data-option-type]': 'optionType()',
     '(focusin)': 'onFocusIn($event)',
     '(focusout)': 'onFocusOut($event)',
@@ -194,7 +201,8 @@ export class AndesRadioGroup<T = unknown> implements ControlValueAccessor {
   >(undefined);
   readonly optionType = input<AndesRadioOptionType>('default');
   readonly buttonStyle = input<AndesRadioButtonStyle>('outline');
-  readonly size = input<AndesRadioSize>('md');
+  /** `md` unless set, or the enclosing `andesForm`'s `size`. */
+  readonly size = input<AndesRadioSize | undefined>(undefined);
   /** Stretch the group to its container's width, sharing it equally between the items. */
   readonly block = input(false, { transform: booleanAttribute });
   readonly labelPlacement = input<AndesRadioLabelPlacement>('end');
@@ -206,6 +214,12 @@ export class AndesRadioGroup<T = unknown> implements ControlValueAccessor {
   readonly ariaLabelledby = input<string | undefined>(undefined, {
     alias: 'aria-labelledby',
   });
+  /** Ids describing the whole group; merged with the enclosing field's hint and messages. */
+  readonly ariaDescribedby = input<string | undefined>(undefined, {
+    alias: 'aria-describedby',
+  });
+  /** Id of the radiogroup element. Defaults to the enclosing field's control id. */
+  readonly id = input<string | undefined>(undefined);
 
   /** Fires only when the user selects an item (click, Space or arrow keys) - not for
    *  programmatic writes. Named `selectionChange` rather than `change` because a `change`
@@ -228,8 +242,38 @@ export class AndesRadioGroup<T = unknown> implements ControlValueAccessor {
   private onChange: (value: T | null) => void = noop;
   protected onTouched: () => void = noop;
 
+  /** The enclosing form field and form: id, ARIA, status, size and disabled. */
+  protected readonly field = injectAndesFieldBinding();
+
+  protected readonly controlId = computed(() => this.id() ?? this.field.id());
+
+  /** `aria-labelledby`, else the field's label - unless an `aria-label` names the group. */
+  protected readonly labelledBy = computed(
+    () =>
+      this.ariaLabelledby() ??
+      (this.ariaLabel() ? undefined : this.field.labelledBy()),
+  );
+
+  protected readonly describedBy = computed(() =>
+    andesIdRefs(this.ariaDescribedby(), this.field.describedBy()),
+  );
+
+  protected readonly isRequired = computed(
+    () => this.required() || this.field.required(),
+  );
+
+  /** The size in effect: `size`, else the form's, else `md`. */
+  readonly resolvedSize = computed<AndesRadioSize>(
+    () => this.size() ?? this.field.size() ?? 'md',
+  );
+
+  /** The status in effect: `status`, else the enclosing field's error or warning. */
+  readonly resolvedStatus = computed<AndesRadioStatus | undefined>(
+    () => this.status() ?? this.field.status(),
+  );
+
   protected readonly isDisabled = computed(
-    () => this.disabled() || this.cvaDisabled(),
+    () => this.disabled() || this.cvaDisabled() || this.field.disabled(),
   );
 
   protected readonly resolvedName = computed(
@@ -244,7 +288,7 @@ export class AndesRadioGroup<T = unknown> implements ControlValueAccessor {
 
   /** `aria-invalid` and `status="error"` are one state: same look, same announcement. */
   protected readonly isInvalid = computed(
-    () => this.ariaInvalid() || this.status() === 'error',
+    () => this.ariaInvalid() || this.resolvedStatus() === 'error',
   );
 
   protected readonly normalizedOptions = computed<AndesRadioOption<T>[]>(() =>
@@ -263,7 +307,7 @@ export class AndesRadioGroup<T = unknown> implements ControlValueAccessor {
       this.block() && 'andes-radio-group--block',
       this.isDisabled() && 'andes-radio-group--disabled',
       this.isInvalid() && 'andes-radio-group--invalid',
-      this.status() === 'warning' && 'andes-radio-group--warning',
+      this.resolvedStatus() === 'warning' && 'andes-radio-group--warning',
       this.readOnly() && 'andes-radio-group--readonly',
       this.columns() !== undefined && 'andes-radio-group--columns',
       this.variant() === 'card' &&
@@ -277,10 +321,10 @@ export class AndesRadioGroup<T = unknown> implements ControlValueAccessor {
       name: this.resolvedName,
       value: this.value,
       disabled: this.isDisabled,
-      required: this.required,
+      required: this.isRequired,
       invalid: this.ariaInvalid,
       readOnly: this.readOnly,
-      status: this.status,
+      status: this.resolvedStatus,
       variant: this.variant,
       columns: this.columns,
       showIndicator: this.showIndicator,
@@ -288,7 +332,7 @@ export class AndesRadioGroup<T = unknown> implements ControlValueAccessor {
       isSelected: (value) => this.isSelected(value),
       optionType: this.optionType,
       buttonStyle: this.buttonStyle,
-      size: this.size,
+      size: this.resolvedSize,
       orientation: this.resolvedOrientation,
       block: this.block,
       labelPlacement: this.labelPlacement,

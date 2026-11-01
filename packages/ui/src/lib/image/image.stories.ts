@@ -1,21 +1,15 @@
-import {
-  andesOverlayPreset,
-  AndesOverlayContentPrimitive,
-  AndesOverlayPrimitive,
-  provideAndesOverlay,
-} from '@andes-ng/primitives';
 import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
 import {
   Component,
   DestroyRef,
   inject,
   signal,
-  type TemplateRef,
-  viewChild,
   ViewEncapsulation,
 } from '@angular/core';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 
+import { AndesButton } from '../button/button';
+import { ANDES_DIALOG_IMPORTS } from '../dialog/dialog';
 import { AndesImage } from './image';
 import { AndesImageGroup } from './image-group';
 import { AndesImagePreview } from './image-preview';
@@ -87,7 +81,7 @@ const GALLERY: readonly AndesImagePreviewItem[] = LARGE.map((src, i) => ({
   name: `${NAMES[i].toLowerCase().replace(/\s+/g, '-')}.svg`,
 }));
 
-const imports = [AndesImage, AndesImageGroup, AndesImagePreview];
+const imports = [AndesImage, AndesImageGroup, AndesImagePreview, AndesButton];
 
 /** Decodes to nothing, so the load fails at once without a network request. */
 const BROKEN = 'data:image/png;base64,AAAA';
@@ -201,13 +195,13 @@ export const PreviewAndMask: Story = {
 
 @Component({
   selector: 'andes-story-image-loading',
-  imports: [AndesImage],
+  imports: [AndesImage, AndesButton],
   template: `
     <div
       style="display: flex; gap: 0.5rem; margin-bottom: 1rem; font: 14px/22px system-ui;"
     >
-      <button type="button" (click)="reload()">Reload</button>
-      <button type="button" (click)="generate()">Generate</button>
+      <andes-button (click)="reload()">Reload Image</andes-button>
+      <andes-button (click)="generate()">Generate</andes-button>
     </div>
     <div
       style="display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: flex-start; font: 12px/20px system-ui;"
@@ -360,7 +354,7 @@ export const FaultTolerance: Story = {
       <ng-template #failed>
         <span style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; height: 100%; font: 13px/20px system-ui;">
           Could not load the photo
-          <button type="button" (click)="attempt = attempt + 1" style="font: inherit;">Try again</button>
+          <andes-button size="sm" variant="outline" (click)="attempt = attempt + 1">Try again</andes-button>
         </span>
       </ng-template>
       <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; font: 12px/20px system-ui;">
@@ -655,30 +649,20 @@ export const SemanticParts: Story = {
   render: () => ({ template: `<andes-story-image-parts />` }),
 };
 
-/**
- * A minimal modal dialog on the overlay primitive the library's dialogs and drawers are built
- * on, so the story shows the viewer stacking over one.
- */
+/** The library's own dialog with a group of photos in it, so the viewer stacks over a real one. */
 @Component({
   selector: 'andes-story-image-dialog',
-  imports: [AndesImage, AndesImageGroup, AndesOverlayContentPrimitive],
-  providers: [provideAndesOverlay()],
+  imports: [AndesImage, AndesImageGroup, AndesButton, ...ANDES_DIALOG_IMPORTS],
   template: `
-    <button type="button" style="font: 14px/22px system-ui;" (click)="open()">
-      Open the dialog
-    </button>
-    <ng-template #panel>
-      <div
-        andesOverlayContent
-        aria-labelledby="story-image-dialog-title"
-        style="box-sizing: border-box; width: min(32rem, calc(100vw - 2rem)); padding: 1.25rem; border-radius: var(--andes-radius-lg); background: var(--andes-color-popover); color: var(--andes-color-popover-foreground); box-shadow: var(--andes-shadow-lg); font: 14px/22px system-ui;"
-      >
-        <h2
-          id="story-image-dialog-title"
-          style="margin: 0 0 0.75rem; font: 600 16px/24px system-ui;"
-        >
-          Trip photos
-        </h2>
+    <andes-button (click)="open.set(true)">Open the dialog</andes-button>
+    <andes-dialog [(open)]="open">
+      <andes-dialog-content *andesDialogContent>
+        <div andesDialogHeader>
+          <h2 andesDialogTitle>Trip photos</h2>
+          <p andesDialogDescription>
+            Open a photo: Escape closes the viewer first, then the dialog.
+          </p>
+        </div>
         <andes-image-group>
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
             @for (thumb of thumbs; track thumb; let i = $index) {
@@ -693,30 +677,18 @@ export const SemanticParts: Story = {
             }
           </div>
         </andes-image-group>
-        <p style="margin: 0.75rem 0;">
-          Escape closes the viewer first, then the dialog.
-        </p>
-        <button type="button" (click)="overlay.close('close-button')">
-          Done
-        </button>
-      </div>
-    </ng-template>
+        <div andesDialogFooter>
+          <andes-button variant="secondary" andesDialogClose>Done</andes-button>
+        </div>
+      </andes-dialog-content>
+    </andes-dialog>
   `,
 })
 class DialogDemo {
-  protected readonly overlay = inject(AndesOverlayPrimitive);
+  protected readonly open = signal(false);
   protected readonly thumbs = THUMBS.slice(0, 3);
   protected readonly large = LARGE;
   protected readonly names = NAMES;
-  private readonly panel = viewChild.required<TemplateRef<unknown>>('panel');
-
-  constructor() {
-    this.overlay.configure(andesOverlayPreset('dialog'));
-  }
-
-  protected open(): void {
-    this.overlay.open(this.panel());
-  }
 }
 
 export const NestedInDialog: Story = {
@@ -776,13 +748,17 @@ export const PreviewConfig: Story = {
 
 @Component({
   selector: 'andes-story-image-controlled',
-  imports: [AndesImage, AndesImageGroup],
+  imports: [AndesImage, AndesImageGroup, AndesButton],
   template: `
     <div
       style="display: flex; gap: 0.5rem; margin-bottom: 1rem; font: 14px/22px system-ui;"
     >
-      <button type="button" (click)="show(1)">Open the second</button>
-      <button type="button" (click)="show(4)">Open the last</button>
+      <andes-button variant="outline" (click)="show(1)"
+        >Open the second</andes-button
+      >
+      <andes-button variant="outline" (click)="show(4)"
+        >Open the last</andes-button
+      >
       <span style="align-self: center;"
         >open: {{ open() }}, current: {{ current() }}</span
       >
@@ -823,15 +799,9 @@ export const Controlled: Story = {
 
 @Component({
   selector: 'andes-story-image-standalone',
-  imports: [AndesImagePreview],
+  imports: [AndesImagePreview, AndesButton],
   template: `
-    <button
-      type="button"
-      (click)="open.set(true)"
-      style="font: 14px/22px system-ui;"
-    >
-      Open the viewer
-    </button>
+    <andes-button (click)="open.set(true)">Open the viewer</andes-button>
     <andes-image-preview
       [items]="items"
       [(open)]="open"

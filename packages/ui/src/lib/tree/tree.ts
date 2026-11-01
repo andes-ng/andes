@@ -1455,7 +1455,7 @@ export class AndesTree {
     clone
       .querySelectorAll('.andes-tree__indent, .andes-tree__drop-indicator')
       .forEach((element) => element.remove());
-    for (const attribute of ['data-dragging', 'data-drop']) {
+    for (const attribute of ['data-dragging', 'data-drop', 'data-selected']) {
       clone.removeAttribute(attribute);
     }
     ghost.append(clone);

@@ -511,6 +511,10 @@
     transition: none;
   }
 
+  .andes-tree__row[data-dragging]::after {
+    animation-duration: 0.01ms;
+  }
+
   /* Slower, not frozen: a ring that stands still no longer says something is loading. */
   .andes-tree__spinner {
     animation-duration: 2.4s;
@@ -536,8 +540,20 @@
   cursor: grabbing;
 }
 
-.andes-tree__row[data-dragging] .andes-tree__content {
-  opacity: 0.5;
+/* The row being dragged is framed where it stands, from the grip to the end of the row. */
+.andes-tree__row[data-dragging]::after {
+  animation: andes-tree-frame var(--andes-motion-duration-slow, 200ms) ease
+    forwards;
+}
+
+@keyframes andes-tree-frame {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 /*
@@ -564,6 +580,23 @@
   padding-block-end: 0;
 }
 
+/* The card is as wide as its content and never shows a selection or a hover fill. */
+.andes-tree .andes-tree__ghost {
+  width: max-content;
+}
+
+/* prettier-ignore */
+.andes-tree .andes-tree__ghost .andes-tree__content,
+.andes-tree .andes-tree__ghost .andes-tree__content:hover {
+  flex: none;
+  background-color: transparent;
+}
+
+.andes-tree .andes-tree__ghost .andes-tree__row::before,
+.andes-tree .andes-tree__ghost .andes-tree__row::after {
+  display: none;
+}
+
 .andes-tree__ghost .andes-tree__handle {
   color: var(--andes-color-muted-foreground, #64748b);
 }
@@ -574,6 +607,8 @@
   the target's own level before or after it. Dropped inside, the target row is framed instead.
 */
 /* Dropped inside, the whole row is framed (grip, switcher, icon and title) and no line is drawn. */
+/* prettier-ignore */
+.andes-tree__row[data-dragging]::after,
 .andes-tree__row[data-drop='inside']::after {
   position: absolute;
   z-index: 1;

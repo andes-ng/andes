@@ -1864,6 +1864,25 @@ describe('AndesTree', () => {
         ).toBeNull();
       });
 
+      it('shows no selection on the picture and frames the row being dragged', () => {
+        const fixture = setup((h) => h.draggable.set(true));
+        fixture.componentInstance.selected.set(['c']);
+        fixture.detectChanges();
+        const setDragImage = vi.fn();
+        row(node(fixture, 'Archivo')).dispatchEvent(
+          dragEvent('dragstart', 0, { setData: vi.fn(), setDragImage }),
+        );
+        fixture.detectChanges();
+        const ghost = setDragImage.mock.calls[0][0] as HTMLElement;
+        expect(ghost.querySelector('[data-selected]')).toBeNull();
+        expect(
+          row(node(fixture, 'Archivo')).hasAttribute('data-dragging'),
+        ).toBe(true);
+        expect(cssText()).toMatch(
+          /\.andes-tree__row\[data-dragging\]::after,\s*\.andes-tree__row\[data-drop='inside'\]::after\s*{[^}]*border: 1px solid var\(--andes-color-primary/,
+        );
+      });
+
       it('styles the picture as a raised card', () => {
         const css = cssText();
         expect(declaredValue(css, '.andes-tree__ghost', 'position')).toBe(

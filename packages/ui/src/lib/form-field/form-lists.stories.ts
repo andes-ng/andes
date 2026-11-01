@@ -138,7 +138,7 @@ export const NestedLists: Story = {
                 <andes-form-field [label]="'Team ' + (i + 1)">
                   <div class="demo-inline">
                     <andes-input formControlName="name" />
-                    <andes-button class="demo-remove" variant="ghost" size="icon-sm" [aria-label]="'Remove team ' + (i + 1)" (click)="removeTeam(i)"><andes-form-icon name="minus-circle" /></andes-button>
+                    <andes-button class="demo-remove" variant="ghost" size="icon" [aria-label]="'Remove team ' + (i + 1)" (click)="removeTeam(i)"><andes-form-icon name="minus-circle" /></andes-button>
                   </div>
                 </andes-form-field>
                 <div formArrayName="members" style="display: flex; flex-direction: column; gap: 1rem; padding-inline-start: 1rem;">
@@ -146,7 +146,7 @@ export const NestedLists: Story = {
                     <andes-form-field [label]="'Member ' + (j + 1)" [formGroupName]="j">
                       <div class="demo-inline">
                         <andes-input formControlName="name" />
-                        <andes-button class="demo-remove" variant="ghost" size="icon-sm" [aria-label]="'Remove member ' + (j + 1) + ' of team ' + (i + 1)" (click)="removeMember(team, j)"><andes-form-icon name="minus-circle" /></andes-button>
+                        <andes-button class="demo-remove" variant="ghost" size="icon" [aria-label]="'Remove member ' + (j + 1) + ' of team ' + (i + 1)" (click)="removeMember(team, j)"><andes-form-icon name="minus-circle" /></andes-button>
                       </div>
                     </andes-form-field>
                   }
@@ -217,7 +217,7 @@ export const DragSorting: Story = {
                 <div class="demo-actions demo-actions--labelled">
                   <andes-button class="demo-quiet" variant="ghost" size="icon-sm" [aria-label]="'Move task ' + (i + 1) + ' up'" [disabled]="i === 0" (click)="move(i, i - 1)"><andes-form-icon name="chevron-up" /></andes-button>
                   <andes-button class="demo-quiet" variant="ghost" size="icon-sm" [aria-label]="'Move task ' + (i + 1) + ' down'" [disabled]="i === rows.length - 1" (click)="move(i, i + 1)"><andes-form-icon name="chevron-down" /></andes-button>
-                  <andes-button class="demo-remove" variant="ghost" size="icon-sm" [aria-label]="'Remove task ' + (i + 1)" (click)="remove(i)"><andes-form-icon name="minus-circle" /></andes-button>
+                  <andes-button class="demo-remove" variant="ghost" size="icon" [aria-label]="'Remove task ' + (i + 1)" (click)="remove(i)"><andes-form-icon name="minus-circle" /></andes-button>
                 </div>
               </div>
             }
@@ -308,7 +308,7 @@ export const ComplexList: Story = {
                     <andes-input-number formControlName="price" [min]="0" [precision]="2" />
                   </andes-form-field>
                   <div class="demo-actions demo-actions--labelled">
-                    <andes-button class="demo-remove" variant="ghost" size="icon-sm" [aria-label]="'Remove line ' + (i + 1)" (click)="remove(i)"><andes-form-icon name="minus-circle" /></andes-button>
+                    <andes-button class="demo-remove" variant="ghost" size="icon" [aria-label]="'Remove line ' + (i + 1)" (click)="remove(i)"><andes-form-icon name="minus-circle" /></andes-button>
                   </div>
                 </div>
               </andes-form-fieldset>

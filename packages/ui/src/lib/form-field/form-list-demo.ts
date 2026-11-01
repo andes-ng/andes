@@ -11,7 +11,8 @@
  *   `demo-actions--labelled` shifts it down by the height of a field label (22px line + 8px
  *   gap), so it still centres on the input when the row shows a label above it - and a row
  *   without one (the second row of a list that labels only the first) needs no shift.
- * - `demo-remove`: the minus-circle button, grey at rest and danger on hover.
+ * - `demo-remove`: the minus-circle remove icon, 24px like Ant's: grey at rest, darker on hover,
+ *   with no button background of its own.
  * - `demo-quiet`: the grip and the up/down arrows, grey at rest and darker on hover.
  *
  * The motion is CDK drag and drop's own, tuned with the library's motion tokens: the dragged
@@ -40,7 +41,11 @@ export const LIST_ROW_STYLE = `
     .demo-actions andes-form-icon { font-size: 1rem; transition: color var(--andes-motion-duration-fast) var(--andes-motion-ease-out); }
     .demo-quiet andes-form-icon, .demo-remove andes-form-icon { color: var(--andes-color-muted-foreground); }
     .demo-quiet:hover andes-form-icon { color: var(--andes-color-foreground); }
-    .demo-remove:hover andes-form-icon { color: var(--andes-color-danger-text, var(--andes-color-danger)); }
+    /* Only the glyph reacts: it gets darker, the button keeps no background of its own. */
+    andes-button.demo-remove andes-form-icon { font-size: 1.5rem; }
+    andes-button.demo-remove:hover:not(:disabled):not([data-disabled]),
+    andes-button.demo-remove:active:not(:disabled):not([data-disabled]) { background-color: transparent; }
+    andes-button.demo-remove:hover andes-form-icon { color: var(--andes-color-foreground); }
     .demo-grip { cursor: grab; }
 
     /* The slot the dragged row leaves: a faint dashed outline with its content hidden. */

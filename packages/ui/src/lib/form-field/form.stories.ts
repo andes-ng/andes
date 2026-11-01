@@ -21,6 +21,7 @@ import type {
   AndesFormLabelAlign,
   AndesFormLayout,
   AndesFormRequiredMark,
+  AndesFormRequiredMarkPosition,
   AndesFormSize,
   AndesFormVariant,
 } from './form-field-tokens';
@@ -51,6 +52,7 @@ interface FormArgs {
   labelWrap: boolean;
   colon: boolean;
   requiredMark: AndesFormRequiredMark;
+  requiredMarkPosition: AndesFormRequiredMarkPosition;
   size: AndesFormSize | undefined;
   variant: AndesFormVariant | undefined;
   disabled: boolean;
@@ -104,6 +106,10 @@ const meta: Meta<FormArgs> = {
       control: 'inline-radio',
       options: [true, false, 'optional'],
     },
+    requiredMarkPosition: {
+      control: 'inline-radio',
+      options: ['start', 'end'],
+    },
     size: { control: 'inline-radio', options: [undefined, 'sm', 'md', 'lg'] },
     variant: {
       control: 'inline-radio',
@@ -118,6 +124,7 @@ const meta: Meta<FormArgs> = {
     labelWrap: false,
     colon: true,
     requiredMark: true,
+    requiredMarkPosition: 'start',
     size: undefined,
     variant: undefined,
     disabled: false,
@@ -147,6 +154,7 @@ const signUpTemplate = (extra = '') => `
     [labelWrap]="labelWrap"
     [colon]="colon"
     [requiredMark]="requiredMark"
+    [requiredMarkPosition]="requiredMarkPosition"
     [size]="size"
     [variant]="variant"
     [disabled]="disabled"

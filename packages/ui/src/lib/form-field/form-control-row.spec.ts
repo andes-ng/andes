@@ -126,6 +126,6 @@ describe('AndesFormIcon', () => {
     )[2] as SVGElement;
 
     expect(icon.querySelector('circle')).toBeTruthy();
-    expect(icon.querySelector('path')?.getAttribute('d')).toBe('M8 12h8');
+    expect(icon.querySelector('path')?.getAttribute('d')).toBe('M7.5 12h9');
   });
 });

@@ -36,8 +36,8 @@ export type AndesFormIconName =
         <path d="M12 17h.01" />
       }
       @case ('minus-circle') {
-        <circle cx="12" cy="12" r="10" />
-        <path d="M8 12h8" />
+        <circle cx="12" cy="12" r="10" stroke-width="1.5" />
+        <path d="M7.5 12h9" stroke-width="1.5" />
       }
       @case ('minus') {
         <path d="M5 12h14" />

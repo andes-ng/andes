@@ -276,6 +276,9 @@ export function buildCalendarWeeks(
  * them. Derived from `Intl` against a known week (2021-08-01 was a Sunday) so no
  * English weekday string is ever hard-coded.
  */
+/** The longest short weekday name a day column takes before narrow names are used. */
+const MAX_SHORT_WEEKDAY = 4;
+
 export function weekdayNames(
   locale: string | undefined,
   weekStartsOn: AndesWeekday = 0,
@@ -285,18 +288,25 @@ export function weekdayNames(
   readonly long: string;
 }[] {
   const shortFormat = new Intl.DateTimeFormat(locale, { weekday: 'short' });
+  const narrowFormat = new Intl.DateTimeFormat(locale, { weekday: 'narrow' });
   const longFormat = new Intl.DateTimeFormat(locale, { weekday: 'long' });
   // A Sunday, so `+ index` walks Sunday..Saturday regardless of the locale.
   const knownSunday = new Date(2021, 7, 1);
+  const days = Array.from({ length: 7 }, (_, index) =>
+    addDays(knownSunday, (weekStartsOn + index) % 7),
+  );
+  // Some locales' short names are whole words (Thai "อาทิตย์", Arabic "الأحد") that
+  // overflow a 36px column: their narrow names ("อา", "ح") are the abbreviation there.
+  const tooLong = days.some(
+    (date) => shortFormat.format(date).length > MAX_SHORT_WEEKDAY,
+  );
+  const headerFormat = tooLong ? narrowFormat : shortFormat;
 
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = addDays(knownSunday, (weekStartsOn + index) % 7);
-    return {
-      key: String(date.getDay()),
-      short: shortFormat.format(date),
-      long: longFormat.format(date),
-    };
-  });
+  return days.map((date) => ({
+    key: String(date.getDay()),
+    short: headerFormat.format(date),
+    long: longFormat.format(date),
+  }));
 }
 
 /** Localized "month year" caption, e.g. `February 2024` / `febrero de 2024`. */

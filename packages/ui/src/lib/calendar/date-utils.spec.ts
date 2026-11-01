@@ -404,6 +404,16 @@ describe('date-utils', () => {
       expect(spanish[0].long.toLowerCase()).toBe('lunes');
       expect(spanish[0].long).not.toBe('Monday');
     });
+
+    it('keeps the short names where they are abbreviations', () => {
+      expect(weekdayNames('en-US')[0].short).toBe('Sun');
+      expect(weekdayNames('fr-FR')[0].short).toBe('dim.');
+    });
+
+    it('takes the narrow names where the short ones are whole words', () => {
+      expect(weekdayNames('th-TH')[0].short).toBe('อา');
+      expect(weekdayNames('th-TH')[0].long).toBe('วันอาทิตย์');
+    });
   });
 
   describe('formatMonthCaption', () => {

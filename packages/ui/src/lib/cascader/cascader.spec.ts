@@ -2048,6 +2048,14 @@ describe('AndesCascader', () => {
       expect(
         declaredInAtRule(source, forced, checked, 'background-color'),
       ).toBe('Highlight');
+      expect(
+        declaredInAtRule(
+          source,
+          forced,
+          `${option}[data-in-path]:not([data-expanded], [data-selected], [data-active], [data-highlighted])`,
+          'outline',
+        ),
+      ).toBe('1px dashed CanvasText');
       // The tick and the dash are drawn in currentColor.
       expect(declaredInAtRule(source, forced, checked, 'color')).toBe(
         'HighlightText',

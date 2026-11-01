@@ -955,6 +955,14 @@ button.andes-cascader__combobox {
   .andes-cascader__option[data-selected][data-highlighted] {
     outline-color: SelectedItemText;
   }
+
+  /* An option on the picked path whose column is not the one open: semibold, and a dashed
+     edge, so the path still reads once the system palette drops its tint. */
+  /* prettier-ignore */
+  .andes-cascader__option[data-in-path]:not([data-expanded], [data-selected], [data-active], [data-highlighted]) {
+    outline: 1px dashed CanvasText;
+    outline-offset: -1px;
+  }
 }
 
 .andes-cascader__expand {

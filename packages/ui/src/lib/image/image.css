@@ -86,13 +86,6 @@
   );
 
   background: var(--_wash-base);
-
-  /* The bar and the percent form one group, centred in the box. */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--andes-space-2, 0.5rem);
 }
 
 /* `{ progress: ... }`: a soft wash drifting slowly behind whatever is shown over it. */
@@ -118,12 +111,13 @@
   animation: andes-image-wash 4s ease-in-out infinite alternate;
 }
 
-/* `{ progress: { percent } }`: the percent sits at the exact centre of the box and the bar
-   floats just above it, 76% wide and centred. */
+/* `{ progress: { percent } }`: the bar and the percent are one pair around the middle of the box,
+   as in the reference: the bar 12px above the middle line, the percent starting 3px under it,
+   so the pair's own centre sits a few pixels below the box's centre. */
 .andes-image__progress {
   position: absolute;
   inset-inline: 12%;
-  inset-block-end: calc(50% + 1.125rem);
+  inset-block-end: calc(50% + 0.75rem);
   height: 0.375rem;
   border-radius: var(--andes-radius-full, 9999px);
   background: color-mix(
@@ -158,8 +152,9 @@
 }
 
 .andes-image__progress-text {
-  position: relative;
-  flex: none;
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: calc(50% + 0.1875rem);
   color: var(--andes-color-muted-foreground, #5f6f86);
   font-size: var(--andes-text-font-size, 0.875rem);
   line-height: var(--andes-text-line-height, 1.375rem);

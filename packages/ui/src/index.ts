@@ -29,7 +29,7 @@ export * from './lib/button';
 
 // @slot carousel
 
-// @slot cascader
+export * from './lib/cascader';
 
 export * from './lib/checkbox';
 
@@ -151,9 +151,9 @@ export * from './lib/toggle';
 
 // @slot transfer
 
-// @slot tree
+export * from './lib/tree';
 
-// @slot tree-select
+export * from './lib/tree-select';
 
 // @slot typography
 

@@ -24,6 +24,7 @@ import {
   type AndesSelectTag,
   type AndesSelectTagContext,
 } from './select-state';
+import { andesMeasureTagFit } from './tag-overflow';
 
 /** Room kept free for the search input when tags are fitted to one row, in px. */
 const RESPONSIVE_SEARCH_RESERVE = 20;
@@ -49,7 +50,7 @@ const RESPONSIVE_SEARCH_RESERVE = 20;
     NgTemplateOutlet,
   ],
   templateUrl: './select-trigger.html',
-  styleUrl: './select-trigger.css',
+  styleUrls: ['./select-trigger.css', './select-overflow.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     '(document:click)': 'onDocumentClick($event)',
@@ -141,45 +142,17 @@ export class AndesSelectTrigger {
    */
   private fitTags(): void {
     const measure = this.measureRef()?.nativeElement;
-    const selection = this.selectionRef().nativeElement;
-    if (!this.responsive() || !measure || selection.clientWidth === 0) {
+    if (!this.responsive() || !measure) {
       return;
     }
-
-    const widths = Array.from(
-      measure.querySelectorAll<HTMLElement>('[data-measure="tag"]'),
-      (element) => element.offsetWidth,
+    const count = andesMeasureTagFit(
+      measure,
+      this.selectionRef().nativeElement,
+      this.select.searchEnabled() ? RESPONSIVE_SEARCH_RESERVE : 0,
     );
-    const rest =
-      measure.querySelector<HTMLElement>('[data-measure="rest"]')
-        ?.offsetWidth ?? 0;
-    const gap = parseFloat(getComputedStyle(selection).columnGap) || 0;
-    const reserve = this.select.searchEnabled()
-      ? RESPONSIVE_SEARCH_RESERVE + gap
-      : 0;
-    const available = selection.clientWidth - reserve;
-
-    const total = widths.reduce(
-      (sum, width, index) => sum + width + (index > 0 ? gap : 0),
-      0,
-    );
-    if (total <= available) {
-      this.select.setResponsiveTagCount(widths.length);
-      return;
+    if (count !== null) {
+      this.select.setResponsiveTagCount(count);
     }
-
-    let used = rest;
-    let count = 0;
-    for (const width of widths) {
-      if (used + gap + width > available) {
-        break;
-      }
-      used += gap + width;
-      count++;
-    }
-    this.select.setResponsiveTagCount(
-      Math.max(count, Math.min(1, widths.length)),
-    );
   }
 
   protected tagText(tag: AndesSelectTag): string {

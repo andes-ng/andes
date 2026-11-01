@@ -4,12 +4,14 @@ import {
   createGlobalPositionStrategy,
   ViewportRuler,
   type ConnectedPosition,
+  type ConnectedOverlayPositionChange,
+  type ConnectionPositionPair,
   type FlexibleConnectedPositionStrategy,
   type GlobalPositionStrategy,
   type OverlayRef,
   type PositionStrategy,
 } from '@angular/cdk/overlay';
-import { Subscription } from 'rxjs';
+import { Subject, Subscription } from 'rxjs';
 
 import {
   type AndesOverlayAlign,
@@ -89,6 +91,31 @@ export function andesConnectedPosition(
         offsetY: alignOffset,
       };
   }
+}
+
+/**
+ * The side of its anchor a connected position puts the overlay on - the inverse of
+ * {@link andesConnectedPosition}, for the position CDK actually applied.
+ */
+export function andesPlacedSide(
+  position: Pick<
+    ConnectionPositionPair,
+    'originX' | 'originY' | 'overlayX' | 'overlayY'
+  >,
+): AndesOverlaySide | null {
+  if (position.originY === 'bottom' && position.overlayY === 'top') {
+    return 'bottom';
+  }
+  if (position.originY === 'top' && position.overlayY === 'bottom') {
+    return 'top';
+  }
+  if (position.originX === 'end' && position.overlayX === 'start') {
+    return 'right';
+  }
+  if (position.originX === 'start' && position.overlayX === 'end') {
+    return 'left';
+  }
+  return null;
 }
 
 /**
@@ -249,6 +276,9 @@ class AndesAnchoredPositionStrategy implements PositionStrategy {
   private innerSubscription = new Subscription();
   private resizeSubscription = new Subscription();
 
+  /** Where the current inner strategy placed the pane, as the CDK strategy reports it. */
+  readonly positionChanges = new Subject<ConnectedOverlayPositionChange>();
+
   constructor(
     private readonly injector: Injector,
     private readonly anchor: HTMLElement,
@@ -330,11 +360,12 @@ class AndesAnchoredPositionStrategy implements PositionStrategy {
       .withLockedPosition(lockPosition);
 
     this.innerSubscription.unsubscribe();
-    this.innerSubscription = this.followsVisibility
-      ? strategy.positionChanges.subscribe((change) => {
-          this.lastPosition = change.connectionPair;
-        })
-      : new Subscription();
+    this.innerSubscription = strategy.positionChanges.subscribe((change) => {
+      if (this.followsVisibility) {
+        this.lastPosition = change.connectionPair;
+      }
+      this.positionChanges.next(change);
+    });
     return strategy;
   }
 

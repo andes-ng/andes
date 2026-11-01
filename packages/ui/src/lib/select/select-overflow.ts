@@ -23,12 +23,11 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
-import {
-  AndesSelectState,
-  type AndesSelectMaxTagPopoverContext,
-  type AndesSelectTag,
-} from './select-state';
 import { andesSelectScrolledOutOfView } from './select-visibility';
+import {
+  AndesTagOverflowHost,
+  type AndesTagOverflowContext,
+} from './tag-overflow';
 
 /** Delay, in ms, between the pointer arriving on the `+ N` tag and its popover opening. */
 export const ANDES_SELECT_OVERFLOW_OPEN_DELAY = 150;
@@ -81,7 +80,10 @@ function isFocusVisible(element: Element): boolean {
  * disabled select's popover still opens on hover or tap - it is informative - but lists the
  * tags without remove buttons, and its tag is no Tab stop.
  *
- * @internal Part of `AndesSelectTrigger`'s template, not public API.
+ * The field it belongs to is whatever provides {@link AndesTagOverflowHost} - the Select, or
+ * another field of the family that shows tags.
+ *
+ * @internal Part of the select family's templates, not public API.
  */
 @Directive({
   selector: '[andesSelectOverflow]',
@@ -95,7 +97,7 @@ function isFocusVisible(element: Element): boolean {
     '[attr.aria-expanded]': 'enabled() ? overlay.isOpen() : null',
     '[attr.aria-controls]':
       'enabled() && overlay.isOpen() ? overlay.contentId : null',
-    '[attr.aria-disabled]': 'enabled() && select.isDisabled() ? "true" : null',
+    '[attr.aria-disabled]': 'enabled() && field.isDisabled() ? "true" : null',
     '[attr.data-state]':
       'enabled() ? (overlay.isOpen() ? "open" : "closed") : null',
     '(pointerenter)': 'onPointerEnter($event)',
@@ -107,9 +109,10 @@ function isFocusVisible(element: Element): boolean {
     '(keydown)': 'onKeydown($event)',
   },
 })
-export class AndesSelectOverflow {
+export class AndesSelectOverflow<T = unknown> {
   readonly overlay = inject(AndesOverlayPrimitive);
-  protected readonly select = inject(AndesSelectState);
+  protected readonly field =
+    inject<AndesTagOverflowHost<T>>(AndesTagOverflowHost);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly document = inject(DOCUMENT);
   private readonly injector = inject(Injector);
@@ -121,25 +124,24 @@ export class AndesSelectOverflow {
   });
 
   /** Whether the tag opens a popover at all (`maxTagPopover`). */
-  protected readonly enabled = computed(() => this.select.maxTagPopover());
+  protected readonly enabled = computed(() => this.field.maxTagPopover());
   /** A disabled select's tag still opens on hover, but is no Tab stop. */
   protected readonly focusable = computed(
-    () => this.enabled() && !this.select.isDisabled(),
+    () => this.enabled() && !this.field.isDisabled(),
   );
   /** Accessible name of the tag and of the popover. */
   readonly label = computed(() =>
-    this.select.maxTagPopoverLabelFor(this.select.omittedTags().length),
+    this.field.maxTagPopoverLabelFor(this.field.omittedTags().length),
   );
   /** Text direction of the field, mirrored onto the portalled popover. */
   readonly direction = signal<'ltr' | 'rtl' | null>(null);
 
   /** Removes a hidden value from the popover, keeping focus in a sensible place. */
-  readonly remove = (tag: AndesSelectTag, event?: Event): void =>
-    this.removeTag(tag, event);
+  readonly remove = (tag: T, event?: Event): void => this.removeTag(tag, event);
 
   /** Context for a custom `maxTagPopoverTemplate`. */
-  readonly context = computed<AndesSelectMaxTagPopoverContext>(() => ({
-    $implicit: this.select.omittedTags(),
+  readonly context = computed<AndesTagOverflowContext<T>>(() => ({
+    $implicit: this.field.omittedTags(),
     remove: (tag) => this.removeTag(tag),
   }));
 
@@ -196,8 +198,8 @@ export class AndesSelectOverflow {
 
     // One overlay at a time: the option list wins. And nothing to show, nothing open.
     effect(() => {
-      const listOpen = this.select.isOpen();
-      const empty = this.select.omittedTags().length === 0;
+      const listOpen = this.field.isOpen();
+      const empty = this.field.omittedTags().length === 0;
       const enabled = this.enabled();
       untracked(() => {
         if (listOpen || empty || !enabled) {
@@ -206,15 +208,13 @@ export class AndesSelectOverflow {
       });
     });
 
-    effect(() =>
-      this.select.registerOverflowPanel(this.overlay.panelElement()),
-    );
+    effect(() => this.field.registerOverflowPanel(this.overlay.panelElement()));
 
     // The hidden set changes (a removal, a responsive re-fit): the popover changes size
     // and the tag may have moved, so the popover follows it.
     afterRenderEffect(() => {
-      this.select.omittedTags();
-      this.select.visibleTags();
+      this.field.omittedTags();
+      this.field.visibleTags();
       untracked(() => {
         if (this.overlay.isOpen()) {
           this.overlay.updatePosition();
@@ -225,10 +225,10 @@ export class AndesSelectOverflow {
     inject(DestroyRef).onDestroy(() => {
       this.clearTimers();
       this.unwatchScroll();
-      this.select.registerOverflowPanel(null);
+      this.field.registerOverflowPanel(null);
       // The last hidden tag went with focus on its remove button, and the tag with it.
       if (this.pendingFocus !== null) {
-        this.select.focus();
+        this.field.focus();
       }
     });
   }
@@ -346,11 +346,11 @@ export class AndesSelectOverflow {
   onPanelFocusIn(event: FocusEvent): void {
     this.focusHeld = true;
     this.clearCloseTimer();
-    this.select.onFocusIn(event);
+    this.field.onFocusIn(event);
   }
 
   onPanelFocusOut(event: FocusEvent): void {
-    this.select.onFocusOut(event);
+    this.field.onFocusOut(event);
     const next = event.relatedTarget;
     if (
       this.pendingFocus !== null ||
@@ -385,7 +385,7 @@ export class AndesSelectOverflow {
     if (tabbables.length === 0 || active === tabbables[tabbables.length - 1]) {
       event.preventDefault();
       this.closeNow();
-      this.select.focus();
+      this.field.focus();
     }
   }
 
@@ -399,8 +399,8 @@ export class AndesSelectOverflow {
       !panel ||
       !this.enabled() ||
       this.overlay.isOpen() ||
-      this.select.isOpen() ||
-      this.select.omittedTags().length === 0
+      this.field.isOpen() ||
+      this.field.omittedTags().length === 0
     ) {
       return;
     }
@@ -484,14 +484,14 @@ export class AndesSelectOverflow {
   // Removal ---------------------------------------------------------------------------
 
   /**
-   * Removes a hidden value - the same `removeValue` the trigger's tags use, so the same
+   * Removes a hidden value - the same removal the field's own tags use, so the same
    * outputs and form updates follow. With focus inside the popover it moves to the control
    * now at the same place (or the one before it); once nothing is left to show, to the
    * combobox, as the tag itself goes too.
    */
-  private removeTag(tag: AndesSelectTag, event?: Event): void {
+  private removeTag(tag: T, event?: Event): void {
     event?.stopPropagation();
-    if (this.select.isDisabled() || !tag.closable) {
+    if (this.field.isDisabled() || !this.field.canRemoveTag(tag)) {
       return;
     }
     const active = this.document.activeElement;
@@ -499,14 +499,14 @@ export class AndesSelectOverflow {
     const index = focusInside
       ? this.tabbables().indexOf(active as HTMLElement)
       : -1;
-    const last = this.select.omittedTags().length <= 1;
+    const last = this.field.omittedTags().length <= 1;
 
     if (focusInside && last) {
-      this.select.focus();
+      this.field.focus();
     } else if (focusInside) {
       this.pendingFocus = Math.max(index, 0);
     }
-    this.select.removeValue(tag.value);
+    this.field.removeTag(tag);
 
     if (this.pendingFocus !== null) {
       const target = this.pendingFocus;
@@ -527,7 +527,7 @@ export class AndesSelectOverflow {
     if (host.isConnected && this.focusable()) {
       host.focus();
     } else {
-      this.select.focus();
+      this.field.focus();
     }
   }
 

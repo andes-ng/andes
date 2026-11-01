@@ -388,6 +388,16 @@ export const ANDES_OVERLAY_PANE_CLASS = 'andes-overlay-pane';
 export const ANDES_OVERLAY_CLOSING_ATTRIBUTE = 'data-andes-closing';
 
 /**
+ * Attribute an anchored overlay carries on its pane and the pane's direct element children
+ * (a component's panel root), naming the side of the anchor it was actually placed on:
+ * `top`, `bottom`, `left` or `right`. It differs from the preferred `side` once the overlay
+ * has flipped for lack of room, so a panel can grow out of the edge that really touches its
+ * anchor (`transform-origin`). Updated on every re-position; centered and edge overlays never
+ * carry it.
+ */
+export const ANDES_OVERLAY_PLACED_SIDE_ATTRIBUTE = 'data-placed-side';
+
+/**
  * Longest a close waits for exit animations before detaching the overlay anyway,
  * so a stalled or endless animation can never keep a closed overlay on screen.
  */

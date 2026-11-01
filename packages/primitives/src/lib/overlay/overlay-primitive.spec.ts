@@ -20,7 +20,11 @@ import {
   AndesOverlayPrimitive,
   provideAndesOverlay,
 } from './overlay-primitive';
-import { andesConnectedPositions } from './overlay-positioning';
+import {
+  andesConnectedPosition,
+  andesConnectedPositions,
+  andesPlacedSide,
+} from './overlay-positioning';
 import { AndesOverlayTriggerPrimitive } from './overlay-trigger-primitive';
 
 /**
@@ -1698,6 +1702,47 @@ describe('AndesOverlayPrimitive', () => {
         'end/top',
         'start/top',
       ]);
+    });
+
+    it('reads the side back from every connected position it builds', () => {
+      for (const side of ['top', 'bottom', 'left', 'right'] as const) {
+        for (const align of ['start', 'center', 'end'] as const) {
+          expect(
+            andesPlacedSide(andesConnectedPosition(side, align, 4, 0)),
+          ).toBe(side);
+        }
+      }
+    });
+
+    it('marks an anchored pane and its panel with the side it was placed on', async () => {
+      const { fixture, host, overlay, pane } = createHost(
+        andesOverlayPreset('popover'),
+      );
+      expect(overlay.placedSide()).toBeNull();
+      host.open();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(overlay.placedSide()).toBe('bottom');
+      expect(pane()?.getAttribute('data-placed-side')).toBe('bottom');
+      expect(pane()?.firstElementChild?.getAttribute('data-placed-side')).toBe(
+        'bottom',
+      );
+
+      overlay.close();
+      fixture.detectChanges();
+      expect(overlay.placedSide()).toBeNull();
+    });
+
+    it('leaves a centered overlay without a placed side', () => {
+      const { fixture, host, overlay, pane } = createHost(
+        andesOverlayPreset('dialog'),
+      );
+      host.open();
+      fixture.detectChanges();
+
+      expect(overlay.placedSide()).toBeNull();
+      expect(pane()?.hasAttribute('data-placed-side')).toBe(false);
     });
 
     it('stays above or below the anchor when cross-side fallback is off', () => {

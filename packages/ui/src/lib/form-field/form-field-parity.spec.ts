@@ -36,6 +36,44 @@ import { declaredValue, expectInherited } from '../../testing/computed-style';
  * contract stays covered, unchanged, in form-field.spec.ts.
  */
 
+/**
+ * jsdom reports zero geometry for every element, which CDK's overlay positioning (the label's
+ * tooltip) cannot place; a nominal size is enough to let it attach. Says nothing about the
+ * field itself.
+ */
+function withElementGeometry() {
+  const descriptors = (['offsetWidth', 'offsetHeight'] as const).map(
+    (prop) =>
+      [
+        prop,
+        Object.getOwnPropertyDescriptor(HTMLElement.prototype, prop),
+      ] as const,
+  );
+
+  beforeAll(() => {
+    for (const [prop] of descriptors) {
+      Object.defineProperty(HTMLElement.prototype, prop, {
+        configurable: true,
+        get: () => 1,
+      });
+    }
+  });
+
+  afterAll(() => {
+    for (const [prop, descriptor] of descriptors) {
+      if (descriptor) {
+        Object.defineProperty(HTMLElement.prototype, prop, descriptor);
+      } else {
+        delete (HTMLElement.prototype as unknown as Record<string, unknown>)[
+          prop
+        ];
+      }
+    }
+  });
+
+  afterEach(() => vi.useRealTimers());
+}
+
 /** The minimum every host needs; hosts add AndesForm/AndesFormError when they use them. */
 const IMPORTS = [ReactiveFormsModule, AndesFormField, AndesFormControl];
 
@@ -413,6 +451,8 @@ describe('AndesFormField - presentation features', () => {
   });
 
   describe('label: required mark, optional mark, tooltip, label input', () => {
+    withElementGeometry();
+
     const mark = (el: HTMLElement) =>
       el.querySelector('.andes-form-label__required');
     const optional = (el: HTMLElement) =>
@@ -485,18 +525,21 @@ describe('AndesFormField - presentation features', () => {
       expect(mark(fixture.nativeElement)).not.toBeNull();
     });
 
-    it('renders a tooltip trigger OUTSIDE the <label>, described by a hidden tooltip', () => {
+    it('renders a question-circle trigger OUTSIDE the <label>, named by tooltipLabel', () => {
       const { el } = setup((h) => h.tooltip.set('Your legal name.'));
       const trigger = el.querySelector(
         '.andes-form-label__tooltip-trigger',
       ) as HTMLButtonElement;
-      const tip = el.querySelector('[role="tooltip"]') as HTMLElement;
       expect(trigger.closest('label')).toBeNull();
       expect(trigger.type).toBe('button');
       expect(trigger.getAttribute('aria-label')).toBe('More information');
-      expect(trigger.getAttribute('aria-describedby')).toBe(tip.id);
-      expect(tip.textContent?.trim()).toBe('Your legal name.');
-      expect(tip.hidden).toBe(true);
+      // The icon is drawn, not typed: a 14px question-circle that is hidden from AT.
+      expect(trigger.querySelector('svg')?.getAttribute('aria-hidden')).toBe(
+        'true',
+      );
+      expect(trigger.querySelectorAll('svg circle')).toHaveLength(1);
+      // The library's tooltip renders nothing until it opens.
+      expect(document.querySelector('.andes-tooltip')).toBeNull();
       // A native button would otherwise fall back to the UA font.
       // `inherit` computes to the parent's font, which a native button would not get on its own,
       // so also assert the declaration the stylesheet makes.
@@ -510,28 +553,59 @@ describe('AndesFormField - presentation features', () => {
       ).toBe('inherit');
     });
 
-    it('opens the tooltip on focus and hover, and closes it on Escape/blur/leave', () => {
+    it('shows the library tooltip - dark, above the button - on focus and hover, described by it', () => {
+      vi.useFakeTimers();
       const { el, fixture } = setup((h) => h.tooltip.set('Tip.'));
       const trigger = el.querySelector(
         '.andes-form-label__tooltip-trigger',
       ) as HTMLButtonElement;
-      const wrap = el.querySelector(
-        '.andes-form-label__tooltip',
-      ) as HTMLElement;
-      const tip = () => el.querySelector('[role="tooltip"]') as HTMLElement;
-      const fire = (target: HTMLElement, event: Event) => {
-        target.dispatchEvent(event);
+      const tip = () => document.querySelector('.andes-tooltip');
+      const settle = (ms: number) => {
+        vi.advanceTimersByTime(ms);
         fixture.detectChanges();
       };
 
-      fire(trigger, new FocusEvent('focus'));
-      expect(tip().hidden).toBe(false);
-      fire(trigger, new KeyboardEvent('keydown', { key: 'Escape' }));
-      expect(tip().hidden).toBe(true);
-      fire(wrap, new MouseEvent('mouseenter'));
-      expect(tip().hidden).toBe(false);
-      fire(wrap, new MouseEvent('mouseleave'));
-      expect(tip().hidden).toBe(true);
+      trigger.dispatchEvent(new FocusEvent('focus'));
+      settle(100);
+      expect(tip()?.textContent?.trim()).toBe('Tip.');
+      expect(tip()?.classList).toContain('andes-tooltip--inverse');
+      expect(tip()?.getAttribute('data-side')).toBe('top');
+      expect(tip()?.querySelector('.andes-tooltip__arrow')).toBeTruthy();
+      expect(tip()?.getAttribute('role')).toBe('tooltip');
+      expect(trigger.getAttribute('aria-describedby')).toBe(tip()?.id);
+
+      trigger.dispatchEvent(new FocusEvent('blur'));
+      settle(0);
+      expect(tip()).toBeNull();
+
+      trigger.dispatchEvent(
+        new PointerEvent('pointerenter', { pointerType: 'mouse' }),
+      );
+      settle(100);
+      expect(tip()).toBeTruthy();
+    });
+
+    it('closes the tooltip with Escape', () => {
+      vi.useFakeTimers();
+      const { el, fixture } = setup((h) => h.tooltip.set('Tip.'));
+      const trigger = el.querySelector(
+        '.andes-form-label__tooltip-trigger',
+      ) as HTMLButtonElement;
+      trigger.dispatchEvent(new FocusEvent('focus'));
+      vi.advanceTimersByTime(100);
+      fixture.detectChanges();
+      expect(document.querySelector('.andes-tooltip')).toBeTruthy();
+
+      document.body.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'Escape',
+          keyCode: 27,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+      fixture.detectChanges();
+      expect(document.querySelector('.andes-tooltip')).toBeNull();
     });
   });
 
@@ -979,6 +1053,8 @@ describe('AndesFormField - display timing, warnings and templates', () => {
   });
 
   describe('templates', () => {
+    withElementGeometry();
+
     @Component({
       imports: [...IMPORTS, AndesForm],
       template: `<ng-template #mark let-required>
@@ -1041,8 +1117,14 @@ describe('AndesFormField - display timing, warnings and templates', () => {
     });
 
     it('renders a tooltip template in the bubble', () => {
-      const { el } = templateSetup();
-      const bubble = el.querySelector('[role="tooltip"]');
+      vi.useFakeTimers();
+      const { el, fixture } = templateSetup();
+      el.querySelector('.andes-form-label__tooltip-trigger')?.dispatchEvent(
+        new FocusEvent('focus'),
+      );
+      vi.advanceTimersByTime(100);
+      fixture.detectChanges();
+      const bubble = document.querySelector('.andes-tooltip');
       expect(bubble?.querySelector('.rich-tip')?.textContent).toBe('Rich');
     });
   });

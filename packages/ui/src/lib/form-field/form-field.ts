@@ -344,7 +344,6 @@ export class AndesFormField implements AndesFormFieldApi {
   /** Id of the generated-messages / `help` block. */
   readonly helpId = computed(() => `${this.controlId()}-help`);
   readonly extraId = computed(() => `${this.controlId()}-extra`);
-  readonly tooltipId = computed(() => `${this.controlId()}-tooltip`);
 
   protected readonly hasLabel = computed(
     () => !!this.projectedLabel() || !!this.label(),

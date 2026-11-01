@@ -2,16 +2,15 @@ import { NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
-  computed,
   ElementRef,
   forwardRef,
   inject,
-  signal,
-  TemplateRef,
   ViewEncapsulation,
 } from '@angular/core';
 
+import { AndesTooltip, AndesTooltipTrigger } from '../tooltip';
 import { ANDES_FORM_FIELD, ANDES_FORM_LABEL } from './form-field-tokens';
+import { AndesFormIcon } from './form-icons';
 
 /**
  * Label for the control inside an `AndesFormField`. Renders a real `<label for="...">`
@@ -30,9 +29,11 @@ import { ANDES_FORM_FIELD, ANDES_FORM_LABEL } from './form-field-tokens';
  *   already says it to assistive technology; or, with `requiredMark="optional"`, a visible
  *   "(optional)" suffix on the fields that are NOT required; or a custom template after the
  *   label text, given whether the field is required.
- * - `tooltip` - an info button after the `<label>` with a `role="tooltip"` bubble, shown on
- *   hover/focus and dismissed with Escape. It sits *outside* the `<label>` so its accessible
- *   name never gets folded into the control's.
+ * - `tooltip` - a question-circle button after the `<label>` that shows the library's
+ *   `AndesTooltip` (dark bubble with an arrow, above the button) on hover or focus, dismissed
+ *   with Escape; the tooltip describes the button through `aria-describedby` while it is
+ *   open, and `tooltipLabel` is the button's accessible name. It sits *outside* the `<label>`
+ *   so its accessible name never gets folded into the control's.
  * - colon - `horizontal` layout only, `aria-hidden`.
  *
  * Clicking the label focuses the control. A control that opens a popup (a select or color
@@ -44,7 +45,7 @@ import { ANDES_FORM_FIELD, ANDES_FORM_LABEL } from './form-field-tokens';
  */
 @Component({
   selector: 'andes-form-label',
-  imports: [NgTemplateOutlet],
+  imports: [NgTemplateOutlet, AndesTooltip, AndesTooltipTrigger, AndesFormIcon],
   template: `<label
       class="andes-form-label"
       [attr.id]="field?.labelId() ?? null"
@@ -82,48 +83,23 @@ import { ANDES_FORM_FIELD, ANDES_FORM_LABEL } from './form-field-tokens';
         />
       }
     </label>
-    @if (field?.tooltip()) {
-      <span
+    @if (field?.tooltip(); as tip) {
+      <andes-tooltip
         class="andes-form-label__tooltip"
-        (mouseenter)="tooltipOpen.set(true)"
-        (mouseleave)="tooltipOpen.set(false)"
+        [content]="tip"
+        variant="inverse"
+        side="top"
+        [openDelay]="100"
       >
         <button
           type="button"
+          andesTooltipTrigger
           class="andes-form-label__tooltip-trigger"
           [attr.aria-label]="field.tooltipLabel()"
-          [attr.aria-describedby]="field.tooltipId()"
-          (focus)="tooltipOpen.set(true)"
-          (blur)="tooltipOpen.set(false)"
-          (keydown.escape)="tooltipOpen.set(false)"
         >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-            <path d="M12 17h.01" />
-          </svg>
+          <andes-form-icon name="help" />
         </button>
-        <span
-          class="andes-form-label__tooltip-content"
-          role="tooltip"
-          [attr.id]="field.tooltipId()"
-          [hidden]="!tooltipOpen()"
-        >
-          @if (tooltipTemplate(); as template) {
-            <ng-container [ngTemplateOutlet]="template" />
-          } @else {
-            {{ field.tooltip() }}
-          }
-        </span>
-      </span>
+      </andes-tooltip>
     }
     @if (field?.showColon()) {
       <span class="andes-form-label__colon" aria-hidden="true">:</span>
@@ -149,8 +125,6 @@ export class AndesFormLabel {
   private readonly element =
     inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
 
-  protected readonly tooltipOpen = signal(false);
-
   protected onLabelClick(event: MouseEvent): void {
     if (!(event.target as Element | null)?.closest?.('label')) {
       return;
@@ -165,9 +139,4 @@ export class AndesFormLabel {
       target.focus();
     }
   }
-
-  protected readonly tooltipTemplate = computed(() => {
-    const tooltip = this.field?.tooltip();
-    return tooltip instanceof TemplateRef ? tooltip : null;
-  });
 }

@@ -191,7 +191,6 @@ export interface AndesFormFieldApi {
   /** Whether the field counts as required (the `required` input, else the control). */
   readonly isRequired: () => boolean;
   readonly tooltip: () => string | TemplateRef<void> | undefined;
-  readonly tooltipId: () => string;
   readonly tooltipLabel: () => string;
   /** The resolved display gate - read by `AndesFormControl` for its `interacted` signal. */
   readonly resolvedShowErrorsOn: () => AndesFormShowErrorsOn;

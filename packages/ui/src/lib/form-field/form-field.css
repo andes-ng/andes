@@ -291,11 +291,14 @@ andes-form-label {
   color: var(--andes-color-foreground);
 }
 
+/* The help icon after a label: a 14px question-circle button, muted at rest and primary on
+   hover or keyboard focus. The bubble is the library's AndesTooltip (portalled into the
+   overlay container, so it is styled by its own sheet), `andes-tooltip` is only the wrapper
+   that positions the button. */
 .andes-form-label__tooltip {
-  position: relative;
   display: inline-flex;
+  align-items: center;
   margin-inline-start: var(--andes-space-1);
-  vertical-align: middle;
 }
 
 .andes-form-label__tooltip-trigger {
@@ -307,13 +310,18 @@ andes-form-label {
   border-radius: var(--andes-radius-full);
   background: none;
   color: var(--andes-color-muted-foreground);
-  /* A native button does not inherit the page font by default. */
+  /* The icon is 1em: the button sets it to 14px. */
   font-family: inherit;
+  font-size: 0.875rem;
+  line-height: 1;
   cursor: help;
+  transition: color var(--andes-motion-duration-fast, 120ms)
+    var(--andes-motion-ease-out, ease-out);
 }
 
-.andes-form-label__tooltip-trigger:hover {
-  color: var(--andes-color-foreground);
+.andes-form-label__tooltip-trigger:hover,
+.andes-form-label__tooltip-trigger:focus-visible {
+  color: var(--andes-color-primary-text, var(--andes-color-primary));
 }
 
 .andes-form-label__tooltip-trigger:focus-visible {
@@ -321,36 +329,10 @@ andes-form-label {
   outline-offset: 2px;
 }
 
-.andes-form-label__tooltip-trigger svg {
-  width: 0.875rem;
-  height: 0.875rem;
-}
-
-.andes-form-label__tooltip-content {
-  position: absolute;
-  bottom: calc(100% + var(--andes-space-2));
-  left: 50%;
-  z-index: var(--andes-z-index-tooltip);
-  width: max-content;
-  max-width: 16rem;
-  padding: var(--andes-space-1) var(--andes-space-2);
-  /* Same surface, type and depth as AndesTooltip, so a label hint reads like every other
-     tooltip on the screen. */
-  border-radius: var(--andes-radius-sm);
-  transform: translateX(-50%);
-  background: var(--andes-color-popover);
-  color: var(--andes-color-popover-foreground);
-  filter: drop-shadow(0 4px 6px rgb(0 0 0 / 15%));
-  font-family: var(--andes-font-family), sans-serif;
-  font-size: 0.875rem;
-  font-weight: normal;
-  line-height: 1.375rem;
-  white-space: normal;
-  text-align: start;
-}
-
-.andes-form-label__tooltip-content[hidden] {
-  display: none;
+@media (prefers-reduced-motion: reduce) {
+  .andes-form-label__tooltip-trigger {
+    transition: none;
+  }
 }
 
 /* help / generated messages / extra */

@@ -1,0 +1,609 @@
+/* Org chart. Cards are absolutely positioned on a canvas that is panned and zoomed with one
+   transform; connectors are SVG paths on the same canvas. Positions are physical (left/top)
+   because the layout already mirrored them for right-to-left charts; card content still
+   follows the page direction.
+
+   Hooks are read with a fallback instead of being declared on :host, so a consumer rule on the
+   element (andes-org-chart { --andes-org-chart-height: 40rem; }) is never outranked:
+     --andes-org-chart-height                    block size of the chart (32rem)
+     --andes-org-chart-background                canvas background
+     --andes-org-chart-dot-color                 background dot grid (transparent hides it)
+     --andes-org-chart-border-color              chart border
+     --andes-org-chart-radius                    chart corner radius
+     --andes-org-chart-node-background           card background
+     --andes-org-chart-node-foreground           card text
+     --andes-org-chart-node-muted-foreground     card secondary text (role)
+     --andes-org-chart-node-border-color         card border
+     --andes-org-chart-node-radius               card corner radius
+     --andes-org-chart-node-shadow               card shadow
+     --andes-org-chart-node-hover-shadow         card shadow on hover
+     --andes-org-chart-node-accent               accent stripe, avatar tint, selection (a node's
+                                                 own `color` or `levelColors` set it per card)
+     --andes-org-chart-node-selected-background  selected card background
+     --andes-org-chart-match-color               ring around search matches
+     --andes-org-chart-dimmed-opacity            opacity of cards off the search path
+     --andes-org-chart-connector-color           connector stroke
+     --andes-org-chart-connector-width           connector stroke width
+     --andes-org-chart-connector-highlight-color connector on a search path
+     --andes-org-chart-secondary-color           dotted-line (secondary) links
+     --andes-org-chart-secondary-dasharray       dash pattern of secondary links
+     --andes-org-chart-badge-background          count badge background
+     --andes-org-chart-badge-foreground          count badge text
+     --andes-org-chart-badge-border-color        count badge border
+     --andes-org-chart-controls-background       zoom controls panel
+     --andes-org-chart-duration                  animation length (also the `animationDuration`
+                                                 input, which this overrides)
+   Every part carries a data-slot attribute (org-chart-viewport, -canvas, -links, -link,
+   -secondary-link, -tree, -node, -card, -avatar, -name, -title, -badge, -controls, -zoom,
+   -toolbar, -empty). Cards carry data-key (the node key), data-kind (root | branch | leaf),
+   data-selected, data-expanded, data-matched, data-highlighted, data-dimmed, data-disabled,
+   data-readonly, data-assistant and data-loading; tree connectors carry data-from, data-to and
+   data-kind (tree | assistant | stack | secondary), for structural styling. */
+
+:host {
+  --_andes-org-chart-motion: var(
+    --andes-org-chart-duration,
+    var(--_andes-org-chart-duration, 280ms)
+  );
+  --_andes-org-chart-ease: var(
+    --andes-motion-ease-out,
+    cubic-bezier(0.2, 0, 0, 1)
+  );
+  --_andes-org-chart-accent: var(--andes-color-primary);
+
+  position: relative;
+  display: block;
+  overflow: hidden;
+  isolation: isolate;
+  box-sizing: border-box;
+  block-size: var(--andes-org-chart-height, 32rem);
+  border: 1px solid
+    var(--andes-org-chart-border-color, var(--andes-color-border));
+  border-radius: var(--andes-org-chart-radius, var(--andes-radius-lg));
+  background: var(--andes-org-chart-background, var(--andes-color-background));
+  color: var(--andes-color-foreground);
+  font-family: var(--andes-font-family), sans-serif;
+}
+
+/* ------------------------------------------------------------------ viewport and canvas */
+
+.andes-org-chart__viewport {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  background-image: radial-gradient(
+    circle,
+    var(
+        --andes-org-chart-dot-color,
+        color-mix(in srgb, var(--andes-color-border) 80%, transparent)
+      )
+      1px,
+    transparent 1.2px
+  );
+  background-size: 20px 20px;
+}
+
+:host([data-panning]) .andes-org-chart__viewport {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.andes-org-chart__canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+:host([data-motion]) .andes-org-chart__canvas[data-smooth] {
+  transition: transform var(--_andes-org-chart-motion)
+    var(--_andes-org-chart-ease);
+}
+
+.andes-org-chart__links {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.andes-org-chart__tree {
+  position: absolute;
+  inset: 0;
+}
+
+.andes-org-chart__empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--andes-space-4);
+  color: var(--andes-color-muted-foreground);
+  font-size: var(--andes-font-size-sm);
+  cursor: default;
+}
+
+/* ------------------------------------------------------------------ connectors */
+
+.andes-org-chart__link {
+  fill: none;
+  stroke: var(
+    --andes-org-chart-connector-color,
+    color-mix(in srgb, var(--andes-color-muted-foreground) 55%, transparent)
+  );
+  stroke-width: var(--andes-org-chart-connector-width, 1.5px);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.andes-org-chart__link-group[data-highlighted] .andes-org-chart__link {
+  stroke: var(
+    --andes-org-chart-connector-highlight-color,
+    var(--_andes-org-chart-accent)
+  );
+  stroke-width: calc(var(--andes-org-chart-connector-width, 1.5px) + 0.5px);
+}
+
+.andes-org-chart__link--secondary {
+  stroke: var(
+    --andes-org-chart-secondary-color,
+    var(--andes-color-warning-hover)
+  );
+  stroke-dasharray: var(--andes-org-chart-secondary-dasharray, 6 4);
+}
+
+:host([data-searching]) .andes-org-chart__link-group:not([data-highlighted]) {
+  opacity: var(--andes-org-chart-dimmed-opacity, 0.35);
+}
+
+/* ------------------------------------------------------------------ cards */
+
+.andes-org-chart__node {
+  position: absolute;
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
+  outline: none;
+  cursor: default;
+}
+
+:host([data-motion][data-ready]) .andes-org-chart__node {
+  transition:
+    transform var(--_andes-org-chart-motion) var(--_andes-org-chart-ease),
+    opacity var(--_andes-org-chart-motion) var(--_andes-org-chart-ease),
+    width var(--_andes-org-chart-motion) var(--_andes-org-chart-ease),
+    height var(--_andes-org-chart-motion) var(--_andes-org-chart-ease);
+}
+
+:host([data-motion][data-ready]) .andes-org-chart__link-group {
+  transition: opacity var(--_andes-org-chart-motion)
+    var(--_andes-org-chart-ease);
+}
+
+:host([data-motion][data-ready]) .andes-org-chart__link {
+  transition:
+    d var(--_andes-org-chart-motion) var(--_andes-org-chart-ease),
+    stroke var(--_andes-org-chart-motion) var(--_andes-org-chart-ease);
+}
+
+/* New cards grow out of their manager; new lines fade in once the cards are on their way. */
+.andes-org-chart__node.andes-org-chart--entering {
+  animation: andes-org-chart-grow var(--_andes-org-chart-motion)
+    var(--_andes-org-chart-ease) both;
+}
+
+.andes-org-chart__link-group.andes-org-chart--entering {
+  animation: andes-org-chart-fade var(--_andes-org-chart-motion)
+    var(--_andes-org-chart-ease) both;
+}
+
+@keyframes andes-org-chart-grow {
+  from {
+    transform: var(--_andes-org-chart-from) scale(0.6);
+    opacity: 0;
+  }
+}
+
+@keyframes andes-org-chart-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.andes-org-chart__card {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--andes-space-3);
+  box-sizing: border-box;
+  overflow: hidden;
+  padding-block: var(--andes-space-3);
+  padding-inline: calc(var(--andes-space-3) + 4px) var(--andes-space-3);
+  border: 1px solid
+    var(--andes-org-chart-node-border-color, var(--andes-color-border));
+  border-radius: var(--andes-org-chart-node-radius, var(--andes-radius-lg));
+  background: var(--andes-org-chart-node-background, var(--andes-color-card));
+  box-shadow: var(--andes-org-chart-node-shadow, var(--andes-shadow-sm));
+  color: var(
+    --andes-org-chart-node-foreground,
+    var(--andes-color-card-foreground)
+  );
+  transition:
+    border-color var(--andes-motion-duration-fast, 150ms) ease,
+    box-shadow var(--andes-motion-duration-fast, 150ms) ease,
+    background-color var(--andes-motion-duration-fast, 150ms) ease;
+}
+
+/* The accent stripe on the card's leading edge. */
+.andes-org-chart__card::before {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  inline-size: 3px;
+  background: var(
+    --andes-org-chart-node-accent,
+    var(--_andes-org-chart-accent)
+  );
+  content: '';
+}
+
+.andes-org-chart__node:hover .andes-org-chart__card {
+  border-color: color-mix(
+    in srgb,
+    var(--andes-org-chart-node-accent, var(--_andes-org-chart-accent)) 45%,
+    var(--andes-org-chart-node-border-color, var(--andes-color-border))
+  );
+  box-shadow: var(--andes-org-chart-node-hover-shadow, var(--andes-shadow-md));
+}
+
+.andes-org-chart__node[data-selected] .andes-org-chart__card {
+  border-color: var(
+    --andes-org-chart-node-accent,
+    var(--_andes-org-chart-accent)
+  );
+  background: var(
+    --andes-org-chart-node-selected-background,
+    color-mix(
+      in srgb,
+      var(--andes-org-chart-node-accent, var(--_andes-org-chart-accent)) 8%,
+      var(--andes-org-chart-node-background, var(--andes-color-card))
+    )
+  );
+  box-shadow:
+    0 0 0 1px var(--andes-org-chart-node-accent, var(--_andes-org-chart-accent)),
+    var(--andes-org-chart-node-shadow, var(--andes-shadow-sm));
+}
+
+.andes-org-chart__node:focus-visible .andes-org-chart__card {
+  outline: 2px solid var(--andes-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.andes-org-chart__node:focus-visible {
+  z-index: 1;
+}
+
+.andes-org-chart__node[data-matched] .andes-org-chart__card {
+  box-shadow:
+    0 0 0 2px var(--andes-org-chart-match-color, var(--andes-color-warning)),
+    var(--andes-org-chart-node-shadow, var(--andes-shadow-sm));
+}
+
+.andes-org-chart__node[data-dimmed] {
+  opacity: var(--andes-org-chart-dimmed-opacity, 0.35);
+}
+
+.andes-org-chart__node[data-disabled] .andes-org-chart__card {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.andes-org-chart__node[data-assistant] .andes-org-chart__card {
+  border-style: dashed;
+}
+
+/* Default card content: avatar, name, role. */
+
+.andes-org-chart__avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  overflow: hidden;
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  border-radius: var(--andes-radius-full);
+  background: color-mix(
+    in srgb,
+    var(--andes-org-chart-node-accent, var(--_andes-org-chart-accent)) 14%,
+    var(--andes-org-chart-node-background, var(--andes-color-card))
+  );
+  color: color-mix(
+    in srgb,
+    var(--andes-org-chart-node-accent, var(--_andes-org-chart-accent)) 70%,
+    var(--andes-org-chart-node-foreground, var(--andes-color-card-foreground))
+  );
+  font-size: var(--andes-font-size-sm);
+  font-weight: var(--andes-font-weight-semibold);
+  line-height: 1;
+  user-select: none;
+}
+
+.andes-org-chart__avatar-image {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+.andes-org-chart__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+.andes-org-chart__name,
+.andes-org-chart__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.andes-org-chart__name {
+  font-size: var(--andes-font-size-sm);
+  font-weight: var(--andes-font-weight-semibold);
+  line-height: var(--andes-line-height-sm);
+}
+
+.andes-org-chart__title {
+  color: var(
+    --andes-org-chart-node-muted-foreground,
+    var(--andes-color-muted-foreground)
+  );
+  font-size: var(--andes-font-size-xs);
+  line-height: var(--andes-line-height-xs);
+}
+
+/* ------------------------------------------------------------------ count badge */
+
+.andes-org-chart__badge {
+  --_andes-org-chart-chevron: 0deg;
+
+  position: absolute;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  box-sizing: border-box;
+  min-inline-size: 1.5rem;
+  block-size: 1.25rem;
+  margin: 0;
+  padding-block: 0;
+  padding-inline: 0.375rem 0.25rem;
+  border: 1px solid
+    var(--andes-org-chart-badge-border-color, var(--andes-color-border));
+  border-radius: var(--andes-radius-full);
+  background: var(--andes-org-chart-badge-background, var(--andes-color-card));
+  box-shadow: var(--andes-shadow-sm);
+  color: var(
+    --andes-org-chart-badge-foreground,
+    var(--andes-color-muted-foreground)
+  );
+  font: inherit;
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--andes-font-weight-semibold);
+  line-height: 1;
+  cursor: pointer;
+  translate: -50% -50%;
+  transition:
+    border-color var(--andes-motion-duration-fast, 150ms) ease,
+    color var(--andes-motion-duration-fast, 150ms) ease,
+    scale var(--andes-motion-duration-fast, 150ms) ease;
+}
+
+.andes-org-chart__badge:not([data-expanded]) {
+  border-color: var(
+    --andes-org-chart-node-accent,
+    var(--_andes-org-chart-accent)
+  );
+  color: var(--andes-org-chart-badge-foreground, var(--andes-color-foreground));
+}
+
+.andes-org-chart__badge:hover {
+  border-color: var(
+    --andes-org-chart-node-accent,
+    var(--_andes-org-chart-accent)
+  );
+  color: var(--andes-org-chart-node-accent, var(--_andes-org-chart-accent));
+  scale: 1.08;
+}
+
+/* The badge sits on the card edge that faces the reports. */
+:host([data-children-side='bottom']) .andes-org-chart__badge {
+  top: 100%;
+  left: 50%;
+}
+
+:host([data-children-side='top']) .andes-org-chart__badge {
+  --_andes-org-chart-chevron: 180deg;
+
+  top: 0;
+  left: 50%;
+}
+
+:host([data-children-side='right']) .andes-org-chart__badge {
+  --_andes-org-chart-chevron: -90deg;
+
+  top: 50%;
+  left: 100%;
+}
+
+:host([data-children-side='left']) .andes-org-chart__badge {
+  --_andes-org-chart-chevron: 90deg;
+
+  top: 50%;
+  left: 0;
+}
+
+.andes-org-chart__count {
+  padding-inline-end: 1px;
+}
+
+.andes-org-chart__chevron,
+.andes-org-chart__spinner {
+  flex: none;
+  inline-size: 0.875rem;
+  block-size: 0.875rem;
+}
+
+.andes-org-chart__chevron {
+  rotate: var(--_andes-org-chart-chevron);
+  transition: rotate var(--_andes-org-chart-motion) var(--_andes-org-chart-ease);
+}
+
+/* Expanded: the chevron points back at the card ("collapse into it"). */
+.andes-org-chart__badge[data-expanded] .andes-org-chart__chevron {
+  rotate: calc(var(--_andes-org-chart-chevron) + 180deg);
+}
+
+.andes-org-chart__badge[data-loading] {
+  padding-inline: 0.25rem;
+  cursor: progress;
+}
+
+.andes-org-chart__spinner circle {
+  stroke-dasharray: 28 10;
+  transform-origin: center;
+  animation: andes-org-chart-spin 0.8s linear infinite;
+}
+
+@keyframes andes-org-chart-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+/* ------------------------------------------------------------------ controls */
+
+.andes-org-chart__controls {
+  position: absolute;
+  z-index: 2;
+  inset-block-end: var(--andes-space-3);
+  inset-inline-end: var(--andes-space-3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--andes-space-1);
+  border: 1px solid var(--andes-color-border);
+  border-radius: var(--andes-radius-lg);
+  background: var(
+    --andes-org-chart-controls-background,
+    var(--andes-color-popover)
+  );
+  box-shadow: var(--andes-shadow-md);
+  color: var(--andes-color-popover-foreground);
+}
+
+.andes-org-chart__controls svg {
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+
+.andes-org-chart__zoom {
+  min-inline-size: 2.25rem;
+  color: var(--andes-color-muted-foreground);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25rem;
+  text-align: center;
+  user-select: none;
+}
+
+.andes-org-chart__divider {
+  inline-size: 60%;
+  block-size: 1px;
+  margin-block: 2px;
+  background: var(--andes-color-border);
+}
+
+.andes-org-chart__toolbar {
+  position: absolute;
+  z-index: 2;
+  inset-block-start: var(--andes-space-3);
+  inset-inline-start: var(--andes-space-3);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--andes-space-2);
+  max-inline-size: calc(100% - 2 * var(--andes-space-3));
+}
+
+/* ------------------------------------------------------------------ preferences */
+
+@media (prefers-reduced-motion: reduce) {
+  .andes-org-chart__canvas,
+  .andes-org-chart__node,
+  .andes-org-chart__link,
+  .andes-org-chart__link-group,
+  .andes-org-chart__card,
+  .andes-org-chart__badge,
+  .andes-org-chart__chevron {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .andes-org-chart__spinner circle {
+    animation-duration: 2.4s;
+  }
+}
+
+@media (forced-colors: active) {
+  .andes-org-chart__viewport {
+    background-image: none;
+  }
+
+  .andes-org-chart__card {
+    border-color: CanvasText;
+    box-shadow: none;
+  }
+
+  .andes-org-chart__card::before {
+    background: CanvasText;
+  }
+
+  .andes-org-chart__node[data-selected] .andes-org-chart__card {
+    border-color: Highlight;
+    outline: 2px solid Highlight;
+    outline-offset: -3px;
+  }
+
+  .andes-org-chart__node:focus-visible .andes-org-chart__card {
+    outline: 2px solid CanvasText;
+  }
+
+  .andes-org-chart__node[data-matched] .andes-org-chart__card {
+    border-width: 3px;
+  }
+
+  .andes-org-chart__link {
+    stroke: CanvasText;
+  }
+
+  .andes-org-chart__link-group[data-highlighted] .andes-org-chart__link {
+    stroke: Highlight;
+  }
+
+  .andes-org-chart__badge {
+    border-color: ButtonText;
+    background: ButtonFace;
+    color: ButtonText;
+    box-shadow: none;
+  }
+}

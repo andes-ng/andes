@@ -89,6 +89,8 @@ export * from './lib/input-number';
 
 // @slot navigation-menu
 
+export * from './lib/org-chart';
+
 // @slot pagination
 
 // @slot palette

@@ -1,0 +1,332 @@
+<!--
+  Pointer handling lives on the viewport: a press anywhere (background or card) can become a
+  pan once it travels a few pixels, and the wheel zooms or pans. Keyboard users get the same
+  through the arrow keys on the tree, the +/- and 0 keys, and the zoom controls, so the
+  viewport itself needs no key handler or focus.
+-->
+<!-- eslint-disable @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+<div
+  #viewport
+  class="andes-org-chart__viewport"
+  data-slot="org-chart-viewport"
+  (pointerdown)="onPointerDown($event)"
+  (pointermove)="onPointerMove($event)"
+  (pointerup)="onPointerUp($event)"
+  (pointercancel)="onPointerUp($event)"
+  (wheel)="onWheel($event)"
+>
+  @if (isEmpty()) {
+  <div class="andes-org-chart__empty" data-slot="org-chart-empty">
+    @if (resolvedEmptyTemplate(); as empty) {
+    <ng-container [ngTemplateOutlet]="empty" />
+    } @else { {{ text().empty }} }
+  </div>
+  } @else {
+  <div
+    class="andes-org-chart__canvas"
+    data-slot="org-chart-canvas"
+    [attr.data-smooth]="smoothView() ? '' : null"
+    [style.width.px]="canvasWidth()"
+    [style.height.px]="canvasHeight()"
+    [style.transform]="canvasTransform()"
+  >
+    <svg
+      class="andes-org-chart__links"
+      data-slot="org-chart-links"
+      aria-hidden="true"
+      focusable="false"
+      [attr.width]="canvasWidth()"
+      [attr.height]="canvasHeight()"
+      [attr.viewBox]="'0 0 ' + canvasWidth() + ' ' + canvasHeight()"
+    >
+      @for (link of links(); track link.id) {
+      <g
+        class="andes-org-chart__link-group"
+        data-slot="org-chart-link"
+        [class]="link.classes"
+        [attr.data-from]="link.context.from"
+        [attr.data-to]="link.context.to"
+        [attr.data-kind]="link.kind"
+        [attr.data-highlighted]="link.highlighted ? '' : null"
+        [animate.enter]="enterClass()"
+        (animate.leave)="onLinkLeave($event)"
+      >
+        @if (resolvedConnectorTemplate(); as connectorTemplate) {
+        <ng-container
+          [ngTemplateOutlet]="connectorTemplate"
+          [ngTemplateOutletContext]="link.context"
+        />
+        } @else {
+        <path
+          class="andes-org-chart__link"
+          [attr.d]="link.d"
+          [style.d]="'path(&quot;' + link.d + '&quot;)'"
+        />
+        }
+      </g>
+      } @for (link of secondaryViews(); track link.id) {
+      <g
+        class="andes-org-chart__link-group"
+        data-slot="org-chart-secondary-link"
+        data-kind="secondary"
+        [class]="link.classes"
+        [animate.enter]="enterClass()"
+        (animate.leave)="onLinkLeave($event)"
+      >
+        @if (resolvedConnectorTemplate(); as connectorTemplate) {
+        <ng-container
+          [ngTemplateOutlet]="connectorTemplate"
+          [ngTemplateOutletContext]="link.context"
+        />
+        } @else {
+        <path
+          class="andes-org-chart__link andes-org-chart__link--secondary"
+          [attr.d]="link.d"
+          [style.d]="'path(&quot;' + link.d + '&quot;)'"
+        >
+          @if (link.label) {
+          <title>{{ link.label }}</title>
+          }
+        </path>
+        }
+      </g>
+      }
+    </svg>
+
+    <div
+      role="tree"
+      class="andes-org-chart__tree"
+      data-slot="org-chart-tree"
+      [attr.aria-label]="ariaLabel() ?? null"
+      [attr.aria-labelledby]="ariaLabelledby() ?? null"
+      [attr.aria-multiselectable]="selectionMode() === 'multiple' ? 'true' : null"
+      (keydown)="onKeydown($event)"
+    >
+      @for (node of nodes(); track node.key) {
+      <div
+        role="treeitem"
+        class="andes-org-chart__node"
+        data-slot="org-chart-node"
+        [class]="node.classes"
+        [andesOrgChartNodeItem]="node.key"
+        [parentKey]="node.parentKey"
+        [label]="node.record.name || node.record.title"
+        [attr.aria-level]="node.level"
+        [attr.aria-posinset]="node.posInSet"
+        [attr.aria-setsize]="node.setSize"
+        [attr.aria-expanded]="node.context.expandable ? node.context.expanded : null"
+        [attr.aria-selected]="selectionMode() === 'none' ? null : node.context.selected"
+        [attr.aria-disabled]="node.record.disabled ? 'true' : null"
+        [attr.aria-busy]="node.context.loading ? 'true' : null"
+        [attr.data-key]="node.key"
+        [attr.data-kind]="node.kind"
+        [attr.data-expanded]="node.context.expanded ? '' : null"
+        [attr.data-selected]="node.context.selected ? '' : null"
+        [attr.data-matched]="node.context.matched ? '' : null"
+        [attr.data-highlighted]="node.context.highlighted ? '' : null"
+        [attr.data-dimmed]="searching() && !node.context.highlighted ? '' : null"
+        [attr.data-disabled]="node.record.disabled ? '' : null"
+        [attr.data-readonly]="node.record.readonly ? '' : null"
+        [attr.data-assistant]="node.record.assistant ? '' : null"
+        [attr.data-loading]="node.context.loading ? '' : null"
+        [style.--andes-org-chart-node-accent]="node.context.color"
+        [style.--_andes-org-chart-from]="'translate(' + node.fromX + 'px, ' + node.fromY + 'px)'"
+        [style.width.px]="node.width"
+        [style.height.px]="node.height"
+        [style.transform]="'translate(' + node.x + 'px, ' + node.y + 'px)'"
+        [animate.enter]="enterClass()"
+        (animate.leave)="onNodeLeave($event, node)"
+        (click)="onNodeClick(node, $event)"
+        (dblclick)="onNodeDblClick(node, $event)"
+        (contextmenu)="onNodeContextMenu(node, $event)"
+        (pointerenter)="onNodeHover(node, $event, true)"
+        (pointerleave)="onNodeHover(node, $event, false)"
+      >
+        <div class="andes-org-chart__card" data-slot="org-chart-card">
+          @if (resolvedNodeTemplate(); as nodeTemplate) {
+          <ng-container
+            [ngTemplateOutlet]="nodeTemplate"
+            [ngTemplateOutletContext]="node.context"
+          />
+          } @else {
+          <span
+            class="andes-org-chart__avatar"
+            data-slot="org-chart-avatar"
+            aria-hidden="true"
+          >
+            @if (node.context.avatar && !brokenAvatars().has(node.key)) {
+            <img
+              class="andes-org-chart__avatar-image"
+              alt=""
+              loading="lazy"
+              decoding="async"
+              [src]="node.context.avatar"
+              (error)="onAvatarError(node.key)"
+            />
+            } @else { {{ node.context.initials }} }
+          </span>
+          <span class="andes-org-chart__text">
+            <span class="andes-org-chart__name" data-slot="org-chart-name"
+              >{{ node.record.name }}</span
+            >
+            @if (node.record.title) {
+            <span class="andes-org-chart__title" data-slot="org-chart-title"
+              >{{ node.record.title }}</span
+            >
+            }
+          </span>
+          }
+        </div>
+        @if (node.context.expandable) {
+        <!--
+          Pointer-only shortcut, hidden from assistive technology and the tab order: keyboard
+          users expand and collapse with Right/Left or Alt+Down/Alt+Up on the card, which already
+          announces aria-expanded.
+        -->
+        <button
+          type="button"
+          tabindex="-1"
+          aria-hidden="true"
+          class="andes-org-chart__badge"
+          data-slot="org-chart-badge"
+          [attr.data-expanded]="node.context.expanded ? '' : null"
+          [attr.data-loading]="node.context.loading ? '' : null"
+          [attr.title]="node.context.loading ? text().loading : null"
+          (click)="onBadgeClick(node, $event)"
+        >
+          @if (resolvedBadgeTemplate(); as badgeTemplate) {
+          <ng-container
+            [ngTemplateOutlet]="badgeTemplate"
+            [ngTemplateOutletContext]="node.context"
+          />
+          } @else if (node.context.loading) {
+          <svg
+            class="andes-org-chart__spinner"
+            viewBox="0 0 16 16"
+            focusable="false"
+          >
+            <circle
+              cx="8"
+              cy="8"
+              r="6"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            />
+          </svg>
+          } @else { @if (node.badge) {
+          <span class="andes-org-chart__count">{{ node.badge }}</span>
+          }
+          <svg
+            class="andes-org-chart__chevron"
+            viewBox="0 0 16 16"
+            focusable="false"
+          >
+            <path
+              d="M4.5 6.5 8 10l3.5-3.5"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.75"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          }
+        </button>
+        }
+      </div>
+      }
+    </div>
+  </div>
+  }
+</div>
+
+@if (resolvedToolbarTemplate(); as toolbar) {
+<div class="andes-org-chart__toolbar" data-slot="org-chart-toolbar">
+  <ng-container
+    [ngTemplateOutlet]="toolbar"
+    [ngTemplateOutletContext]="{ $implicit: this }"
+  />
+</div>
+} @if (controls() && !isEmpty()) {
+<div
+  class="andes-org-chart__controls"
+  data-slot="org-chart-controls"
+  role="group"
+  [attr.aria-label]="text().controls"
+>
+  @if (zoomable()) {
+  <andes-button
+    variant="ghost"
+    size="icon-sm"
+    [aria-label]="text().zoomIn"
+    [disabled]="!canZoomIn()"
+    (click)="zoomIn()"
+  >
+    <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+      <path
+        d="M8 3.5v9M3.5 8h9"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+      />
+    </svg>
+  </andes-button>
+  <span class="andes-org-chart__zoom" data-slot="org-chart-zoom"
+    >{{ zoomPercent() }}</span
+  >
+  <andes-button
+    variant="ghost"
+    size="icon-sm"
+    [aria-label]="text().zoomOut"
+    [disabled]="!canZoomOut()"
+    (click)="zoomOut()"
+  >
+    <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+      <path
+        d="M3.5 8h9"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+      />
+    </svg>
+  </andes-button>
+  <span class="andes-org-chart__divider" aria-hidden="true"></span>
+  }
+  <andes-button
+    variant="ghost"
+    size="icon-sm"
+    [aria-label]="text().fit"
+    (click)="fitView()"
+  >
+    <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+      <path
+        d="M2.75 6V3.75a1 1 0 0 1 1-1H6M10 2.75h2.25a1 1 0 0 1 1 1V6M13.25 10v2.25a1 1 0 0 1-1 1H10M6 13.25H3.75a1 1 0 0 1-1-1V10"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+      />
+    </svg>
+  </andes-button>
+  <andes-button
+    variant="ghost"
+    size="icon-sm"
+    [aria-label]="text().reset"
+    (click)="resetView()"
+  >
+    <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+      <circle cx="8" cy="8" r="2" fill="currentColor" />
+      <path
+        d="M8 1.75v2.5M8 11.75v2.5M1.75 8h2.5M11.75 8h2.5"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+      />
+    </svg>
+  </andes-button>
+</div>
+}

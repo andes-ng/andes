@@ -68,12 +68,16 @@
 
 /* ------------------------------------------------------------------ viewport and canvas */
 
+/* A press anywhere can turn into a pan, so text is not selectable on the canvas (it would start
+   a selection under the pointer before the drag is recognised). Form fields keep their own. */
 .andes-org-chart__viewport {
   position: absolute;
   inset: 0;
   overflow: hidden;
   cursor: grab;
   touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
   background-image: radial-gradient(
     circle,
     var(
@@ -88,7 +92,6 @@
 
 :host([data-panning]) .andes-org-chart__viewport {
   cursor: grabbing;
-  user-select: none;
 }
 
 .andes-org-chart__canvas {

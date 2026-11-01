@@ -673,6 +673,23 @@ describe('AndesDatePicker motion and layout', () => {
         expect(frames.size).toBe(0);
       });
 
+      it('aligns a column when the value arrives after the panel opened', async () => {
+        const view = await create((host) => host.showTime.set(true));
+        await view.open();
+        manualFrames();
+
+        view.host.value.set(FEB_15_0930);
+        view.detect();
+        await view.fixture.whenStable();
+        view.detect();
+        run(1000);
+        run(1200);
+
+        expect(selected(view, 'hours')).toBe('09');
+        expect(column(view, 'hours').scrollTop).toBe(9 * 28);
+        expect(column(view, 'minutes').scrollTop).toBe(30 * 28);
+      });
+
       it('marks no time as selected until a day is picked', async () => {
         const view = await create((host) => host.showTime.set(true));
         await view.open();

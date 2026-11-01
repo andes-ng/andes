@@ -1600,10 +1600,31 @@ export class AndesDatePicker implements ControlValueAccessor {
     this.isRange() ? (toOpenDateRange(this.selection())?.end ?? null) : null,
   );
 
-  /** The `multiple` selection, in order. */
-  protected readonly selectedDates = computed<readonly Date[]>(() =>
-    this.isMultiple() ? toDateList(this.selection()) : [],
-  );
+  /**
+   * The `multiple` selection, in order. For the month, quarter, year and week pickers it is read
+   * as periods, one per period, so dates kept from another picker do not show as twins.
+   */
+  protected readonly selectedDates = computed<readonly Date[]>(() => {
+    if (!this.isMultiple()) {
+      return [];
+    }
+    const dates = toDateList(this.selection());
+    const unit = this.calendarPicker();
+    if (unit === 'date') {
+      return dates;
+    }
+    const seen = new Set<string>();
+    const periods: Date[] = [];
+    for (const date of dates) {
+      const start = startOfPeriod(date, unit, this.weekStartsOn());
+      const key = toDateKey(start);
+      if (!seen.has(key)) {
+        seen.add(key);
+        periods.push(start);
+      }
+    }
+    return periods;
+  });
 
   /** The value the current selection would commit, or `null` if incomplete. */
   private readonly currentValue = computed<AndesDatePickerValue>(() => {
@@ -2211,6 +2232,9 @@ export class AndesDatePicker implements ControlValueAccessor {
         const moved =
           !this.alignedSelection.has(column) ||
           (before !== null && before !== key) ||
+          // A value that arrives after the panel opened (a form model set late) lands on a
+          // column nobody has scrolled yet.
+          (before === null && column.scrollTop === 0) ||
           this.pickedColumns.has(column.dataset['unit'] ?? '');
         this.alignedSelection.set(column, key);
         if (selected && first && moved) {

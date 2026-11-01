@@ -209,6 +209,21 @@ describe('AndesDatePicker multiple mode', () => {
       expect(view.host.values).toHaveLength(4);
     });
 
+    it('shows one tag per period when the picker changes under dates that share a period', () => {
+      const view = create((host) =>
+        host.control.setValue([d(2024, 2, 2), d(2024, 2, 14), d(2024, 3, 5)]),
+      );
+      expect(view.fieldTags()).toHaveLength(3);
+
+      view.host.picker.set('month');
+      view.detect();
+
+      expect(view.fieldTags().map((tag) => tag.textContent?.trim())).toEqual([
+        expect.stringContaining('Feb 2024'),
+        expect.stringContaining('Mar 2024'),
+      ]);
+    });
+
     it('shows the placeholder only while no date is selected', () => {
       const view = create();
       expect(view.input().placeholder).toBe('Select dates');

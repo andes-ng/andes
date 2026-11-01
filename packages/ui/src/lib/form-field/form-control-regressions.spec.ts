@@ -110,6 +110,27 @@ class RebindHost {
   readonly current = signal(this.first);
 }
 
+/** Compiles only if the documented manual binding type-checks against a library control under
+ *  strictTemplates: `describedBy()` and `labelledBy()` return `string | undefined`. */
+@Component({
+  selector: 'andes-test-manual-binding-host',
+  imports: [ReactiveFormsModule, AndesFormField, AndesFormControl, AndesInput],
+  template: `<andes-form-field label="Name" #field="andesFormField">
+    <andes-input
+      andesFormControl
+      #ctrl="andesFormControl"
+      [formControl]="name"
+      [id]="field.controlId()"
+      [aria-describedby]="ctrl.describedBy()"
+      [aria-labelledby]="ctrl.labelledBy()"
+      [aria-invalid]="field.showError()"
+    />
+  </andes-form-field>`,
+})
+class ManualBindingHost {
+  readonly name = new FormControl('', Validators.required);
+}
+
 describe('AndesFormControl - regressions', () => {
   describe('signal forms', () => {
     it('binds [formField] on a native input inside a field without throwing', async () => {
@@ -200,5 +221,17 @@ describe('AndesFormControl - regressions', () => {
     await settle(fixture);
 
     expect(fieldOf(fixture).dataset['status']).toBe('error');
+  });
+
+  it('types the manual binding snippet for library controls under strictTemplates', async () => {
+    const fixture = TestBed.createComponent(ManualBindingHost);
+    await settle(fixture);
+    const input = fixture.nativeElement.querySelector(
+      'andes-input input',
+    ) as HTMLInputElement;
+    const label = fixture.nativeElement.querySelector('label');
+
+    expect(input.id).toBe(label.htmlFor);
+    expect(input.getAttribute('aria-labelledby')).toBe(label.id);
   });
 });

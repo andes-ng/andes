@@ -191,9 +191,11 @@ export class AndesFormControlState implements AndesFormControlApi {
     false,
   );
 
-  /** `'true'` when {@link isRequired} is set, `null` otherwise - shaped as an attribute
+  /** `'true'` when {@link isRequired} is set, `undefined` otherwise - shaped as an attribute
    *  value. */
-  readonly ariaRequired = computed(() => (this.isRequired() ? 'true' : null));
+  readonly ariaRequired = computed(() =>
+    this.isRequired() ? 'true' : undefined,
+  );
 
   /** Whether the label should carry a required mark: {@link isRequired}, or a native
    *  `required` attribute on the element (template-driven forms). */
@@ -201,15 +203,16 @@ export class AndesFormControlState implements AndesFormControlApi {
     () => this.isRequired() || this.requiredAttribute(),
   );
 
-  /** The id of the enclosing field's control, or `null` outside a field. */
-  readonly resolvedId = computed(() => this.field?.controlId() ?? null);
+  /** The id of the enclosing field's control, or `undefined` outside a field. */
+  readonly resolvedId = computed(() => this.field?.controlId());
 
-  /** The ids of the enclosing field's description and messages, space separated, or `null`
-   *  when there are none. */
-  readonly describedBy = computed(() => this.field?.describedBy() ?? null);
+  /** The ids of the enclosing field's description and messages, space separated, or
+   *  `undefined` when there are none. Binds straight into an `[aria-describedby]` input, which
+   *  takes `string | undefined` on every library control. */
+  readonly describedBy = computed(() => this.field?.describedBy());
 
-  /** The enclosing field's `<andes-form-label>` id, or `null` when there is no label. */
-  readonly labelledBy = computed(() => this.field?.labelledBy() ?? null);
+  /** The enclosing field's `<andes-form-label>` id, or `undefined` when there is no label. */
+  readonly labelledBy = computed(() => this.field?.labelledBy());
 
   constructor() {
     // Registered while constructing, before the field's own view is first checked, so the field
@@ -309,7 +312,7 @@ export class AndesFormControlState implements AndesFormControlApi {
  * still useful as a template reference (`#ctrl="andesFormControl"`) to the state signals below.
  *
  * A third-party `ControlValueAccessor` component that does neither can be wired by hand from
- * those signals:
+ * those signals, which return `undefined` when there is nothing to bind:
  *
  * ```html
  * <andes-form-field label="Accept" #field="andesFormField">
@@ -347,11 +350,11 @@ export class AndesFormControl
   );
 
   protected readonly hostId = computed(() =>
-    this.isNativeFormElement ? this.resolvedId() : null,
+    this.isNativeFormElement ? (this.resolvedId() ?? null) : null,
   );
 
   protected readonly hostDescribedBy = computed(() =>
-    this.isNativeFormElement ? this.describedBy() : null,
+    this.isNativeFormElement ? (this.describedBy() ?? null) : null,
   );
 
   protected readonly hostAriaInvalid = computed(() =>
@@ -365,7 +368,7 @@ export class AndesFormControl
   );
 
   protected readonly hostAriaRequired = computed(() =>
-    this.isNativeFormElement ? this.ariaRequired() : null,
+    this.isNativeFormElement ? (this.ariaRequired() ?? null) : null,
   );
 
   ngOnInit(): void {

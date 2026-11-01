@@ -133,8 +133,10 @@ export interface AndesFormFieldApi {
   readonly labelId: () => string;
   readonly descriptionId: () => string;
   readonly errorId: () => string;
-  readonly labelledBy: () => string | null;
-  readonly describedBy: () => string | null;
+  /** The `<andes-form-label>` id, or `undefined` when the field has no label. */
+  readonly labelledBy: () => string | undefined;
+  /** Ids of the description, messages and extra text, space separated, or `undefined`. */
+  readonly describedBy: () => string | undefined;
   readonly showError: () => boolean;
   /** Effective status: the manual `validateStatus` override, else derived from the control. */
   readonly status: () => AndesFormValidateStatus | null;

@@ -252,19 +252,19 @@ export class AndesFormField implements AndesFormFieldApi {
   );
 
   /**
-   * The `<andes-form-label>`'s own element id, or `null` when no label was authored - shaped
-   * to be bound straight through `[aria-labelledby]`.
+   * The `<andes-form-label>`'s own element id, or `undefined` when no label was authored -
+   * shaped to be bound straight through `[aria-labelledby]`.
    *
    * This is the escape hatch for wrapper components that expose no `id` input, where the
    * native `for`/`id` association cannot be completed from outside (see `AndesFormControl`'s
    * class comment): every one of this library's wrappers already accepts an `aria-labelledby`
    * input and forwards it onto its real internal control, so pointing that at the label's id
    * gives assistive technology the accessible name without needing any change to the wrapper's
-   * own source. Returns `null` rather than a dangling id when there is no label, so a template
+   * own source. Returns `undefined` rather than a dangling id when there is no label, so a template
    * binding it unconditionally never emits `aria-labelledby` pointing at nothing.
    */
   readonly labelledBy = computed(() =>
-    this.hasLabel() ? this.labelId() : null,
+    this.hasLabel() ? this.labelId() : undefined,
   );
 
   /** Errors of the `warningValidators`, run against the control's current value. */
@@ -486,7 +486,7 @@ export class AndesFormField implements AndesFormFieldApi {
     if (this.extra()) {
       ids.push(this.extraId());
     }
-    return ids.length > 0 ? ids.join(' ') : null;
+    return ids.length > 0 ? ids.join(' ') : undefined;
   });
 
   constructor() {

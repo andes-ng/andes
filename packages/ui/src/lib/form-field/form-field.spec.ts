@@ -45,8 +45,8 @@ import { declaredValue, expectLength } from '../../testing/computed-style';
   ],
 })
 class TestWrapperInput implements ControlValueAccessor {
-  @Input() id: string | null = null;
-  @Input('aria-describedby') ariaDescribedby: string | null = null;
+  @Input() id: string | null | undefined = null;
+  @Input('aria-describedby') ariaDescribedby: string | null | undefined = null;
   @Input('aria-invalid') ariaInvalid = false;
 
   protected readonly value = signal('');
@@ -238,8 +238,8 @@ class BareWrapperControlHost {
   ],
 })
 class TestLabelledbyWrapper implements ControlValueAccessor {
-  @Input('aria-labelledby') ariaLabelledby: string | null = null;
-  @Input('aria-describedby') ariaDescribedby: string | null = null;
+  @Input('aria-labelledby') ariaLabelledby: string | null | undefined = null;
+  @Input('aria-describedby') ariaDescribedby: string | null | undefined = null;
   @Input('aria-invalid') ariaInvalid = false;
 
   protected readonly value = signal('');

@@ -48,6 +48,7 @@ import type {
   AndesTreeKey,
   AndesTreeLoadData,
   AndesTreeNode,
+  AndesTreeNodeContext,
   AndesTreeNodeEvent,
   AndesTreeSelectEvent,
 } from '../tree/tree-types';
@@ -260,6 +261,11 @@ export class AndesTreeSelect
   readonly value = model<AndesTreeSelectModel>(null);
   /** Open nodes, two-way. */
   readonly expandedKeys = model<AndesTreeKey[]>([]);
+  /**
+   * Nodes whose children `loadData` has loaded, two-way. Set it to say which nodes need no
+   * loading; take a key out of it to load that node again the next time it opens.
+   */
+  readonly loadedKeys = model<AndesTreeKey[]>([]);
   /** The text in the search box. */
   readonly searchValue = model('');
 
@@ -302,6 +308,10 @@ export class AndesTreeSelect
   readonly loadData = input<AndesTreeLoadData | undefined>(undefined);
   readonly showLine = input(false, { transform: booleanAttribute });
   readonly showIcon = input(false, { transform: booleanAttribute });
+  /** Replaces the expand arrow of the panel's branches (see the tree's `switcherIcon`). */
+  readonly switcherIcon = input<TemplateRef<AndesTreeNodeContext> | undefined>(
+    undefined,
+  );
   /** What expands a branch: a click on the row, a double click, or only its switcher (`false`). */
   readonly expandAction = input<AndesTreeExpandAction | undefined>(undefined);
   readonly virtualScroll = input(false, { transform: booleanAttribute });

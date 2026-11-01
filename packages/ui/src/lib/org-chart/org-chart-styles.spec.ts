@@ -203,14 +203,26 @@ describe('AndesOrgChart styles', () => {
     expect(svg.pointerEvents).toBe('none');
   });
 
-  it('dims cards off the search path', () => {
+  it('dims cards off the search path without losing text contrast', () => {
     const s = setup();
     s.fixture.componentInstance.search.set('carla');
     s.fixture.detectChanges();
-    expect(getComputedStyle(s.part('[data-key="d"]')).opacity).toBe(
-      'var(--andes-org-chart-dimmed-opacity, 0.35)',
-    );
+    const dimmed = s.part('[data-key="d"]');
+    expect(dimmed.hasAttribute('data-dimmed')).toBe(true);
     expect(s.part('[data-key="c"]').hasAttribute('data-dimmed')).toBe(false);
+    // The card itself stays opaque; only its decoration fades.
+    expect(getComputedStyle(dimmed).opacity).toBe('1');
+    expect(
+      getComputedStyle(
+        dimmed.querySelector('[data-slot="org-chart-name"]') as Element,
+      ).color,
+    ).toBe('var(--andes-color-muted-foreground)');
+    expect(
+      declared(
+        '.andes-org-chart__node[data-dimmed] .andes-org-chart__card::before',
+        'opacity',
+      ),
+    ).toBe('var(--andes-org-chart-dimmed-opacity, 0.35)');
   });
 
   it('marks the selected card with its accent', () => {

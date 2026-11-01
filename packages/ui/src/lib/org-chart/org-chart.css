@@ -21,7 +21,8 @@
                                                  own `color` or `levelColors` set it per card)
      --andes-org-chart-node-selected-background  selected card background
      --andes-org-chart-match-color               ring around search matches
-     --andes-org-chart-dimmed-opacity            opacity of cards off the search path
+     --andes-org-chart-dimmed-opacity            opacity of the accent, photo and lines off the
+                                                 search path (their text only turns muted)
      --andes-org-chart-connector-color           connector stroke
      --andes-org-chart-connector-width           connector stroke width
      --andes-org-chart-connector-highlight-color connector on a search path
@@ -294,8 +295,34 @@
     var(--andes-org-chart-node-shadow, var(--andes-shadow-sm));
 }
 
-.andes-org-chart__node[data-dimmed] {
+/* Off the search path: the chrome fades, the text only turns muted, so it keeps its contrast. */
+.andes-org-chart__node[data-dimmed] .andes-org-chart__card {
+  border-color: color-mix(
+    in srgb,
+    var(--andes-org-chart-node-border-color, var(--andes-color-border)) 60%,
+    transparent
+  );
+  box-shadow: none;
+}
+
+.andes-org-chart__node[data-dimmed] .andes-org-chart__card::before,
+.andes-org-chart__node[data-dimmed] .andes-org-chart__avatar-image {
   opacity: var(--andes-org-chart-dimmed-opacity, 0.35);
+}
+
+.andes-org-chart__node[data-dimmed] .andes-org-chart__name,
+.andes-org-chart__node[data-dimmed] .andes-org-chart__title,
+.andes-org-chart__node[data-dimmed] .andes-org-chart__badge {
+  color: var(--andes-color-muted-foreground);
+}
+
+.andes-org-chart__node[data-dimmed] .andes-org-chart__avatar {
+  background: var(--andes-color-muted);
+  color: var(--andes-color-muted-foreground);
+}
+
+.andes-org-chart__node[data-dimmed] .andes-org-chart__badge {
+  border-color: var(--andes-color-border);
 }
 
 .andes-org-chart__node[data-disabled] .andes-org-chart__card {
@@ -322,9 +349,11 @@
     var(--andes-org-chart-node-accent, var(--_andes-org-chart-accent)) 14%,
     var(--andes-org-chart-node-background, var(--andes-color-card))
   );
+  /* Mostly the card's own text color, tinted by the accent: readable on the light tint in both
+     themes, whatever the accent (a dark accent on a dark card would not be). */
   color: color-mix(
     in srgb,
-    var(--andes-org-chart-node-accent, var(--_andes-org-chart-accent)) 70%,
+    var(--andes-org-chart-node-accent, var(--_andes-org-chart-accent)) 45%,
     var(--andes-org-chart-node-foreground, var(--andes-color-card-foreground))
   );
   font-size: var(--andes-font-size-sm);

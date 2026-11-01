@@ -1580,6 +1580,7 @@ describe('AndesCascader', () => {
       expect(calls.length).toBe(1);
       expect(calls[0].map((option) => option['value'])).toEqual(['peru']);
       expect(item('Peru').hasAttribute('data-loading')).toBe(true);
+      expect(item('Peru').getAttribute('aria-busy')).toBe('true');
       expect(
         item('Peru').querySelector('.andes-cascader__spinner'),
       ).not.toBeNull();
@@ -1594,6 +1595,7 @@ describe('AndesCascader', () => {
       detect();
 
       expect(item('Peru').hasAttribute('data-loading')).toBe(false);
+      expect(item('Peru').hasAttribute('aria-busy')).toBe(false);
       expect(document.querySelectorAll('.andes-cascader__column').length).toBe(
         2,
       );

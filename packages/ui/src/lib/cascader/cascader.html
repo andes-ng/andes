@@ -516,6 +516,7 @@
           [attr.data-in-path]="isInSelectedPath(node) ? '' : null"
           [attr.data-disabled]="node.disabled ? '' : null"
           [attr.data-loading]="isLoadingNode(node) ? '' : null"
+          [attr.aria-busy]="isLoadingNode(node) ? 'true' : null"
           (click)="onItemClick(node)"
           (mouseenter)="onItemEnter(node)"
           (pointermove)="onItemPointerMove(node, $event)"

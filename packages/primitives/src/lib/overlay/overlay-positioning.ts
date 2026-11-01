@@ -3,6 +3,7 @@ import {
   createFlexibleConnectedPositionStrategy,
   createGlobalPositionStrategy,
   type ConnectedPosition,
+  type ConnectionPositionPair,
   type GlobalPositionStrategy,
   type PositionStrategy,
 } from '@angular/cdk/overlay';
@@ -84,6 +85,31 @@ export function andesConnectedPosition(
         offsetY: alignOffset,
       };
   }
+}
+
+/**
+ * The side of its anchor a connected position puts the overlay on - the inverse of
+ * {@link andesConnectedPosition}, for the position CDK actually applied.
+ */
+export function andesPlacedSide(
+  position: Pick<
+    ConnectionPositionPair,
+    'originX' | 'originY' | 'overlayX' | 'overlayY'
+  >,
+): AndesOverlaySide | null {
+  if (position.originY === 'bottom' && position.overlayY === 'top') {
+    return 'bottom';
+  }
+  if (position.originY === 'top' && position.overlayY === 'bottom') {
+    return 'top';
+  }
+  if (position.originX === 'end' && position.overlayX === 'start') {
+    return 'right';
+  }
+  if (position.originX === 'start' && position.overlayX === 'end') {
+    return 'left';
+  }
+  return null;
 }
 
 /**

@@ -354,3 +354,212 @@ export const CustomRequiredMark: Story = {
     `,
   }),
 };
+
+/**
+ * `requiredMark` styles and where the asterisk sits. Each row is a form with its own mark:
+ * the default asterisk, `'optional'` (the optional fields say so instead), `false` (nothing),
+ * and a template shown after every label. `requiredMarkPosition` moves only the asterisk:
+ * `start` (default) before the label text, `end` after it, before the colon and the tooltip -
+ * the optional text and the template keep their place after the text. The right-hand column is
+ * right-to-left text, where the asterisk flips sides on its own. A field's own
+ * `requiredMarkPosition` wins over the form's.
+ */
+export const RequiredMark: Story = {
+  args: { layout: 'horizontal' },
+  render: (args) => {
+    const rows = [
+      { title: 'Default', mark: true },
+      { title: 'optional', mark: 'optional' },
+      { title: 'false', mark: false },
+    ];
+    return {
+      moduleMetadata,
+      props: {
+        ...args,
+        rows,
+        positions: ['start', 'end'],
+        forms: Array.from({ length: rows.length * 2 }, () => signUpForm()),
+        tpl: signUpForm(),
+        rtl: signUpForm(),
+        mixed: signUpForm(),
+      },
+      template: `
+        <ng-template #tag let-required>
+          <span
+            [style.color]="required ? 'var(--andes-color-danger-hover)' : 'var(--andes-color-muted-foreground)'"
+            style="margin-inline-start: 0.375rem; font-size: 0.75rem; font-weight: normal;"
+            >{{ required ? '(required)' : '(optional)' }}</span
+          >
+        </ng-template>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem 2.5rem; width: min(960px, 100vw - 2rem);">
+          @for (position of positions; track position) {
+            <h4 style="grid-column: span 1; margin: 0; font-family: var(--andes-font-family), sans-serif; font-size: 0.875rem; color: var(--andes-color-foreground);">requiredMarkPosition = {{ position }}</h4>
+          }
+          @for (row of rows; track row.title; let r = $index) {
+            @for (position of positions; track position; let p = $index) {
+              <form andesForm [formGroup]="forms[r * 2 + p]" layout="horizontal" [labelCol]="9" [requiredMark]="row.mark" [requiredMarkPosition]="$any(position)">
+                <andes-form-field label="Full name (requiredMark = {{ row.title }})" tooltip="As printed on your ID." [labelWrap]="true">
+                  <andes-input formControlName="name" />
+                </andes-form-field>
+                <andes-form-field label="Company">
+                  <andes-input formControlName="company" />
+                </andes-form-field>
+              </form>
+            }
+          }
+          <form andesForm [formGroup]="tpl" layout="horizontal" [labelCol]="9" [requiredMark]="tag" requiredMarkPosition="end">
+            <andes-form-field label="Template">
+              <andes-input formControlName="name" />
+            </andes-form-field>
+            <andes-form-field label="Company">
+              <andes-input formControlName="company" />
+            </andes-form-field>
+          </form>
+          <form andesForm dir="rtl" [formGroup]="rtl" layout="horizontal" [labelCol]="9" requiredMarkPosition="end">
+            <andes-form-field label="الاسم الكامل">
+              <andes-input formControlName="name" />
+            </andes-form-field>
+            <andes-form-field label="Right to left, end">
+              <andes-input formControlName="email" />
+            </andes-form-field>
+          </form>
+          <form andesForm [formGroup]="mixed" layout="vertical" requiredMarkPosition="end">
+            <andes-form-field label="Form says end">
+              <andes-input formControlName="name" />
+            </andes-form-field>
+            <andes-form-field label="This field says start" requiredMarkPosition="start">
+              <andes-input formControlName="email" />
+            </andes-form-field>
+          </form>
+        </div>
+      `,
+    };
+  },
+};
+
+/**
+ * `labelWrap`: what happens to a label longer than its column in a horizontal form. By default
+ * it is cut with an ellipsis (hover for the full text in a real app); with `labelWrap` it wraps
+ * onto more lines, the colon and the tooltip following the last word. `labelAlign="left"`
+ * and a fixed `labelCol` show the same.
+ */
+export const LabelWrap: Story = {
+  render: () => ({
+    moduleMetadata,
+    props: { off: signUpForm(), on: signUpForm(), left: signUpForm() },
+    template: `
+      <div style="display: flex; flex-direction: column; gap: 2.5rem; width: min(560px, 100vw - 2rem);">
+        @for (case of [
+          { title: 'Truncated (default)', wrap: false, align: 'right', form: off },
+          { title: 'labelWrap', wrap: true, align: 'right', form: on },
+          { title: 'labelWrap, labelAlign = left', wrap: true, align: 'left', form: left }
+        ]; track case.title) {
+          <form andesForm [formGroup]="case.form" layout="horizontal" labelCol="9rem" [labelWrap]="case.wrap" [labelAlign]="$any(case.align)">
+            <andes-form-field [label]="'Work email address used to sign in to the billing portal'" tooltip="We never share it.">
+              <andes-input formControlName="email" [placeholder]="case.title" />
+            </andes-form-field>
+          </form>
+        }
+      </div>
+    `,
+  }),
+};
+
+/**
+ * Mixed layouts: the form sets a default `layout` and any field overrides it. Here a horizontal
+ * form with one vertical field (a long text area wants the room), and a vertical form with an
+ * inline row of fields - each keeps its own label placement and the form's `labelCol` only
+ * applies where the field is horizontal.
+ */
+export const MixedLayouts: Story = {
+  render: () => ({
+    moduleMetadata,
+    props: { horizontal: signUpForm(), vertical: signUpForm() },
+    template: `
+      <div style="display: flex; flex-direction: column; gap: 2.5rem; width: min(560px, 100vw - 2rem);">
+        <form andesForm [formGroup]="horizontal" layout="horizontal" [labelCol]="6">
+          <andes-form-field label="Full name">
+            <andes-input formControlName="name" />
+          </andes-form-field>
+          <andes-form-field label="About you (vertical)" layout="vertical" extra="This field stacks its label.">
+            <andes-input formControlName="company" />
+          </andes-form-field>
+          <andes-form-field label="Work email">
+            <andes-input formControlName="email" />
+          </andes-form-field>
+        </form>
+        <form andesForm [formGroup]="vertical" layout="vertical">
+          <andes-form-field label="Full name">
+            <andes-input formControlName="name" />
+          </andes-form-field>
+          <andes-form-field label="Work email (horizontal)" layout="horizontal" [labelCol]="8">
+            <andes-input formControlName="email" />
+          </andes-form-field>
+          <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+            <andes-form-field label="Company" layout="inline">
+              <andes-input formControlName="company" style="width: 9rem;" />
+            </andes-form-field>
+            <andes-form-field label="Plan" layout="inline">
+              <andes-select formControlName="plan" [options]="plans" style="width: 8rem;" />
+            </andes-form-field>
+          </div>
+        </form>
+      </div>
+    `,
+  }),
+};
+
+/**
+ * Custom semantic parts: `classNames` and `styles` reach the parts of a form and its fields -
+ * `root` (the form element, or the field box), `label`, `control`, `help` (the help text and
+ * the warning lines), `extra` and `error` (the generated messages and `<andes-form-error>`).
+ * On `andesForm`, `root` is the `<form>` and the other parts are the default for every field
+ * inside it; a field's own classes are added to them and its own styles win. Classes style the
+ * parts from a stylesheet (this story's `<style>`, with `::ng-deep` because the parts live in the
+ * field's own view); `styles` sets them inline.
+ */
+export const SemanticParts: Story = {
+  render: () => ({
+    moduleMetadata,
+    props: {
+      form: signUpForm(),
+      formClassNames: {
+        root: 'demo-form',
+        label: 'demo-label',
+        error: 'demo-error',
+      },
+      formStyles: { control: { 'padding-inline-start': '0.25rem' } },
+      fieldClassNames: { root: 'demo-highlight', extra: 'demo-extra' },
+      fieldStyles: {
+        label: { 'letter-spacing': '0.04em', 'text-transform': 'uppercase' },
+      },
+    },
+    template: `
+      <style>
+        ::ng-deep .demo-form { padding: 1rem; border: 1px dashed var(--andes-color-border); border-radius: var(--andes-radius-lg); }
+        ::ng-deep .demo-label { font-style: italic; }
+        ::ng-deep .demo-error { font-weight: 600; }
+        ::ng-deep .demo-highlight { padding: 0.5rem; border-radius: var(--andes-radius-md); background: var(--andes-color-muted); }
+        ::ng-deep .demo-extra { font-style: italic; }
+      </style>
+      <form
+        andesForm
+        [formGroup]="form"
+        [classNames]="formClassNames"
+        [styles]="formStyles"
+        (ngSubmit)="form.markAllAsTouched()"
+        style="width: min(480px, 100vw - 2rem);"
+      >
+        <andes-form-field label="Full name" [classNames]="fieldClassNames" [styles]="fieldStyles" extra="Classes on root and extra, inline styles on label.">
+          <andes-input formControlName="name" />
+        </andes-form-field>
+        <andes-form-field label="Work email">
+          <andes-input formControlName="email" type="email" />
+        </andes-form-field>
+        <andes-form-field>
+          <andes-button type="submit">Submit to see the error part</andes-button>
+        </andes-form-field>
+      </form>
+    `,
+  }),
+};

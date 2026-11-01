@@ -2,6 +2,7 @@ import { FormsModule } from '@angular/forms';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 
 import { AndesDatePicker, type AndesDatePickerValue } from './date-picker';
+import { FIELD_ROW, fieldGrid } from '../../testing/story-layout';
 
 /**
  * Every story here shows the picker types side by side: `date`, `week`, `month`,
@@ -67,7 +68,7 @@ export const Basic: Story = {
   render: (args) => ({
     moduleMetadata: { imports: [FormsModule] },
     props: { ...args, types: TYPES, picked: FEB_15, caption: CAPTION },
-    template: `<div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start;">
+    template: `<div style="${FIELD_ROW}">
       @for (type of types; track type) {
         <div>
           <p [style]="caption">picker="{{ type }}"</p>
@@ -111,7 +112,7 @@ export const RangeTypes: Story = {
       @for (type of types; track type) {
         <div style="width: 22rem;">
           <p [style]="caption">picker="{{ type }}" mode="range"</p>
-          <andes-date-picker style="width: 100%" mode="range" [picker]="type" locale="en-US" [weekStartsOn]="1" [ngModel]="ranges[type]" [aria-label]="type + ' range'" />
+          <andes-date-picker mode="range" [picker]="type" locale="en-US" [weekStartsOn]="1" [ngModel]="ranges[type]" [aria-label]="type + ' range'" />
         </div>
       }
     </div>`,
@@ -166,11 +167,11 @@ export const MultipleTypes: Story = {
   render: () => ({
     moduleMetadata: { imports: [FormsModule] },
     props: { types: TYPES, values: MULTIPLES, caption: CAPTION },
-    template: `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); gap: 1rem; align-items: start;">
+    template: `<div style="${fieldGrid('18rem')}">
       @for (type of types; track type) {
         <div>
           <p [style]="caption">picker="{{ type }}" mode="multiple"</p>
-          <andes-date-picker style="width: 100%" mode="multiple" [picker]="type" locale="en-US" [weekStartsOn]="1" [ngModel]="values[type]" [maxTagCount]="2" [aria-label]="type + ' multiple'" />
+          <andes-date-picker mode="multiple" [picker]="type" locale="en-US" [weekStartsOn]="1" [ngModel]="values[type]" [maxTagCount]="2" [aria-label]="type + ' multiple'" />
         </div>
       }
     </div>`,
@@ -191,9 +192,9 @@ export const NeedConfirmTypes: Story = {
       <p [style]="caption">needConfirm</p>
       <p [style]="caption">range with needConfirm</p>
       @for (type of types; track type) {
-        <andes-date-picker style="width: 100%" [picker]="type" locale="en-US" [weekStartsOn]="1" [needConfirm]="false" [ngModel]="picked" [aria-label]="type + ' without confirm'" />
-        <andes-date-picker style="width: 100%" [picker]="type" locale="en-US" [weekStartsOn]="1" needConfirm [ngModel]="picked" [aria-label]="type + ' with confirm'" />
-        <andes-date-picker style="width: 100%" mode="range" [picker]="type" locale="en-US" [weekStartsOn]="1" needConfirm [aria-label]="type + ' range with confirm'" />
+        <andes-date-picker [picker]="type" locale="en-US" [weekStartsOn]="1" [needConfirm]="false" [ngModel]="picked" [aria-label]="type + ' without confirm'" />
+        <andes-date-picker [picker]="type" locale="en-US" [weekStartsOn]="1" needConfirm [ngModel]="picked" [aria-label]="type + ' with confirm'" />
+        <andes-date-picker mode="range" [picker]="type" locale="en-US" [weekStartsOn]="1" needConfirm [aria-label]="type + ' range with confirm'" />
       }
     </div>`,
   }),

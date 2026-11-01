@@ -6,6 +6,7 @@ import {
   type AndesDatePickerValue,
   type AndesDisabledTime,
 } from './date-picker';
+import { fieldGrid } from '../../testing/story-layout';
 
 /**
  * What can and cannot be picked: `min`/`max` bounds (which also stop the panel's
@@ -90,15 +91,15 @@ export const LimitDateRange: Story = {
       febMonth: FEB,
       caption: CAPTION,
     },
-    template: `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr)); gap: 1rem 1.5rem; align-items: start; align-content: start; min-height: 30rem;">
+    template: `<div style="${fieldGrid('20rem')} min-height: 30rem;">
       @for (case of cases; track case.type) {
         <div>
           <p [style]="caption">Single, {{ case.label }}</p>
-          <andes-date-picker style="width: 100%" [picker]="case.type" locale="en-US" [weekStartsOn]="1" [min]="case.min" [max]="case.max" [defaultMonth]="febMonth" [aria-label]="case.type + ' within bounds'" />
+          <andes-date-picker [picker]="case.type" locale="en-US" [weekStartsOn]="1" [min]="case.min" [max]="case.max" [defaultMonth]="febMonth" [aria-label]="case.type + ' within bounds'" />
         </div>
         <div>
           <p [style]="caption">Range, same bounds</p>
-          <andes-date-picker style="width: 100%" mode="range" [picker]="case.type" locale="en-US" [weekStartsOn]="1" [min]="case.min" [max]="case.max" [defaultMonth]="febMonth" [aria-label]="case.type + ' range within bounds'" />
+          <andes-date-picker mode="range" [picker]="case.type" locale="en-US" [weekStartsOn]="1" [min]="case.min" [max]="case.max" [defaultMonth]="febMonth" [aria-label]="case.type + ' range within bounds'" />
         </div>
       }
     </div>`,
@@ -174,26 +175,26 @@ export const SelectRangeDates: Story = {
       febMonth: FEB,
       caption: CAPTION,
     },
-    template: `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(21rem, 1fr)); gap: 1rem 1.5rem; align-items: start; align-content: start; min-height: 30rem;">
+    template: `<div style="${fieldGrid('21rem')} min-height: 30rem;">
       <div>
         <p [style]="caption">At most 7 days</p>
-        <andes-date-picker style="width: 100%" mode="range" locale="en-US" [dateDisabled]="sevenDays" [defaultMonth]="febMonth" aria-label="Up to 7 days" />
+        <andes-date-picker mode="range" locale="en-US" [dateDisabled]="sevenDays" [defaultMonth]="febMonth" aria-label="Up to 7 days" />
       </div>
       <div>
         <p [style]="caption">At most 6 months</p>
-        <andes-date-picker style="width: 100%" mode="range" locale="en-US" [dateDisabled]="sixMonths" [defaultMonth]="febMonth" aria-label="Up to 6 months" />
+        <andes-date-picker mode="range" locale="en-US" [dateDisabled]="sixMonths" [defaultMonth]="febMonth" aria-label="Up to 6 months" />
       </div>
       <div>
         <p [style]="caption">At least 3 nights</p>
-        <andes-date-picker style="width: 100%" mode="range" locale="en-US" [dateDisabled]="threeNights" [defaultMonth]="febMonth" aria-label="Three nights or more" />
+        <andes-date-picker mode="range" locale="en-US" [dateDisabled]="threeNights" [defaultMonth]="febMonth" aria-label="Three nights or more" />
       </div>
       <div>
         <p [style]="caption">Months, at most 6</p>
-        <andes-date-picker style="width: 100%" mode="range" picker="month" locale="en-US" [dateDisabled]="monthsWithinHalfYear" aria-label="Up to 6 months, by month" />
+        <andes-date-picker mode="range" picker="month" locale="en-US" [dateDisabled]="monthsWithinHalfYear" aria-label="Up to 6 months, by month" />
       </div>
       <div>
         <p [style]="caption">Weeks, at most 4</p>
-        <andes-date-picker style="width: 100%" mode="range" picker="week" locale="en-US" [weekStartsOn]="1" [dateDisabled]="weeksWithinMonth" [defaultMonth]="febMonth" aria-label="Up to 4 weeks" />
+        <andes-date-picker mode="range" picker="week" locale="en-US" [weekStartsOn]="1" [dateDisabled]="weeksWithinMonth" [defaultMonth]="febMonth" aria-label="Up to 4 weeks" />
       </div>
     </div>`,
   }),
@@ -256,12 +257,12 @@ export const DisabledBeforeToday: Story = {
       future: (date: Date) => date > startOfToday(),
       caption: CAPTION,
     },
-    template: `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 0.75rem 1.5rem; align-items: start; align-content: start; min-height: 30rem;">
+    template: `<div style="${fieldGrid('16rem')} min-height: 30rem;">
       <p [style]="caption">No past dates</p>
       <p [style]="caption">No future dates</p>
       @for (type of types; track type) {
-        <andes-date-picker style="width: 100%" [picker]="type" locale="en-US" [weekStartsOn]="1" [dateDisabled]="past" [aria-label]="type + ' not before today'" />
-        <andes-date-picker style="width: 100%" [picker]="type" locale="en-US" [weekStartsOn]="1" [dateDisabled]="future" [aria-label]="type + ' not after today'" />
+        <andes-date-picker [picker]="type" locale="en-US" [weekStartsOn]="1" [dateDisabled]="past" [aria-label]="type + ' not before today'" />
+        <andes-date-picker [picker]="type" locale="en-US" [weekStartsOn]="1" [dateDisabled]="future" [aria-label]="type + ' not after today'" />
       }
     </div>`,
   }),
@@ -394,16 +395,16 @@ export const AllowEmptyTypes: Story = {
       time: [new Date(2024, 1, 5, 9, 0), null],
       caption: CAPTION,
     },
-    template: `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(21rem, 1fr)); gap: 1rem 1.5rem; align-items: start; align-content: start; min-height: 30rem;">
+    template: `<div style="${fieldGrid('21rem')} min-height: 30rem;">
       @for (type of types; track type) {
         <div>
           <p [style]="caption">picker="{{ type }}", {{ values[type][0] ? 'start set, end may stay empty' : 'end set, start may stay empty' }}</p>
-          <andes-date-picker style="width: 100%" mode="range" [picker]="type" locale="en-US" [weekStartsOn]="1" [allowEmpty]="values[type][0] ? endMayBeEmpty : startMayBeEmpty" [ngModel]="values[type]" [aria-label]="type + ' open-ended range'" />
+          <andes-date-picker mode="range" [picker]="type" locale="en-US" [weekStartsOn]="1" [allowEmpty]="values[type][0] ? endMayBeEmpty : startMayBeEmpty" [ngModel]="values[type]" [aria-label]="type + ' open-ended range'" />
         </div>
       }
       <div>
         <p [style]="caption">Date and time, start set, end may stay empty</p>
-        <andes-date-picker style="width: 100%" mode="range" locale="en-GB" showTime [allowEmpty]="endMayBeEmpty" [ngModel]="time" aria-label="Open-ended date and time range" />
+        <andes-date-picker mode="range" locale="en-GB" showTime [allowEmpty]="endMayBeEmpty" [ngModel]="time" aria-label="Open-ended date and time range" />
       </div>
     </div>`,
   }),

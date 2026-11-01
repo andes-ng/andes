@@ -12,6 +12,7 @@ import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
 import { AndesDatePicker, type AndesDisabledTime } from './date-picker';
+import { FIELD_ROW, fieldGrid } from '../../testing/story-layout';
 
 /**
  * More time picker stories (`picker="time"`): ranges, disabled times, variants, status,
@@ -62,31 +63,31 @@ export const TimeRange: Story = {
       mono: MONO,
       caption: CAPTION,
     },
-    template: `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr)); gap: 1rem 1.5rem; align-items: start; align-content: start; min-height: 24rem;">
+    template: `<div style="${fieldGrid('20rem')} min-height: 24rem;">
       <div>
         <p [style]="caption">Start before end</p>
-        <andes-date-picker style="width: 100%;" picker="time" mode="range" locale="en-GB" [(ngModel)]="range" aria-label="Opening hours" />
+        <andes-date-picker picker="time" mode="range" locale="en-GB" [(ngModel)]="range" aria-label="Opening hours" />
         <pre [style]="mono">{{ range | json }}</pre>
       </div>
       <div>
         <p [style]="caption">[order]="false", night shift</p>
-        <andes-date-picker style="width: 100%;" picker="time" mode="range" locale="en-GB" [order]="false" [ngModel]="shift" aria-label="Night shift" />
+        <andes-date-picker picker="time" mode="range" locale="en-GB" [order]="false" [ngModel]="shift" aria-label="Night shift" />
       </div>
       <div>
         <p [style]="caption">allowEmpty, open end</p>
-        <andes-date-picker style="width: 100%;" picker="time" mode="range" locale="en-GB" [allowEmpty]="openEnd" [ngModel]="from" aria-label="From nine" />
+        <andes-date-picker picker="time" mode="range" locale="en-GB" [allowEmpty]="openEnd" [ngModel]="from" aria-label="From nine" />
       </div>
       <div>
         <p [style]="caption">allowEmpty, open start</p>
-        <andes-date-picker style="width: 100%;" picker="time" mode="range" locale="en-GB" [allowEmpty]="openStart" [ngModel]="until" aria-label="Until five" />
+        <andes-date-picker picker="time" mode="range" locale="en-GB" [allowEmpty]="openStart" [ngModel]="until" aria-label="Until five" />
       </div>
       <div>
         <p [style]="caption">Placeholders</p>
-        <andes-date-picker style="width: 100%;" picker="time" mode="range" locale="en-GB" [placeholder]="placeholders" startInputLabel="Opens" endInputLabel="Closes" aria-label="Opening hours, empty" />
+        <andes-date-picker picker="time" mode="range" locale="en-GB" [placeholder]="placeholders" startInputLabel="Opens" endInputLabel="Closes" aria-label="Opening hours, empty" />
       </div>
       <div>
         <p [style]="caption">12 hours</p>
-        <andes-date-picker style="width: 100%;" picker="time" mode="range" locale="en-US" [showTime]="{ use12Hours: true }" [ngModel]="range" aria-label="Opening hours, 12 hours" />
+        <andes-date-picker picker="time" mode="range" locale="en-US" [showTime]="{ use12Hours: true }" [ngModel]="range" aria-label="Opening hours, 12 hours" />
       </div>
     </div>`,
   }),
@@ -164,11 +165,11 @@ export const Variants: Story = {
       @for (variant of variants; track variant) {
         <div>
           <p [style]="caption">variant="{{ variant }}"</p>
-          <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-start;">
-            <andes-date-picker style="width: 12.5rem;" picker="time" locale="en-GB" [variant]="variant" [ngModel]="time" [aria-label]="variant + ' time'" />
-            <andes-date-picker style="width: 12.5rem;" picker="time" locale="en-GB" [variant]="variant" [showTime]="seconds" [ngModel]="time" [aria-label]="variant + ' time with seconds'" />
-            <andes-date-picker style="width: 12.5rem;" picker="time" locale="en-US" [variant]="variant" [showTime]="twelve" [ngModel]="time" [aria-label]="variant + ' 12-hour time'" />
-            <andes-date-picker style="width: 16rem;" picker="time" mode="range" locale="en-GB" [variant]="variant" [ngModel]="range" [aria-label]="variant + ' time range'" />
+          <div style="${FIELD_ROW}">
+            <andes-date-picker picker="time" locale="en-GB" [variant]="variant" [ngModel]="time" [aria-label]="variant + ' time'" />
+            <andes-date-picker picker="time" locale="en-GB" [variant]="variant" [showTime]="seconds" [ngModel]="time" [aria-label]="variant + ' time with seconds'" />
+            <andes-date-picker picker="time" locale="en-US" [variant]="variant" [showTime]="twelve" [ngModel]="time" [aria-label]="variant + ' 12-hour time'" />
+            <andes-date-picker picker="time" mode="range" locale="en-GB" [variant]="variant" [ngModel]="range" [aria-label]="variant + ' time range'" />
           </div>
         </div>
       }
@@ -195,11 +196,11 @@ export const Status: Story = {
       @for (status of statuses; track status) {
         <div>
           <p [style]="caption">status="{{ status }}"</p>
-          <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-start;">
-            <andes-date-picker style="width: 12.5rem;" picker="time" locale="en-GB" [status]="status" [ngModel]="time" [aria-label]="status + ' time'" />
-            <andes-date-picker style="width: 12.5rem;" picker="time" locale="en-GB" [status]="status" [showTime]="seconds" [ngModel]="time" [aria-label]="status + ' time with seconds'" />
-            <andes-date-picker style="width: 12.5rem;" picker="time" locale="en-US" [status]="status" [showTime]="twelve" [ngModel]="time" [aria-label]="status + ' 12-hour time'" />
-            <andes-date-picker style="width: 16rem;" picker="time" mode="range" locale="en-GB" [status]="status" [ngModel]="range" [aria-label]="status + ' time range'" />
+          <div style="${FIELD_ROW}">
+            <andes-date-picker picker="time" locale="en-GB" [status]="status" [ngModel]="time" [aria-label]="status + ' time'" />
+            <andes-date-picker picker="time" locale="en-GB" [status]="status" [showTime]="seconds" [ngModel]="time" [aria-label]="status + ' time with seconds'" />
+            <andes-date-picker picker="time" locale="en-US" [status]="status" [showTime]="twelve" [ngModel]="time" [aria-label]="status + ' 12-hour time'" />
+            <andes-date-picker picker="time" mode="range" locale="en-GB" [status]="status" [ngModel]="range" [aria-label]="status + ' time range'" />
           </div>
         </div>
       }
@@ -229,22 +230,22 @@ export const PrefixAndSuffix: Story = {
       <ng-template #hourglass>
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 22h14M5 2h14M17 22v-4.2a2 2 0 0 0-.6-1.4L12 12l-4.4 4.4a2 2 0 0 0-.6 1.4V22M7 2v4.2a2 2 0 0 0 .6 1.4L12 12l4.4-4.4a2 2 0 0 0 .6-1.4V2" /></svg>
       </ng-template>
-      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); gap: 1rem 1.5rem; align-items: start; align-content: start; min-height: 22rem;">
+      <div style="${fieldGrid('18rem')} min-height: 22rem;">
         <div>
           <p [style]="caption">Label prefix</p>
-          <andes-date-picker style="width: 100%;" picker="time" locale="en-GB" [prefix]="label" [ngModel]="time" aria-label="Opens at" />
+          <andes-date-picker picker="time" locale="en-GB" [prefix]="label" [ngModel]="time" aria-label="Opens at" />
         </div>
         <div>
           <p [style]="caption">Icon prefix and suffix</p>
-          <andes-date-picker style="width: 100%;" picker="time" locale="en-GB" [prefix]="bell" [suffixIcon]="hourglass" [ngModel]="time" aria-label="Alarm" />
+          <andes-date-picker picker="time" locale="en-GB" [prefix]="bell" [suffixIcon]="hourglass" [ngModel]="time" aria-label="Alarm" />
         </div>
         <div>
           <p [style]="caption">12 hours, suffix</p>
-          <andes-date-picker style="width: 100%;" picker="time" locale="en-US" [showTime]="twelve" [suffixIcon]="hourglass" [ngModel]="time" aria-label="12-hour time with suffix" />
+          <andes-date-picker picker="time" locale="en-US" [showTime]="twelve" [suffixIcon]="hourglass" [ngModel]="time" aria-label="12-hour time with suffix" />
         </div>
         <div>
           <p [style]="caption">Range</p>
-          <andes-date-picker style="width: 100%;" picker="time" mode="range" locale="en-GB" [prefix]="bell" [suffixIcon]="hourglass" [ngModel]="range" aria-label="Range with prefix and suffix" />
+          <andes-date-picker picker="time" mode="range" locale="en-GB" [prefix]="bell" [suffixIcon]="hourglass" [ngModel]="range" aria-label="Range with prefix and suffix" />
         </div>
       </div>
     `,
@@ -355,15 +356,15 @@ export const Locales: Story = {
       time: AFTERNOON,
       caption: CAPTION,
     },
-    template: `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 1rem 1.5rem; align-items: start; align-content: start; min-height: 24rem;">
+    template: `<div style="${fieldGrid('14rem')} min-height: 24rem;">
       @for (locale of locales; track locale) {
         <div [attr.dir]="locale === 'ar' ? 'rtl' : null">
           <p [style]="caption">{{ locale }}, 24 hours</p>
-          <andes-date-picker style="width: 100%;" picker="time" [locale]="locale" [ngModel]="time" [aria-label]="locale + ' 24 hours'" />
+          <andes-date-picker picker="time" [locale]="locale" [ngModel]="time" [aria-label]="locale + ' 24 hours'" />
         </div>
         <div [attr.dir]="locale === 'ar' ? 'rtl' : null">
           <p [style]="caption">{{ locale }}, use12Hours</p>
-          <andes-date-picker style="width: 100%;" picker="time" [locale]="locale" [showTime]="twelve" [ngModel]="time" [aria-label]="locale + ' 12 hours'" />
+          <andes-date-picker picker="time" [locale]="locale" [showTime]="twelve" [ngModel]="time" [aria-label]="locale + ' 12 hours'" />
         </div>
       }
     </div>`,
@@ -384,26 +385,26 @@ export const ClearableAndReadOnly: Story = {
       <ng-template #clear>
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
       </ng-template>
-      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 1rem 1.5rem; align-items: start; align-content: start; min-height: 26rem;">
+      <div style="${fieldGrid('14rem')} min-height: 26rem;">
         <div>
           <p [style]="caption">allowClear off</p>
-          <andes-date-picker style="width: 100%;" picker="time" locale="en-GB" [allowClear]="false" [ngModel]="time" aria-label="Without clear" />
+          <andes-date-picker picker="time" locale="en-GB" [allowClear]="false" [ngModel]="time" aria-label="Without clear" />
         </div>
         <div>
           <p [style]="caption">Custom clearIcon</p>
-          <andes-date-picker style="width: 100%;" picker="time" locale="en-GB" [clearIcon]="clear" [ngModel]="time" aria-label="Custom clear icon" />
+          <andes-date-picker picker="time" locale="en-GB" [clearIcon]="clear" [ngModel]="time" aria-label="Custom clear icon" />
         </div>
         <div>
           <p [style]="caption">inputReadOnly</p>
-          <andes-date-picker style="width: 100%;" picker="time" locale="en-GB" inputReadOnly [ngModel]="time" aria-label="Read-only input" />
+          <andes-date-picker picker="time" locale="en-GB" inputReadOnly [ngModel]="time" aria-label="Read-only input" />
         </div>
         <div>
           <p [style]="caption">autoFocus</p>
-          <andes-date-picker style="width: 100%;" picker="time" locale="en-GB" autoFocus aria-label="Focused on load" />
+          <andes-date-picker picker="time" locale="en-GB" autoFocus aria-label="Focused on load" />
         </div>
         <div>
           <p [style]="caption">defaultOpen</p>
-          <andes-date-picker style="width: 100%;" picker="time" locale="en-GB" defaultOpen aria-label="Open on load" />
+          <andes-date-picker picker="time" locale="en-GB" defaultOpen aria-label="Open on load" />
         </div>
       </div>
     `,
@@ -506,19 +507,19 @@ export const TimeMask: Story = {
       mono: MONO,
       caption: CAPTION,
     },
-    template: `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); gap: 1rem 1.5rem; align-items: start; align-content: start; min-height: 22rem;">
+    template: `<div style="${fieldGrid('18rem')} min-height: 22rem;">
       <div>
         <p [style]="caption">HH:mm</p>
-        <andes-date-picker style="width: 100%;" picker="time" locale="en-GB" [format]="minutes" [(ngModel)]="time" aria-label="Masked time" />
+        <andes-date-picker picker="time" locale="en-GB" [format]="minutes" [(ngModel)]="time" aria-label="Masked time" />
         <pre [style]="mono">{{ time | json }}</pre>
       </div>
       <div>
         <p [style]="caption">HH:mm:ss</p>
-        <andes-date-picker style="width: 100%;" picker="time" locale="en-GB" [format]="seconds" aria-label="Masked time with seconds" />
+        <andes-date-picker picker="time" locale="en-GB" [format]="seconds" aria-label="Masked time with seconds" />
       </div>
       <div>
         <p [style]="caption">Range, HH:mm</p>
-        <andes-date-picker style="width: 100%;" picker="time" mode="range" locale="en-GB" [format]="minutes" [ngModel]="range" aria-label="Masked time range" />
+        <andes-date-picker picker="time" mode="range" locale="en-GB" [format]="minutes" [ngModel]="range" aria-label="Masked time range" />
       </div>
     </div>`,
   }),
@@ -539,11 +540,11 @@ export const DarkTheme: Story = {
       caption: CAPTION,
     },
     template: `<div style="display: flex; flex-direction: column; gap: 1rem;">
-      <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-start;">
-        <andes-date-picker style="width: 12.5rem;" picker="time" locale="en-GB" [ngModel]="time" aria-label="Outlined" />
-        <andes-date-picker style="width: 12.5rem;" picker="time" variant="filled" locale="en-GB" [ngModel]="time" aria-label="Filled" />
-        <andes-date-picker style="width: 12.5rem;" picker="time" status="error" locale="en-GB" [ngModel]="time" aria-label="Error" />
-        <andes-date-picker style="width: 12.5rem;" picker="time" disabled locale="en-GB" [ngModel]="time" aria-label="Disabled" />
+      <div style="${FIELD_ROW}">
+        <andes-date-picker picker="time" locale="en-GB" [ngModel]="time" aria-label="Outlined" />
+        <andes-date-picker picker="time" variant="filled" locale="en-GB" [ngModel]="time" aria-label="Filled" />
+        <andes-date-picker picker="time" status="error" locale="en-GB" [ngModel]="time" aria-label="Error" />
+        <andes-date-picker picker="time" disabled locale="en-GB" [ngModel]="time" aria-label="Disabled" />
       </div>
       <div style="display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; align-items: flex-start;">
         <div style="width: 15rem; min-height: 22rem;">

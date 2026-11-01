@@ -2,6 +2,7 @@ import { FormsModule } from '@angular/forms';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 
 import { AndesDatePicker } from './date-picker';
+import { FIELD_ROW, fieldGrid } from '../../testing/story-layout';
 
 /**
  * Language and calendar. `locale` sets the month and weekday names, the field's
@@ -26,6 +27,9 @@ const FEB_15 = new Date(2024, 1, 15);
 const CAPTION =
   'margin: 0 0 0.375rem; font: 0.75rem/1.25rem var(--andes-font-family), sans-serif; color: var(--andes-color-muted-foreground);';
 const TYPES = ['date', 'week', 'month', 'quarter', 'year'] as const;
+/** Room for the longest localized dates below ("15 de fev. de 2024", "民國113年2月15日"). */
+const WIDE_SINGLE = '--andes-date-picker-width: 10.5rem;';
+const WIDE_RANGE = '--andes-date-picker-width: 19.5rem;';
 
 interface LocaleCase {
   readonly locale: string;
@@ -62,11 +66,11 @@ export const LocaleGallery: Story = {
   render: () => ({
     moduleMetadata: { imports: [FormsModule] },
     props: { locales: LOCALES, picked: FEB_15, caption: CAPTION },
-    template: `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 1rem 1.5rem; align-items: start; align-content: start; min-height: 24rem;">
+    template: `<div style="${fieldGrid('13rem')} ${WIDE_SINGLE} min-height: 24rem;">
       @for (item of locales; track item.locale) {
         <div [attr.dir]="item.dir ?? null">
           <p [style]="caption">{{ item.label }}, {{ item.locale }}</p>
-          <andes-date-picker style="width: 100%" [locale]="item.locale" [weekStartsOn]="item.start" [ngModel]="picked" [aria-label]="item.label" />
+          <andes-date-picker [locale]="item.locale" [weekStartsOn]="item.start" [ngModel]="picked" [aria-label]="item.label" />
         </div>
       }
     </div>`,
@@ -92,7 +96,7 @@ export const LocalePanels: Story = {
       @for (item of locales; track item.locale) {
         <div style="width: 19rem; min-height: 26rem;">
           <p [style]="caption">{{ item.label }}</p>
-          <andes-date-picker [locale]="item.locale" [weekStartsOn]="item.start" [ngModel]="picked" [open]="true" [aria-label]="item.label" />
+          <andes-date-picker style="${WIDE_SINGLE}" [locale]="item.locale" [weekStartsOn]="item.start" [ngModel]="picked" [open]="true" [aria-label]="item.label" />
         </div>
       }
     </div>`,
@@ -119,7 +123,7 @@ export const LocalesAllPickers: Story = {
       @for (item of locales; track item.locale) {
         <div>
           <p [style]="caption">{{ item.label }}</p>
-          <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+          <div style="${FIELD_ROW}">
             @for (type of types; track type) {
               <andes-date-picker style="width: 11rem;" [picker]="type" [locale]="item.locale" [weekStartsOn]="item.start" [ngModel]="picked" [aria-label]="item.label + ' ' + type" />
             }
@@ -153,15 +157,15 @@ export const LocalesRange: Story = {
       range: [new Date(2024, 1, 5), new Date(2024, 1, 12)],
       caption: CAPTION,
     },
-    template: `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(21rem, 1fr)); gap: 1rem 1.5rem; align-items: start; align-content: start; min-height: 24rem;">
+    template: `<div style="${fieldGrid('21rem')} ${WIDE_RANGE} min-height: 24rem;">
       @for (item of cases; track item.locale) {
         <div>
           <p [style]="caption">{{ item.locale }}, filled</p>
-          <andes-date-picker style="width: 100%" mode="range" [locale]="item.locale" [weekStartsOn]="1" [ngModel]="range" [startInputLabel]="item.from" [endInputLabel]="item.to" [aria-label]="item.from + ' - ' + item.to" />
+          <andes-date-picker mode="range" [locale]="item.locale" [weekStartsOn]="1" [ngModel]="range" [startInputLabel]="item.from" [endInputLabel]="item.to" [aria-label]="item.from + ' - ' + item.to" />
         </div>
         <div>
           <p [style]="caption">{{ item.locale }}, empty</p>
-          <andes-date-picker style="width: 100%" mode="range" [locale]="item.locale" [weekStartsOn]="1" [placeholder]="[item.from, item.to]" [startInputLabel]="item.from" [endInputLabel]="item.to" [aria-label]="item.from + ' - ' + item.to + ' empty'" />
+          <andes-date-picker mode="range" [locale]="item.locale" [weekStartsOn]="1" [placeholder]="[item.from, item.to]" [startInputLabel]="item.from" [endInputLabel]="item.to" [aria-label]="item.from + ' - ' + item.to + ' empty'" />
         </div>
       }
     </div>`,
@@ -213,24 +217,24 @@ export const AlternativeCalendars: Story = {
       range: [new Date(2024, 1, 5), new Date(2024, 1, 12)],
       caption: CAPTION,
     },
-    template: `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(21rem, 1fr)); gap: 1rem 1.5rem; align-items: start; align-content: start; min-height: 26rem;">
+    template: `<div style="${fieldGrid('21rem')} min-height: 26rem;">
       @for (item of cases; track item.locale) {
         <div>
           <p [style]="caption">{{ item.label }}</p>
-          <andes-date-picker style="width: 100%" [locale]="item.locale" [ngModel]="picked" [aria-label]="item.label" />
+          <andes-date-picker style="${WIDE_SINGLE}" [locale]="item.locale" [ngModel]="picked" [aria-label]="item.label" />
         </div>
         <div>
           <p [style]="caption">Range, same calendar</p>
-          <andes-date-picker style="width: 100%" mode="range" [locale]="item.locale" [ngModel]="range" [aria-label]="item.label + ' range'" />
+          <andes-date-picker style="${WIDE_RANGE}" mode="range" [locale]="item.locale" [ngModel]="range" [aria-label]="item.label + ' range'" />
         </div>
       }
       <div>
         <p [style]="caption">BBBB token in a format</p>
-        <andes-date-picker style="width: 100%" locale="en-GB" format="DD/MM/BBBB" [ngModel]="picked" aria-label="Buddhist year token" />
+        <andes-date-picker locale="en-GB" format="DD/MM/BBBB" [ngModel]="picked" aria-label="Buddhist year token" />
       </div>
       <div>
         <p [style]="caption">Month and year, Buddhist era</p>
-        <andes-date-picker style="width: 100%" picker="month" locale="th-TH" [ngModel]="picked" aria-label="Thai month" />
+        <andes-date-picker picker="month" locale="th-TH" [ngModel]="picked" aria-label="Thai month" />
       </div>
     </div>`,
   }),
@@ -253,36 +257,36 @@ export const Rtl: Story = {
       range: [new Date(2024, 1, 5), new Date(2024, 1, 12)],
       caption: CAPTION,
     },
-    template: `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 1rem 1.5rem; align-items: start; align-content: start; min-height: 30rem;">
+    template: `<div style="${fieldGrid('15rem')} min-height: 30rem;">
       @for (type of types; track type) {
         <div>
           <p [style]="caption">ar, picker="{{ type }}"</p>
-          <andes-date-picker style="width: 100%" [picker]="type" locale="ar" [weekStartsOn]="6" [ngModel]="picked" [aria-label]="'ar ' + type" />
+          <andes-date-picker [picker]="type" locale="ar" [weekStartsOn]="6" [ngModel]="picked" [aria-label]="'ar ' + type" />
         </div>
       }
       <div>
         <p [style]="caption">ar, range</p>
-        <andes-date-picker style="width: 100%" mode="range" locale="ar" [weekStartsOn]="6" [ngModel]="range" aria-label="ar range" />
+        <andes-date-picker mode="range" locale="ar" [weekStartsOn]="6" [ngModel]="range" aria-label="ar range" />
       </div>
       <div>
         <p [style]="caption">he-IL</p>
-        <andes-date-picker style="width: 100%" locale="he-IL" [ngModel]="picked" aria-label="he" />
+        <andes-date-picker locale="he-IL" [ngModel]="picked" aria-label="he" />
       </div>
       <div>
         <p [style]="caption">he-IL, range</p>
-        <andes-date-picker style="width: 100%" mode="range" locale="he-IL" [ngModel]="range" aria-label="he range" />
+        <andes-date-picker mode="range" locale="he-IL" [ngModel]="range" aria-label="he range" />
       </div>
       <div>
         <p [style]="caption">ar, date and time</p>
-        <andes-date-picker style="width: 100%" locale="ar" showTime [weekStartsOn]="6" [ngModel]="picked" aria-label="ar date and time" />
+        <andes-date-picker locale="ar" showTime [weekStartsOn]="6" [ngModel]="picked" aria-label="ar date and time" />
       </div>
       <div>
         <p [style]="caption">ar, time</p>
-        <andes-date-picker style="width: 100%" picker="time" locale="ar" aria-label="ar time" />
+        <andes-date-picker picker="time" locale="ar" aria-label="ar time" />
       </div>
       <div>
         <p [style]="caption">ar, multiple</p>
-        <andes-date-picker style="width: 100%" mode="multiple" locale="ar" [weekStartsOn]="6" aria-label="ar multiple" />
+        <andes-date-picker mode="multiple" locale="ar" [weekStartsOn]="6" aria-label="ar multiple" />
       </div>
     </div>`,
   }),

@@ -8,6 +8,7 @@ import {
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesDatePicker } from './date-picker';
+import { FIELD_ROW } from '../../testing/story-layout';
 
 const meta: Meta<AndesDatePicker> = {
   title: 'Data Entry/Date Picker/Basics/Field',
@@ -118,13 +119,13 @@ export const Sizes: Story = {
       @for (size of sizes; track size) {
         <div>
           <p [style]="caption">size="{{ size }}"</p>
-          <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-start;">
+          <div style="${FIELD_ROW}">
             @for (type of types; track type) {
-              <andes-date-picker style="width: 12.5rem;" [size]="size" [picker]="type" locale="en-US" [weekStartsOn]="1" [ngModel]="picked" [aria-label]="size + ' ' + type" />
+              <andes-date-picker [size]="size" [picker]="type" locale="en-US" [weekStartsOn]="1" [ngModel]="picked" [aria-label]="size + ' ' + type" />
             }
-            <andes-date-picker style="width: 20rem;" [size]="size" mode="range" locale="en-US" [ngModel]="rangeValue" [aria-label]="size + ' range'" />
-            <andes-date-picker style="width: 18rem;" [size]="size" mode="multiple" locale="en-US" [maxTagCount]="1" [ngModel]="several" [aria-label]="size + ' multiple'" />
-            <andes-date-picker style="width: 12.5rem;" [size]="size" picker="time" locale="en-GB" [aria-label]="size + ' time'" />
+            <andes-date-picker [size]="size" mode="range" locale="en-US" [ngModel]="rangeValue" [aria-label]="size + ' range'" />
+            <andes-date-picker [size]="size" mode="multiple" locale="en-US" [maxTagCount]="1" [ngModel]="several" [aria-label]="size + ' multiple'" />
+            <andes-date-picker [size]="size" picker="time" locale="en-GB" [aria-label]="size + ' time'" />
           </div>
         </div>
       }
@@ -147,13 +148,13 @@ export const Variants: Story = {
       @for (variant of variants; track variant) {
         <div>
           <p [style]="caption">variant="{{ variant }}"</p>
-          <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-start;">
+          <div style="${FIELD_ROW}">
             @for (type of types; track type) {
-              <andes-date-picker style="width: 12.5rem;" [variant]="variant" [picker]="type" locale="en-US" [weekStartsOn]="1" [ngModel]="picked" [aria-label]="variant + ' ' + type" />
+              <andes-date-picker [variant]="variant" [picker]="type" locale="en-US" [weekStartsOn]="1" [ngModel]="picked" [aria-label]="variant + ' ' + type" />
             }
-            <andes-date-picker style="width: 20rem;" [variant]="variant" mode="range" locale="en-US" [ngModel]="rangeValue" [aria-label]="variant + ' range'" />
-            <andes-date-picker style="width: 18rem;" [variant]="variant" mode="multiple" locale="en-US" [maxTagCount]="1" [ngModel]="several" [aria-label]="variant + ' multiple'" />
-            <andes-date-picker style="width: 12.5rem;" [variant]="variant" picker="time" locale="en-GB" [aria-label]="variant + ' time'" />
+            <andes-date-picker [variant]="variant" mode="range" locale="en-US" [ngModel]="rangeValue" [aria-label]="variant + ' range'" />
+            <andes-date-picker [variant]="variant" mode="multiple" locale="en-US" [maxTagCount]="1" [ngModel]="several" [aria-label]="variant + ' multiple'" />
+            <andes-date-picker [variant]="variant" picker="time" locale="en-GB" [aria-label]="variant + ' time'" />
           </div>
         </div>
       }
@@ -177,25 +178,25 @@ export const States: Story = {
       @for (status of statuses; track status) {
         <div>
           <p [style]="caption">status="{{ status }}"</p>
-          <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-start;">
+          <div style="${FIELD_ROW}">
             @for (type of types; track type) {
-              <andes-date-picker style="width: 12.5rem;" [status]="status" [picker]="type" locale="en-US" [weekStartsOn]="1" [ngModel]="picked" [aria-label]="status + ' ' + type" />
+              <andes-date-picker [status]="status" [picker]="type" locale="en-US" [weekStartsOn]="1" [ngModel]="picked" [aria-label]="status + ' ' + type" />
             }
-            <andes-date-picker style="width: 20rem;" [status]="status" mode="range" locale="en-US" [ngModel]="rangeValue" [aria-label]="status + ' range'" />
-            <andes-date-picker style="width: 18rem;" [status]="status" mode="multiple" locale="en-US" [maxTagCount]="1" [ngModel]="several" [aria-label]="status + ' multiple'" />
-            <andes-date-picker style="width: 12.5rem;" [status]="status" picker="time" locale="en-GB" [aria-label]="status + ' time'" />
+            <andes-date-picker [status]="status" mode="range" locale="en-US" [ngModel]="rangeValue" [aria-label]="status + ' range'" />
+            <andes-date-picker [status]="status" mode="multiple" locale="en-US" [maxTagCount]="1" [ngModel]="several" [aria-label]="status + ' multiple'" />
+            <andes-date-picker [status]="status" picker="time" locale="en-GB" [aria-label]="status + ' time'" />
           </div>
         </div>
       }
       <div>
         <p [style]="caption">disabled</p>
-        <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-start;">
+        <div style="${FIELD_ROW}">
           @for (type of types; track type) {
-            <andes-date-picker style="width: 12.5rem;" disabled [picker]="type" locale="en-US" [weekStartsOn]="1" [ngModel]="picked" [aria-label]="'disabled ' + type" />
+            <andes-date-picker disabled [picker]="type" locale="en-US" [weekStartsOn]="1" [ngModel]="picked" [aria-label]="'disabled ' + type" />
           }
-          <andes-date-picker style="width: 20rem;" disabled mode="range" locale="en-US" [ngModel]="rangeValue" aria-label="disabled range" />
-          <andes-date-picker style="width: 18rem;" disabled mode="multiple" locale="en-US" [maxTagCount]="1" [ngModel]="several" aria-label="disabled multiple" />
-          <andes-date-picker style="width: 12.5rem;" disabled picker="time" locale="en-GB" aria-label="disabled time" />
+          <andes-date-picker disabled mode="range" locale="en-US" [ngModel]="rangeValue" aria-label="disabled range" />
+          <andes-date-picker disabled mode="multiple" locale="en-US" [maxTagCount]="1" [ngModel]="several" aria-label="disabled multiple" />
+          <andes-date-picker disabled picker="time" locale="en-GB" aria-label="disabled time" />
         </div>
       </div>
     </div>`,

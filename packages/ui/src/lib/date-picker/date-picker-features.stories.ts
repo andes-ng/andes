@@ -95,7 +95,7 @@ export const OpeningAndFocus: Story = {
     ],
     template: `<div style="min-height: 26rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-start;">
       <andes-date-picker locale="en-US" aria-label="Opens on load" defaultOpen [panelClass]="extraClasses" [defaultMonth]="febMonth" />
-      <andes-date-picker locale="en-US" aria-label="Focused on load" autoFocus placeholder="Focused on load" />
+      <andes-date-picker style="--andes-date-picker-width: 10rem;" locale="en-US" aria-label="Focused on load" autoFocus placeholder="Focused on load" />
     </div>`,
   }),
 };
@@ -156,7 +156,7 @@ export const CaptionDropdowns: Story = {
     },
     template: `<div style="min-height: 26rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-start;">
       <andes-date-picker locale="en-US" aria-label="Date of birth" placeholder="Date of birth" captionLayout="dropdown" [min]="earliest" [max]="latest" />
-      <andes-date-picker locale="en-US" aria-label="Year select only" placeholder="Year select only" captionLayout="dropdown-years" [startYear]="2000" [endYear]="2030" />
+      <andes-date-picker style="--andes-date-picker-width: 10rem;" locale="en-US" aria-label="Year select only" placeholder="Year select only" captionLayout="dropdown-years" [startYear]="2000" [endYear]="2030" />
       <andes-date-picker mode="range" locale="en-US" aria-label="Booking window" captionLayout="dropdown" [min]="bookingStart" [max]="bookingEnd" />
     </div>`,
   }),
@@ -185,7 +185,7 @@ export const SwitchablePicker: Story = {
     },
     template: `<div style="min-height: 28rem; display: flex; flex-direction: column; gap: 0.75rem;">
       <andes-select [options]="types" [(value)]="type" aria-label="Picker" style="width: 7.5rem;" />
-      <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-start;">
+      <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start;">
         <andes-date-picker style="width: 13rem;" [picker]="type" locale="en-US" [(ngModel)]="picked" aria-label="Switchable" />
         <andes-date-picker style="width: 22rem;" mode="range" [picker]="type" locale="en-US" [ngModel]="span" aria-label="Switchable range" />
         @if (type !== 'time') {
@@ -238,7 +238,7 @@ export const BuddhistEra: Story = {
     props: { picked: FEB_15 },
     template: `<div style="min-height: 26rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-start;">
       <andes-date-picker locale="th-TH" [(ngModel)]="picked" aria-label="Thai" />
-      <andes-date-picker locale="en-US-u-ca-buddhist" [(ngModel)]="picked" aria-label="Buddhist era" />
+      <andes-date-picker style="--andes-date-picker-width: 10rem;" locale="en-US-u-ca-buddhist" [(ngModel)]="picked" aria-label="Buddhist era" />
       <andes-date-picker locale="en-GB" format="DD/MM/BBBB" [(ngModel)]="picked" aria-label="BBBB token" />
     </div>`,
   }),

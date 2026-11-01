@@ -4,6 +4,7 @@ import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
 import { AndesDatePicker } from './date-picker';
+import { FIELD_ROW, fieldGrid } from '../../testing/story-layout';
 
 /**
  * The time picker is the date picker with `picker="time"`: time columns without a calendar,
@@ -157,11 +158,11 @@ export const ThreeSizes: Story = {
       @for (size of sizes; track size) {
         <div>
           <p [style]="caption">size="{{ size }}"</p>
-          <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-start;">
-            <andes-date-picker style="width: 12.5rem;" picker="time" locale="en-GB" [size]="size" [ngModel]="time" [aria-label]="size + ' time'" />
-            <andes-date-picker style="width: 12.5rem;" picker="time" locale="en-GB" [size]="size" [showTime]="seconds" [ngModel]="time" [aria-label]="size + ' time with seconds'" />
-            <andes-date-picker style="width: 12.5rem;" picker="time" locale="en-US" [size]="size" [showTime]="twelve" [ngModel]="time" [aria-label]="size + ' 12-hour time'" />
-            <andes-date-picker style="width: 16rem;" picker="time" mode="range" locale="en-GB" [size]="size" [ngModel]="range" [aria-label]="size + ' time range'" />
+          <div style="${FIELD_ROW}">
+            <andes-date-picker picker="time" locale="en-GB" [size]="size" [ngModel]="time" [aria-label]="size + ' time'" />
+            <andes-date-picker picker="time" locale="en-GB" [size]="size" [showTime]="seconds" [ngModel]="time" [aria-label]="size + ' time with seconds'" />
+            <andes-date-picker picker="time" locale="en-US" [size]="size" [showTime]="twelve" [ngModel]="time" [aria-label]="size + ' 12-hour time'" />
+            <andes-date-picker picker="time" mode="range" locale="en-GB" [size]="size" [ngModel]="range" [aria-label]="size + ' time range'" />
           </div>
         </div>
       }
@@ -189,22 +190,22 @@ export const NeedConfirm: Story = {
     template: `<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 22rem)); gap: 0.75rem 1.5rem; align-items: start; align-content: start; min-height: 26rem;">
       <div>
         <p [style]="caption">needConfirm (default)</p>
-        <andes-date-picker style="width: 100%;" picker="time" locale="en-GB" [(ngModel)]="confirmed" aria-label="Time with confirmation" />
+        <andes-date-picker picker="time" locale="en-GB" [(ngModel)]="confirmed" aria-label="Time with confirmation" />
         <pre [style]="mono">{{ confirmed | json }}</pre>
       </div>
       <div>
         <p [style]="caption">[needConfirm]="false"</p>
-        <andes-date-picker style="width: 100%;" picker="time" locale="en-GB" [needConfirm]="false" [(ngModel)]="immediate" aria-label="Time without confirmation" />
+        <andes-date-picker picker="time" locale="en-GB" [needConfirm]="false" [(ngModel)]="immediate" aria-label="Time without confirmation" />
         <pre [style]="mono">{{ immediate | json }}</pre>
       </div>
       <div>
         <p [style]="caption">Range, needConfirm (default)</p>
-        <andes-date-picker style="width: 100%;" picker="time" mode="range" locale="en-GB" [(ngModel)]="confirmedRange" aria-label="Time range with confirmation" />
+        <andes-date-picker picker="time" mode="range" locale="en-GB" [(ngModel)]="confirmedRange" aria-label="Time range with confirmation" />
         <pre [style]="mono">{{ confirmedRange | json }}</pre>
       </div>
       <div>
         <p [style]="caption">Range, [needConfirm]="false"</p>
-        <andes-date-picker style="width: 100%;" picker="time" mode="range" locale="en-GB" [needConfirm]="false" [(ngModel)]="immediateRange" aria-label="Time range without confirmation" />
+        <andes-date-picker picker="time" mode="range" locale="en-GB" [needConfirm]="false" [(ngModel)]="immediateRange" aria-label="Time range without confirmation" />
         <pre [style]="mono">{{ immediateRange | json }}</pre>
       </div>
     </div>`,
@@ -226,30 +227,30 @@ export const Disabled: Story = {
       endLocked: [false, true] as const,
       caption: CAPTION,
     },
-    template: `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); gap: 1rem 1.5rem; align-items: start; align-content: start; min-height: 22rem;">
+    template: `<div style="${fieldGrid('18rem')} min-height: 22rem;">
       <div>
         <p [style]="caption">Disabled</p>
-        <andes-date-picker style="width: 100%;" picker="time" locale="en-GB" disabled aria-label="Disabled time" />
+        <andes-date-picker picker="time" locale="en-GB" disabled aria-label="Disabled time" />
       </div>
       <div>
         <p [style]="caption">Disabled, with a value</p>
-        <andes-date-picker style="width: 100%;" picker="time" locale="en-GB" disabled [ngModel]="time" aria-label="Disabled time with a value" />
+        <andes-date-picker picker="time" locale="en-GB" disabled [ngModel]="time" aria-label="Disabled time with a value" />
       </div>
       <div>
         <p [style]="caption">Range, disabled</p>
-        <andes-date-picker style="width: 100%;" picker="time" mode="range" locale="en-GB" disabled [ngModel]="range" aria-label="Disabled time range" />
+        <andes-date-picker picker="time" mode="range" locale="en-GB" disabled [ngModel]="range" aria-label="Disabled time range" />
       </div>
       <div>
         <p [style]="caption">Range, start locked</p>
-        <andes-date-picker style="width: 100%;" picker="time" mode="range" locale="en-GB" [disabled]="startLocked" [ngModel]="range" aria-label="Time range, start locked" />
+        <andes-date-picker picker="time" mode="range" locale="en-GB" [disabled]="startLocked" [ngModel]="range" aria-label="Time range, start locked" />
       </div>
       <div>
         <p [style]="caption">Range, end locked</p>
-        <andes-date-picker style="width: 100%;" picker="time" mode="range" locale="en-GB" [disabled]="endLocked" [ngModel]="range" aria-label="Time range, end locked" />
+        <andes-date-picker picker="time" mode="range" locale="en-GB" [disabled]="endLocked" [ngModel]="range" aria-label="Time range, end locked" />
       </div>
       <div>
         <p [style]="caption">12 hours, disabled</p>
-        <andes-date-picker style="width: 100%;" picker="time" locale="en-US" disabled [showTime]="{ use12Hours: true }" [ngModel]="time" aria-label="Disabled 12-hour time" />
+        <andes-date-picker picker="time" locale="en-US" disabled [showTime]="{ use12Hours: true }" [ngModel]="time" aria-label="Disabled 12-hour time" />
       </div>
     </div>`,
   }),
@@ -271,7 +272,7 @@ export const HourAndMinute: Story = {
       caption: CAPTION,
     },
     template: `<div style="display: flex; flex-direction: column; gap: 1rem;">
-      <andes-date-picker style="width: 16rem;" picker="time" mode="range" locale="en-GB" format="HH:mm" [value]="range" aria-label="Hour and minute range" />
+      <andes-date-picker picker="time" mode="range" locale="en-GB" format="HH:mm" [value]="range" aria-label="Hour and minute range" />
       <div style="display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; align-items: flex-start;">
         @for (format of formats; track format) {
           <div style="width: 15rem; min-height: 22rem;">

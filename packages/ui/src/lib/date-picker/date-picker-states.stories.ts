@@ -13,6 +13,7 @@ import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 import { AndesButton } from '../button/button';
 import { AndesSwitch } from '../switch/switch';
 import { AndesDatePicker } from './date-picker';
+import { FIELD_ROW } from '../../testing/story-layout';
 
 /**
  * Disabled and validated fields, forms, labels and help text, theming (dark, custom styling
@@ -68,31 +69,31 @@ export const Disabled: Story = {
     template: `<div style="display: flex; flex-direction: column; gap: 1.25rem; min-height: 26rem;">
       <div>
         <p [style]="caption">Disabled, every type</p>
-        <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-start;">
+        <div style="${FIELD_ROW}">
           @for (type of types; track type) {
-            <andes-date-picker style="width: 12.5rem;" disabled [picker]="type" locale="en-US" [weekStartsOn]="1" [ngModel]="picked" [aria-label]="'disabled ' + type" />
+            <andes-date-picker disabled [picker]="type" locale="en-US" [weekStartsOn]="1" [ngModel]="picked" [aria-label]="'disabled ' + type" />
           }
-          <andes-date-picker style="width: 20rem;" disabled mode="range" locale="en-US" [ngModel]="range" aria-label="Disabled range" />
-          <andes-date-picker style="width: 18rem;" disabled mode="multiple" locale="en-US" [ngModel]="several" aria-label="Disabled multiple" />
-          <andes-date-picker style="width: 12.5rem;" disabled picker="time" locale="en-GB" aria-label="Disabled time" />
+          <andes-date-picker disabled mode="range" locale="en-US" [ngModel]="range" aria-label="Disabled range" />
+          <andes-date-picker disabled mode="multiple" locale="en-US" [ngModel]="several" aria-label="Disabled multiple" />
+          <andes-date-picker disabled picker="time" locale="en-GB" aria-label="Disabled time" />
         </div>
       </div>
       <div>
         <p [style]="caption">Range with one side locked (the locked input cannot be focused or typed in)</p>
-        <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-start;">
-          <andes-date-picker style="width: 20rem;" mode="range" locale="en-US" [disabled]="startLocked" [ngModel]="range" aria-label="Start locked" />
-          <andes-date-picker style="width: 20rem;" mode="range" locale="en-US" [disabled]="endLocked" [ngModel]="range" aria-label="End locked" />
-          <andes-date-picker style="width: 20rem;" mode="range" picker="month" locale="en-US" [disabled]="startLocked" [ngModel]="months" aria-label="Month range, start locked" />
-          <andes-date-picker style="width: 20rem;" mode="range" picker="year" locale="en-US" [disabled]="endLocked" [ngModel]="years" aria-label="Year range, end locked" />
-          <andes-date-picker style="width: 22rem;" mode="range" locale="en-GB" showTime [disabled]="startLocked" aria-label="Range with time, start locked" />
-          <andes-date-picker style="width: 16rem;" mode="range" picker="time" locale="en-GB" [disabled]="endLocked" aria-label="Time range, end locked" />
+        <div style="${FIELD_ROW}">
+          <andes-date-picker mode="range" locale="en-US" [disabled]="startLocked" [ngModel]="range" aria-label="Start locked" />
+          <andes-date-picker mode="range" locale="en-US" [disabled]="endLocked" [ngModel]="range" aria-label="End locked" />
+          <andes-date-picker mode="range" picker="month" locale="en-US" [disabled]="startLocked" [ngModel]="months" aria-label="Month range, start locked" />
+          <andes-date-picker mode="range" picker="year" locale="en-US" [disabled]="endLocked" [ngModel]="years" aria-label="Year range, end locked" />
+          <andes-date-picker mode="range" locale="en-GB" showTime [disabled]="startLocked" aria-label="Range with time, start locked" />
+          <andes-date-picker mode="range" picker="time" locale="en-GB" [disabled]="endLocked" aria-label="Time range, end locked" />
         </div>
       </div>
       <div>
         <p [style]="caption">With a form control: disabledSides on an enabled control, and a disabled control</p>
-        <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-start;">
-          <andes-date-picker style="width: 20rem;" mode="range" locale="en-US" [disabledSides]="startLocked" [formControl]="control" aria-label="Start locked through disabledSides" />
-          <andes-date-picker style="width: 20rem;" mode="range" locale="en-US" [formControl]="disabledControl" aria-label="Disabled by the form control" />
+        <div style="${FIELD_ROW}">
+          <andes-date-picker mode="range" locale="en-US" [disabledSides]="startLocked" [formControl]="control" aria-label="Start locked through disabledSides" />
+          <andes-date-picker mode="range" locale="en-US" [formControl]="disabledControl" aria-label="Disabled by the form control" />
         </div>
       </div>
     </div>`,
@@ -257,13 +258,13 @@ export const DarkTheme: Story = {
       caption: CAPTION,
     },
     template: `<div style="display: flex; flex-direction: column; gap: 1rem;">
-      <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-start;">
-        <andes-date-picker style="width: 12.5rem;" locale="en-US" [ngModel]="picked" aria-label="Outlined" />
-        <andes-date-picker style="width: 12.5rem;" variant="filled" locale="en-US" [ngModel]="picked" aria-label="Filled" />
-        <andes-date-picker style="width: 12.5rem;" status="error" locale="en-US" [ngModel]="picked" aria-label="Error" />
-        <andes-date-picker style="width: 12.5rem;" status="warning" locale="en-US" [ngModel]="picked" aria-label="Warning" />
-        <andes-date-picker style="width: 12.5rem;" disabled locale="en-US" [ngModel]="picked" aria-label="Disabled" />
-        <andes-date-picker style="width: 20rem;" mode="range" locale="en-US" [ngModel]="range" aria-label="Range" />
+      <div style="${FIELD_ROW}">
+        <andes-date-picker locale="en-US" [ngModel]="picked" aria-label="Outlined" />
+        <andes-date-picker variant="filled" locale="en-US" [ngModel]="picked" aria-label="Filled" />
+        <andes-date-picker status="error" locale="en-US" [ngModel]="picked" aria-label="Error" />
+        <andes-date-picker status="warning" locale="en-US" [ngModel]="picked" aria-label="Warning" />
+        <andes-date-picker disabled locale="en-US" [ngModel]="picked" aria-label="Disabled" />
+        <andes-date-picker mode="range" locale="en-US" [ngModel]="range" aria-label="Range" />
       </div>
       <div style="display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; align-items: flex-start;">
         <div style="width: 19rem; min-height: 26rem;">
@@ -326,19 +327,19 @@ export const SemanticStylingRange: Story = {
     template: `<div class="story-semantic" style="display: flex; flex-direction: column; gap: 1rem; width: 24rem; min-height: 30rem;">
       <div>
         <p [style]="caption">Range</p>
-        <andes-date-picker style="width: 100%;" mode="range" locale="en-US" [panelClass]="panel" [ngModel]="range" aria-label="Styled range" />
+        <andes-date-picker mode="range" locale="en-US" [panelClass]="panel" [ngModel]="range" aria-label="Styled range" />
       </div>
       <div>
         <p [style]="caption">Multiple</p>
-        <andes-date-picker style="width: 100%;" mode="multiple" locale="en-US" [panelClass]="panel" [ngModel]="several" aria-label="Styled multiple" />
+        <andes-date-picker mode="multiple" locale="en-US" [panelClass]="panel" [ngModel]="several" aria-label="Styled multiple" />
       </div>
       <div>
         <p [style]="caption">Date and time</p>
-        <andes-date-picker style="width: 100%;" locale="en-GB" showTime [panelClass]="panel" aria-label="Styled date and time" />
+        <andes-date-picker locale="en-GB" showTime [panelClass]="panel" aria-label="Styled date and time" />
       </div>
       <div>
         <p [style]="caption">Time</p>
-        <andes-date-picker style="width: 100%;" picker="time" locale="en-GB" [panelClass]="panel" aria-label="Styled time" />
+        <andes-date-picker picker="time" locale="en-GB" [panelClass]="panel" aria-label="Styled time" />
       </div>
     </div>`,
   }),

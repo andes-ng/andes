@@ -251,10 +251,8 @@ class ProfileFields {
     >
       <andes-story-profile-fields [form]="profile" />
       <div style="display: flex; gap: 0.5rem;">
-        <andes-button size="sm" variant="outline" (click)="load()"
-          >Load saved</andes-button
-        >
-        <andes-button size="sm" variant="outline" (click)="profile.reset()"
+        <andes-button (click)="load()">Load saved</andes-button>
+        <andes-button variant="outline" (click)="profile.reset()"
           >Clear</andes-button
         >
       </div>

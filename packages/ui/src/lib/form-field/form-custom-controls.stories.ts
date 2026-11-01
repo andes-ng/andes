@@ -23,6 +23,7 @@ import { AndesInputNumber } from '../input-number/input-number';
 import { AndesForm } from './form';
 import { AndesFormControl } from './form-control';
 import { AndesFormField } from './form-field';
+import { AndesFormIcon } from './form-icons';
 import { andesIdRefs, injectAndesFieldBinding } from './field-binding';
 
 /** Shared look for the small result panels the stories below print into. */
@@ -45,6 +46,7 @@ const BOX_STYLE = `
  */
 @Component({
   selector: 'andes-story-stepper',
+  imports: [AndesButton, AndesFormIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     {
@@ -66,16 +68,16 @@ const BOX_STYLE = `
     }
   `,
   template: `
-    <button
-      type="button"
-      class="box"
-      style="width: 2rem; cursor: pointer;"
+    <andes-button
+      variant="outline"
+      size="icon"
       aria-label="Decrease"
       [disabled]="isDisabled()"
       (click)="step(-1)"
-    >
-      −
-    </button>
+      ><andes-form-icon name="minus"
+    /></andes-button>
+    <!-- A native, labelable <input> on purpose: the story shows a custom control putting the
+         field's id and ARIA on its own native element. -->
     <input
       class="box"
       readonly
@@ -88,16 +90,14 @@ const BOX_STYLE = `
       [value]="value()"
       (blur)="onTouched()"
     />
-    <button
-      type="button"
-      class="box"
-      style="width: 2rem; cursor: pointer;"
+    <andes-button
+      variant="outline"
+      size="icon"
       aria-label="Increase"
       [disabled]="isDisabled()"
       (click)="step(1)"
-    >
-      +
-    </button>
+      ><andes-form-icon name="plus"
+    /></andes-button>
   `,
 })
 class StepperControl implements ControlValueAccessor {
@@ -137,7 +137,8 @@ class StepperControl implements ControlValueAccessor {
 /**
  * A control from somewhere else, one that knows nothing about the form: it takes an `inputId`,
  * a `describedBy` and an `invalid` flag as plain inputs. `andesFormControl` plus the field's
- * state signals wire it by hand.
+ * state signals wire it by hand. Its native `<button role="switch">` is the stand-in for that
+ * foreign control, on purpose: the story is about wiring a control the library did not write.
  */
 @Component({
   selector: 'andes-story-third-party-toggle',
@@ -199,7 +200,9 @@ class ThirdPartyToggle implements ControlValueAccessor {
   }
 }
 
-/** A comma-separated text box whose model is a `string[]`: the view and the model differ. */
+/** A comma-separated text box whose model is a `string[]`: the view and the model differ. It is
+ *  built on a native `<input>` on purpose: the story is about the `ControlValueAccessor` that
+ *  converts between the two, not about the box. */
 @Component({
   selector: 'andes-story-csv-input',
   changeDetection: ChangeDetectionStrategy.OnPush,

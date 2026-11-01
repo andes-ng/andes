@@ -188,8 +188,17 @@ describe('AndesOrgChart styles', () => {
     );
   });
 
-  it('centers the toggle on the card edge that faces the reports', () => {
+  it('puts the toggle of an open team where its line leaves the card', () => {
     const s = setup();
+    const toggle = s.part('[data-key="b"] [data-slot="org-chart-toggle"]');
+    expect(toggle.style.left).toBe('120px');
+    expect(toggle.style.top).toBe('72px');
+  });
+
+  it('centers the toggle of a closed team on the card edge that faces the reports', () => {
+    const s = setup();
+    s.part('[data-key="b"] [data-slot="org-chart-toggle"]').click();
+    s.fixture.detectChanges();
     const toggle = () =>
       getComputedStyle(s.part('[data-key="b"] [data-slot="org-chart-toggle"]'));
     expect(toggle().position).toBe('absolute');

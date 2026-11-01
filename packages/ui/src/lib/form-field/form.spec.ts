@@ -369,6 +369,32 @@ describe('resolveAndesFormErrorMessages', () => {
     ]);
   });
 
+  it('covers the camel-cased signal forms kinds, and prefers a rule`s own message', () => {
+    expect(
+      resolveAndesFormErrorMessages(
+        {
+          minLength: { kind: 'minLength', minLength: 3 },
+          maxLength: { kind: 'maxLength', maxLength: 8 },
+          required: { kind: 'required', message: 'Name, please.' },
+        },
+        [],
+        undefined,
+      ),
+    ).toEqual([
+      'Enter at least 3 characters.',
+      'Enter no more than 8 characters.',
+      'Name, please.',
+    ]);
+    // A message map still wins over the rule's own message.
+    expect(
+      resolveAndesFormErrorMessages(
+        { required: { kind: 'required', message: 'Name, please.' } },
+        [{ required: 'Mapped.' }],
+        undefined,
+      ),
+    ).toEqual(['Mapped.']);
+  });
+
   it('blanks placeholders the error object does not carry', () => {
     expect(
       resolveAndesFormErrorMessages(

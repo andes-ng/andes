@@ -7,8 +7,8 @@ import {
 } from './form-field-tokens';
 
 /**
- * Built-in messages for every validator `@angular/forms` ships (`Validators.*` and their
- * template-driven directive twins). Deliberately label-free, so they read correctly whether
+ * Built-in messages for every validator `@angular/forms` ships (`Validators.*`, their
+ * template-driven directive twins and signal forms' rules). Deliberately label-free, so they read correctly whether
  * or not the field was given a `label` input; use `{label}` in your own map if you want it.
  */
 export const ANDES_DEFAULT_FORM_ERROR_MESSAGES: AndesFormErrorMessages = {
@@ -17,6 +17,9 @@ export const ANDES_DEFAULT_FORM_ERROR_MESSAGES: AndesFormErrorMessages = {
   email: 'Enter a valid email address.',
   minlength: 'Enter at least {requiredLength} characters.',
   maxlength: 'Enter no more than {requiredLength} characters.',
+  // Signal forms name these two in camel case, with the limit under the same key.
+  minLength: 'Enter at least {minLength} characters.',
+  maxLength: 'Enter no more than {maxLength} characters.',
   min: 'Enter a value of at least {min}.',
   max: 'Enter a value of at most {max}.',
   pattern: 'The value does not match the expected format.',
@@ -54,19 +57,26 @@ export function resolveAndesFormErrorMessages(
   if (!errors) {
     return [];
   }
-  const chain = [...maps, ANDES_DEFAULT_FORM_ERROR_MESSAGES].filter(
-    (map): map is AndesFormErrorMessages => !!map,
-  );
-  const lookup = (key: string) =>
+  const own = maps.filter((map): map is AndesFormErrorMessages => !!map);
+  const find = (chain: readonly AndesFormErrorMessages[], key: string) =>
     chain.find((map) => Object.hasOwn(map, key))?.[key];
 
   return Object.entries(errors).map(([key, error]) => {
-    // A key nobody mapped, whose validator already put a human-readable string in its error
-    // (`{ taken: 'That username is taken.' }`), is its own best message.
+    // A key nobody mapped, whose validator already wrote a human-readable message - a string
+    // error (`{ taken: 'That username is taken.' }`) or a signal forms error's `message` - is
+    // its own best message, ahead of the built-in default for its kind.
+    const written =
+      typeof error === 'string'
+        ? error
+        : typeof error?.message === 'string'
+          ? (error.message as string)
+          : undefined;
     const message =
-      lookup(key) ??
-      (typeof error === 'string' ? error : undefined) ??
-      lookup('default') ??
+      find(own, key) ??
+      written ??
+      find([ANDES_DEFAULT_FORM_ERROR_MESSAGES], key) ??
+      find(own, 'default') ??
+      ANDES_DEFAULT_FORM_ERROR_MESSAGES['default'] ??
       '';
     if (typeof message === 'function') {
       return message(error, { key, label });

@@ -67,7 +67,13 @@ export interface AndesOverlayAnchoredPositioning {
    * above or below and is shifted into view instead.
    */
   readonly crossSideFallback?: boolean;
-  /** Shift along the cross axis to stay on screen. Default `true`. */
+  /**
+   * Shift the overlay to stay on screen. Default `true`. Only while its anchor is at
+   * least partly visible: once the anchor has scrolled out of view (off the viewport, or
+   * out of a clipping ancestor) the overlay stays on its side of the anchor and scrolls
+   * away with it, keeping only its horizontal containment, instead of being pinned to
+   * the viewport edge. It does not close.
+   */
   readonly shift?: boolean;
   /**
    * Let the overlay shrink to the room on its side (down to `size.minHeight`/`minWidth`)
@@ -380,6 +386,16 @@ export const ANDES_OVERLAY_PANE_CLASS = 'andes-overlay-pane';
  * emits for the interrupted close.
  */
 export const ANDES_OVERLAY_CLOSING_ATTRIBUTE = 'data-andes-closing';
+
+/**
+ * Attribute an anchored overlay carries on its pane and the pane's direct element children
+ * (a component's panel root), naming the side of the anchor it was actually placed on:
+ * `top`, `bottom`, `left` or `right`. It differs from the preferred `side` once the overlay
+ * has flipped for lack of room, so a panel can grow out of the edge that really touches its
+ * anchor (`transform-origin`). Updated on every re-position; centered and edge overlays never
+ * carry it.
+ */
+export const ANDES_OVERLAY_PLACED_SIDE_ATTRIBUTE = 'data-placed-side';
 
 /**
  * Longest a close waits for exit animations before detaching the overlay anyway,

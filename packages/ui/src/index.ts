@@ -23,13 +23,13 @@ export * from './lib/avatar';
 
 export * from './lib/button';
 
-// @slot calendar
+export * from './lib/calendar';
 
 // @slot card
 
 // @slot carousel
 
-// @slot cascader
+export * from './lib/cascader';
 
 export * from './lib/checkbox';
 
@@ -43,7 +43,7 @@ export * from './lib/combobox';
 
 // @slot context-menu
 
-// @slot date-picker
+export * from './lib/date-picker';
 
 // @slot descriptions
 
@@ -151,9 +151,9 @@ export * from './lib/toggle';
 
 // @slot transfer
 
-// @slot tree
+export * from './lib/tree';
 
-// @slot tree-select
+export * from './lib/tree-select';
 
 // @slot typography
 

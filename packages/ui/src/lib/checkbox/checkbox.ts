@@ -65,7 +65,9 @@ export interface AndesCheckboxChange {
   selector: 'andes-checkbox',
   imports: [NgTemplateOutlet],
   templateUrl: './checkbox.html',
-  styleUrl: './checkbox.css',
+  // The motion last, where its rules sat at the end of checkbox.css: with its keyframes, in
+  // the sheet the tree and the cascader share.
+  styleUrls: ['./checkbox.css', './check-motion.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     // Forwarded to the native input in the template instead - a screen reader never sees

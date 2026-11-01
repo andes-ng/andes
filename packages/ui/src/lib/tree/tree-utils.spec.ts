@@ -11,6 +11,7 @@ import {
   andesGetExpandableKeys,
   andesGetTreeAncestors,
   andesGetTreeDescendants,
+  andesGetTreePath,
   andesHighlightSegments,
   andesMoveTreeNode,
   andesToggleCheck,
@@ -123,6 +124,20 @@ describe('tree utils', () => {
         'a1',
         'b',
       ]);
+    });
+
+    it('gives the path of keys from the root down to a node', () => {
+      const nodes = sample();
+      expect(andesGetTreePath(nodes, 'a1y')).toEqual(['a', 'a1', 'a1y']);
+      expect(andesGetTreePath(nodes, 'c')).toEqual(['c']);
+      expect(andesGetTreePath(nodes, 'zzz')).toEqual([]);
+      expect(
+        andesGetTreePath(
+          [{ id: 1, name: 'A', items: [{ id: 2, name: 'B' }] }],
+          2,
+          { key: 'id', title: 'name', children: 'items' },
+        ),
+      ).toEqual([1, 2]);
     });
   });
 

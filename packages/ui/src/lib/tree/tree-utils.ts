@@ -164,6 +164,21 @@ export function andesGetTreeAncestors(entry: AndesTreeEntry): AndesTreeEntry[] {
   return ancestors;
 }
 
+/**
+ * The keys from the root down to a node, the node included: the branches to open before the
+ * node can be shown. Empty when no node has the key.
+ */
+export function andesGetTreePath(
+  nodes: readonly AndesTreeNode[],
+  key: AndesTreeKey,
+  fieldNames?: AndesTreeFieldNames,
+): AndesTreeKey[] {
+  const entry = andesFindTreeEntry(nodes, key, fieldNames);
+  return entry
+    ? [...andesGetTreeAncestors(entry).map((ancestor) => ancestor.key), key]
+    : [];
+}
+
 /** Every entry below a node, depth first. */
 export function andesGetTreeDescendants(
   entry: AndesTreeEntry,

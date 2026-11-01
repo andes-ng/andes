@@ -46,6 +46,7 @@ export {
   andesGetExpandableKeys,
   andesGetTreeAncestors,
   andesGetTreeDescendants,
+  andesGetTreePath,
   andesHighlightSegments,
   andesIsTreeDescendantOrSelf,
   andesMoveTreeNode,

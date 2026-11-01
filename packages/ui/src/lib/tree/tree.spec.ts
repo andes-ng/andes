@@ -1254,6 +1254,19 @@ describe('AndesTree', () => {
       expect(focused(fixture)).toBe('Estante X');
     });
 
+    it('gives the path of keys down to a node, for a controlled scroll', () => {
+      const fixture = setup();
+      const tree = fixture.componentInstance.tree();
+      expect(tree.getNodePath('a1y')).toEqual(['a', 'a1', 'a1y']);
+      expect(tree.getNodePath('zzz')).toEqual([]);
+      // Opening the path but the node itself is what showing it takes.
+      fixture.componentInstance.expanded.set(
+        tree.getNodePath('a1y').slice(0, -1),
+      );
+      fixture.detectChanges();
+      expect(titles(fixture)).toContain('Estante Y');
+    });
+
     it('refuses to scroll to an unknown node or into a closed branch when asked not to expand', () => {
       const fixture = start();
       const tree = fixture.componentInstance.tree();
@@ -2585,6 +2598,8 @@ describe('AndesTree', () => {
   it('is exported from the package entry point', async () => {
     const barrel = await import('../../index');
     expect(barrel.AndesTree).toBe(AndesTree);
+    expect(barrel.andesGetTreePath).toBeTypeOf('function');
+    expect(barrel.andesMoveTreeNode).toBeTypeOf('function');
     expect(barrel.andesFlattenTree).toBeTypeOf('function');
     expect(barrel.andesConductCheck).toBeTypeOf('function');
   });

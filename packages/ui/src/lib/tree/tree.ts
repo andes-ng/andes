@@ -717,6 +717,17 @@ export class AndesTree {
     return this.index().byKey.get(key)?.node;
   }
 
+  /**
+   * The keys from the root down to a node, the node included: what `expandedKeys` must hold
+   * (but the node itself) for it to show. Empty for an unknown key.
+   */
+  getNodePath(key: AndesTreeKey): AndesTreeKey[] {
+    const entry = this.index().byKey.get(key);
+    return entry
+      ? [...andesGetTreeAncestors(entry).map((ancestor) => ancestor.key), key]
+      : [];
+  }
+
   /** Moves focus to a node, opening its ancestors and scrolling it into view if needed. */
   focusKey(key: AndesTreeKey): void {
     this.scrollToKey(key, { focus: true });

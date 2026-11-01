@@ -420,6 +420,8 @@ const TIME_PAGE = 5;
 
 /** How long a time column eases to a newly picked option, as the `mid` motion token. */
 const TIME_SCROLL_MS = 150;
+/** How long after a pointer pick the time columns stay put instead of aligning to it. */
+const TIME_POINTER_KEEP_MS = 400;
 
 /** How long a scrolled time column must rest before `changeOnScroll` picks its top option. */
 const TIME_SCROLL_SETTLE_MS = 100;
@@ -1256,6 +1258,8 @@ export class AndesDatePicker implements ControlValueAccessor {
 
   /** The pane whose time columns have had their first, instant alignment. */
   private alignedPane: HTMLElement | null = null;
+  /** Until this time (ms) a pointer pick leaves the columns where the user has them. */
+  private keepColumnsUntil = 0;
 
   /** The animation frame of each time column's scroll under way. */
   private readonly columnScrolls = new Map<HTMLElement, number>();
@@ -2177,6 +2181,8 @@ export class AndesDatePicker implements ControlValueAccessor {
       return;
     }
     const animate = this.alignedPane === pane;
+    // The option under the pointer is already in view; moving the column under it is a jump.
+    const keep = animate && Date.now() < this.keepColumnsUntil;
     let found = false;
     pane
       .querySelectorAll<HTMLElement>('.andes-date-picker__time-column')
@@ -2186,7 +2192,7 @@ export class AndesDatePicker implements ControlValueAccessor {
           '[aria-selected="true"]',
         );
         const first = column.firstElementChild as HTMLElement | null;
-        if (selected && first) {
+        if (selected && first && !keep) {
           this.scrollColumnTo(
             column,
             selected.offsetTop - first.offsetTop,
@@ -3190,6 +3196,7 @@ export class AndesDatePicker implements ControlValueAccessor {
     option: TimeColumn['options'][number],
   ): void {
     if (event.button === 0 && !option.disabled) {
+      this.keepColumnsUntil = Date.now() + TIME_POINTER_KEEP_MS;
       this.setTimePart(unit, option.value);
     }
   }

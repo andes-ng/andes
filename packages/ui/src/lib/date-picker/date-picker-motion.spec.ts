@@ -600,14 +600,30 @@ describe('AndesDatePicker motion and layout', () => {
         expect(column(view, 'minutes').scrollTop).toBe(30 * 28);
       });
 
+      it('leaves a column where it is when an option is picked with the pointer', async () => {
+        const view = await withTime();
+        await view.open();
+        manualFrames();
+        column(view, 'hours').scrollTop = 3 * 28;
+
+        column(view, 'hours')
+          .querySelector<HTMLElement>('[id$="-hours-14"]')
+          ?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+        view.detect();
+        await view.fixture.whenStable();
+        view.detect();
+
+        expect(selected(view, 'hours')).toBe('14');
+        expect(column(view, 'hours').scrollTop).toBe(3 * 28);
+        expect(frames.size).toBe(0);
+      });
+
       it('eases to an option picked afterwards, ending exactly on it', async () => {
         const view = await withTime();
         await view.open();
         manualFrames();
 
-        column(view, 'hours')
-          .querySelector<HTMLElement>('[id$="-hours-14"]')
-          ?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+        press(view, 'hours', 'PageDown');
         view.detect();
         await view.fixture.whenStable();
         view.detect();

@@ -1,6 +1,8 @@
+import { JsonPipe } from '@angular/common';
 import { Component, signal } from '@angular/core';
 import {
   type AbstractControl,
+  FormArray,
   FormControl,
   FormGroup,
   ReactiveFormsModule,
@@ -39,6 +41,7 @@ import { AndesToggleGroup } from '../toggle/toggle-group';
 import { AndesForm } from './form';
 import { AndesFormDescription } from './form-description';
 import { AndesFormError } from './form-error';
+import { AndesFormControl } from './form-control';
 import { AndesFormField } from './form-field';
 import { AndesFormFieldset } from './form-fieldset';
 import type {
@@ -51,10 +54,12 @@ import { PLAN_OPTIONS } from './form-field.stories';
 
 const moduleMetadata = {
   imports: [
+    JsonPipe,
     ReactiveFormsModule,
     AndesForm,
     AndesFormField,
     AndesFormFieldset,
+    AndesFormControl,
     AndesFormDescription,
     AndesFormError,
     AndesButton,
@@ -564,4 +569,342 @@ export const SignalForms: Story = {
     moduleMetadata: { imports: [SignalSignupDemo] },
     template: `<andes-story-signal-signup />`,
   }),
+};
+
+/**
+ * The form methods, as plain buttons. `andesForm` (through `#f="andesForm"`) offers `submit()`,
+ * `reset()`, `scrollToField(path)`, `focusFirstError()` and the `valid` / `pending` /
+ * `canSubmit` / `submitted` signals; everything else is the Angular `FormGroup` on the same
+ * element - `setValue`, `patchValue`, `getRawValue`, `markAllAsTouched`, `disable`. The value
+ * and the flags below read straight from them.
+ */
+export const FormMethods: Story = {
+  render: () => {
+    const form = new FormGroup({
+      name: new FormControl('', Validators.required),
+      email: new FormControl('', [Validators.required, Validators.email]),
+      address: new FormGroup({
+        city: new FormControl('', Validators.required),
+      }),
+    });
+    const log = signal('Nothing yet.');
+    return {
+      moduleMetadata,
+      props: {
+        form,
+        log,
+        sample: {
+          name: 'Ada Lovelace',
+          email: 'ada@lovelace.dev',
+          address: { city: 'Lima' },
+        },
+        say: (text: string) => log.set(text),
+        toggleDisabled: () => (form.disabled ? form.enable() : form.disable()),
+      },
+      template: `
+        <form
+          andesForm
+          #f="andesForm"
+          [formGroup]="form"
+          layout="horizontal"
+          [labelCol]="6"
+          (validSubmit)="say('validSubmit')"
+          (invalidSubmit)="say('invalidSubmit')"
+          (formReset)="say('formReset')"
+          style="width: min(560px, 100vw - 2rem);"
+        >
+          <andes-form-field label="Name">
+            <andes-input formControlName="name" />
+          </andes-form-field>
+          <andes-form-field label="Email">
+            <andes-input formControlName="email" type="email" />
+          </andes-form-field>
+          <ng-container formGroupName="address">
+            <andes-form-field label="City">
+              <andes-input formControlName="city" />
+            </andes-form-field>
+          </ng-container>
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+            <andes-button size="sm" (click)="form.patchValue(sample)">patchValue</andes-button>
+            <andes-button size="sm" variant="outline" (click)="form.markAllAsTouched()">markAllAsTouched</andes-button>
+            <andes-button size="sm" variant="outline" (click)="f.submit()">submit()</andes-button>
+            <andes-button size="sm" variant="outline" (click)="f.reset()">reset()</andes-button>
+            <andes-button size="sm" variant="outline" (click)="say('scrollToField → ' + f.scrollToField('address.city'))">scrollToField('address.city')</andes-button>
+            <andes-button size="sm" variant="outline" (click)="say('focusFirstError → ' + f.focusFirstError())">focusFirstError()</andes-button>
+            <andes-button size="sm" variant="outline" (click)="toggleDisabled()">disable() / enable()</andes-button>
+          </div>
+          <pre style="${LOG_STYLE}">{{ log() }}
+value = {{ form.getRawValue() | json }}
+valid = {{ f.valid() }}, pending = {{ f.pending() }}, canSubmit = {{ f.canSubmit() }}, submitted = {{ f.submitted() }}</pre>
+        </form>
+      `,
+    };
+  },
+};
+
+/**
+ * A login card: a vertical form with a remember-me checkbox and a full-width button that
+ * shows `loading` while the request runs. A wrong password comes back from the server as a
+ * manual status - `validateStatus="error"` with a `help` line - which the user clears by typing.
+ */
+export const Login: Story = {
+  render: () => {
+    const failed = signal(false);
+    const loading = signal(false);
+    const form = new FormGroup({
+      email: new FormControl('', [Validators.required, Validators.email]),
+      password: new FormControl('', Validators.required),
+      remember: new FormControl(true),
+    });
+    form.controls.password.valueChanges.subscribe(() => failed.set(false));
+    return {
+      moduleMetadata,
+      props: {
+        form,
+        failed,
+        loading,
+        login: () => {
+          loading.set(true);
+          setTimeout(() => {
+            loading.set(false);
+            failed.set(true);
+          }, 800);
+        },
+      },
+      template: `
+        <section style="width: min(380px, 100vw - 2rem); padding: 1.5rem; border: 1px solid var(--andes-color-border); border-radius: var(--andes-radius-lg); background: var(--andes-color-background); font-family: var(--andes-font-family), sans-serif;">
+          <h3 style="margin: 0 0 0.25rem; font-size: 1.25rem; line-height: 1.75rem; color: var(--andes-color-foreground);">Log in</h3>
+          <p style="margin: 0 0 1.5rem; font-size: 0.875rem; color: var(--andes-color-muted-foreground);">Use any valid email; the password is always wrong.</p>
+          <form andesForm [formGroup]="form" (validSubmit)="login()" [requiredMark]="false">
+            <andes-form-field label="Email">
+              <andes-input formControlName="email" type="email" placeholder="you@company.com" />
+            </andes-form-field>
+            <andes-form-field
+              label="Password"
+              [validateStatus]="failed() ? 'error' : undefined"
+              [help]="failed() ? 'The email or the password is wrong.' : undefined"
+            >
+              <andes-input-password formControlName="password" />
+            </andes-form-field>
+            <andes-form-field>
+              <andes-checkbox formControlName="remember">Keep me signed in</andes-checkbox>
+            </andes-form-field>
+            <andes-button type="submit" [fullWidth]="true" [loading]="loading()">Log in</andes-button>
+          </form>
+        </section>
+      `,
+    };
+  },
+};
+
+/** An inline login: the fields and the button in one row, the way a navigation bar holds it. */
+export const InlineLogin: Story = {
+  render: () => ({
+    moduleMetadata,
+    props: {
+      form: new FormGroup({
+        user: new FormControl('', Validators.required),
+        password: new FormControl('', Validators.required),
+        remember: new FormControl(false),
+      }),
+    },
+    template: `
+      <form
+        andesForm
+        [formGroup]="form"
+        layout="inline"
+        [requiredMark]="false"
+        (ngSubmit)="form.markAllAsTouched()"
+      >
+        <andes-form-field label="User">
+          <andes-input formControlName="user" placeholder="Username" style="width: 11rem;" />
+        </andes-form-field>
+        <andes-form-field label="Password">
+          <andes-input-password formControlName="password" style="width: 11rem;" />
+        </andes-form-field>
+        <andes-form-field>
+          <andes-checkbox formControlName="remember">Remember me</andes-checkbox>
+        </andes-form-field>
+        <andes-form-field>
+          <andes-button type="submit">Log in</andes-button>
+        </andes-form-field>
+      </form>
+    `,
+  }),
+};
+
+/**
+ * Time-related controls: dates and times are plain form controls, so a native
+ * `<input type="date">` (or `time`, `datetime-local`, `month`) joins a field with
+ * `andesFormControl`, which gives it the id, the `aria-invalid` and the described-by the
+ * library controls take by themselves. The end date must fall after the start; the group
+ * validator reports it on the end field with `groupErrors`. The library's date picker will take
+ * this place - same field, same `formControlName` - once it lands in this branch.
+ */
+export const TimeRelated: Story = {
+  render: () => {
+    const endsAfterStart = (
+      group: AbstractControl,
+    ): ValidationErrors | null => {
+      const start = group.get('start')?.value as string;
+      const end = group.get('end')?.value as string;
+      return start && end && end < start ? { endBeforeStart: true } : null;
+    };
+    const form = new FormGroup(
+      {
+        start: new FormControl('2026-11-10', Validators.required),
+        end: new FormControl('2026-11-02', Validators.required),
+        time: new FormControl('09:30', Validators.required),
+        meeting: new FormControl(''),
+      },
+      { validators: endsAfterStart },
+    );
+    form.markAllAsTouched();
+    return {
+      moduleMetadata,
+      props: {
+        form,
+        messages: { endBeforeStart: 'The end date is before the start date.' },
+      },
+      template: `
+        <style>
+          .demo-native { box-sizing: border-box; width: 100%; height: 2rem; padding: 0 0.75rem; border: 1px solid var(--andes-color-border); border-radius: var(--andes-radius-md); background: var(--andes-color-background); color: var(--andes-color-foreground); font: inherit; }
+          .demo-native:focus-visible { outline: 2px solid var(--andes-color-focus-ring); outline-offset: 1px; }
+        </style>
+        <form andesForm [formGroup]="form" [errorMessages]="messages" layout="horizontal" [labelCol]="7" style="width: min(480px, 100vw - 2rem);">
+          <andes-form-field label="Start date">
+            <input class="demo-native" type="date" andesFormControl formControlName="start" />
+          </andes-form-field>
+          <andes-form-field label="End date" groupErrors="endBeforeStart">
+            <input class="demo-native" type="date" andesFormControl formControlName="end" />
+          </andes-form-field>
+          <andes-form-field label="Time">
+            <input class="demo-native" type="time" andesFormControl formControlName="time" />
+          </andes-form-field>
+          <andes-form-field label="Meeting">
+            <input class="demo-native" type="datetime-local" andesFormControl formControlName="meeting" />
+          </andes-form-field>
+        </form>
+      `,
+    };
+  },
+};
+
+/**
+ * Path prefix: give the form a `name` and the ids of its fields stop being a counter - each
+ * one is `<name>_<path>` (`signup_address_city`, `signup_phones_0`), the same on every render
+ * and on the server, so a test or a link can rely on them. An explicit `id` on a field still
+ * wins. The ids printed below are read from the fields themselves.
+ */
+export const PathPrefix: Story = {
+  render: () => ({
+    moduleMetadata,
+    props: {
+      form: new FormGroup({
+        name: new FormControl(''),
+        address: new FormGroup({ city: new FormControl('') }),
+        phones: new FormArray([new FormControl(''), new FormControl('')]),
+      }),
+    },
+    template: `
+      <form andesForm name="signup" [formGroup]="form" style="width: min(420px, 100vw - 2rem);">
+        <andes-form-field label="Name" #name="andesFormField">
+          <andes-input formControlName="name" />
+        </andes-form-field>
+        <ng-container formGroupName="address">
+          <andes-form-field label="City" #city="andesFormField">
+            <andes-input formControlName="city" />
+          </andes-form-field>
+        </ng-container>
+        <ng-container formArrayName="phones">
+          @for (phone of form.controls.phones.controls; track phone; let i = $index) {
+            <andes-form-field [label]="'Phone ' + (i + 1)">
+              <andes-input [formControlName]="i" />
+            </andes-form-field>
+          }
+        </ng-container>
+        <pre style="${LOG_STYLE}">ids: {{ name.controlId() }}, {{ city.controlId() }}, signup_phones_0, signup_phones_1</pre>
+      </form>
+    `,
+  }),
+};
+
+/**
+ * Nested names: a field's name is the path of its control through the form's groups and
+ * arrays (`profile.address.geo.lat`, `tags.1`). The value keeps that shape, `scrollToField()`
+ * takes the same path, and `invalidSubmit` reports it for every failing control - submit the
+ * empty form and read the list.
+ */
+export const NestedNames: Story = {
+  render: () => {
+    const log = signal('Submit the empty form.');
+    return {
+      moduleMetadata,
+      props: {
+        log,
+        form: new FormGroup({
+          profile: new FormGroup({
+            name: new FormControl('', Validators.required),
+            address: new FormGroup({
+              geo: new FormGroup({
+                lat: new FormControl<number | null>(null, Validators.required),
+                lng: new FormControl<number | null>(null, Validators.required),
+              }),
+            }),
+          }),
+          tags: new FormArray([
+            new FormControl('', Validators.required),
+            new FormControl('ok'),
+          ]),
+        }),
+        onInvalid: (event: {
+          errors: { path: readonly (string | number)[] }[];
+        }) =>
+          log.set(
+            'invalidSubmit\n' +
+              event.errors.map((e) => e.path.join('.')).join('\n'),
+          ),
+      },
+      template: `
+        <form
+          andesForm
+          #f="andesForm"
+          [formGroup]="form"
+          layout="horizontal"
+          [labelCol]="8"
+          (invalidSubmit)="onInvalid($event)"
+          style="width: min(520px, 100vw - 2rem);"
+        >
+          <ng-container formGroupName="profile">
+            <andes-form-field label="Name">
+              <andes-input formControlName="name" />
+            </andes-form-field>
+            <ng-container formGroupName="address">
+              <ng-container formGroupName="geo">
+                <andes-form-field label="Latitude">
+                  <andes-input-number formControlName="lat" />
+                </andes-form-field>
+                <andes-form-field label="Longitude">
+                  <andes-input-number formControlName="lng" />
+                </andes-form-field>
+              </ng-container>
+            </ng-container>
+          </ng-container>
+          <ng-container formArrayName="tags">
+            @for (tag of form.controls.tags.controls; track tag; let i = $index) {
+              <andes-form-field [label]="'Tag ' + (i + 1)">
+                <andes-input [formControlName]="i" />
+              </andes-form-field>
+            }
+          </ng-container>
+          <div style="display: flex; gap: 0.5rem;">
+            <andes-button type="submit">Submit</andes-button>
+            <andes-button variant="outline" (click)="f.scrollToField('profile.address.geo.lng')">Go to longitude</andes-button>
+          </div>
+          <pre style="${LOG_STYLE}">{{ log() }}
+value = {{ form.getRawValue() | json }}</pre>
+        </form>
+      `,
+    };
+  },
 };

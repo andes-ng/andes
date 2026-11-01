@@ -73,7 +73,7 @@ export class AndesSelectTrigger {
   protected readonly classes = computed(() =>
     clsx(
       'andes-select__trigger',
-      `andes-select__trigger--${this.select.size()}`,
+      `andes-select__trigger--${this.select.resolvedSize()}`,
       this.select.invalid() && 'andes-select__trigger--invalid',
     ),
   );
@@ -82,7 +82,7 @@ export class AndesSelectTrigger {
   protected readonly describedBy = computed(
     () =>
       [
-        this.select.ariaDescribedby(),
+        this.select.describedBy(),
         this.select.selectionSummary() ? this.select.summaryId : undefined,
       ]
         .filter(Boolean)

@@ -5,9 +5,9 @@
   #field
   class="andes-combobox-field"
   [attr.data-multiple]="multiple() ? '' : null"
-  [attr.data-size]="size()"
-  [attr.data-variant]="variant()"
-  [attr.data-status]="status() ?? null"
+  [attr.data-size]="resolvedSize()"
+  [attr.data-variant]="resolvedVariant()"
+  [attr.data-status]="resolvedStatus() ?? null"
   [attr.data-invalid]="invalid() ? '' : null"
   [attr.data-disabled]="isDisabled() ? '' : null"
   [attr.data-readonly]="readOnly() ? '' : null"

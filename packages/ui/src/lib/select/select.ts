@@ -34,6 +34,10 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NG_VALUE_ACCESSOR, type ControlValueAccessor } from '@angular/forms';
 
+import {
+  andesIdRefs,
+  injectAndesFieldBinding,
+} from '../form-field/field-binding';
 import { AndesSelectContent } from './select-content';
 import {
   AndesSelectState,
@@ -221,9 +225,10 @@ export class AndesSelect
   /** Marks the field required; surfaces as `aria-required` on the combobox. */
   readonly required = input(false, { transform: booleanAttribute });
   /** Control height: 24px (`sm`), 32px (`md`) or 40px (`lg`); grows as tags wrap. */
-  readonly size = input<AndesSelectSize>('md');
-  /** Visual treatment of the trigger box. */
-  readonly variant = input<AndesSelectVariant>('outlined');
+  readonly size = input<AndesSelectSize | undefined>(undefined);
+  /** Visual treatment of the trigger box: `outlined` unless set, or the enclosing
+   *  `andesForm`'s `variant`. */
+  readonly variant = input<AndesSelectVariant | undefined>(undefined);
   /** Validation status. `error` also sets `aria-invalid` on the combobox. */
   readonly status = input<AndesSelectStatus | undefined>(undefined);
   /** Where the panel opens. `side`/`align` on `<andes-select-content>` take precedence. */
@@ -605,11 +610,51 @@ export class AndesSelect
 
   readonly rawValue = computed(() => this.selectedValues()[0] ?? null);
 
-  readonly invalid = computed(
-    () => this.ariaInvalid() || this.status() === 'error',
+  /** The enclosing form field and form: id, ARIA, status, size, variant and disabled. */
+  private readonly field = injectAndesFieldBinding();
+
+  /** The size in effect: `size`, else the form's, else `md`. */
+  readonly resolvedSize = computed<AndesSelectSize>(
+    () => this.size() ?? this.field.size() ?? 'md',
   );
 
-  readonly isDisabled = computed(() => this.disabled() || this._formDisabled());
+  /** The variant in effect: `variant`, else the form's, else `outlined`. */
+  readonly resolvedVariant = computed<AndesSelectVariant>(
+    () => this.variant() ?? this.field.variant() ?? 'outlined',
+  );
+
+  /** The status in effect: `status`, else the enclosing field's error or warning. */
+  readonly resolvedStatus = computed<AndesSelectStatus | undefined>(
+    () => this.status() ?? this.field.status(),
+  );
+
+  /** The combobox id: `id`, else the enclosing field's control id. */
+  readonly controlId = computed(() => this.id() ?? this.field.id());
+
+  /** `aria-labelledby`, else the field's label - unless an `aria-label` names the select. */
+  readonly labelledBy = computed(
+    () =>
+      this.ariaLabelledby() ??
+      (this.ariaLabel() ? undefined : this.field.labelledBy()),
+  );
+
+  /** `aria-describedby` merged with the enclosing field's hint and message ids. */
+  readonly describedBy = computed(() =>
+    andesIdRefs(this.ariaDescribedby(), this.field.describedBy()),
+  );
+
+  /** `required`, or a required enclosing field. */
+  readonly isRequired = computed(
+    () => this.required() || this.field.required(),
+  );
+
+  readonly invalid = computed(
+    () => this.ariaInvalid() || this.resolvedStatus() === 'error',
+  );
+
+  readonly isDisabled = computed(
+    () => this.disabled() || this._formDisabled() || this.field.disabled(),
+  );
 
   readonly activeDescendantId = computed(() =>
     this.isOpen() ? this.navigation.activeDescendantId() : null,

@@ -275,8 +275,12 @@ export abstract class AndesSelectState {
   abstract readonly invalid: Signal<boolean>;
   /** Whether the control is required. */
   abstract readonly required: Signal<boolean>;
-  /** Control height. */
-  abstract readonly size: Signal<AndesSelectSize>;
+  /** Whether the control is required, by input or by its enclosing form field. */
+  abstract readonly isRequired: Signal<boolean>;
+  /** Control height, as set (`undefined` for the default). */
+  abstract readonly size: Signal<AndesSelectSize | undefined>;
+  /** Control height in effect: `size`, the enclosing form's, else `md`. */
+  abstract readonly resolvedSize: Signal<AndesSelectSize>;
   /** Selection mode. */
   abstract readonly mode: Signal<AndesSelectMode>;
   /** Whether the value is an array (`multiple` or `tags`). */
@@ -287,8 +291,12 @@ export abstract class AndesSelectState {
   abstract readonly searchValue: Signal<string>;
   /** Validation status. */
   abstract readonly status: Signal<AndesSelectStatus | undefined>;
-  /** Visual variant. */
-  abstract readonly variant: Signal<AndesSelectVariant>;
+  /** Validation status in effect: `status`, else the enclosing field's. */
+  abstract readonly resolvedStatus: Signal<AndesSelectStatus | undefined>;
+  /** Visual variant, as set (`undefined` for the default). */
+  abstract readonly variant: Signal<AndesSelectVariant | undefined>;
+  /** Visual variant in effect: `variant`, the enclosing form's, else `outlined`. */
+  abstract readonly resolvedVariant: Signal<AndesSelectVariant>;
   /** Whether options are being loaded. */
   abstract readonly loading: Signal<boolean>;
   /** Whether the clear button should be rendered. */
@@ -301,6 +309,12 @@ export abstract class AndesSelectState {
   abstract readonly ariaLabelledby: Signal<string | undefined>;
   /** `aria-describedby` for the trigger. */
   abstract readonly ariaDescribedby: Signal<string | undefined>;
+  /** The combobox id in effect: `id`, else the enclosing form field's control id. */
+  abstract readonly controlId: Signal<string | undefined>;
+  /** `aria-labelledby` in effect: its own, else the enclosing field's label. */
+  abstract readonly labelledBy: Signal<string | undefined>;
+  /** `aria-describedby` in effect: its own merged with the enclosing field's ids. */
+  abstract readonly describedBy: Signal<string | undefined>;
   /** The id to publish as `aria-activedescendant` while the search input owns focus. */
   abstract readonly activeDescendantId: Signal<string | null>;
   /** Screen-reader text describing the selection, or `null` when the trigger shows it. */

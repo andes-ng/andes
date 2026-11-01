@@ -59,19 +59,20 @@ import { ANDES_COMBOBOX } from './combobox-token';
     '[attr.aria-autocomplete]': '"list"',
     '[attr.aria-activedescendant]': 'navigation.activeDescendantId()',
     '[attr.aria-invalid]': 'combobox.invalid() || null',
-    '[attr.aria-required]': 'combobox.required() || null',
+    '[attr.aria-required]': 'combobox.isRequired() || null',
     // In the `multiple` mode the chip box around this input draws the field, so the
     // input carries none of the box's styling hooks itself.
-    '[attr.data-size]': 'boxed() ? null : combobox.size()',
-    '[attr.data-variant]': 'boxed() ? null : combobox.variant()',
-    '[attr.data-status]': 'boxed() ? null : (combobox.status() ?? null)',
+    '[attr.data-size]': 'boxed() ? null : combobox.resolvedSize()',
+    '[attr.data-variant]': 'boxed() ? null : combobox.resolvedVariant()',
+    '[attr.data-status]':
+      'boxed() ? null : (combobox.resolvedStatus() ?? null)',
     '[attr.data-suffix]': 'boxed() ? null : combobox.suffixCount() || null',
     '[attr.data-prefix]':
       'boxed() || combobox.prefix() === undefined ? null : ""',
     '[value]': 'combobox.displayText()',
     '[disabled]': 'combobox.isDisabled()',
     '[readOnly]': 'combobox.readOnly()',
-    '[required]': 'combobox.required() && !combobox.multiple()',
+    '[required]': 'combobox.isRequired() && !combobox.multiple()',
     '(input)': 'onInput($event)',
     '(keydown)': 'onKeydown($event)',
     '(focus)': 'onFocus($event)',
@@ -135,9 +136,26 @@ export class AndesComboboxInput<T = string> {
       }
     });
     effect(() => {
-      const labelledBy = this.combobox.ariaLabelledby();
+      const labelledBy = this.combobox.labelledBy();
       if (labelledBy !== undefined) {
         this.renderer.setAttribute(this.element, 'aria-labelledby', labelledBy);
+      }
+    });
+    // The description, from the root and the enclosing form field: removed again when the
+    // field's messages go away, but a projected input's own one is left alone otherwise.
+    let describedBySet = false;
+    effect(() => {
+      const describedBy = this.combobox.describedBy();
+      if (describedBy !== undefined) {
+        this.renderer.setAttribute(
+          this.element,
+          'aria-describedby',
+          describedBy,
+        );
+        describedBySet = true;
+      } else if (describedBySet) {
+        this.renderer.removeAttribute(this.element, 'aria-describedby');
+        describedBySet = false;
       }
     });
     effect(() => {

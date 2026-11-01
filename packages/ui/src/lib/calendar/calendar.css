@@ -511,10 +511,11 @@
 }
 
 /* A week picker selects whole rows, so the row reads as one bar: the band carries
-   the hover and the selection, rounded at the row's two ends. */
+   the hover and the selection, rounded at the row's two ends. Hovering the selected week
+   keeps its selection fill, so its white text never lands on the hover fill. */
 
 /* prettier-ignore */
-.andes-calendar--week-picker .andes-calendar__row:hover .andes-calendar__day:not([aria-disabled='true'])::before {
+.andes-calendar--week-picker .andes-calendar__row:hover .andes-calendar__day:not([aria-disabled='true'], .andes-calendar__day--selected)::before {
   background-color: var(--andes-color-accent-hover, var(--andes-color-accent));
 }
 
@@ -549,7 +550,7 @@
 }
 
 /* prettier-ignore */
-.andes-calendar--week-picker .andes-calendar__row:hover:has(.andes-calendar__day:not([aria-disabled='true'])) .andes-calendar__week-number::before {
+.andes-calendar--week-picker .andes-calendar__row:hover:not(:has(.andes-calendar__day--selected)):has(.andes-calendar__day:not([aria-disabled='true'])) .andes-calendar__week-number::before {
   background-color: var(--andes-color-accent-hover, var(--andes-color-accent));
 }
 

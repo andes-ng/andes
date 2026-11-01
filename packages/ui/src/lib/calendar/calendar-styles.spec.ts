@@ -331,4 +331,17 @@ describe('AndesCalendar styles', () => {
       ).toBe('inline-flex');
     });
   });
+
+  describe('week picker hover on the selected week', () => {
+    it('keeps the selection fill instead of the hover fill, on the days and on the week number', () => {
+      const days = source.match(
+        /\.andes-calendar--week-picker \.andes-calendar__row:hover \.andes-calendar__day:not\(\[aria-disabled='true'\], \.andes-calendar__day--selected\)::before\s*{[^}]*accent-hover/,
+      );
+      expect(days).not.toBeNull();
+      const number = source.match(
+        /\.andes-calendar__row:hover:not\(:has\(\.andes-calendar__day--selected\)\):has\([^{]*week-number::before\s*{[^}]*accent-hover/,
+      );
+      expect(number).not.toBeNull();
+    });
+  });
 });

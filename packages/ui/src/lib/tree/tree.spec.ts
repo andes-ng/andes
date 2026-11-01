@@ -616,6 +616,92 @@ describe('AndesTree', () => {
       ]);
     });
 
+    describe('in a directory tree', () => {
+      function click(
+        fixture: Fixture,
+        title: string,
+        init: MouseEventInit = {},
+      ) {
+        (
+          row(node(fixture, title)).querySelector(
+            '.andes-tree__content',
+          ) as HTMLElement
+        ).dispatchEvent(new MouseEvent('click', { bubbles: true, ...init }));
+        fixture.detectChanges();
+      }
+
+      function directory(): Fixture {
+        return setup((h) => {
+          h.directory.set(true);
+          h.multiple.set(true);
+          h.expandAction.set(false);
+          h.expanded.set(['a', 'a1']);
+        });
+      }
+
+      it('selects only the clicked node on a plain click, like a file browser', () => {
+        const fixture = directory();
+        click(fixture, 'Estante X');
+        click(fixture, 'Estante Y');
+        expect(fixture.componentInstance.selected()).toEqual(['a1y']);
+        // A second plain click keeps it selected.
+        click(fixture, 'Estante Y');
+        expect(fixture.componentInstance.selected()).toEqual(['a1y']);
+      });
+
+      it('adds and removes nodes with Ctrl or Cmd + click', () => {
+        const fixture = directory();
+        click(fixture, 'Estante X');
+        click(fixture, 'Archivo', { ctrlKey: true });
+        click(fixture, 'Pasillo 1', { metaKey: true });
+        expect(fixture.componentInstance.selected()).toEqual([
+          'a1x',
+          'c',
+          'a1',
+        ]);
+        click(fixture, 'Archivo', { metaKey: true });
+        expect(fixture.componentInstance.selected()).toEqual(['a1x', 'a1']);
+      });
+
+      it('replaces the selection with the range on Shift + click', () => {
+        const fixture = directory();
+        click(fixture, 'Archivo', { ctrlKey: true });
+        click(fixture, 'Pasillo 1');
+        click(fixture, 'Estante Y', { shiftKey: true });
+        expect(fixture.componentInstance.selected()).toEqual([
+          'a1',
+          'a1x',
+          'a1y',
+        ]);
+      });
+
+      it('selects one node with Space and adds one with Ctrl + Space', () => {
+        const fixture = directory();
+        document.body.appendChild(fixture.nativeElement);
+        try {
+          key(node(fixture, 'Estante X'), ' ');
+          fixture.detectChanges();
+          key(node(fixture, 'Archivo'), ' ', { ctrlKey: true });
+          fixture.detectChanges();
+          expect(fixture.componentInstance.selected()).toEqual(['a1x', 'c']);
+          key(node(fixture, 'Estante Y'), ' ');
+          expect(fixture.componentInstance.selected()).toEqual(['a1y']);
+        } finally {
+          document.body.innerHTML = '';
+        }
+      });
+
+      it('keeps toggling on a plain click outside directory mode', () => {
+        const fixture = setup((h) => {
+          h.multiple.set(true);
+          h.expanded.set(['a', 'a1']);
+        });
+        click(fixture, 'Estante X');
+        click(fixture, 'Estante Y');
+        expect(fixture.componentInstance.selected()).toEqual(['a1x', 'a1y']);
+      });
+    });
+
     it('ignores disabled nodes and nodes that opt out', () => {
       const fixture = setup((h) => {
         h.expanded.set(['a']);
@@ -2374,11 +2460,35 @@ describe('AndesTree', () => {
       expect(block).not.toContain('animation: none');
     });
 
-    it('fills a selected directory row with a rounded pseudo-element, not a clipped background', () => {
+    it('fills a directory row, on hover and when selected, with one rounded full-width pseudo-element', () => {
       expect(css).not.toContain('background-clip: content-box');
-      expect(css).toMatch(
-        /\[data-directory\] \.andes-tree__row\[data-selected\]::before\s*{[^}]*inset: 0 0 var\(--_gap\);[^}]*border-radius: var\(--andes-radius-md/,
+      const fill = '.andes-tree[data-directory] .andes-tree__row::before';
+      expect(declaredValue(css, fill, 'inset')).toBe('0 0 var(--_gap)');
+      expect(declaredValue(css, fill, 'border-radius')).toBe(
+        'var(--andes-radius-md, 0.375rem)',
       );
+      expect(
+        declaredValue(
+          css,
+          '.andes-tree[data-directory] .andes-tree__row:not([data-selected]):not([data-disabled]):hover::before',
+          'background-color',
+        ),
+      ).toBe('var(--_hover)');
+      expect(
+        declaredValue(
+          css,
+          '.andes-tree[data-directory] .andes-tree__row[data-selected]::before',
+          'background-color',
+        ),
+      ).toBe('var(--andes-color-primary, #2563eb)');
+      // The content draws no second, shorter fill on top.
+      expect(
+        declaredValue(
+          css,
+          '.andes-tree[data-directory] .andes-tree__content:hover',
+          'background-color',
+        ),
+      ).toBe('transparent');
     });
 
     it('animates a branch open and shut between 150ms and 200ms, without bounce', () => {

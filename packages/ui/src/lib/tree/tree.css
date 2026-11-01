@@ -391,34 +391,50 @@
   background-color: transparent;
 }
 
-/* Directory: rows are the highlight, and a selected row is solid. */
+/* Directory: the whole row is the highlight - a hover fill, and a solid selected fill. */
 
-/* prettier-ignore */
-.andes-tree[data-directory] .andes-tree__row[data-selected] {
+.andes-tree[data-directory] .andes-tree__row {
   isolation: isolate;
-  color: var(--andes-color-primary-foreground, #fff);
 }
 
 /* The fill is a pseudo-element that stops above the row's bottom gap. Clipping the row's own
    background to its content box would cut the fill square at the bottom. */
-/* prettier-ignore */
-.andes-tree[data-directory] .andes-tree__row[data-selected]::before {
+.andes-tree[data-directory] .andes-tree__row::before {
   position: absolute;
   z-index: -1;
   inset: 0 0 var(--_gap);
   border-radius: var(--andes-radius-md, 0.375rem);
-  background-color: var(--andes-color-primary, #2563eb);
+  background-color: transparent;
   content: '';
+  transition: background-color var(--andes-motion-duration-mid, 150ms) ease;
 }
 
 /* prettier-ignore */
+.andes-tree[data-directory] .andes-tree__row:not([data-selected]):not([data-disabled]):hover::before {
+  background-color: var(--_hover);
+}
+
+/* prettier-ignore */
+.andes-tree[data-directory] .andes-tree__row[data-selected]::before {
+  background-color: var(--andes-color-primary, #2563eb);
+}
+
+/* prettier-ignore */
+.andes-tree[data-directory] .andes-tree__row[data-selected] {
+  color: var(--andes-color-primary-foreground, #fff);
+}
+
+/* The row draws the fills; the content keeps none of its own. */
+/* prettier-ignore */
+.andes-tree[data-directory] .andes-tree__content:hover,
 .andes-tree[data-directory] .andes-tree__row[data-selected] .andes-tree__content {
   background-color: transparent;
 }
 
 /* prettier-ignore */
 .andes-tree[data-directory] .andes-tree__row[data-selected] .andes-tree__switcher,
-.andes-tree[data-directory] .andes-tree__row[data-selected] .andes-tree__icon {
+.andes-tree[data-directory] .andes-tree__row[data-selected] .andes-tree__icon,
+.andes-tree[data-directory] .andes-tree__row[data-selected] .andes-tree__handle {
   color: inherit;
 }
 
@@ -488,6 +504,10 @@
   .andes-tree__switcher,
   .andes-tree__content,
   .andes-tree__checkbox {
+    transition: none;
+  }
+
+  .andes-tree[data-directory] .andes-tree__row::before {
     transition: none;
   }
 

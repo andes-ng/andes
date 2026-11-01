@@ -228,7 +228,12 @@ export class AndesTree {
   /** Open every node that has children, once, when the first nodes arrive. */
   readonly defaultExpandAll = input(false, { transform: booleanAttribute });
 
-  /** Select several nodes: a click toggles, Shift + click selects a range. */
+  /**
+   * Select several nodes: a click toggles a node, Shift + click adds a range. A directory tree
+   * works like a file browser instead: a click selects only that node, Ctrl / Cmd + click adds
+   * or removes one, and Shift + click selects the range from the last clicked node. From the
+   * keyboard, Space and Enter act as a click and Ctrl / Cmd + Space as a Ctrl / Cmd + click.
+   */
   readonly multiple = input(false, { transform: booleanAttribute });
   /** `false` turns selection off (a checkable tree often wants that). */
   readonly selectable = input(true, { transform: booleanAttribute });
@@ -252,7 +257,11 @@ export class AndesTree {
   >(false, { transform: leafIconAttribute });
   /** Show node icons, with a folder or file when a node has none of its own. */
   readonly showIcon = input(false, { transform: booleanAttribute });
-  /** File-browser look: icons, full-width rows, a solid selected row, a click opens folders. */
+  /**
+   * File-browser look and feel: folder and file icons, rows whose hover and selected fill span
+   * the full width (the selected one solid), a click opens a folder, and with `multiple`,
+   * Ctrl / Cmd + click to add to the selection.
+   */
   readonly directory = input(false, { transform: booleanAttribute });
   /** Rows (and their hover and selected background) span the full width. */
   readonly blockNode = input(false, { transform: booleanAttribute });
@@ -1046,7 +1055,7 @@ export class AndesTree {
 
   private selectRow(
     row: AndesFlatTreeNode,
-    event?: Pick<MouseEvent, 'shiftKey'>,
+    event?: Pick<MouseEvent, 'shiftKey' | 'ctrlKey' | 'metaKey'>,
   ): void {
     if (!this.canSelect(row)) {
       return;
@@ -1066,8 +1075,13 @@ export class AndesTree {
           .slice(Math.min(from, to), Math.max(from, to) + 1)
           .filter((candidate) => this.canSelect(candidate))
           .map((candidate) => candidate.key);
-        next = [...new Set([...current, ...range])];
+        // A file browser's Shift + click replaces the selection with the range.
+        next = this.directory() ? range : [...new Set([...current, ...range])];
         selected = true;
+      } else if (this.directory() && !event?.ctrlKey && !event?.metaKey) {
+        selected = true;
+        next = [key];
+        this.selectionAnchor = key;
       } else {
         selected = !this.selectedSet().has(key);
         next = selected ? [...current, key] : current.filter((k) => k !== key);
@@ -1192,6 +1206,11 @@ export class AndesTree {
       return;
     }
     if (event.ctrlKey || event.metaKey) {
+      // Ctrl / Cmd + Space adds or removes the node, as Ctrl / Cmd + click does.
+      if (event.key === ' ' && this.multiple() && this.canSelect(row)) {
+        event.preventDefault();
+        this.selectRow(row, event);
+      }
       return;
     }
 

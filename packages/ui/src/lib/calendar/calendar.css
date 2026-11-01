@@ -402,16 +402,13 @@
 }
 
 /* The boundary of the preview that is not the picked start (the day the range would end on, or
-   begin on when it runs backwards) is filled with the band, so the half band behind it does not
-   show its edge through the chip, and it is outlined while hovered or focused. */
-/* prettier-ignore */
-:is(.andes-calendar__day--preview-start, .andes-calendar__day--preview-end):not(.andes-calendar__day--selected):not([aria-disabled='true']) > * {
-  background-color: var(--andes-calendar-band);
-}
-
+   begin on when it runs backwards) takes its band right up to the far edge of its chip instead
+   of stopping at the middle of the cell, so the band sits behind the whole chip: no half-shaded
+   chip, and no second layer of the translucent band where two of them would overlap. */
 /* prettier-ignore */
 :is(.andes-calendar__day--preview-start, .andes-calendar__day--preview-end):not(.andes-calendar__day--selected):is(:hover, :focus-visible):not([aria-disabled='true']) > * {
   border-color: var(--andes-color-primary-text, var(--andes-color-primary));
+  background-color: transparent;
 }
 
 /* prettier-ignore */
@@ -422,6 +419,20 @@
 /* prettier-ignore */
 .andes-calendar:not(.andes-calendar--week-picker) .andes-calendar__day--preview-end::before {
   inset-inline-end: 50%;
+}
+
+/* prettier-ignore */
+.andes-calendar:not(.andes-calendar--week-picker) .andes-calendar__day--preview-end:not(.andes-calendar__day--selected)::before {
+  inset-inline-end: calc(50% - var(--andes-calendar-chip) / 2);
+  border-start-end-radius: var(--andes-radius-sm);
+  border-end-end-radius: var(--andes-radius-sm);
+}
+
+/* prettier-ignore */
+.andes-calendar:not(.andes-calendar--week-picker) .andes-calendar__day--preview-start:not(.andes-calendar__day--selected)::before {
+  inset-inline-start: calc(50% - var(--andes-calendar-chip) / 2);
+  border-start-start-radius: var(--andes-radius-sm);
+  border-end-start-radius: var(--andes-radius-sm);
 }
 
 .andes-calendar__day--in-range:hover:not([aria-disabled='true']) > * {

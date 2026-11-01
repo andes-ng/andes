@@ -81,14 +81,20 @@ describe('AndesCalendar styles', () => {
       ).toBe(true);
     });
 
-    it('fills the previewed boundary chip with the band so the half band does not show through it', () => {
-      const chip =
-        ":is(.andes-calendar__day--preview-start, .andes-calendar__day--preview-end):not(.andes-calendar__day--selected):not([aria-disabled='true']) > *";
-      expect(declaredValue(source, chip, 'background-color')).toBe(
-        'var(--andes-calendar-band)',
+    it('runs the band behind the whole chip of the previewed boundary that is not selected', () => {
+      const end =
+        '.andes-calendar:not(.andes-calendar--week-picker) .andes-calendar__day--preview-end:not(.andes-calendar__day--selected)::before';
+      const start =
+        '.andes-calendar:not(.andes-calendar--week-picker) .andes-calendar__day--preview-start:not(.andes-calendar__day--selected)::before';
+      expect(declaredValue(source, end, 'inset-inline-end')).toBe(
+        'calc(50% - var(--andes-calendar-chip) / 2)',
       );
-      expect(source.indexOf(chip)).toBeGreaterThan(
-        source.indexOf(":hover:not([aria-disabled='true']) > * {"),
+      expect(declaredValue(source, start, 'inset-inline-start')).toBe(
+        'calc(50% - var(--andes-calendar-chip) / 2)',
+      );
+      // The chip itself stays unfilled, so the translucent band is never layered twice.
+      expect(source).not.toContain(
+        ":not([aria-disabled='true']) > * {\n  background-color: var(--andes-calendar-band);",
       );
     });
 

@@ -156,6 +156,8 @@
         (click)="onInputClick('start')"
         (focus)="onInputFocus('start', $event)"
         (input)="onInput('start', $event)"
+        (mouseup)="onMaskPointerUp('start', $event)"
+        (paste)="onMaskPaste('start', $event)"
         (keydown)="onInputKeydown('start', $event)"
       />
     </ng-template>
@@ -203,6 +205,8 @@
       (click)="onInputClick('end')"
       (focus)="onInputFocus('end', $event)"
       (input)="onInput('end', $event)"
+      (mouseup)="onMaskPointerUp('end', $event)"
+      (paste)="onMaskPaste('end', $event)"
       (keydown)="onInputKeydown('end', $event)"
     />
     } @if (isRange()) {

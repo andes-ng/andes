@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
+import type { AndesDateMaskFormat } from '../calendar/date-format';
 import { toDateKey } from '../calendar/date-utils';
 import {
   AndesDatePicker,
@@ -760,7 +761,9 @@ describe('AndesDatePicker events', () => {
   template: `
     <ng-template #header let-month let-setView="setView">
       <div class="my-header">{{ month.getMonth() }}</div>
-      <button type="button" class="my-years" (click)="setView('year')">years</button>
+      <button type="button" class="my-years" (click)="setView('year')">
+        years
+      </button>
     </ng-template>
     <ng-template #full let-cell="cell">
       <span class="my-cell">{{ cell.text }}!</span>
@@ -820,5 +823,223 @@ describe('AndesDatePicker panel hooks', () => {
   it('hands a time picker footer "time"', () => {
     const view = create((host) => host.picker.set('time'));
     expect(view.panel().querySelector('.my-footer')?.textContent).toBe('time');
+  });
+});
+
+@Component({
+  imports: [AndesDatePicker],
+  template: `
+    <button type="button" id="outside">Outside</button>
+    <andes-date-picker
+      [mode]="mode()"
+      [picker]="picker()"
+      locale="en-US"
+      [format]="format()"
+      [defaultMonth]="defaultMonth"
+      [(value)]="value"
+    />
+  `,
+})
+class MaskHost {
+  readonly mode = signal<AndesDatePickerMode>('single');
+  readonly picker = signal<AndesDatePickerType>('date');
+  readonly format = signal<AndesDateMaskFormat | string>({
+    format: 'DD/MM/YYYY',
+    type: 'mask',
+  });
+  readonly defaultMonth = d(2024, 2, 1);
+  readonly value = signal<AndesDatePickerValue | undefined>(undefined);
+}
+
+describe('AndesDatePicker mask format', () => {
+  function create(setup: (host: MaskHost) => void = () => undefined) {
+    const fixture = TestBed.createComponent(MaskHost);
+    setup(fixture.componentInstance);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const input = () =>
+      root.querySelector<HTMLInputElement>(
+        '[data-slot^="date-picker-input"]',
+      ) as HTMLInputElement;
+    const detect = () => fixture.detectChanges();
+    const key = (name: string, init: KeyboardEventInit = {}) => {
+      const event = new KeyboardEvent('keydown', {
+        key: name,
+        bubbles: true,
+        cancelable: true,
+        ...init,
+      });
+      input().dispatchEvent(event);
+      detect();
+      return event;
+    };
+    return {
+      host: fixture.componentInstance,
+      root,
+      input,
+      detect,
+      key,
+      focus: () => {
+        input().focus();
+        detect();
+      },
+      typeKeys: (text: string) => {
+        for (const char of text) {
+          key(char);
+        }
+      },
+      selected: () =>
+        input().value.slice(
+          input().selectionStart ?? 0,
+          input().selectionEnd ?? 0,
+        ),
+      leave: () => {
+        const outside = root.querySelector<HTMLElement>('#outside');
+        root
+          .querySelector('[data-slot="date-picker-trigger"]')
+          ?.dispatchEvent(
+            new FocusEvent('focusout', {
+              bubbles: true,
+              relatedTarget: outside,
+            }),
+          );
+        outside?.focus();
+        detect();
+      },
+    };
+  }
+
+  it('shows the mask as the placeholder', () => {
+    expect(create().input().placeholder).toBe('DD/MM/YYYY');
+  });
+
+  it('fills the cells one after another as digits are typed', () => {
+    const view = create();
+    view.focus();
+
+    view.typeKeys('1');
+    expect(view.input().value).toBe('01/MM/YYYY');
+    expect(view.selected()).toBe('01');
+
+    view.typeKeys('5');
+    expect(view.input().value).toBe('15/MM/YYYY');
+    expect(view.selected()).toBe('MM');
+
+    view.typeKeys('022024');
+    expect(view.input().value).toBe('15/02/2024');
+  });
+
+  it('commits the typed date on Enter', () => {
+    const view = create();
+    view.focus();
+    view.typeKeys('15022024');
+    view.key('Enter');
+
+    expect(toDateKey(view.host.value() as Date)).toBe('2024-02-15');
+    expect(view.input().value).toBe('15/02/2024');
+  });
+
+  it('moves between cells with Left and Right, and steps one with Up and Down', () => {
+    const view = create((host) => host.value.set(d(2024, 2, 15)));
+    view.focus();
+    expect(view.selected()).toBe('15');
+
+    view.key('ArrowRight');
+    expect(view.selected()).toBe('02');
+    view.key('ArrowUp');
+    expect(view.input().value).toBe('15/03/2024');
+    view.key('ArrowLeft');
+    view.key('ArrowDown');
+    expect(view.input().value).toBe('14/03/2024');
+    view.key('End');
+    expect(view.selected()).toBe('2024');
+  });
+
+  it('empties a cell with Backspace and moves on at a separator', () => {
+    const view = create((host) => host.value.set(d(2024, 2, 15)));
+    view.focus();
+
+    const backspace = view.key('Backspace');
+    expect(backspace.defaultPrevented).toBe(true);
+    expect(view.input().value).toBe('DD/02/2024');
+
+    view.key('/');
+    expect(view.selected()).toBe('02');
+  });
+
+  it('puts the value back on blur when the mask is not a whole date', () => {
+    const view = create((host) => host.value.set(d(2024, 2, 15)));
+    view.focus();
+    view.typeKeys('3');
+    view.key('ArrowRight');
+    view.key('Backspace');
+    expect(view.input().value).toBe('03/MM/2024');
+
+    view.leave();
+
+    expect(view.input().value).toBe('15/02/2024');
+    expect(toDateKey(view.host.value() as Date)).toBe('2024-02-15');
+  });
+
+  it('clears the value when every cell is emptied and focus leaves', () => {
+    const view = create((host) => host.value.set(d(2024, 2, 15)));
+    view.focus();
+    view.input().setSelectionRange(0, view.input().value.length);
+    view.key('Backspace');
+    expect(view.input().value).toBe('');
+
+    view.leave();
+
+    expect(view.host.value()).toBeNull();
+  });
+
+  it('leaves Tab, Escape, Alt+Down and shortcuts to the field', () => {
+    const view = create();
+    view.focus();
+    expect(view.key('Tab').defaultPrevented).toBe(false);
+    expect(view.key('c', { ctrlKey: true }).defaultPrevented).toBe(false);
+  });
+
+  it('reads a pasted date into the cells', () => {
+    const view = create();
+    view.focus();
+    const paste = new Event('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(paste, 'clipboardData', {
+      value: { getData: () => '2024-02-20' },
+    });
+    view.input().dispatchEvent(paste);
+    view.detect();
+
+    expect(view.input().value).toBe('20/02/2024');
+    expect(paste.defaultPrevented).toBe(true);
+  });
+
+  it('masks a time picker and derives its columns from the mask', () => {
+    const view = create((host) => {
+      host.picker.set('time');
+      host.format.set({ format: 'HH:mm', type: 'mask' });
+      host.value.set(new Date(2024, 1, 15, 9, 30));
+    });
+    view.focus();
+    view.typeKeys('1745');
+    expect(
+      Array.from(
+        document.querySelectorAll('.andes-date-picker__time-column'),
+        (column) => column.getAttribute('data-unit'),
+      ),
+    ).toEqual(['hours', 'minutes']);
+    view.key('Enter');
+
+    const value = view.host.value() as Date;
+    expect([value.getHours(), value.getMinutes()]).toEqual([17, 45]);
+  });
+
+  it('falls back to a plain pattern for tokens a mask cannot type', () => {
+    const view = create((host) =>
+      host.format.set({ format: 'D MMM YYYY', type: 'mask' }),
+    );
+    view.focus();
+    expect(view.input().placeholder).toBe('Select a date');
+    expect(view.key('1').defaultPrevented).toBe(false);
   });
 });

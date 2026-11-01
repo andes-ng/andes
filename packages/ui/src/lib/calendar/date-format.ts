@@ -41,7 +41,21 @@ import {
  * cannot be inverted, so typed input then falls back to ISO).
  */
 export type AndesDateFormat =
-  string | readonly string[] | ((date: Date) => string);
+  | string
+  | readonly string[]
+  | ((date: Date) => string)
+  | AndesDateMaskFormat;
+
+/**
+ * A token pattern typed through a mask (`AndesDatePicker`): the input always holds the
+ * pattern's shape, each number is a segment of its own, and typing fills the segment the
+ * caret is on. Only fixed-width number tokens can be masked (`YYYY`, `YY`, `BBBB`, `BB`,
+ * `Q`, `MM`, `DD`, `ww`, `HH`, `hh`, `mm`, `ss`), between any literal text.
+ */
+export interface AndesDateMaskFormat {
+  readonly format: string;
+  readonly type: 'mask';
+}
 
 export interface AndesFormatContext {
   readonly locale: string | undefined;
@@ -76,6 +90,19 @@ function tokenize(pattern: string): Token[] {
     tokens.push({ kind: 'literal', text: pattern.slice(lastIndex) });
   }
   return tokens;
+}
+
+/**
+ * A pattern split into its parts, in order: literal text (from `[...]` or anything that is
+ * not a token) and field tokens.
+ */
+export function patternParts(
+  pattern: string,
+): readonly (
+  | { readonly kind: 'literal'; readonly text: string }
+  | { readonly kind: 'field'; readonly token: string }
+)[] {
+  return tokenize(pattern);
 }
 
 /** The field tokens of a pattern, in order, without its literal text. */

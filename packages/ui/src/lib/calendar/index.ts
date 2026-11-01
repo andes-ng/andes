@@ -22,4 +22,4 @@ export type {
   AndesTimeOfDay,
   AndesWeekday,
 } from './date-utils';
-export type { AndesDateFormat } from './date-format';
+export type { AndesDateFormat, AndesDateMaskFormat } from './date-format';

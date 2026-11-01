@@ -53,6 +53,7 @@ import {
   patternFields,
   patternFromIntl,
   type AndesDateFormat,
+  type AndesDateMaskFormat,
 } from '../calendar/date-format';
 import {
   clampWeekday,
@@ -74,6 +75,7 @@ import {
   type AndesTimeOfDay,
   type AndesWeekday,
 } from '../calendar/date-utils';
+import { DateMask } from './date-mask';
 import { AndesDatePickerOverflow } from './date-picker-overflow';
 
 /**
@@ -917,6 +919,13 @@ export class AndesDatePicker implements ControlValueAccessor {
    * `['DD/MM/YYYY', 'DD/MM/YY']`, …; see `date-format.ts` for the tokens). The
    * first pattern displays, every pattern parses. A function formats only; typing
    * then accepts ISO dates. Takes precedence over `displayFormat`.
+   *
+   * `{ format: 'DD/MM/YYYY', type: 'mask' }` types through a mask: the input keeps the
+   * pattern's shape (also its placeholder), digits fill the number under the caret and
+   * move on, Left/Right switch numbers, Up/Down step one, Backspace empties it, and a
+   * mask that is not a whole date when focus leaves is put back to the value. Only
+   * fixed-width number tokens can be masked; a pattern with a month or weekday name
+   * formats and parses as a plain one.
    */
   readonly format = input<AndesDateFormat | null>(null);
 
@@ -1186,6 +1195,16 @@ export class AndesDatePicker implements ControlValueAccessor {
 
   /** The input that has focus, while focus is inside the picker; `null` once it has left. */
   private focusedSide: Side | null = null;
+
+  /**
+   * Where typing goes in a mask: the side and cell, and the digits typed into that cell so
+   * far (a second digit completes a month, a fourth a year).
+   */
+  private maskState: {
+    readonly side: Side;
+    readonly cell: number;
+    readonly typed: string;
+  } | null = null;
 
   /** Move focus into the grid when the panel opens (keyboard open). */
   protected readonly focusGridOnOpen = signal(false);
@@ -1479,8 +1498,24 @@ export class AndesDatePicker implements ControlValueAccessor {
     if (typeof format === 'function') {
       return null;
     }
+    if (format) {
+      // A mask format: its pattern displays and parses like a plain one.
+      return [(format as AndesDateMaskFormat).format];
+    }
     const fallback = DEFAULT_PATTERNS[this.picker()];
     return fallback && !this.displayFormat() ? [fallback] : null;
+  });
+
+  /**
+   * The mask of a `{ format, type: 'mask' }` format, or `null`: without a mask format, or
+   * when its pattern holds a token a mask cannot type (a month name, a weekday), which
+   * then formats and parses like a plain pattern.
+   */
+  protected readonly mask = computed<DateMask | null>(() => {
+    const format = this.format();
+    return format && typeof format === 'object' && !Array.isArray(format)
+      ? DateMask.from((format as AndesDateMaskFormat).format)
+      : null;
   });
 
   /** `Intl` options for display when no token pattern applies. */
@@ -1529,6 +1564,11 @@ export class AndesDatePicker implements ControlValueAccessor {
     }
     if (typeof placeholder === 'string') {
       return [placeholder, placeholder];
+    }
+    const template = this.mask()?.template;
+    if (template) {
+      // A mask shows the shape to type in: `YYYY-MM-DD`.
+      return [template, this.isRange() ? template : ''];
     }
     const noun = PLACEHOLDER_NOUNS[this.picker()];
     if (this.isMultiple()) {
@@ -1703,7 +1743,8 @@ export class AndesDatePicker implements ControlValueAccessor {
   /** `extraFooter`'s context: the calendar's grid, or `time` without a calendar. */
   protected readonly footerContext = computed<AndesDatePickerFooterContext>(
     () => ({
-      $implicit: this.calendar()?.view() ?? (this.isTimeOnly() ? 'time' : 'date'),
+      $implicit:
+        this.calendar()?.view() ?? (this.isTimeOnly() ? 'time' : 'date'),
     }),
   );
 
@@ -2473,6 +2514,10 @@ export class AndesDatePicker implements ControlValueAccessor {
       return;
     }
     this.setActiveSide(side);
+    if (this.mask()) {
+      this.maskState = { side, cell: 0, typed: '' };
+      this.selectMaskCell(event.target as HTMLInputElement, 0);
+    }
     if (this.focusedSide !== side) {
       this.focusedSide = side;
       this.focused.emit({ event, range: side });
@@ -2490,7 +2535,22 @@ export class AndesDatePicker implements ControlValueAccessor {
   }
 
   protected onInput(side: Side, event: Event): void {
-    const text = (event.target as HTMLInputElement).value;
+    const input = event.target as HTMLInputElement;
+    const text = input.value;
+    const mask = this.mask();
+    if (mask && text && !mask.fits(text)) {
+      // Text that reached a mask without a key it could handle (a phone keyboard, a cut, a
+      // drop): a date it can read is put into the mask's shape, anything else is undone.
+      const parsed = this.parse(text, side);
+      this.writeMask(
+        side,
+        input,
+        parsed ? this.formatValue(parsed) : this.maskText(side),
+        0,
+        '',
+      );
+      return;
+    }
     this.hoverText.set(null);
     this.draftFor(side).set(text);
     const parsed = this.parse(text, side);
@@ -2521,6 +2581,180 @@ export class AndesDatePicker implements ControlValueAccessor {
     this.startInput()?.nativeElement.focus();
   }
 
+  // --- Mask -----------------------------------------------------------------
+
+  /**
+   * A mask's keys: digits fill the cell the caret is on, moving on once it is complete;
+   * Left and Right (and Home and End) move between cells, Up and Down step the cell's
+   * number, Backspace and Delete empty it (all of it when the whole text is selected), and
+   * a separator moves on. Returns whether the key was the mask's; other keys (Tab, Enter,
+   * Escape, Alt+Down, shortcuts) go on to the field's own handling.
+   */
+  private onMaskKeydown(side: Side, event: KeyboardEvent): boolean {
+    const mask = this.mask();
+    if (
+      !mask ||
+      this.inputReadOnly() ||
+      this.isSideLocked(side) ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.isComposing
+    ) {
+      return false;
+    }
+    const input = event.target as HTMLInputElement;
+    const text = this.maskText(side);
+    const last = mask.cells.length - 1;
+    const state = this.maskState?.side === side ? this.maskState : null;
+    const cell = state?.cell ?? mask.cellAt(input.selectionStart ?? 0);
+    const key = event.key;
+
+    if (key.length === 1 && key >= '0' && key <= '9') {
+      const width = mask.cells[cell].end - mask.cells[cell].start;
+      let typed = (state?.cell === cell ? state.typed : '') + key;
+      if (typed.length > width) {
+        typed = key;
+      }
+      const filled = mask.fill(text, cell, typed);
+      const next = filled.done ? Math.min(cell + 1, last) : cell;
+      this.writeMask(side, input, filled.text, next, filled.done ? '' : typed);
+      return true;
+    }
+    switch (key) {
+      case 'ArrowLeft':
+      case 'ArrowRight':
+      case 'Home':
+      case 'End': {
+        const target =
+          key === 'Home'
+            ? 0
+            : key === 'End'
+              ? last
+              : Math.min(
+                  Math.max(cell + (key === 'ArrowLeft' ? -1 : 1), 0),
+                  last,
+                );
+        this.maskState = { side, cell: target, typed: '' };
+        this.selectMaskCell(input, target);
+        return true;
+      }
+      case 'ArrowUp':
+      case 'ArrowDown': {
+        const seed = this.sideValue(side) ?? new Date();
+        const stepped = mask.step(text, cell, key === 'ArrowUp' ? 1 : -1, seed);
+        this.writeMask(side, input, stepped, cell, '');
+        return true;
+      }
+      case 'Backspace':
+      case 'Delete': {
+        const all =
+          input.selectionStart === 0 &&
+          input.selectionEnd === input.value.length &&
+          input.value.length > 0 &&
+          (input.selectionEnd ?? 0) > mask.cells[cell].end;
+        const cleared = all ? mask.template : mask.clear(text, cell);
+        this.writeMask(side, input, cleared, all ? 0 : cell, '');
+        return true;
+      }
+    }
+    if (key.length === 1) {
+      // A separator (or any other character) moves on to the next cell.
+      const next = Math.min(cell + 1, last);
+      this.maskState = { side, cell: next, typed: '' };
+      this.selectMaskCell(input, next);
+      return true;
+    }
+    return false;
+  }
+
+  /** A pointer press in a masked input selects the cell it landed on. */
+  protected onMaskPointerUp(side: Side, event: MouseEvent): void {
+    const mask = this.mask();
+    const input = event.target as HTMLInputElement;
+    if (!mask || !input.value || !mask.fits(input.value)) {
+      return;
+    }
+    const cell = mask.cellAt(input.selectionStart ?? 0);
+    this.maskState = { side, cell, typed: '' };
+    this.selectMaskCell(input, cell);
+  }
+
+  /** A date pasted into a masked input fills every cell at once, if it can be read. */
+  protected onMaskPaste(side: Side, event: ClipboardEvent): void {
+    if (!this.mask() || this.inputReadOnly() || this.isSideLocked(side)) {
+      return;
+    }
+    event.preventDefault();
+    const parsed = this.parse(event.clipboardData?.getData('text') ?? '', side);
+    if (parsed) {
+      this.writeMask(
+        side,
+        event.target as HTMLInputElement,
+        this.formatValue(parsed),
+        0,
+        '',
+      );
+    }
+  }
+
+  /** The mask text a side is typed into: its draft, its value, or the empty mask. */
+  private maskText(side: Side): string {
+    const mask = this.mask();
+    if (!mask) {
+      return '';
+    }
+    const text =
+      this.draftFor(side)() ??
+      (side === 'end'
+        ? this.formatSide(this.endDate(), this.endTime())
+        : this.isMultiple()
+          ? ''
+          : this.formatSide(this.startDate(), this.startTime()));
+    return mask.fits(text) ? text : mask.template;
+  }
+
+  /**
+   * Puts `text` in a masked input and selects `cell`: the text becomes the side's draft
+   * and, once every cell holds a date that exists, the calendar follows it as typing
+   * does. A mask emptied of every number leaves the input empty, so leaving it clears.
+   */
+  private writeMask(
+    side: Side,
+    input: HTMLInputElement,
+    text: string,
+    cell: number,
+    typed: string,
+  ): void {
+    const mask = this.mask();
+    if (!mask) {
+      return;
+    }
+    const empty = mask.isEmpty(text);
+    const shown = empty ? '' : text;
+    input.value = shown;
+    this.hoverText.set(null);
+    this.draftFor(side).set(shown);
+    this.maskState = { side, cell, typed };
+    if (!empty) {
+      this.selectMaskCell(input, cell);
+    }
+    if (mask.isComplete(text)) {
+      const parsed = this.parse(text, side);
+      if (parsed) {
+        this.preview(side, parsed);
+      }
+    }
+    this.openPanel();
+  }
+
+  private selectMaskCell(input: HTMLInputElement, index: number): void {
+    const cell = this.mask()?.cells[index];
+    if (cell && input.value) {
+      input.setSelectionRange(cell.start, cell.end);
+    }
+  }
+
   /**
    * `tagTemplate`'s context. `remove` is the `+ N` popover's own remover inside it, which
    * keeps focus there, and the field's otherwise.
@@ -2549,6 +2783,10 @@ export class AndesDatePicker implements ControlValueAccessor {
 
   protected onInputKeydown(side: Side, event: KeyboardEvent): void {
     if (this.isDisabled()) {
+      return;
+    }
+    if (this.onMaskKeydown(side, event)) {
+      event.preventDefault();
       return;
     }
     switch (event.key) {

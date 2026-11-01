@@ -527,6 +527,11 @@ describe('AndesCascader', () => {
       open();
       expect(panel()?.textContent).toContain('No data');
       expect(document.querySelector('[role="tree"]')).toBeNull();
+      // A decorative tray above the text.
+      const icon = panel()?.querySelector(
+        '[data-slot="cascader-empty"] .andes-cascader__empty-icon',
+      );
+      expect(icon?.getAttribute('aria-hidden')).toBe('true');
 
       host.notFound.set(null);
       detect();
@@ -552,6 +557,8 @@ describe('AndesCascader', () => {
       fixture.detectChanges();
 
       expect(document.querySelector('.empty')?.textContent).toBe('Nothing yet');
+      // A custom empty state replaces the tray as well.
+      expect(document.querySelector('.andes-cascader__empty-icon')).toBeNull();
     });
 
     it('shows a loading line in an empty panel while loading', () => {

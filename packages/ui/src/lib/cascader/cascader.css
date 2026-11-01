@@ -1060,6 +1060,25 @@ button.andes-cascader__combobox {
   text-align: center;
 }
 
+/* No options or no search results: a muted empty tray above the text, as the tree draws. */
+.andes-cascader__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding-block: 0.4375rem;
+}
+
+.andes-cascader__empty-icon {
+  width: 1.75rem;
+  height: 1.75rem;
+  color: color-mix(
+    in srgb,
+    var(--andes-color-muted-foreground) 70%,
+    transparent
+  );
+}
+
 @media (prefers-reduced-motion: reduce) {
   .andes-cascader__option,
   .andes-cascader__check {

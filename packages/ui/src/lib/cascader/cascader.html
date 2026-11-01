@@ -582,7 +582,31 @@
     <div class="andes-cascader__status" data-slot="cascader-empty">
       @if (notFoundTemplate(); as template) {
       <ng-container [ngTemplateOutlet]="template" />
-      } @else { {{ notFoundText() }} }
+      } @else {
+      <span class="andes-cascader__empty">
+        <svg
+          class="andes-cascader__empty-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path
+            d="M4 13.5 6.2 5.6A1.5 1.5 0 0 1 7.64 4.5h8.72a1.5 1.5 0 0 1 1.44 1.1L20 13.5v4.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18Z"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linejoin="round"
+          />
+          <path
+            d="M4 13.5h4.5l1 2h5l1-2H20"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linejoin="round"
+          />
+        </svg>
+        {{ notFoundText() }}
+      </span>
+      }
     </div>
     }
     <span class="andes-cascader__sr" role="status" aria-live="polite"

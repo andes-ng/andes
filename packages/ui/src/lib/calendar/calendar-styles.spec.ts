@@ -277,13 +277,16 @@ describe('AndesCalendar styles', () => {
       expect(declaredValue(source, cell, 'grid-template-columns')).toBe('100%');
       expect(declaredValue(source, cell, 'align-content')).toBe('center');
       expect(declaredValue(source, cell, 'justify-items')).toBe('center');
-      // The band fills that track, so it is as tall as the chip whatever the chip holds.
+      // The band is centred on that track and is the 24px chip tall whatever the chip holds, so
+      // a boundary chip grown by a template does not make its band taller than its neighbours'.
       expect(declaredValue(source, band, 'position')).toBe('absolute');
       expect(declaredValue(source, band, 'grid-area')).toBe('1 / 1 / 2 / 2');
-      expect(declaredValue(source, band, 'inset-block')).toBe('0');
       expect(declaredValue(source, band, 'inset-inline')).toBe('0');
-      expect(declaredValue(source, band, 'height')).toBeUndefined();
-      expect(declaredValue(source, band, 'transform')).toBeUndefined();
+      expect(declaredValue(source, band, 'top')).toBe('50%');
+      expect(declaredValue(source, band, 'height')).toBe(
+        'var(--andes-calendar-chip)',
+      );
+      expect(declaredValue(source, band, 'transform')).toBe('translateY(-50%)');
     });
 
     it('grows a cellTemplate chip to its content, 4px clear of it, never under 24px', () => {

@@ -274,8 +274,8 @@
 
 /* Cells: the button is the 36px hit area; its text span is the visible chip. The button is a
    one-track grid whose row is as tall as the chip and centred, so the band (the `::before`,
-   placed in that same track) is always exactly as tall as the chip, also when a cellTemplate
-   grows the chip past its 24px. */
+   placed in that same track) is centred on the chip. The band is always the 24px chip tall, so
+   one range reads as one strip even when a cellTemplate grows a boundary chip past 24px. */
 
 .andes-calendar__day,
 .andes-calendar__period {
@@ -307,9 +307,12 @@
 .andes-calendar__period::before {
   position: absolute;
   grid-area: 1 / 1 / 2 / 2;
-  inset-block: 0;
+  inset-block: auto;
   inset-inline: 0;
+  top: 50%;
   box-sizing: border-box;
+  height: var(--andes-calendar-chip);
+  transform: translateY(-50%);
   content: '';
   transition: background-color var(--andes-motion-duration-fast, 120ms)
     var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1));
@@ -357,6 +360,14 @@
 /* prettier-ignore */
 :is(.andes-calendar__day, .andes-calendar__period):has(> .andes-calendar__cell-content--full) {
   align-content: stretch;
+}
+
+/* A cell the template fills whole has its band as tall as the cell. */
+/* prettier-ignore */
+:is(.andes-calendar__day, .andes-calendar__period):has(> .andes-calendar__cell-content--full)::before {
+  top: 0;
+  height: 100%;
+  transform: none;
 }
 
 /* prettier-ignore */

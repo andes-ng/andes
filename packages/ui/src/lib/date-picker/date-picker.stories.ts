@@ -100,7 +100,7 @@ export const Range: Story = {
 const MATRIX_PROPS = {
   types: ['date', 'week', 'month', 'quarter', 'year'],
   picked: FEB_15,
-  range: [new Date(2024, 1, 5), new Date(2024, 1, 12)],
+  rangeValue: [new Date(2024, 1, 5), new Date(2024, 1, 12)],
   several: [new Date(2024, 1, 2), new Date(2024, 1, 14), new Date(2024, 1, 20)],
   caption:
     'margin: 0 0 0.375rem; font: 0.75rem/1.25rem var(--andes-font-family), sans-serif; color: var(--andes-color-muted-foreground);',
@@ -122,7 +122,7 @@ export const Sizes: Story = {
             @for (type of types; track type) {
               <andes-date-picker style="width: 12.5rem;" [size]="size" [picker]="type" locale="en-US" [weekStartsOn]="1" [ngModel]="picked" [aria-label]="size + ' ' + type" />
             }
-            <andes-date-picker style="width: 20rem;" [size]="size" mode="range" locale="en-US" [ngModel]="range" [aria-label]="size + ' range'" />
+            <andes-date-picker style="width: 20rem;" [size]="size" mode="range" locale="en-US" [ngModel]="rangeValue" [aria-label]="size + ' range'" />
             <andes-date-picker style="width: 18rem;" [size]="size" mode="multiple" locale="en-US" [maxTagCount]="1" [ngModel]="several" [aria-label]="size + ' multiple'" />
             <andes-date-picker style="width: 9rem;" [size]="size" picker="time" locale="en-GB" [aria-label]="size + ' time'" />
           </div>
@@ -151,7 +151,7 @@ export const Variants: Story = {
             @for (type of types; track type) {
               <andes-date-picker style="width: 12.5rem;" [variant]="variant" [picker]="type" locale="en-US" [weekStartsOn]="1" [ngModel]="picked" [aria-label]="variant + ' ' + type" />
             }
-            <andes-date-picker style="width: 20rem;" [variant]="variant" mode="range" locale="en-US" [ngModel]="range" [aria-label]="variant + ' range'" />
+            <andes-date-picker style="width: 20rem;" [variant]="variant" mode="range" locale="en-US" [ngModel]="rangeValue" [aria-label]="variant + ' range'" />
             <andes-date-picker style="width: 18rem;" [variant]="variant" mode="multiple" locale="en-US" [maxTagCount]="1" [ngModel]="several" [aria-label]="variant + ' multiple'" />
             <andes-date-picker style="width: 9rem;" [variant]="variant" picker="time" locale="en-GB" [aria-label]="variant + ' time'" />
           </div>
@@ -181,7 +181,7 @@ export const States: Story = {
             @for (type of types; track type) {
               <andes-date-picker style="width: 12.5rem;" [status]="status" [picker]="type" locale="en-US" [weekStartsOn]="1" [ngModel]="picked" [aria-label]="status + ' ' + type" />
             }
-            <andes-date-picker style="width: 20rem;" [status]="status" mode="range" locale="en-US" [ngModel]="range" [aria-label]="status + ' range'" />
+            <andes-date-picker style="width: 20rem;" [status]="status" mode="range" locale="en-US" [ngModel]="rangeValue" [aria-label]="status + ' range'" />
             <andes-date-picker style="width: 18rem;" [status]="status" mode="multiple" locale="en-US" [maxTagCount]="1" [ngModel]="several" [aria-label]="status + ' multiple'" />
             <andes-date-picker style="width: 9rem;" [status]="status" picker="time" locale="en-GB" [aria-label]="status + ' time'" />
           </div>
@@ -193,7 +193,7 @@ export const States: Story = {
           @for (type of types; track type) {
             <andes-date-picker style="width: 12.5rem;" disabled [picker]="type" locale="en-US" [weekStartsOn]="1" [ngModel]="picked" [aria-label]="'disabled ' + type" />
           }
-          <andes-date-picker style="width: 20rem;" disabled mode="range" locale="en-US" [ngModel]="range" aria-label="disabled range" />
+          <andes-date-picker style="width: 20rem;" disabled mode="range" locale="en-US" [ngModel]="rangeValue" aria-label="disabled range" />
           <andes-date-picker style="width: 18rem;" disabled mode="multiple" locale="en-US" [maxTagCount]="1" [ngModel]="several" aria-label="disabled multiple" />
           <andes-date-picker style="width: 9rem;" disabled picker="time" locale="en-GB" aria-label="disabled time" />
         </div>

@@ -1,6 +1,6 @@
 import { JsonPipe } from '@angular/common';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
-import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 
 import {
   AndesDatePicker,
@@ -14,9 +14,12 @@ import {
  * the time of day a picked date carries with `showTime`. Each story runs the formats
  * across the picker types and, where it makes sense, across single and range.
  */
+// No `component` on the meta: Storybook assigns every story prop that is not an input to the
+// first picker in the template, which would overwrite its own members (`range`, `time`,
+// `placeholders`...). The picker is imported through a decorator instead.
 const meta: Meta<AndesDatePicker> = {
   title: 'Data Entry/Date Picker/Formats',
-  component: AndesDatePicker,
+  decorators: [moduleMetadata({ imports: [AndesDatePicker] })],
   parameters: { layout: 'padded' },
 };
 

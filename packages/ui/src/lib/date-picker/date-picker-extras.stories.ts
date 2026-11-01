@@ -1,5 +1,5 @@
 import { FormsModule } from '@angular/forms';
-import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 
 import {
   AndesDatePicker,
@@ -12,9 +12,12 @@ import {
  * suffix of the field, the clear button, a read-only or loading field, and the hover
  * preview. Each story runs the feature across the picker types.
  */
+// No `component` on the meta: Storybook assigns every story prop that is not an input to the
+// first picker in the template, which would overwrite its own members (`range`, `time`,
+// `placeholders`...). The picker is imported through a decorator instead.
 const meta: Meta<AndesDatePicker> = {
   title: 'Data Entry/Date Picker/Extras',
-  component: AndesDatePicker,
+  decorators: [moduleMetadata({ imports: [AndesDatePicker] })],
   parameters: { layout: 'padded' },
 };
 

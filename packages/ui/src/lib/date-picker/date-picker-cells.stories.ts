@@ -1,6 +1,6 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
 import { AndesCalendar } from '../calendar/calendar';
@@ -11,9 +11,12 @@ import { AndesDatePicker } from './date-picker';
  * panel wrappers, icons, default and controlled months, the events the panel reports,
  * and the panel used on its own without the field.
  */
+// No `component` on the meta: Storybook assigns every story prop that is not an input to the
+// first picker in the template, which would overwrite its own members (`range`, `time`,
+// `placeholders`...). The picker is imported through a decorator instead.
 const meta: Meta<AndesDatePicker> = {
   title: 'Data Entry/Date Picker/Cells and panels',
-  component: AndesDatePicker,
+  decorators: [moduleMetadata({ imports: [AndesDatePicker] })],
   parameters: { layout: 'padded' },
 };
 

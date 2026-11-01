@@ -1,5 +1,5 @@
 import { FormsModule } from '@angular/forms';
-import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 
 import { AndesDatePicker } from './date-picker';
 
@@ -9,9 +9,12 @@ import { AndesDatePicker } from './date-picker';
  * does not choose it); an `-u-ca-` extension (or `th-TH`) switches the calendar; and a
  * right-to-left locale under `dir="rtl"` mirrors the field and the panel.
  */
+// No `component` on the meta: Storybook assigns every story prop that is not an input to the
+// first picker in the template, which would overwrite its own members (`range`, `time`,
+// `placeholders`...). The picker is imported through a decorator instead.
 const meta: Meta<AndesDatePicker> = {
   title: 'Data Entry/Date Picker/Locales',
-  component: AndesDatePicker,
+  decorators: [moduleMetadata({ imports: [AndesDatePicker] })],
   parameters: { layout: 'padded' },
 };
 

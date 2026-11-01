@@ -8,7 +8,7 @@ import {
   type AbstractControl,
   type ValidationErrors,
 } from '@angular/forms';
-import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
 import { AndesSwitch } from '../switch/switch';
@@ -18,9 +18,12 @@ import { AndesDatePicker } from './date-picker';
  * Disabled and validated fields, forms, labels and help text, theming (dark, custom styling
  * from page CSS) and placement for the kinds of pickers that are not a plain date.
  */
+// No `component` on the meta: Storybook assigns every story prop that is not an input to the
+// first picker in the template, which would overwrite its own members (`range`, `time`,
+// `placeholders`...). The picker is imported through a decorator instead.
 const meta: Meta<AndesDatePicker> = {
   title: 'Data Entry/Date Picker/States and theming',
-  component: AndesDatePicker,
+  decorators: [moduleMetadata({ imports: [AndesDatePicker] })],
   parameters: { layout: 'padded' },
 };
 

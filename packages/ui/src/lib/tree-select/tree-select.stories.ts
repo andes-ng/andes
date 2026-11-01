@@ -1,4 +1,5 @@
 import { JsonPipe } from '@angular/common';
+import { signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import type { Meta, StoryObj } from '@storybook/angular';
 
@@ -432,14 +433,18 @@ export const Search: Story = {
   }),
 };
 
-/** `loadData` runs the first time a node without children opens; add the children to `nodes`. */
+/**
+ * `loadData` runs the first time a node without children opens; add the children to `nodes`
+ * (here by replacing the signal behind it), and the branch opens with them once it resolves.
+ */
 export const LoadOnDemand: Story = {
   render: () => {
+    const lazyNodes = signal<AndesTreeNode[]>([
+      { key: 'sedes', title: 'Sedes' },
+      { key: 'areas', title: 'Áreas' },
+    ]);
     const component = {
-      lazyNodes: [
-        { key: 'sedes', title: 'Sedes' },
-        { key: 'areas', title: 'Áreas' },
-      ] as AndesTreeNode[],
+      lazyNodes,
       selected: null as AndesTreeKey | null,
       loadData: ((node: AndesTreeNode) =>
         new Promise<void>((resolve) => {
@@ -449,8 +454,8 @@ export const LoadOnDemand: Story = {
               title: `${String(node.title)} ${n}`,
               isLeaf: true,
             }));
-            component.lazyNodes = component.lazyNodes.map((n) =>
-              n.key === node.key ? { ...n, children } : n,
+            lazyNodes.update((nodes) =>
+              nodes.map((n) => (n.key === node.key ? { ...n, children } : n)),
             );
             resolve();
           }, 800);
@@ -462,7 +467,7 @@ export const LoadOnDemand: Story = {
       styles: STORY_STYLES,
       template: `
         <div class="stack">
-          <andes-tree-select aria-label="Lazy" placeholder="Open a branch" [nodes]="lazyNodes" [loadData]="loadData" [(value)]="selected" />
+          <andes-tree-select aria-label="Lazy" placeholder="Open a branch" [nodes]="lazyNodes()" [loadData]="loadData" [(value)]="selected" />
         </div>
       `,
     };
@@ -575,9 +580,11 @@ export const CustomNodeContent: Story = {
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 2h12M6 22h12M7 2c0 6 10 6 10 10S7 16 7 22M17 2c0 6-10 6-10 10s10 4 10 10"/></svg>
       </ng-template>
       <ng-template #tag let-tag let-onClose="onClose">
-        <span style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0 0.5rem; border-radius: var(--andes-radius-full); background: var(--andes-color-primary-subtle); color: var(--andes-color-primary);">
+        <span style="display: inline-flex; align-items: center; gap: 0.125rem; height: 1.375rem; padding: 0 0.125rem 0 0.625rem; border-radius: var(--andes-radius-full); background: var(--andes-color-primary-subtle); color: var(--andes-color-primary); font-size: 0.875rem; line-height: 1;">
           {{ tag.title }}
-          <andes-button variant="ghost" size="icon-xs" aria-label="Drop" (click)="onClose()">×</andes-button>
+          <andes-button variant="ghost" size="icon-xs" aria-label="Drop" style="display: inline-flex; margin: 0;" (click)="onClose()">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+          </andes-button>
         </span>
       </ng-template>
       <ng-template #header let-search>

@@ -367,20 +367,21 @@
 }
 
 /* Range band. The start and end cells carry half a band (towards the inside of
-   the range) once the range has an end; a lone picked start has none. */
+   the range) once the range has an end; a lone picked start has none. A week picker's
+   boundaries are whole rows, filled from end to end, so the halves skip it. */
 
 .andes-calendar__day--in-range::before {
   background-color: var(--andes-calendar-band);
 }
 
 /* prettier-ignore */
-.andes-calendar:has(.andes-calendar__day--in-range, .andes-calendar__day--range-end:not(.andes-calendar__day--range-start)) .andes-calendar__day--range-start:not(.andes-calendar__day--range-end)::before {
+.andes-calendar:not(.andes-calendar--week-picker):has(.andes-calendar__day--in-range, .andes-calendar__day--range-end:not(.andes-calendar__day--range-start)) .andes-calendar__day--range-start:not(.andes-calendar__day--range-end)::before {
   inset-inline-start: 50%;
   background-color: var(--andes-calendar-band);
 }
 
 /* prettier-ignore */
-.andes-calendar__day--range-end:not(.andes-calendar__day--range-start)::before {
+.andes-calendar:not(.andes-calendar--week-picker) .andes-calendar__day--range-end:not(.andes-calendar__day--range-start)::before {
   inset-inline-end: 50%;
   background-color: var(--andes-calendar-band);
 }
@@ -408,11 +409,13 @@
   background-color: transparent;
 }
 
-.andes-calendar__day--preview-start::before {
+/* prettier-ignore */
+.andes-calendar:not(.andes-calendar--week-picker) .andes-calendar__day--preview-start::before {
   inset-inline-start: 50%;
 }
 
-.andes-calendar__day--preview-end::before {
+/* prettier-ignore */
+.andes-calendar:not(.andes-calendar--week-picker) .andes-calendar__day--preview-end::before {
   inset-inline-end: 50%;
 }
 

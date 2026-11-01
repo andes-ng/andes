@@ -53,17 +53,32 @@ describe('AndesCalendar styles', () => {
       expect(
         declaredValue(
           source,
-          '.andes-calendar__day--preview-start::before',
+          '.andes-calendar:not(.andes-calendar--week-picker) .andes-calendar__day--preview-start::before',
           'inset-inline-start',
         ),
       ).toBe('50%');
       expect(
         declaredValue(
           source,
-          '.andes-calendar__day--preview-end::before',
+          '.andes-calendar:not(.andes-calendar--week-picker) .andes-calendar__day--preview-end::before',
           'inset-inline-end',
         ),
       ).toBe('50%');
+    });
+
+    it("keeps a week picker's boundary rows whole, without half bands", () => {
+      for (const selector of [
+        '.andes-calendar:not(.andes-calendar--week-picker) .andes-calendar__day--preview-start::before',
+        '.andes-calendar:not(.andes-calendar--week-picker) .andes-calendar__day--preview-end::before',
+        '.andes-calendar:not(.andes-calendar--week-picker) .andes-calendar__day--range-end:not(.andes-calendar__day--range-start)::before',
+      ]) {
+        expect(source.includes(`${selector} {`)).toBe(true);
+      }
+      expect(
+        source.includes(
+          '.andes-calendar:not(.andes-calendar--week-picker):has(',
+        ),
+      ).toBe(true);
     });
 
     it('declares the half bands after the full-width band they override', () => {

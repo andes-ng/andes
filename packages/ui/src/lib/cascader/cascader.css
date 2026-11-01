@@ -804,6 +804,18 @@ button.andes-cascader__combobox {
   .andes-cascader__panel[data-andes-closing][data-side='top'] {
     transform-origin: bottom center;
   }
+
+  /* Once placed, the side the overlay really took (`data-placed-side`, after a flip) wins
+     over the requested one, so the panel grows out of the edge that touches the field. */
+  /* prettier-ignore */
+  .andes-cascader__panel[data-state='open'][data-placed-side='bottom'], .andes-cascader__panel[data-andes-closing][data-placed-side='bottom'] {
+    transform-origin: top center;
+  }
+
+  /* prettier-ignore */
+  .andes-cascader__panel[data-state='open'][data-placed-side='top'], .andes-cascader__panel[data-andes-closing][data-placed-side='top'] {
+    transform-origin: bottom center;
+  }
 }
 
 .andes-cascader__panel[data-search] {

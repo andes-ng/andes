@@ -1912,6 +1912,28 @@ describe('AndesCascader', () => {
       ).toBe('var(--andes-font-family), sans-serif');
     });
 
+    it('grows the panel from the side the overlay really placed it on', () => {
+      const bodies = atRuleBodies(source, noPreference).join('\n');
+      expect(
+        declaredValue(
+          bodies,
+          ".andes-cascader__panel[data-andes-closing][data-placed-side='top']",
+          'transform-origin',
+        ),
+      ).toBe('bottom center');
+      expect(
+        declaredValue(
+          bodies,
+          ".andes-cascader__panel[data-state='open'][data-placed-side='bottom']",
+          'transform-origin',
+        ),
+      ).toBe('top center');
+      // The placed side comes after, and so wins over, the requested one.
+      expect(bodies.indexOf("[data-placed-side='top']")).toBeGreaterThan(
+        bodies.indexOf("[data-side='top']"),
+      );
+    });
+
     it('ignores the pointer while the panel is closing', () => {
       expect(
         declaredValue(

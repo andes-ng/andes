@@ -22,6 +22,7 @@
   [attr.data-disabled]="isDisabled() ? '' : null"
   [attr.data-clearable]="showClear() ? '' : null"
   [attr.data-invalid]="invalid() ? '' : null"
+  [attr.data-responsive]="responsive() ? '' : null"
   (mousedown)="onBoxMousedown($event)"
   (click)="onBoxClick($event)"
   (focusin)="onFocusIn($event)"
@@ -42,67 +43,161 @@
     } @else { {{ singleLabel() }} } } @else { {{ placeholder() }} }
   </ng-template>
 
-  <div class="andes-cascader__selection">
-    @if (multiple()) { @for (entry of tags(); track entry.path) { @if
-    (tagTemplate(); as customTag) {
-    <ng-container
-      [ngTemplateOutlet]="customTag"
-      [ngTemplateOutletContext]="tagContext(entry)"
-    />
-    } @else {
-    <span
-      class="andes-cascader__tag"
-      data-slot="cascader-tag"
-      [attr.title]="tagText(entry)"
-    >
-      <span class="andes-cascader__tag-label">
-        @if (displayRender(); as template) {
-        <ng-container
-          [ngTemplateOutlet]="template"
-          [ngTemplateOutletContext]="displayContext(entry)"
-        />
-        } @else { {{ tagText(entry) }} }
-      </span>
-      <!--
-        Out of the tab order on purpose: keyboard users remove tags with Backspace from the
-        combobox, which is one tab stop instead of one per tag.
-      -->
-      <button
-        type="button"
-        tabindex="-1"
-        class="andes-cascader__tag-remove"
-        data-slot="cascader-tag-remove"
-        [attr.aria-label]="removeLabel(entry)"
-        [disabled]="isDisabled()"
-        (mousedown)="$event.preventDefault()"
-        (click)="onTagRemoveClick(entry, $event)"
+  <div #selection class="andes-cascader__selection">
+    <!--
+      One tag, shared by the visible row, the responsive measuring row and the "+ N" popover.
+      `remove` is set in the popover only: there each remove button is a Tab stop and removing
+      keeps focus inside it.
+    -->
+    <ng-template #tagSlot let-tag let-remove="remove">
+      @if (tagTemplate(); as customTag) {
+      <ng-container
+        [ngTemplateOutlet]="customTag"
+        [ngTemplateOutletContext]="tagContext(tag, remove)"
+      />
+      } @else {
+      <span
+        class="andes-cascader__tag"
+        data-slot="cascader-tag"
+        [attr.title]="tagTitle(tag)"
       >
-        @if (removeIcon(); as removeTemplate) {
-        <ng-container [ngTemplateOutlet]="removeTemplate" />
-        } @else {
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          aria-hidden="true"
-        >
-          <path
-            d="M18 6 6 18M6 6l12 12"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+        <span class="andes-cascader__tag-label">
+          @if (displayRender(); as template) {
+          <ng-container
+            [ngTemplateOutlet]="template"
+            [ngTemplateOutletContext]="tagDisplayContext(tag)"
           />
-        </svg>
-        }
-      </button>
-    </span>
-    } } @if (omittedTags().length > 0) {
+          } @else { {{ tagText(tag) }} }
+        </span>
+        <!--
+          In the field, out of the tab order on purpose: keyboard users remove tags with
+          Backspace from the combobox, which is one tab stop instead of one per tag.
+        -->
+        <button
+          type="button"
+          class="andes-cascader__tag-remove"
+          data-slot="cascader-tag-remove"
+          [attr.tabindex]="remove ? null : -1"
+          [attr.aria-label]="removeLabel(tag)"
+          [disabled]="isDisabled()"
+          (mousedown)="$event.preventDefault()"
+          (click)="remove ? remove(tag, $event) : onTagRemoveClick(tag, $event)"
+        >
+          @if (removeIcon(); as removeTemplate) {
+          <ng-container [ngTemplateOutlet]="removeTemplate" />
+          } @else {
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            aria-hidden="true"
+          >
+            <path
+              d="M18 6 6 18M6 6l12 12"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          }
+        </button>
+      </span>
+      }
+    </ng-template>
+
+    <!-- What the "+ N" tag reads: the maxTagPlaceholder text, function or template. -->
+    <ng-template #restLabel let-omitted>
+      @if (maxTagPlaceholderTemplate(); as restTemplate) {
+      <ng-container
+        [ngTemplateOutlet]="restTemplate"
+        [ngTemplateOutletContext]="{ $implicit: omitted }"
+      />
+      } @else { {{ moreTagsText(omitted) }} }
+    </ng-template>
+
+    @if (multiple()) { @for (tag of visibleTags(); track tagKey(tag)) {
+    <ng-container
+      [ngTemplateOutlet]="tagSlot"
+      [ngTemplateOutletContext]="{ $implicit: tag }"
+    />
+    } @if (omittedTags().length > 0) {
+    <!--
+      The "+ N" tag: a button opening a popover of the hidden tags (the select's own
+      AndesSelectOverflow), or, with maxTagPopover off, plain text with a native tooltip. Its
+      popover template lives inside it so that it shares the tag's overlay.
+    -->
     <span
+      #overflow="andesSelectOverflow"
       class="andes-cascader__tag andes-cascader__tag--rest"
       data-slot="cascader-tag-rest"
-      [attr.title]="moreTagsTitle()"
-      >{{ moreTagsText() }}</span
+      [andesSelectOverflow]="overflowPanel"
+      [attr.title]="maxTagPopover() ? null : moreTagsTitle()"
     >
+      <ng-container
+        [ngTemplateOutlet]="restLabel"
+        [ngTemplateOutletContext]="{ $implicit: omittedTags() }"
+      />
+      <ng-template #overflowPanel>
+        <div
+          andesOverlayContent
+          class="andes-select__overflow"
+          data-slot="cascader-overflow"
+          [attr.aria-label]="overflow.label()"
+          [attr.dir]="overflow.direction()"
+          [attr.data-size]="size()"
+          (pointerenter)="overflow.onPanelPointerEnter($event)"
+          (pointerleave)="overflow.onPanelPointerLeave($event)"
+          (focusin)="overflow.onPanelFocusIn($event)"
+          (focusout)="overflow.onPanelFocusOut($event)"
+          (keydown)="overflow.onPanelKeydown($event)"
+        >
+          <div class="andes-select__overflow-body">
+            <ul class="andes-select__overflow-list" role="list">
+              @for (tag of omittedTags(); track tagKey(tag)) {
+              <li class="andes-select__overflow-item">
+                <ng-container
+                  [ngTemplateOutlet]="tagSlot"
+                  [ngTemplateOutletContext]="{
+                    $implicit: tag,
+                    remove: overflow.remove
+                  }"
+                />
+              </li>
+              }
+            </ul>
+          </div>
+        </div>
+      </ng-template>
+    </span>
+    } @if (responsive()) {
+    <!--
+      Every tag, laid out on one invisible row, so the field can tell how many fit before
+      deciding which ones to show. Inert: nothing in it is reachable.
+    -->
+    <div
+      #measure
+      class="andes-cascader__measure"
+      data-slot="cascader-tag-measure"
+      aria-hidden="true"
+      inert
+    >
+      @for (tag of allTags(); track tagKey(tag)) {
+      <span class="andes-cascader__measure-item" data-measure="tag">
+        <ng-container
+          [ngTemplateOutlet]="tagSlot"
+          [ngTemplateOutletContext]="{ $implicit: tag }"
+        />
+      </span>
+      }
+      <span class="andes-cascader__measure-item" data-measure="rest">
+        <span class="andes-cascader__tag andes-cascader__tag--rest">
+          <ng-container
+            [ngTemplateOutlet]="restLabel"
+            [ngTemplateOutletContext]="{ $implicit: allTags() }"
+          />
+        </span>
+      </span>
+    </div>
     } } @if (searchEnabled()) {
     <span class="andes-cascader__search">
       @if (!searchValue() && (!multiple() || !hasValue())) {

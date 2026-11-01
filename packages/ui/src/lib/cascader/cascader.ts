@@ -33,6 +33,12 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NG_VALUE_ACCESSOR, type ControlValueAccessor } from '@angular/forms';
 
+import { AndesSelectOverflow } from '../select/select-overflow';
+import {
+  andesMeasureTagFit,
+  AndesTagOverflowHost,
+} from '../select/tag-overflow';
+
 import {
   buildTree,
   collectTerminals,
@@ -54,6 +60,8 @@ import {
   type AndesCascaderFieldNames,
   type AndesCascaderLabels,
   type AndesCascaderLoadData,
+  type AndesCascaderMaxTagCount,
+  type AndesCascaderMaxTagPlaceholder,
   type AndesCascaderNotFound,
   type AndesCascaderOption,
   type AndesCascaderOptionContext,
@@ -113,6 +121,16 @@ function optionalNumber(value: unknown): number | undefined {
     : numberAttribute(value);
 }
 
+/** `'responsive'` stays as is; anything else goes through {@link optionalNumber}. */
+function maxTagCountAttribute(
+  value: unknown,
+): AndesCascaderMaxTagCount | undefined {
+  return value === 'responsive' ? value : optionalNumber(value);
+}
+
+/** Room kept on a responsive row for the search input, in px (as in the select). */
+const RESPONSIVE_SEARCH_RESERVE = 20;
+
 interface SelectedEntry {
   readonly path: readonly AndesCascaderValue[];
   /** The nodes of the path, or `null` when an option on it is not in `options` (yet). */
@@ -154,6 +172,13 @@ interface Column {
  * keyboard cursor (`data-active`) is separate and always visible; the next key press clears
  * the pointer highlight.
  *
+ * ## Tags
+ *
+ * With `multiple` every path is a tag. `maxTagCount` collapses the tags past a number - or,
+ * `'responsive'`, past what fits on one row - into a `+ N ...` tag (reworded by
+ * `maxTagPlaceholder`), which opens a popover listing and removing the hidden ones;
+ * `maxTagPopover="false"` makes it plain text instead. `maxTagTextLength` cuts long tags short.
+ *
  * ## Header, footer and scrolling
  *
  * `panelHeader` and `panelFooter` put content above and below the columns, inside the panel.
@@ -173,14 +198,24 @@ interface Column {
   imports: [
     AndesOverlayContentPrimitive,
     AndesOverlayTriggerPrimitive,
+    AndesSelectOverflow,
     NgTemplateOutlet,
   ],
   templateUrl: './cascader.html',
   // The checkbox's shared check motion (pop, drawn tick, click ring) for the option boxes.
-  styleUrls: ['./cascader.css', '../checkbox/check-motion.css'],
+  // The "+ N" popover is the select's, on the select's popover surface.
+  styleUrls: [
+    './cascader.css',
+    '../checkbox/check-motion.css',
+    '../select/select-overflow.css',
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     provideAndesOverlay(),
+    {
+      provide: AndesTagOverflowHost,
+      useExisting: forwardRef(() => AndesCascader),
+    },
     {
       provide: NG_VALUE_ACCESSOR,
       useExisting: forwardRef(() => AndesCascader),
@@ -200,8 +235,11 @@ interface Column {
     '[attr.data-disabled]': 'isDisabled() ? "" : null',
   },
 })
-export class AndesCascader implements ControlValueAccessor {
+export class AndesCascader
+  implements ControlValueAccessor, AndesTagOverflowHost<AndesCascaderTag>
+{
   private readonly overlay = inject(AndesOverlayPrimitive);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
@@ -237,8 +275,25 @@ export class AndesCascader implements ControlValueAccessor {
   readonly loadData = input<AndesCascaderLoadData | undefined>(undefined);
   /** Turns the field into a text input that searches every path. */
   readonly showSearch = input<boolean | AndesCascaderSearch>(false);
-  /** How many tags `multiple` shows before collapsing the rest into `+ N ...`. */
-  readonly maxTagCount = input<number | undefined, unknown>(undefined, {
+  /**
+   * How many tags `multiple` shows before collapsing the rest into `+ N ...`. `'responsive'`
+   * keeps the tags on one row and shows as many as fit.
+   */
+  readonly maxTagCount = input<AndesCascaderMaxTagCount | undefined, unknown>(
+    undefined,
+    { transform: maxTagCountAttribute },
+  );
+  /** Replaces the `+ N ...` text: a string, a function of the hidden tags, or a template. */
+  readonly maxTagPlaceholder = input<
+    AndesCascaderMaxTagPlaceholder | undefined
+  >(undefined);
+  /**
+   * Whether the `+ N ...` tag is a button opening a popover that lists - and removes - the
+   * hidden tags. Off, it is plain text with the hidden paths as a native tooltip.
+   */
+  readonly maxTagPopover = input(true, { transform: booleanAttribute });
+  /** Longest tag text, in characters, before it is cut short with "...". */
+  readonly maxTagTextLength = input<number | undefined, unknown>(undefined, {
     transform: optionalNumber,
   });
   /** Joins the labels of a path, in the field and in search results. Default ` / `. */
@@ -381,7 +436,8 @@ export class AndesCascader implements ControlValueAccessor {
   }));
 
   private readonly disabledByForm = signal(false);
-  protected readonly isDisabled = computed(
+  /** Whether the cascader is disabled, by its input or by its form control. */
+  readonly isDisabled = computed(
     () => this.disabled() || this.disabledByForm(),
   );
   readonly isOpen = this.overlay.isOpen;
@@ -556,23 +612,83 @@ export class AndesCascader implements ControlValueAccessor {
     this.multiple() ? undefined : this.entries()[0],
   );
 
-  protected readonly tags = computed(() => {
-    const entries = this.entries();
+  /** Whether tags are fitted to one row (`maxTagCount="responsive"`). */
+  protected readonly responsive = computed(
+    () => this.maxTagCount() === 'responsive' && this.multiple(),
+  );
+  private readonly responsiveCount = signal<number | null>(null);
+
+  /** Every selected path as a tag, before `maxTagCount` applies. */
+  protected readonly allTags = computed<AndesCascaderTag[]>(() =>
+    this.entries().map((entry) => ({
+      path: [...entry.path],
+      labels: entry.labels,
+      selectedOptions: entry.options,
+      closable: !this.isDisabled(),
+    })),
+  );
+
+  /** How many tags the field shows, or `undefined` for all of them. */
+  private readonly shownCount = computed(() => {
     const limit = this.maxTagCount();
-    return limit === undefined ? entries : entries.slice(0, Math.max(limit, 0));
+    if (limit === 'responsive') {
+      return this.responsive()
+        ? (this.responsiveCount() ?? undefined)
+        : undefined;
+    }
+    return limit === undefined ? undefined : Math.max(limit, 0);
   });
 
-  protected readonly omittedTags = computed(() => {
-    const limit = this.maxTagCount();
-    return limit === undefined ? [] : this.entries().slice(Math.max(limit, 0));
+  /** The tags the field shows. */
+  readonly visibleTags = computed<AndesCascaderTag[]>(() => {
+    const count = this.shownCount();
+    const all = this.allTags();
+    return count === undefined ? all : all.slice(0, count);
+  });
+
+  /** The tags hidden behind the `+ N ...` tag. */
+  readonly omittedTags = computed<AndesCascaderTag[]>(() => {
+    const count = this.shownCount();
+    return count === undefined ? [] : this.allTags().slice(count);
+  });
+
+  protected readonly maxTagPlaceholderTemplate = computed(() => {
+    const placeholder = this.maxTagPlaceholder();
+    return placeholder instanceof TemplateRef ? placeholder : null;
   });
 
   protected readonly showClear = computed(
     () => this.allowClear() && this.hasValue() && !this.isDisabled(),
   );
 
-  protected tagText(entry: SelectedEntry): string {
-    return entry.labels.join(this.separator());
+  /** A tag's full text: its labels joined by the separator. */
+  protected tagTitle(tag: { readonly labels: readonly string[] }): string {
+    return tag.labels.join(this.separator());
+  }
+
+  /** A tag's shown text, cut short past `maxTagTextLength`. */
+  protected tagText(tag: { readonly labels: readonly string[] }): string {
+    const text = this.tagTitle(tag);
+    const max = this.maxTagTextLength();
+    return max !== undefined && text.length > max
+      ? `${text.slice(0, max)}...`
+      : text;
+  }
+
+  /** Identifies a tag across renders: the key of its path. */
+  protected tagKey(tag: AndesCascaderTag): string {
+    return pathKey(tag.path);
+  }
+
+  /** The `displayRender` context of a tag. */
+  protected tagDisplayContext(
+    tag: AndesCascaderTag,
+  ): AndesCascaderDisplayContext {
+    return {
+      $implicit: tag.labels,
+      labels: tag.labels,
+      selectedOptions: tag.selectedOptions,
+    };
   }
 
   protected displayContext(entry: SelectedEntry): AndesCascaderDisplayContext {
@@ -583,17 +699,26 @@ export class AndesCascader implements ControlValueAccessor {
     };
   }
 
-  protected removeLabel(entry: SelectedEntry): string {
-    return this.text().remove.replace('{label}', this.tagText(entry));
+  protected removeLabel(tag: AndesCascaderTag): string {
+    return this.text().remove.replace('{label}', this.tagTitle(tag));
   }
 
-  protected readonly moreTagsText = computed(() =>
-    this.text().moreTags.replace('{count}', String(this.omittedTags().length)),
-  );
+  /** The `+ N ...` text for a list of hidden tags, from `maxTagPlaceholder` or the label. */
+  protected moreTagsText(omitted: readonly AndesCascaderTag[]): string {
+    const placeholder = this.maxTagPlaceholder();
+    if (typeof placeholder === 'string') {
+      return placeholder;
+    }
+    if (typeof placeholder === 'function') {
+      return placeholder(omitted);
+    }
+    return this.text().moreTags.replace('{count}', String(omitted.length));
+  }
 
+  /** Native tooltip of the `+ N ...` tag with `maxTagPopover` off: the paths it stands for. */
   protected readonly moreTagsTitle = computed(() =>
     this.omittedTags()
-      .map((entry) => this.tagText(entry))
+      .map((tag) => this.tagTitle(tag))
       .join(', '),
   );
 
@@ -619,21 +744,44 @@ export class AndesCascader implements ControlValueAccessor {
     };
   }
 
-  protected tagContext(entry: SelectedEntry): AndesCascaderTagContext {
-    const tag: AndesCascaderTag = {
-      path: [...entry.path],
-      labels: entry.labels,
-      selectedOptions: entry.options,
-      closable: !this.isDisabled(),
-    };
+  /** Context of a `tagTemplate` tag; `remove` is the popover's own removal, when in it. */
+  protected tagContext(
+    tag: AndesCascaderTag,
+    remove?: (tag: AndesCascaderTag) => void,
+  ): AndesCascaderTagContext {
     return {
       $implicit: tag,
       onClose: () => {
-        if (!this.isDisabled()) {
-          this.removeEntry(entry);
+        if (remove) {
+          remove(tag);
+        } else if (!this.isDisabled()) {
+          this.removeTag(tag);
         }
       },
     };
+  }
+
+  // ----- The "+ N" popover (AndesTagOverflowHost) ----------------------------------------
+
+  maxTagPopoverLabelFor(count: number): string {
+    return this.text().moreSelected.replace('{count}', String(count));
+  }
+
+  registerOverflowPanel(element: HTMLElement | null): void {
+    this.overflowPane.set(element);
+  }
+
+  canRemoveTag(tag: AndesCascaderTag): boolean {
+    return tag.closable;
+  }
+
+  /** Removes the path of a tag, as its remove button does. */
+  removeTag(tag: AndesCascaderTag): void {
+    const key = pathKey(tag.path);
+    const entry = this.entries().find((other) => pathKey(other.path) === key);
+    if (entry) {
+      this.removeEntry(entry);
+    }
   }
 
   /** What a native form posts for each selected path: the value of its last option. */
@@ -828,6 +976,10 @@ export class AndesCascader implements ControlValueAccessor {
    * pointer - so it must not highlight the option that happens to be there.
    */
   private lastPointer: { readonly x: number; readonly y: number } | null = null;
+  /** The open "+ N" popover's pane: focus moving into it has not left the cascader. */
+  private readonly overflowPane = signal<HTMLElement | null>(null);
+  private readonly selection = viewChild<ElementRef<HTMLElement>>('selection');
+  private readonly measure = viewChild<ElementRef<HTMLElement>>('measure');
   private hasFocus = false;
   private destroyed = false;
 
@@ -928,7 +1080,30 @@ export class AndesCascader implements ControlValueAccessor {
       this.onTouched();
     });
 
-    inject(DestroyRef).onDestroy(() => {
+    // A resized field re-fits responsive tags.
+    afterNextRender(() => {
+      const box = this.box()?.nativeElement;
+      if (typeof ResizeObserver === 'undefined' || !box) {
+        return;
+      }
+      const observer = new ResizeObserver(() => this.fitTags());
+      observer.observe(box);
+      this.destroyRef.onDestroy(() => observer.disconnect());
+    });
+
+    // Re-fit once the measuring row has rendered a changed set of tags.
+    afterRenderEffect(() => {
+      this.allTags();
+      this.searchEnabled();
+      if (!this.responsive()) {
+        untracked(() => this.responsiveCount.set(null));
+        return;
+      }
+      this.measure();
+      untracked(() => this.fitTags());
+    });
+
+    this.destroyRef.onDestroy(() => {
       this.destroyed = true;
       if (this.checkMotionTimer !== null) {
         clearTimeout(this.checkMotionTimer);
@@ -1102,9 +1277,29 @@ export class AndesCascader implements ControlValueAccessor {
     this.focus({ preventScroll: true });
   }
 
-  protected onTagRemoveClick(entry: SelectedEntry, event: MouseEvent): void {
+  protected onTagRemoveClick(tag: AndesCascaderTag, event: MouseEvent): void {
     event.stopPropagation();
-    this.removeEntry(entry);
+    this.removeTag(tag);
+  }
+
+  /**
+   * Counts how many tags fit on the field's one row, for `maxTagCount="responsive"`, from the
+   * invisible measuring row; a search keeps room for its input.
+   */
+  private fitTags(): void {
+    const measure = this.measure()?.nativeElement;
+    const selection = this.selection()?.nativeElement;
+    if (!this.responsive() || !measure || !selection) {
+      return;
+    }
+    const count = andesMeasureTagFit(
+      measure,
+      selection,
+      this.searchEnabled() ? RESPONSIVE_SEARCH_RESERVE : 0,
+    );
+    if (count !== null) {
+      this.responsiveCount.set(count);
+    }
   }
 
   protected onItemClick(node: AndesCascaderNode): void {
@@ -1190,7 +1385,8 @@ export class AndesCascader implements ControlValueAccessor {
 
   // ----- Focus --------------------------------------------------------------------------
 
-  protected onFocusIn(event: FocusEvent): void {
+  /** Focus entering the field, its panel or its "+ N" popover. */
+  onFocusIn(event: FocusEvent): void {
     if (!this.hasFocus) {
       this.hasFocus = true;
       this.focused.emit(event);
@@ -1202,7 +1398,7 @@ export class AndesCascader implements ControlValueAccessor {
    * new target is unknown (focus going nowhere, or an element being removed), the check
    * waits a task for focus to settle.
    */
-  protected onFocusOut(event: FocusEvent): void {
+  onFocusOut(event: FocusEvent): void {
     if (!this.hasFocus || this.ownsElement(event.relatedTarget)) {
       return;
     }
@@ -1224,9 +1420,11 @@ export class AndesCascader implements ControlValueAccessor {
       return false;
     }
     const panel = this.overlay.panelElement();
+    const overflow = this.overflowPane();
     return (
       this.host.nativeElement.contains(target) ||
-      (panel !== null && panel.contains(target))
+      (panel !== null && panel.contains(target)) ||
+      (overflow !== null && overflow.contains(target))
     );
   }
 

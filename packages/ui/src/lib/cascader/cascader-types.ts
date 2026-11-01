@@ -125,6 +125,21 @@ export interface AndesCascaderPanelContext {
   close: () => void;
 }
 
+/**
+ * How many tags `multiple` shows before the rest collapse into one "+ N" tag: a number, or
+ * `'responsive'` to fit as many as one row of the field holds.
+ */
+export type AndesCascaderMaxTagCount = number | 'responsive';
+
+/**
+ * What stands in for the tags `maxTagCount` hides: a text, a function of the hidden tags, or a
+ * template whose `$implicit` is the hidden tags.
+ */
+export type AndesCascaderMaxTagPlaceholder =
+  | string
+  | ((omitted: readonly AndesCascaderTag[]) => string)
+  | TemplateRef<{ $implicit: readonly AndesCascaderTag[] }>;
+
 /** What `loadData` receives: the options from the first level down to the one expanding. */
 export type AndesCascaderLoadData = (
   selectedOptions: AndesCascaderOption[],
@@ -139,6 +154,8 @@ export interface AndesCascaderLabels {
   loading: string;
   /** `{count}` more tags than `maxTagCount`. */
   moreTags: string;
+  /** Accessible name of the "+ N" tag and of the popover listing the hidden tags: `{count}`. */
+  moreSelected: string;
   /** Spoken after a search: `{count}` results. */
   results: string;
   /** Name of a column of options, `{level}` from 1. */
@@ -150,6 +167,7 @@ export const ANDES_CASCADER_DEFAULT_LABELS: AndesCascaderLabels = {
   remove: 'Remove {label}',
   loading: 'Loading',
   moreTags: '+ {count} ...',
+  moreSelected: '{count} more selected',
   results: '{count} results',
   level: 'Level {level}',
 };

@@ -1143,7 +1143,10 @@ describe('AndesCascader', () => {
       expect(tags()).toEqual(['Cusco / Wanchaq']);
       const rest = root.querySelector('[data-slot="cascader-tag-rest"]');
       expect(rest?.textContent?.trim()).toBe('+ 2 ...');
-      expect(rest?.getAttribute('title')).toBe('Callao, Cusco / San Blas');
+      // A button opening the popover of the hidden tags (see cascader-tags.spec.ts).
+      expect(rest?.getAttribute('role')).toBe('button');
+      expect(rest?.getAttribute('aria-label')).toBe('2 more selected');
+      expect(rest?.hasAttribute('title')).toBe(false);
 
       host.maxTagCount.set(undefined);
       detect();

@@ -363,6 +363,92 @@ button.andes-cascader__combobox {
   background-color: var(--andes-color-background);
 }
 
+/* With `maxTagPopover` (the default) the "+ N" tag is a button opening the popover. */
+.andes-cascader__tag--rest[role='button'] {
+  cursor: pointer;
+  outline: none;
+  transition:
+    background-color var(--andes-duration-base, 150ms) ease,
+    color var(--andes-duration-base, 150ms) ease;
+}
+
+.andes-cascader__tag--rest[role='button']:hover,
+.andes-cascader__tag--rest[role='button'][data-state='open'] {
+  background-color: color-mix(
+    in srgb,
+    var(--andes-color-muted) 88%,
+    var(--andes-color-foreground)
+  );
+  color: var(--andes-color-foreground);
+}
+
+.andes-cascader__tag--rest[role='button']:focus-visible {
+  outline: 2px solid var(--andes-color-focus-ring);
+  outline-offset: -2px;
+}
+
+.andes-cascader__tag--rest[aria-disabled='true'] {
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .andes-cascader__tag--rest[role='button'] {
+    transition: none;
+  }
+}
+
+/*
+  `maxTagCount="responsive"`: one row of tags, never wrapping. The field counts how many fit
+  from an invisible measuring row holding all of them.
+*/
+.andes-cascader__trigger[data-responsive] .andes-cascader__selection {
+  position: relative;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.andes-cascader__trigger[data-responsive] .andes-cascader__tag {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.andes-cascader__trigger[data-responsive] .andes-cascader__tag--rest {
+  flex-shrink: 0;
+}
+
+.andes-cascader__measure {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  display: flex;
+  width: max-content;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.andes-cascader__measure-item {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+/*
+  The "+ N" popover (the select's, from select-overflow.css) renders outside the field, so its
+  tags take their size from the popover's own `data-size`.
+*/
+.andes-select__overflow[data-size='sm'] .andes-cascader__tag {
+  height: calc(var(--andes-control-height-sm, 1.5rem) - 0.5rem);
+  padding-inline: var(--andes-space-1);
+  border-radius: 0.125rem;
+  font-size: 0.75rem;
+  line-height: calc(var(--andes-control-height-sm, 1.5rem) - 0.625rem);
+}
+
+.andes-select__overflow[data-size='lg'] .andes-cascader__tag {
+  height: calc(var(--andes-control-height-lg, 2.5rem) - 0.625rem);
+  border-radius: var(--andes-control-radius-md, 0.375rem);
+  line-height: calc(var(--andes-control-height-lg, 2.5rem) - 0.75rem);
+}
+
 .andes-cascader__tag-label {
   overflow: hidden;
   white-space: nowrap;
@@ -388,6 +474,13 @@ button.andes-cascader__combobox {
 
 .andes-cascader__tag-remove:disabled {
   cursor: not-allowed;
+}
+
+/* Only a Tab stop inside the "+ N" popover; in the field, Backspace removes tags. */
+.andes-cascader__tag-remove:focus-visible {
+  color: var(--andes-color-foreground);
+  outline: 2px solid var(--andes-color-focus-ring);
+  outline-offset: 1px;
 }
 
 .andes-cascader__tag-remove svg {

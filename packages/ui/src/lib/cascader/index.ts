@@ -9,6 +9,8 @@ export type {
   AndesCascaderFieldNames,
   AndesCascaderLabels,
   AndesCascaderLoadData,
+  AndesCascaderMaxTagCount,
+  AndesCascaderMaxTagPlaceholder,
   AndesCascaderNotFound,
   AndesCascaderOption,
   AndesCascaderOptionContext,

@@ -7,8 +7,10 @@ export {
 } from './form';
 export { AndesFormControl } from './form-control';
 export { AndesFormDescription } from './form-description';
-export { AndesFormError } from './form-error';
+export { AndesFormError, injectAndesControlErrors } from './form-error';
+export type { AndesControlErrors } from './form-error';
 export { AndesFormField } from './form-field';
+export { AndesFormFieldset } from './form-fieldset';
 export { AndesFormLabel } from './form-label';
 export {
   ANDES_DEFAULT_FORM_ERROR_MESSAGES,

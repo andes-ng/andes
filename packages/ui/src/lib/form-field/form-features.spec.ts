@@ -1,7 +1,10 @@
+import { readFileSync } from 'node:fs';
+
 import { Component, signal, viewChild } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import {
   type AbstractControl,
+  FormArray,
   FormControl,
   FormGroup,
   ReactiveFormsModule,
@@ -9,10 +12,18 @@ import {
   Validators,
 } from '@angular/forms';
 
+import { declaredValue, expectLength } from '../../testing/computed-style';
 import { AndesForm } from './form';
 import { AndesFormControl } from './form-control';
+import { AndesFormError } from './form-error';
 import { AndesFormField } from './form-field';
+import { AndesFormFieldset } from './form-fieldset';
 import type { AndesFormMessageMode } from './form-field-tokens';
+
+const CSS = readFileSync(
+  'packages/ui/src/lib/form-field/form-field.css',
+  'utf8',
+);
 
 async function settle(fixture: ComponentFixture<unknown>): Promise<void> {
   fixture.detectChanges();
@@ -163,6 +174,62 @@ class ImperativeHost {
   });
 }
 
+@Component({
+  selector: 'andes-test-group-blocks-host',
+  imports: [
+    ReactiveFormsModule,
+    AndesForm,
+    AndesFormField,
+    AndesFormControl,
+    AndesFormError,
+    AndesFormFieldset,
+  ],
+  template: `<form andesForm [formGroup]="group">
+    <andes-form-fieldset
+      legend="Guests"
+      description="Everyone coming along."
+      [control]="group.controls.guests"
+      [errorMessages]="{ atLeastOne: 'Add at least one guest.' }"
+    >
+      <span slot="legend" class="legend-extra">(up to 4)</span>
+      @for (guest of group.controls.guests.controls; track guest) {
+        <andes-form-field label="Guest">
+          <input andesFormControl [formControl]="guest" />
+        </andes-form-field>
+      }
+    </andes-form-fieldset>
+    <andes-form-error
+      id="dates-error"
+      [control]="group.controls.dates"
+      [errorMessages]="{ order: 'The end comes before the start.' }"
+    />
+    <div formGroupName="dates">
+      <andes-form-field label="From">
+        <input andesFormControl formControlName="from" />
+      </andes-form-field>
+      <andes-form-field label="To">
+        <input andesFormControl formControlName="to" />
+      </andes-form-field>
+    </div>
+    <button type="submit">Book</button>
+  </form>`,
+})
+class GroupBlocksHost {
+  readonly group = new FormGroup({
+    guests: new FormArray<FormControl<string | null>>([], {
+      validators: (array: AbstractControl) =>
+        (array.value as unknown[]).length > 0 ? null : { atLeastOne: true },
+    }),
+    dates: new FormGroup(
+      { from: new FormControl('2'), to: new FormControl('1') },
+      {
+        validators: (g: AbstractControl) =>
+          g.get('from')?.value <= g.get('to')?.value ? null : { order: true },
+      },
+    ),
+  });
+}
+
 const helpOf = (el: HTMLElement, index: number): string[] =>
   Array.from(
     el
@@ -240,6 +307,20 @@ describe('AndesForm - field features', () => {
       );
     });
 
+    it('keeps a field or error id on the control or message only, never twice', async () => {
+      const fixture = TestBed.createComponent(LabelClickHost);
+      await settle(fixture);
+
+      expect(fixture.nativeElement.querySelectorAll('#country')).toHaveLength(
+        1,
+      );
+      expect(
+        fixture.nativeElement
+          .querySelector('andes-form-field')
+          .hasAttribute('id'),
+      ).toBe(false);
+    });
+
     it('focuses a popup control on label click instead of opening it, and still toggles a checkbox', async () => {
       const fixture = TestBed.createComponent(LabelClickHost);
       await settle(fixture);
@@ -313,6 +394,78 @@ describe('AndesForm - field features', () => {
       await settle(fixture);
 
       expect(fixture.componentInstance.resets).toBe(1);
+    });
+  });
+
+  describe('group and list errors', () => {
+    it('shows a group validator error once a control in it changes, with its own id', async () => {
+      const fixture = TestBed.createComponent(GroupBlocksHost);
+      await settle(fixture);
+      const el = fixture.nativeElement as HTMLElement;
+
+      expect(el.querySelector('#dates-error')).toBeNull();
+
+      type(el.querySelectorAll('input')[0], '3');
+      await settle(fixture);
+      const error = el.querySelector('#dates-error') as HTMLElement;
+
+      expect(error.textContent?.trim()).toBe('The end comes before the start.');
+      expect(error.tagName).toBe('P');
+      expect(el.querySelectorAll('#dates-error')).toHaveLength(1);
+      expect(error.getAttribute('role')).toBe('alert');
+    });
+
+    it('titles a fieldset with its legend and describes it', async () => {
+      const fixture = TestBed.createComponent(GroupBlocksHost);
+      await settle(fixture);
+      const fieldset = fixture.nativeElement.querySelector(
+        'fieldset',
+      ) as HTMLFieldSetElement;
+      const legend = fieldset.querySelector('legend') as HTMLElement;
+      const description = fieldset.querySelector(
+        '.andes-form-description',
+      ) as HTMLElement;
+
+      expect(legend.textContent).toContain('Guests');
+      expect(legend.querySelector('.legend-extra')).not.toBeNull();
+      expect(fieldset.getAttribute('aria-describedby')).toBe(description.id);
+      const style = getComputedStyle(legend);
+      expectLength(style.fontSize, '1rem');
+      expect(
+        declaredValue(CSS, '.andes-form-fieldset__legend', 'font-weight'),
+      ).toBe('var(--andes-font-weight-semibold)');
+      expect(getComputedStyle(fieldset).borderTopStyle).toBe('none');
+    });
+
+    it('shows a list error at the bottom of the fieldset after a submit', async () => {
+      const fixture = TestBed.createComponent(GroupBlocksHost);
+      await settle(fixture);
+      const fieldset = fixture.nativeElement.querySelector(
+        'fieldset',
+      ) as HTMLFieldSetElement;
+
+      expect(fieldset.querySelector('.andes-form-fieldset__error')).toBeNull();
+
+      fixture.nativeElement
+        .querySelector('form')
+        .dispatchEvent(new Event('submit', { cancelable: true }));
+      await settle(fixture);
+      const error = fieldset.querySelector(
+        '.andes-form-fieldset__error',
+      ) as HTMLElement;
+
+      expect(error.textContent?.trim()).toBe('Add at least one guest.');
+      expect(fieldset.dataset['status']).toBe('error');
+      expect(fieldset.getAttribute('aria-describedby')?.split(' ')).toContain(
+        error.id,
+      );
+
+      fixture.componentInstance.group.controls.guests.push(
+        new FormControl('Ada'),
+      );
+      await settle(fixture);
+
+      expect(fieldset.querySelector('.andes-form-fieldset__error')).toBeNull();
     });
   });
 });

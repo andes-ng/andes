@@ -514,6 +514,62 @@ andes-form-label {
   }
 }
 
+/* One line per generated message of an <andes-form-error [control]>. */
+.andes-form-error__item {
+  display: block;
+}
+
+/* AndesFormFieldset: a bare native fieldset whose legend titles the group (16px/24px), the
+   description under it, the fields 24px apart as in the form, and the group's own errors at
+   the bottom. */
+.andes-form-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-family: var(--andes-font-family), sans-serif;
+}
+
+.andes-form-fieldset__legend {
+  /* A legend is not a flex or grid item of its fieldset; floating it into the flow lets the
+     description and content stack under it the same way in every browser. */
+  float: inline-start;
+  width: 100%;
+  margin: 0 0 var(--andes-space-2);
+  padding: 0;
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: var(--andes-font-weight-semibold);
+  color: var(--andes-color-foreground);
+}
+
+/* prettier-ignore */
+.andes-form-fieldset__legend + .andes-form-description,
+.andes-form-fieldset__legend + .andes-form-fieldset__content {
+  clear: both;
+}
+
+.andes-form-fieldset > .andes-form-description {
+  margin-block-end: var(--andes-space-4);
+}
+
+.andes-form-fieldset__content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.andes-form--inline .andes-form-fieldset__content {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--andes-space-4);
+}
+
+.andes-form-fieldset__error {
+  margin-block-start: var(--andes-space-2);
+}
+
 /* `hidden` on a field: gone from the layout, but still part of the form model. */
 andes-form-field[hidden] {
   display: none;

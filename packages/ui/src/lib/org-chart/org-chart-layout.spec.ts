@@ -435,6 +435,20 @@ describe('andesOrgChartLayout', () => {
       expect(smallestClearance(result)).toBeGreaterThan(0);
     });
 
+    it('keeps half a level gap between the assistants and the reports fork', () => {
+      const result = layout(
+        {
+          key: 'ceo',
+          children: [{ key: 'asst', assistant: true }, ...leaves('vp', 2)],
+        },
+        { levelGap: 60 },
+      );
+      const asst = box(result, 'asst');
+      const fork = result.links.find((link) => link.to === 'vp0')?.points[1];
+      expect(fork?.y).toBe(asst.y + asst.height + 30);
+      expect(box(result, 'vp0').y).toBe(asst.y + asst.height + 60);
+    });
+
     it('alternates assistants between the two sides of the stem', () => {
       const result = layout({
         key: 'ceo',

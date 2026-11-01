@@ -465,7 +465,9 @@ function arrange(frame: Frame, options: Resolved): void {
     next += rowSize + nodeGap;
   }
   if (assistants.length) {
-    next += levelGap / 2 - nodeGap;
+    // A full level gap below the last assistant row, so the reports' fork line keeps half a
+    // level gap of air from the assistant cards instead of touching them.
+    next += levelGap - nodeGap;
   }
 
   const stacked =
@@ -477,7 +479,7 @@ function arrange(frame: Frame, options: Resolved): void {
     // Nothing more to place.
   } else if (stacked && options.leafLayout === 'hanging') {
     const stem = -half + options.hangingIndent;
-    let main = next - (assistants.length ? 0 : levelGap / 2);
+    let main = next - levelGap / 2;
     for (const child of regular) {
       child.kind = 'stack';
       child.side = 1;
@@ -490,7 +492,7 @@ function arrange(frame: Frame, options: Resolved): void {
     }
   } else if (stacked) {
     // Two columns: reading order fills the start column, then the end column, row by row.
-    let main = next - (assistants.length ? 0 : levelGap / 2);
+    let main = next - levelGap / 2;
     for (let row = 0; row * 2 < regular.length; row++) {
       const pair = regular.slice(row * 2, row * 2 + 2);
       const rowSize = Math.max(...pair.map((child) => child.mainSize));

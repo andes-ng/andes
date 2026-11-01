@@ -160,6 +160,10 @@ export interface AndesCascaderLabels {
   results: string;
   /** Name of a column of options, `{level}` from 1. */
   level: string;
+  /** Spoken when the user adds paths to a multiple cascader: `{labels}`, their texts. */
+  tagsAdded: string;
+  /** Spoken when the user takes paths off a multiple cascader: `{labels}`, their texts. */
+  tagsRemoved: string;
 }
 
 export const ANDES_CASCADER_DEFAULT_LABELS: AndesCascaderLabels = {
@@ -170,6 +174,8 @@ export const ANDES_CASCADER_DEFAULT_LABELS: AndesCascaderLabels = {
   moreSelected: '{count} more selected',
   results: '{count} results',
   level: 'Level {level}',
+  tagsAdded: 'Added {labels}',
+  tagsRemoved: 'Removed {labels}',
 };
 
 export type AndesCascaderNotFound = string | TemplateRef<unknown> | null;

@@ -293,4 +293,45 @@ describe('AndesCascader tags', () => {
       expect(host.value()).toEqual([]);
     });
   });
+
+  describe('announcements', () => {
+    const live = () =>
+      field().querySelector('[data-slot="cascader-tags-live"]') as HTMLElement;
+
+    it('announces a removed path and the leaves a check adds, politely', () => {
+      setup((h) => {
+        h.maxTagCount.set(undefined);
+        h.value.set([['iquitos']]);
+      });
+      expect(live().getAttribute('role')).toBe('status');
+      expect(live().getAttribute('aria-live')).toBe('polite');
+      expect(live().textContent).toBe('');
+
+      (
+        field().querySelector('.andes-cascader__tag-remove') as HTMLElement
+      ).click();
+      fixture.detectChanges();
+      expect(live().textContent).toBe('Removed Iquitos');
+
+      (
+        field().querySelector('[data-slot="cascader-trigger"]') as HTMLElement
+      ).click();
+      fixture.detectChanges();
+      const peru = Array.from(
+        document.querySelectorAll<HTMLElement>('[data-slot="cascader-option"]'),
+      ).find((el) => el.textContent?.trim() === 'Perú') as HTMLElement;
+      (peru.querySelector('.andes-cascader__check') as HTMLElement).click();
+      fixture.detectChanges();
+      expect(live().textContent).toBe(
+        'Added Perú / Lima, Perú / Cusco, Perú / Arequipa, Perú / Trujillo',
+      );
+    });
+
+    it('stays quiet for a value written from outside', () => {
+      const host = setup((h) => h.maxTagCount.set(undefined));
+      host.value.set([['iquitos']]);
+      fixture.detectChanges();
+      expect(live().textContent).toBe('');
+    });
+  });
 });

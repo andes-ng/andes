@@ -343,6 +343,16 @@
     </span>
   </span>
 
+  <!-- The paths the user adds or removes, read out politely. -->
+  <span
+    class="andes-cascader__sr"
+    data-slot="cascader-tags-live"
+    role="status"
+    aria-live="polite"
+    aria-atomic="true"
+    [textContent]="tagAnnouncement()"
+  ></span>
+
   @if (name(); as fieldName) { @for (value of formValues(); track $index) {
   <input
     type="hidden"

@@ -600,6 +600,8 @@ export class AndesCascader
 
   /** The paths the user just added, whose tags grow in; never those a value arrives with. */
   protected readonly enteringTags = signal<ReadonlySet<string>>(new Set());
+  /** What the field's live region last said: the tags the user added or removed. */
+  protected readonly tagAnnouncement = signal('');
   /** The level of a column that just opened beside the others, which slides in. */
   protected readonly enteringLevel = signal<number | null>(null);
   private enterTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1990,11 +1992,42 @@ export class AndesCascader
     value: AndesCascaderValue[] | AndesCascaderValue[][],
     selectedOptions: AndesCascaderOption[] | AndesCascaderOption[][],
   ): void {
-    const before = new Set(this.entries().map((entry) => pathKey(entry.path)));
+    const previous = this.entries();
+    const before = new Set(previous.map((entry) => pathKey(entry.path)));
     this.value.set(value);
     this.markEntering(before);
+    this.announceTags(previous);
     this.onChange(value);
     this.selectionChange.emit({ value, selectedOptions });
+  }
+
+  /**
+   * Tells a screen reader which paths came and went in a multiple cascader: a tag removed from
+   * the field (or its popover) and the leaves a checked branch brings in are otherwise silent.
+   */
+  private announceTags(previous: readonly SelectedEntry[]): void {
+    if (!this.multiple()) {
+      return;
+    }
+    const keys = (entries: readonly SelectedEntry[]) =>
+      new Set(entries.map((entry) => pathKey(entry.path)));
+    const before = keys(previous);
+    const after = keys(this.entries());
+    const titles = (entries: readonly SelectedEntry[], skip: Set<string>) =>
+      entries
+        .filter((entry) => !skip.has(pathKey(entry.path)))
+        .map((entry) => this.tagTitle(entry))
+        .join(', ');
+    const added = titles(this.entries(), before);
+    const removed = titles(previous, after);
+    const text = this.text();
+    const parts = [
+      added ? text.tagsAdded.replace('{labels}', added) : '',
+      removed ? text.tagsRemoved.replace('{labels}', removed) : '',
+    ].filter(Boolean);
+    if (parts.length > 0) {
+      this.tagAnnouncement.set(parts.join('. '));
+    }
   }
 
   /** Marks the tags the commit just added, so they grow in. */

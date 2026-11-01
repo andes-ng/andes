@@ -823,6 +823,56 @@ describe('AndesCascader', () => {
       expect(selected.active()).toBe('Callao');
     });
 
+    describe('type-ahead', () => {
+      afterEach(() => vi.useRealTimers());
+
+      it('opens and jumps to the option whose label starts with the typed letter', () => {
+        const { combobox, active, panel } = setup();
+        combobox().focus();
+        const event = press(combobox(), 'c');
+        expect(event.defaultPrevented).toBe(true);
+        expect(panel()).not.toBeNull();
+        expect(active()).toBe('Cusco');
+      });
+
+      it('cycles through the options starting with a repeated letter, skipping disabled ones', () => {
+        const { combobox, active } = setup();
+        combobox().focus();
+        press(combobox(), 'c');
+        press(combobox(), 'c');
+        expect(active()).toBe('Callao');
+        press(combobox(), 'c');
+        expect(active()).toBe('Cusco');
+        press(combobox(), 't');
+        // "ccct" matches nothing (Tumbes is disabled anyway), so the cursor stays.
+        expect(active()).toBe('Cusco');
+      });
+
+      it('matches several letters, ignoring case and accents, within the cursor column', () => {
+        vi.useFakeTimers();
+        const { combobox, active } = setup();
+        combobox().focus();
+        press(combobox(), 'ArrowDown');
+        press(combobox(), 'ArrowRight');
+        expect(active()).toBe('Lima');
+        vi.advanceTimersByTime(600);
+        press(combobox(), 'H');
+        press(combobox(), 'U');
+        expect(active()).toBe('Huaral');
+        vi.advanceTimersByTime(600);
+        press(combobox(), 'l');
+        expect(active()).toBe('Lima');
+      });
+
+      it('leaves typing to the search input when there is one', () => {
+        const { combobox, panel } = setup((h) => h.showSearch.set(true));
+        combobox().focus();
+        const event = press(combobox(), 'c');
+        expect(event.defaultPrevented).toBe(false);
+        expect(panel()).toBeNull();
+      });
+    });
+
     it('opens with ArrowUp on the last enabled option', () => {
       const { combobox, active, panel } = setup();
       combobox().focus();

@@ -91,6 +91,17 @@ type CheckMotion = 'check' | 'uncheck' | 'indeterminate';
 
 /** How long a check box keeps its `data-motion`: the click ring's length. */
 const CHECK_MOTION_MS = 1000;
+/** How long typed characters keep building one type-ahead search, as in the tree. */
+const TYPEAHEAD_RESET_MS = 500;
+
+/** Folds case and accents, so "AREQ" and "arequipa" or "Peru" and "Perú" match. */
+function foldText(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase();
+}
+
 /** How long a just-added tag or column keeps its `data-enter` (its enter animation and more). */
 const ENTER_MS = 200;
 
@@ -1016,6 +1027,8 @@ export class AndesCascader
   private readonly measure = viewChild<ElementRef<HTMLElement>>('measure');
   private hasFocus = false;
   private destroyed = false;
+  private typeahead = '';
+  private typeaheadTimer: ReturnType<typeof setTimeout> | null = null;
 
   private onChange: (value: AndesCascaderModel) => void = () => undefined;
   private onTouched: () => void = () => undefined;
@@ -1158,6 +1171,7 @@ export class AndesCascader
       this.destroyed = true;
       clearTimeout(this.enterTimer ?? undefined);
       clearTimeout(this.columnTimer ?? undefined);
+      clearTimeout(this.typeaheadTimer ?? undefined);
       if (this.checkMotionTimer !== null) {
         clearTimeout(this.checkMotionTimer);
       }
@@ -1519,6 +1533,14 @@ export class AndesCascader
       return;
     }
 
+    // Without a search input, typing jumps to the next option of the cursor's column whose
+    // label starts with the typed text.
+    if (!this.searchEnabled() && this.isTypeaheadKey(key)) {
+      event.preventDefault();
+      this.typeAhead(key);
+      return;
+    }
+
     const rtl = this.isRtl();
     const forward = rtl ? 'ArrowLeft' : 'ArrowRight';
     const backward = rtl ? 'ArrowRight' : 'ArrowLeft';
@@ -1631,6 +1653,51 @@ export class AndesCascader
     this.activeKey.set(node.key);
     if (!node.disabled && this.isBranch(node)) {
       this.ensureLoaded(node);
+    }
+  }
+
+  /** A printable character; Space only once a type-ahead search has started. */
+  private isTypeaheadKey(key: string): boolean {
+    if (key.length !== 1) {
+      return false;
+    }
+    return key !== ' ' || this.typeahead !== '';
+  }
+
+  /**
+   * Moves the cursor to the next enabled option of its column (the first column when the panel
+   * is closed, which this opens) whose label starts with what was typed in the last half second.
+   * Typing one letter again and again cycles through the options starting with it.
+   */
+  private typeAhead(char: string): void {
+    clearTimeout(this.typeaheadTimer ?? undefined);
+    this.typeaheadTimer = setTimeout(() => {
+      this.typeaheadTimer = null;
+      this.typeahead = '';
+    }, TYPEAHEAD_RESET_MS);
+    this.typeahead += foldText(char);
+
+    if (!this.overlay.isOpen()) {
+      this.open();
+    }
+    const column = this.cursorColumn().filter((node) => !node.disabled);
+    if (column.length === 0) {
+      return;
+    }
+    const buffer = this.typeahead;
+    const repeated = [...buffer].every((letter) => letter === buffer[0]);
+    const needle = repeated ? buffer[0] : buffer;
+    const active = this.activeNode();
+    const at = active ? column.indexOf(active) : -1;
+    // A fresh search (or one letter repeated) looks past the cursor; a longer one may stay.
+    const from = at === -1 ? 0 : at + (buffer.length === 1 || repeated ? 1 : 0);
+    this.clearPointerHighlight();
+    for (let step = 0; step < column.length; step++) {
+      const node = column[(from + step) % column.length];
+      if (foldText(node.label).startsWith(needle)) {
+        this.setActive(node);
+        return;
+      }
     }
   }
 

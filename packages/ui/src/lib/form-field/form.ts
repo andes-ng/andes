@@ -31,6 +31,7 @@ import { filter, first, map, of } from 'rxjs';
 
 import {
   ANDES_FORM,
+  ANDES_FORM_PROVIDER,
   type AndesFormApi,
   type AndesFormClassNames,
   type AndesFormColumn,
@@ -48,6 +49,7 @@ import {
   type AndesFormSize,
   type AndesFormStyles,
   type AndesFormVariant,
+  type AndesLinkedForm,
 } from './form-field-tokens';
 import { ANDES_FORM_LOCALE, ANDES_FORM_LOCALE_EN } from './form-locale';
 
@@ -146,7 +148,7 @@ export function collectAndesFormErrors(
     '(reset)': 'onNativeReset()',
   },
 })
-export class AndesForm implements AndesFormApi {
+export class AndesForm implements AndesFormApi, AndesLinkedForm {
   private readonly element =
     inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly injector = inject(Injector);
@@ -160,6 +162,10 @@ export class AndesForm implements AndesFormApi {
   private readonly ownSubmitted = signal(false);
   /** Bumped when the Angular form directive is submitted or reset. */
   private readonly submitTick = signal(0);
+  /** Bumped on every event of the Angular form, so `valid` and `pending` are read again. */
+  private readonly statusTick = signal(0);
+  /** The `AndesFormProvider` this form is linked to, if any. */
+  private readonly provider = inject(ANDES_FORM_PROVIDER, { optional: true });
 
   /** Defaults to `vertical` - the stacked layout every `AndesFormField` already had before
    *  this directive existed - so wrapping an existing form in `andesForm` never changes how
@@ -282,6 +288,38 @@ export class AndesForm implements AndesFormApi {
       : this.ownSubmitted();
   });
 
+  /**
+   * Whether the form is valid right now - no enabled control has an error - read without
+   * touching any control's state, so nothing starts showing an error. A disabled form is not.
+   * Follows the Angular form on the element, or signal forms' `[formRoot]`; `true` without one.
+   */
+  readonly valid = computed(() => {
+    this.statusTick();
+    const root = this.signalRoot();
+    if (root) {
+      return root.valid();
+    }
+    const form = this.formDirective?.form;
+    return form ? form.valid : true;
+  });
+
+  /** Whether an async validator is still running. */
+  readonly pending = computed(() => {
+    this.statusTick();
+    const root = this.signalRoot();
+    if (root) {
+      return root.pending();
+    }
+    return this.formDirective?.form?.pending ?? false;
+  });
+
+  /**
+   * Whether a submit would succeed: {@link valid} and nothing {@link pending}. It is how to
+   * disable a submit button until the form is complete, without showing a single error early
+   * (`[disabled]="!f.canSubmit()"` with `#f="andesForm"`).
+   */
+  readonly canSubmit = computed(() => this.valid() && !this.pending());
+
   /** Signal forms' `[formRoot]` on the same `<form>`, if any. */
   private readonly formRoot = inject(FormRoot, {
     self: true,
@@ -300,6 +338,16 @@ export class AndesForm implements AndesFormApi {
 
   constructor() {
     const destroyRef = inject(DestroyRef);
+    const provider = this.provider;
+    if (provider) {
+      // Linked forms are known by name; a form with none stays out of the registry.
+      effect((onCleanup) => {
+        const name = this.name();
+        if (name) {
+          onCleanup(provider.register(name, this));
+        }
+      });
+    }
     if (this.formRoot) {
       let initial = true;
       effect(() => {
@@ -308,7 +356,7 @@ export class AndesForm implements AndesFormApi {
           initial = false;
           return;
         }
-        untracked(() => this.valuesChange.emit(value));
+        untracked(() => this.changed(value));
       });
     }
     const formDirective = this.formDirective;
@@ -330,11 +378,17 @@ export class AndesForm implements AndesFormApi {
     afterNextRender(
       () => {
         this.syncDisabled(this.disabled());
-        queueMicrotask(() => this.syncDisabled(this.disabled()));
+        const refresh = () => this.statusTick.update((n) => n + 1);
+        refresh();
+        queueMicrotask(() => {
+          this.syncDisabled(this.disabled());
+          refresh();
+        });
         formDirective.form.events
           .pipe(takeUntilDestroyed(destroyRef))
           .subscribe((event) => {
             this.syncDisabled(this.disabled());
+            refresh();
             if (event instanceof FormResetEvent) {
               // `resetForm()` clears `submitted` only after the reset event.
               queueMicrotask(() => this.submitTick.update((n) => n + 1));
@@ -342,10 +396,28 @@ export class AndesForm implements AndesFormApi {
           });
         formDirective.form.valueChanges
           .pipe(takeUntilDestroyed(destroyRef))
-          .subscribe((value) => this.valuesChange.emit(value));
+          .subscribe((value) => this.changed(value));
       },
       { injector: this.injector },
     );
+  }
+
+  /** The value changed: tells the `valuesChange` listeners and the provider. */
+  private changed(value: unknown): void {
+    this.valuesChange.emit(value);
+    const name = this.name();
+    if (name) {
+      this.provider?.notifyChange(name, this, value);
+    }
+  }
+
+  /** The form was submitted valid: tells the `validSubmit` listeners and the provider. */
+  private finished(value: unknown): void {
+    this.validSubmit.emit(value);
+    const name = this.name();
+    if (name) {
+      this.provider?.notifyFinish(name, this, value);
+    }
   }
 
   private syncDisabled(disabled: boolean): void {
@@ -374,7 +446,7 @@ export class AndesForm implements AndesFormApi {
       : of(form);
     settled.subscribe(() => {
       if (form.valid || form.disabled) {
-        this.validSubmit.emit(form.value);
+        this.finished(form.value);
         return;
       }
       this.invalidSubmit.emit({
@@ -409,7 +481,7 @@ export class AndesForm implements AndesFormApi {
       }
       untracked(() => {
         if (root.valid()) {
-          this.validSubmit.emit(root.value());
+          this.finished(root.value());
           return;
         }
         this.invalidSubmit.emit({

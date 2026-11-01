@@ -297,6 +297,51 @@ export interface AndesFormApi {
 export const ANDES_FORM = new InjectionToken<AndesFormApi>('AndesForm');
 
 /**
+ * A form as an `AndesFormProvider` sees it: what a linked form shows of itself, and the two
+ * calls a footer button needs. Implemented by `AndesForm`.
+ */
+export interface AndesLinkedForm {
+  /** The form's `name` - what it is registered under. */
+  readonly name: Signal<string | undefined>;
+  /** No enabled control has an error. */
+  readonly valid: Signal<boolean>;
+  /** An async validator is still running. */
+  readonly pending: Signal<boolean>;
+  /** Valid, and nothing pending - what a submit button waits for. */
+  readonly canSubmit: Signal<boolean>;
+  /** Submitted and not reset since. */
+  readonly submitted: Signal<boolean>;
+  /** Submits the form as its own submit button would. */
+  submit(): void;
+  /** Resets the form to `value`, or to each control's initial value. */
+  reset(value?: unknown): void;
+}
+
+/** What an `AndesFormProvider` reports about one of its forms. */
+export interface AndesFormProviderEvent {
+  /** The form's `name`. */
+  readonly name: string;
+  /** The form itself, for `submit()`, `reset()` or its `canSubmit`. */
+  readonly form: AndesLinkedForm;
+  /** The form's value: after a change for `formChange`, at a valid submit for `formFinish`. */
+  readonly value: unknown;
+}
+
+/** The surface `AndesForm` uses on an enclosing `AndesFormProvider`. */
+export interface AndesFormProviderApi {
+  /** Adds a form under `name`; returns the callback that removes it. */
+  register(name: string, form: AndesLinkedForm): () => void;
+  /** A named form's value changed. */
+  notifyChange(name: string, form: AndesLinkedForm, value: unknown): void;
+  /** A named form was submitted and is valid. */
+  notifyFinish(name: string, form: AndesLinkedForm, value: unknown): void;
+}
+
+export const ANDES_FORM_PROVIDER = new InjectionToken<AndesFormProviderApi>(
+  'AndesFormProvider',
+);
+
+/**
  * App- or subtree-wide error messages, merged between the built-in
  * defaults and any `AndesForm`/`AndesFormField` `errorMessages` input. Register with
  * {@link provideAndesFormErrorMessages}.

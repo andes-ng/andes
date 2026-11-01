@@ -1729,6 +1729,51 @@ describe('AndesTree', () => {
     });
   });
 
+  describe('disabledKeys', () => {
+    @Component({
+      imports: [AndesTree],
+      template: `
+        <andes-tree
+          checkable
+          [nodes]="nodes"
+          [expandedKeys]="['a', 'a1']"
+          [disabledKeys]="locked()"
+          [(checkedKeys)]="checked"
+          aria-label="Warehouses"
+        />
+      `,
+    })
+    class LockedHost {
+      readonly nodes = sample();
+      readonly locked = signal<AndesTreeKey[]>(['a1y']);
+      checked: AndesTreeKey[] = [];
+    }
+
+    it('disables the listed nodes on top of their own flag, and lets go of them again', () => {
+      const fixture = TestBed.createComponent(LockedHost);
+      fixture.detectChanges();
+      const item = () =>
+        [...fixture.nativeElement.querySelectorAll('[role="treeitem"]')].find(
+          (el) =>
+            el
+              .querySelector(':scope > .andes-tree__row .andes-tree__title')
+              ?.textContent?.trim() === 'Estante Y',
+        ) as HTMLElement;
+
+      expect(item().getAttribute('aria-disabled')).toBe('true');
+      checkbox(item()).click();
+      fixture.detectChanges();
+      expect(fixture.componentInstance.checked).toEqual([]);
+
+      fixture.componentInstance.locked.set([]);
+      fixture.detectChanges();
+      expect(item().hasAttribute('aria-disabled')).toBe(false);
+      checkbox(item()).click();
+      fixture.detectChanges();
+      expect(fixture.componentInstance.checked).toEqual(['a1y']);
+    });
+  });
+
   describe('switcherIcon', () => {
     @Component({
       imports: [AndesTree],

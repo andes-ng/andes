@@ -74,11 +74,13 @@ export function andesTreeFromFlat<T extends Record<string, unknown>>(
 /**
  * Resolves a tree of node objects into keyed entries: each carries its level, its position among
  * its siblings, its parent and its resolved flags. A node without a key gets its position path
- * (`'0-2-1'`) as one.
+ * (`'0-2-1'`) as one. Nodes whose keys are in `disabledKeys` are resolved as disabled, as
+ * though their own `disabled` flag were set.
  */
 export function andesCreateTreeIndex(
   nodes: readonly AndesTreeNode[] | null | undefined,
   fieldNames?: AndesTreeFieldNames,
+  disabledKeys?: ReadonlySet<AndesTreeKey>,
 ): AndesTreeIndex {
   const keyField = fieldNames?.key ?? 'key';
   const titleField = fieldNames?.title ?? 'title';
@@ -102,7 +104,7 @@ export function andesCreateTreeIndex(
       const rawChildren = node[childrenField];
       const hasChildrenField = Array.isArray(rawChildren);
       const children: AndesTreeEntry[] = [];
-      const disabled = node.disabled === true;
+      const disabled = node.disabled === true || !!disabledKeys?.has(key);
       const disableCheckbox = disabled || node.disableCheckbox === true;
       const entry: AndesTreeEntry = {
         key,

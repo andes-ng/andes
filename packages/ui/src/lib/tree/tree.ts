@@ -191,6 +191,12 @@ export class AndesTree {
   readonly checkedKeys = model<AndesTreeKey[]>([]);
   /** Nodes whose children have been loaded (or that `loadData` has been called for). */
   readonly loadedKeys = model<AndesTreeKey[]>([]);
+  /**
+   * Nodes to treat as disabled on top of their own `disabled` flag: not selectable, checkable
+   * or draggable, still expandable. The tree select uses it to lock the rest of the tree once
+   * its `maxCount` is reached.
+   */
+  readonly disabledKeys = input<readonly AndesTreeKey[]>([]);
 
   /** Open every node that has children, once, when the first nodes arrive. */
   readonly defaultExpandAll = input(false, { transform: booleanAttribute });
@@ -327,8 +333,15 @@ export class AndesTree {
   private readonly itemIds = new Map<AndesTreeKey, string>();
   private readonly itemKeys = new Map<string, AndesTreeKey>();
 
+  private readonly disabledKeySet = computed(
+    () => new Set<AndesTreeKey>(this.disabledKeys()),
+  );
   protected readonly index = computed(() =>
-    andesCreateTreeIndex(this.nodes(), this.fieldNames()),
+    andesCreateTreeIndex(
+      this.nodes(),
+      this.fieldNames(),
+      this.disabledKeySet(),
+    ),
   );
   protected readonly text = computed<AndesTreeLabels>(() => ({
     ...DEFAULT_LABELS,

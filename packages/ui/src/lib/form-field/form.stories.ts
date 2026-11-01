@@ -1,4 +1,4 @@
-import { Component, computed, input, signal } from '@angular/core';
+import { signal } from '@angular/core';
 import {
   FormControl,
   FormGroup,
@@ -8,13 +8,14 @@ import {
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
-import {
-  AndesForm,
-  injectAndesFormDisabled,
-  injectAndesFormSize,
-  injectAndesFormVariant,
-} from './form';
-import { AndesFormControl } from './form-control';
+import { AndesCheckbox } from '../checkbox/checkbox';
+import { AndesInput } from '../input/input';
+import { AndesInputPassword } from '../input/input-password';
+import { AndesRadio } from '../radio-group/radio';
+import { AndesRadioGroup } from '../radio-group/radio-group';
+import { AndesSelect } from '../select/select';
+import { AndesSwitch } from '../switch/switch';
+import { AndesForm } from './form';
 import { AndesFormField } from './form-field';
 import type {
   AndesFormLabelAlign,
@@ -24,43 +25,7 @@ import type {
   AndesFormVariant,
 } from './form-field-tokens';
 import { AndesFormLabel } from './form-label';
-import { withDemoControls } from './form-field.stories';
-
-// Native controls (see form-field.stories.ts) on purpose: the field tints status and feedback only on a direct native child, and andesFormControl wires AndesInput by hand.
-
-/**
- * Stand-in for a control on another branch adopting the size hook: it defaults its own
- * `size` from the enclosing `andesForm` via `injectAndesFormSize()`.
- */
-@Component({
-  selector: 'andes-demo-size-readout',
-  template: `<code
-    style="font-size: 0.75rem; color: var(--andes-color-muted-foreground);"
-    >injectAndesFormSize() → {{ effective() }}</code
-  >`,
-})
-class DemoSizeReadout {
-  readonly size = input<AndesFormSize | undefined>(undefined);
-  private readonly formSize = injectAndesFormSize();
-  protected readonly effective = computed(
-    () => this.size() ?? this.formSize() ?? 'md (default)',
-  );
-}
-
-/** Stand-in for a non-form control (an action button, an uploader) that follows the form's
- *  `variant` and `disabled` through the DI hooks. */
-@Component({
-  selector: 'andes-demo-hint-readout',
-  template: `<code
-    style="font-size: 0.75rem; color: var(--andes-color-muted-foreground);"
-    >injectAndesFormVariant() → {{ variant() ?? 'undefined' }} ·
-    injectAndesFormDisabled() → {{ disabled() }}</code
-  >`,
-})
-class DemoHintReadout {
-  protected readonly variant = injectAndesFormVariant();
-  protected readonly disabled = injectAndesFormDisabled();
-}
+import { PLAN_OPTIONS } from './form-field.stories';
 
 const moduleMetadata = {
   imports: [
@@ -68,10 +33,14 @@ const moduleMetadata = {
     AndesForm,
     AndesFormField,
     AndesFormLabel,
-    AndesFormControl,
     AndesButton,
-    DemoSizeReadout,
-    DemoHintReadout,
+    AndesCheckbox,
+    AndesInput,
+    AndesInputPassword,
+    AndesRadio,
+    AndesRadioGroup,
+    AndesSelect,
+    AndesSwitch,
   ],
 };
 
@@ -83,12 +52,13 @@ interface FormArgs {
   colon: boolean;
   requiredMark: AndesFormRequiredMark;
   size: AndesFormSize | undefined;
+  variant: AndesFormVariant | undefined;
+  disabled: boolean;
 }
 
 const meta: Meta<FormArgs> = {
   title: 'Data Entry/Form/Layout',
   tags: ['autodocs'],
-  decorators: [withDemoControls],
   parameters: {
     docs: {
       description: {
@@ -108,13 +78,15 @@ const meta: Meta<FormArgs> = {
           '',
           'A few thin conveniences drive or read that same Angular form: `disabled`',
           '(`disable()` / `enable()` on it), `(validSubmit)` / `(invalidSubmit)` (the submit',
-          'verdict, after async validators settle, with every failing control path) and',
-          '`scrollToField(path)`.',
+          'verdict, after async validators settle, with every failing control path),',
+          '`submit()`, `reset()`, `(valuesChange)`, `(formReset)` and `scrollToField(path)`.',
+          'With signal forms, `andesForm` sits on a `<form [formRoot]>` the same way.',
           '',
-          '`size` does not resize anything by itself: controls opt in with',
-          '`injectAndesFormSize()` (none of the unmerged andes-ng controls do yet), and it is',
-          'reflected as `data-size` for plain CSS. The native controls in these stories use that',
-          'attribute.',
+          '`size` and `variant` reach every library control whose own is unset, and `disabled`',
+          'disables each of them, buttons included - also a control bound to a signal of its own',
+          'rather than to the form. A control maps `variant` to its own vocabulary and ignores a',
+          'value it does not have. On a screen 575px wide or less a horizontal form stacks its',
+          'labels above the controls.',
         ].join('\n'),
       },
     },
@@ -133,6 +105,11 @@ const meta: Meta<FormArgs> = {
       options: [true, false, 'optional'],
     },
     size: { control: 'inline-radio', options: [undefined, 'sm', 'md', 'lg'] },
+    variant: {
+      control: 'inline-radio',
+      options: [undefined, 'outlined', 'filled', 'borderless', 'underlined'],
+    },
+    disabled: { control: 'boolean' },
   },
   args: {
     layout: 'horizontal',
@@ -142,6 +119,8 @@ const meta: Meta<FormArgs> = {
     colon: true,
     requiredMark: true,
     size: undefined,
+    variant: undefined,
+    disabled: false,
   },
 };
 
@@ -169,24 +148,23 @@ const signUpTemplate = (extra = '') => `
     [colon]="colon"
     [requiredMark]="requiredMark"
     [size]="size"
+    [variant]="variant"
+    [disabled]="disabled"
     ${extra}
     (ngSubmit)="form.markAllAsTouched()"
-    style="max-width: 560px;"
+    style="width: min(560px, 100vw - 2rem);"
   >
     <andes-form-field label="Full name" tooltip="As printed on your ID." hasFeedback>
-      <input andesFormControl formControlName="name" class="andes-demo-control" />
+      <andes-input formControlName="name" />
     </andes-form-field>
     <andes-form-field label="Work email address" hasFeedback>
-      <input andesFormControl formControlName="email" type="email" class="andes-demo-control" />
+      <andes-input formControlName="email" type="email" />
     </andes-form-field>
     <andes-form-field label="Company" extra="Leave blank if you are signing up alone.">
-      <input andesFormControl formControlName="company" class="andes-demo-control" />
+      <andes-input formControlName="company" />
     </andes-form-field>
     <andes-form-field label="Plan">
-      <select andesFormControl formControlName="plan" class="andes-demo-control">
-        <option value="free">Free</option>
-        <option value="pro">Pro</option>
-      </select>
+      <andes-select formControlName="plan" [options]="plans" />
     </andes-form-field>
     <andes-form-field>
       <andes-button type="submit">Create account</andes-button>
@@ -198,7 +176,7 @@ const signUpTemplate = (extra = '') => `
 export const Playground: Story = {
   render: (args) => ({
     moduleMetadata,
-    props: { ...args, form: signUpForm() },
+    props: { ...args, form: signUpForm(), plans: PLAN_OPTIONS },
     template: signUpTemplate(),
   }),
 };
@@ -214,7 +192,8 @@ export const Playground: Story = {
  * `labelWrap` on.
  *
  * `vertical` is the default - identical to fields with no `andesForm` at all. `inline` makes
- * the fields flow in a wrapping row, label beside control.
+ * the fields flow in a wrapping row, label beside control. On a screen 575px wide or less a
+ * horizontal form stacks: open the story at a phone width.
  */
 export const Layouts: Story = {
   render: (args) => {
@@ -224,13 +203,13 @@ export const Layouts: Story = {
     horizontal.controls.email.markAsTouched();
     const fields = (extra: string) => `
       <andes-form-field label="Full name" tooltip="As printed on your ID." hasFeedback>
-        <input andesFormControl formControlName="name" class="andes-demo-control" />
+        <andes-input formControlName="name" />
       </andes-form-field>
       <andes-form-field label="Work email address" hasFeedback>
-        <input andesFormControl formControlName="email" type="email" class="andes-demo-control" />
+        <andes-input formControlName="email" type="email" />
       </andes-form-field>
       <andes-form-field label="Company" extra="Leave blank if you are signing up alone.">
-        <input andesFormControl formControlName="company" class="andes-demo-control" />
+        <andes-input formControlName="company" />
       </andes-form-field>
       <andes-form-field>
         <andes-button type="submit">${extra}</andes-button>
@@ -248,7 +227,7 @@ export const Layouts: Story = {
         }),
       },
       template: `
-        <div style="display: flex; flex-direction: column; gap: 2.5rem; max-width: 560px;">
+        <div style="display: flex; flex-direction: column; gap: 2.5rem; width: min(560px, 100vw - 2rem);">
           <form andesForm [formGroup]="horizontal" layout="horizontal" [requiredMark]="requiredMark" (ngSubmit)="horizontal.markAllAsTouched()">
             ${fields('Horizontal')}
           </form>
@@ -260,10 +239,10 @@ export const Layouts: Story = {
           </form>
           <form andesForm [formGroup]="inline" layout="inline" (ngSubmit)="inline.markAllAsTouched()">
             <andes-form-field label="Username">
-              <input andesFormControl formControlName="user" class="andes-demo-control" style="width: 12rem;" />
+              <andes-input formControlName="user" style="width: 12rem;" />
             </andes-form-field>
             <andes-form-field label="Password">
-              <input andesFormControl formControlName="password" type="password" class="andes-demo-control" style="width: 12rem;" />
+              <andes-input-password formControlName="password" style="width: 12rem;" />
             </andes-form-field>
             <andes-form-field>
               <andes-button type="submit">Log in (inline)</andes-button>
@@ -276,12 +255,10 @@ export const Layouts: Story = {
 };
 
 /**
- * What a form hands down through DI. `size` cascades: the readout component calls
- * `injectAndesFormSize()`, and the native controls react to the `data-size` the form
- * reflects. Below, `disabled` disables the whole Angular form (`disable()`) and re-enables it
- * when switched off, while `variant` is a hint, like `size`: controls read both through
- * `injectAndesFormVariant()` / `injectAndesFormDisabled()` - the readout does - and plain CSS
- * can key off the reflected `data-variant` / `data-disabled`.
+ * What a form hands down to its controls. Each column is an `andesForm` with its own `size`:
+ * every control in it - input, select, number, radios, switch, checkbox, button - takes it.
+ * Below, `variant="filled"` reaches the controls that have a filled look, and `disabled`
+ * disables the Angular form (`disable()`) and also the button, which is bound to nothing.
  */
 export const Propagation: Story = {
   args: { layout: 'horizontal' },
@@ -290,49 +267,59 @@ export const Propagation: Story = {
     props: {
       ...args,
       sizes: ['sm', 'md', 'lg'],
-      value: new FormControl('Ada Lovelace'),
+      columns: (['sm', 'md', 'lg'] as const).map(() => signUpForm()),
       locked: signal(true),
-      variant: 'filled' satisfies AndesFormVariant,
       form: signUpForm(),
+      plans: PLAN_OPTIONS,
     },
     template: `
-      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; max-width: 900px;">
-        @for (s of sizes; track s) {
-          <div andesForm [size]="s">
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; width: min(960px, 100vw - 2rem);">
+        @for (s of sizes; track s; let i = $index) {
+          <form andesForm [size]="s" [formGroup]="columns[i]">
             <andes-form-field [label]="'size = ' + s">
-              <input andesFormControl [formControl]="value" class="andes-demo-control" />
+              <andes-input formControlName="name" placeholder="Full name" />
             </andes-form-field>
-            <andes-demo-size-readout />
-          </div>
+            <andes-form-field label="Plan">
+              <andes-select formControlName="plan" [options]="plans" />
+            </andes-form-field>
+            <andes-form-field label="Billing">
+              <andes-radio-group value="month" optionType="button">
+                <andes-radio value="month">Monthly</andes-radio>
+                <andes-radio value="year">Yearly</andes-radio>
+              </andes-radio-group>
+            </andes-form-field>
+            <andes-form-field>
+              <andes-button type="submit">Save</andes-button>
+            </andes-form-field>
+          </form>
         }
       </div>
-      <label style="display: inline-flex; gap: 0.5rem; align-items: center; margin-block: 2rem 1rem; font-family: var(--andes-font-family), sans-serif; font-size: 0.875rem; color: var(--andes-color-foreground);">
-        <input type="checkbox" [checked]="locked()" (change)="locked.set(!locked())" />
-        Disable the form
-      </label>
+      <div style="margin-block: 2rem 1rem;">
+        <andes-switch [checked]="locked()" (checkedChange)="locked.set($event)">Disable the form</andes-switch>
+      </div>
       <form
         andesForm
         [formGroup]="form"
         [layout]="layout"
         [labelCol]="labelCol"
         [disabled]="locked()"
-        [variant]="variant"
-        style="width: 100%; max-width: 560px;"
+        variant="filled"
+        style="width: min(560px, 100vw - 2rem);"
       >
         <andes-form-field label="Full name">
-          <input andesFormControl formControlName="name" class="andes-demo-control" />
+          <andes-input formControlName="name" />
         </andes-form-field>
         <andes-form-field label="Work email">
-          <input andesFormControl formControlName="email" class="andes-demo-control" />
+          <andes-input formControlName="email" />
         </andes-form-field>
         <andes-form-field label="Plan">
-          <select andesFormControl formControlName="plan" class="andes-demo-control">
-            <option value="free">Free</option>
-            <option value="pro">Pro</option>
-          </select>
+          <andes-select formControlName="plan" [options]="plans" />
+        </andes-form-field>
+        <andes-form-field label="Newsletter">
+          <andes-checkbox>Send me product news</andes-checkbox>
         </andes-form-field>
         <andes-form-field>
-          <andes-demo-hint-readout />
+          <andes-button type="submit">Create account</andes-button>
         </andes-form-field>
       </form>
     `,
@@ -356,12 +343,12 @@ export const CustomRequiredMark: Story = {
           >{{ required ? 'Required' : 'Optional' }}</span
         >
       </ng-template>
-      <form andesForm [formGroup]="form" [requiredMark]="tag" style="max-width: 360px;">
+      <form andesForm [formGroup]="form" [requiredMark]="tag" style="width: min(360px, 100vw - 2rem);">
         <andes-form-field label="Full name">
-          <input andesFormControl formControlName="name" class="andes-demo-control" />
+          <andes-input formControlName="name" />
         </andes-form-field>
         <andes-form-field label="Company">
-          <input andesFormControl formControlName="company" class="andes-demo-control" />
+          <andes-input formControlName="company" />
         </andes-form-field>
       </form>
     `,

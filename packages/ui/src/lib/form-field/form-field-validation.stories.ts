@@ -8,14 +8,11 @@ import {
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesFormField } from './form-field';
-import { fieldModuleMetadata, withDemoControls } from './form-field.stories';
-
-// Native controls (see form-field.stories.ts) on purpose: the field tints status and feedback only on a direct native child, and andesFormControl wires AndesInput by hand.
+import { fieldModuleMetadata } from './form-field.stories';
 
 const meta: Meta<AndesFormField> = {
   title: 'Data Entry/Form/Field/Validation',
   component: AndesFormField,
-  decorators: [withDemoControls],
 };
 
 export default meta;
@@ -24,8 +21,9 @@ type Story = StoryObj<AndesFormField>;
 
 /**
  * `validateStatus` set by hand, each with `hasFeedback` and a `help` line - the full status
- * vocabulary (`success`, `warning`, `error`, `validating`). Only `error` and `warning` tint a
- * plain native control; `success`/`validating` are carried by the icon alone.
+ * vocabulary (`success`, `warning`, `error`, `validating`). The input takes `error` and
+ * `warning` as its own status (border, ring, `aria-invalid` for an error); `success` and
+ * `validating` are carried by the icon alone.
  */
 export const ManualStatus: Story = {
   render: () => ({
@@ -40,7 +38,7 @@ export const ManualStatus: Story = {
       value: new FormControl('andes'),
     },
     template: `
-      <div andesForm style="max-width: 360px;">
+      <div andesForm style="width: min(360px, 100vw - 2rem);">
         @for (row of rows; track row.status) {
           <andes-form-field
             [label]="row.label"
@@ -48,7 +46,7 @@ export const ManualStatus: Story = {
             [help]="row.help"
             hasFeedback
           >
-            <input andesFormControl [formControl]="value" class="andes-demo-control" />
+            <andes-input [formControl]="value" />
           </andes-form-field>
         }
       </div>
@@ -58,7 +56,7 @@ export const ManualStatus: Story = {
 
 /**
  * Status *derived* from the control, with `hasFeedback`. The username runs an async
- * validator (≈0.8 s) - type to see `validating` (spinner, `aria-busy` on the input), then
+ * validator (≈0.8 s) - type to see `validating` (the spinner), then
  * `success`, or `error` for "admin". Messages come from the validators themselves; the
  * async one returns its own string (`{ taken: 'That username is taken.' }`), which is used
  * as-is since no message map entry exists for `taken`.
@@ -88,21 +86,25 @@ export const DerivedStatus: Story = {
     [username, email, city].forEach((c) => c.markAsTouched());
     return {
       moduleMetadata: fieldModuleMetadata,
-      props: { username, email, city },
+      props: {
+        username,
+        email,
+        city,
+        cities: [
+          { value: 'Lima', label: 'Lima' },
+          { value: 'Cusco', label: 'Cusco' },
+        ],
+      },
       template: `
-        <div andesForm style="max-width: 360px;">
+        <div andesForm style="width: min(360px, 100vw - 2rem);">
           <andes-form-field label="Username" hasFeedback>
-            <input andesFormControl [formControl]="username" class="andes-demo-control" />
+            <andes-input [formControl]="username" />
           </andes-form-field>
           <andes-form-field label="Email" hasFeedback>
-            <input andesFormControl [formControl]="email" class="andes-demo-control" />
+            <andes-input [formControl]="email" type="email" />
           </andes-form-field>
           <andes-form-field label="City" hasFeedback>
-            <select andesFormControl [formControl]="city" class="andes-demo-control">
-              <option value="">Select a city</option>
-              <option value="Lima">Lima</option>
-              <option value="Cusco">Cusco</option>
-            </select>
+            <andes-select [formControl]="city" [options]="cities" placeholder="Select a city" />
           </andes-form-field>
         </div>
       `,
@@ -140,15 +142,15 @@ export const GeneratedErrorMessages: Story = {
         codeMessages: { pattern: 'Solo dígitos, por favor.' },
       },
       template: `
-        <form andesForm [formGroup]="form" [errorMessages]="spanish" style="max-width: 360px;">
+        <form andesForm [formGroup]="form" [errorMessages]="spanish" style="width: min(360px, 100vw - 2rem);">
           <andes-form-field label="Nombre">
-            <input andesFormControl formControlName="name" class="andes-demo-control" />
+            <andes-input formControlName="name" />
           </andes-form-field>
           <andes-form-field label="Código" [errorMessages]="codeMessages">
-            <input andesFormControl formControlName="code" class="andes-demo-control" />
+            <andes-input formControlName="code" />
           </andes-form-field>
           <andes-form-field label="Correo">
-            <input andesFormControl formControlName="email" class="andes-demo-control" />
+            <andes-input formControlName="email" />
           </andes-form-field>
         </form>
       `,
@@ -164,23 +166,23 @@ export const GeneratedErrorMessages: Story = {
 export const WarningValidators: Story = {
   render: () => {
     const belowCost = (control: AbstractControl): ValidationErrors | null =>
-      control.value !== '' && Number(control.value) < 12.5
+      control.value !== null && Number(control.value) < 12.5
         ? { belowCost: { cost: '12.50' } }
         : null;
-    const price = new FormControl('9.90', Validators.required);
+    const price = new FormControl<number | null>(9.9, Validators.required);
     price.markAsTouched();
     return {
       moduleMetadata: fieldModuleMetadata,
       props: { price, warnings: [belowCost] },
       template: `
-        <div andesForm style="max-width: 360px;">
+        <div andesForm style="width: min(360px, 100vw - 2rem);">
           <andes-form-field
             label="Unit price"
             hasFeedback
             [warningValidators]="warnings"
             [errorMessages]="{ belowCost: 'Below the unit cost of {cost}.' }"
           >
-            <input andesFormControl [formControl]="price" inputmode="decimal" class="andes-demo-control" />
+            <andes-input-number [formControl]="price" [precision]="2" [min]="0" />
           </andes-form-field>
           <p style="margin: 0; font-family: var(--andes-font-family), sans-serif; font-size: 0.75rem; line-height: 1.25rem; color: var(--andes-color-muted-foreground);">
             control.valid = {{ price.valid }}

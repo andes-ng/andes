@@ -8,27 +8,35 @@ import {
   type ValidationErrors,
   Validators,
 } from '@angular/forms';
+import {
+  CdkDrag,
+  CdkDragHandle,
+  type CdkDragDrop,
+  CdkDropList,
+} from '@angular/cdk/drag-drop';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
+import { AndesInput } from '../input/input';
 import { AndesForm } from './form';
-import { AndesFormControl } from './form-control';
+import { AndesFormError } from './form-error';
 import { AndesFormField } from './form-field';
 import type {
   AndesFormInvalidSubmit,
   AndesFormShowErrorsOn,
 } from './form-field-tokens';
-import { withDemoControls } from './form-field.stories';
-
-// Native controls (see form-field.stories.ts) on purpose: the field tints status and feedback only on a direct native child, and andesFormControl wires AndesInput by hand.
 
 const moduleMetadata = {
   imports: [
     ReactiveFormsModule,
+    CdkDrag,
+    CdkDragHandle,
+    CdkDropList,
     AndesForm,
     AndesFormField,
-    AndesFormControl,
+    AndesFormError,
     AndesButton,
+    AndesInput,
   ],
 };
 
@@ -36,14 +44,13 @@ const moduleMetadata = {
 const LOG_STYLE =
   'margin: 0; padding: 0.5rem 0.75rem; border-radius: var(--andes-radius-md); background: var(--andes-color-muted); color: var(--andes-color-foreground); font-family: var(--andes-font-family), sans-serif; font-size: 0.75rem; line-height: 1.25rem; white-space: pre-wrap;';
 
-/** These stories take no controls; the typed shape only keeps the shared decorator assignable. */
+/** These stories take no controls. */
 interface BehaviorArgs {
   readonly unused?: never;
 }
 
 const meta: Meta<BehaviorArgs> = {
   title: 'Data Entry/Form/Behavior',
-  decorators: [withDemoControls],
 };
 
 export default meta;
@@ -77,11 +84,11 @@ export const ShowErrorsOn: Story = {
       ),
     },
     template: `
-      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: 1.5rem; max-width: 960px;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: 1.5rem; width: min(960px, 100vw - 2rem);">
         @for (gate of gates; track gate; let i = $index) {
           <form andesForm [showErrorsOn]="gate" [formGroup]="forms[i]">
             <andes-form-field [label]="gate" hasFeedback>
-              <input andesFormControl formControlName="code" class="andes-demo-control" />
+              <andes-input formControlName="code" />
             </andes-form-field>
             <andes-button type="submit" variant="outline" size="sm" style="align-self: flex-start;">Submit</andes-button>
           </form>
@@ -106,15 +113,15 @@ export const ScrollToFirstError: Story = {
       }),
     },
     template: `
-      <form andesForm scrollToFirstError [formGroup]="form" style="max-width: 360px;">
+      <form andesForm scrollToFirstError [formGroup]="form" style="width: min(360px, 100vw - 2rem);">
         <andes-form-field label="First">
-          <input andesFormControl formControlName="first" class="andes-demo-control" />
+          <andes-input formControlName="first" />
         </andes-form-field>
         <div style="height: 120vh; border-inline-start: 2px dashed var(--andes-color-border); padding-inline-start: 0.5rem; font-family: var(--andes-font-family), sans-serif; color: var(--andes-color-muted-foreground);">
           (spacer)
         </div>
         <andes-form-field label="Second">
-          <input andesFormControl formControlName="second" class="andes-demo-control" />
+          <andes-input formControlName="second" />
         </andes-form-field>
         <andes-button type="submit" style="position: sticky; bottom: 1rem; align-self: flex-start;">Submit</andes-button>
       </form>
@@ -170,14 +177,14 @@ export const SubmitOutputs: Story = {
           [labelCol]="8"
           (validSubmit)="onValid($event)"
           (invalidSubmit)="onInvalid($event)"
-          style="width: 100%; max-width: 560px;"
+          style="width: min(560px, 100vw - 2rem);"
         >
           <andes-form-field label="Username" hasFeedback [errorMessages]="{ taken: 'That username is taken.' }">
-            <input andesFormControl formControlName="username" class="andes-demo-control" />
+            <andes-input formControlName="username" />
           </andes-form-field>
           <ng-container formGroupName="address">
             <andes-form-field label="City">
-              <input andesFormControl formControlName="city" class="andes-demo-control" />
+              <andes-input formControlName="city" />
             </andes-form-field>
           </ng-container>
           <andes-form-field>
@@ -195,15 +202,20 @@ export const SubmitOutputs: Story = {
 
 /**
  * Dynamic rows with a plain `FormArray`: every row is its own field (only the first one
- * labelled, the rest keep the empty label column so they line up), and the array-level
- * validator's error is shown on the field holding the add button through `validateStatus` +
- * `help`. Nothing beyond `FormArray` is needed.
+ * labelled, the rest keep the empty label column so they line up), reordered by dragging the
+ * handle (CDK drag and drop moving the array's controls). The array's own error - `required`
+ * on an empty array - shows under the list with `<andes-form-error [control]="emails">`, once
+ * the list was touched or the form submitted. Nothing beyond `FormArray` is needed.
  */
 export const DynamicRows: Story = {
   render: () => {
     const emails = new FormArray(
       [
         new FormControl('ada@lovelace.dev', [
+          Validators.required,
+          Validators.email,
+        ]),
+        new FormControl('grace@hopper.dev', [
           Validators.required,
           Validators.email,
         ]),
@@ -227,6 +239,11 @@ export const DynamicRows: Story = {
           emails.removeAt(index);
           emails.markAsTouched();
         },
+        move: (event: CdkDragDrop<unknown>) => {
+          const control = emails.at(event.previousIndex);
+          emails.removeAt(event.previousIndex, { emitEvent: false });
+          emails.insert(event.currentIndex, control);
+        },
         onValid: (value: unknown) => log.set(JSON.stringify(value)),
       },
       template: `
@@ -236,27 +253,25 @@ export const DynamicRows: Story = {
           layout="horizontal"
           [labelCol]="8"
           (validSubmit)="onValid($event)"
-          style="width: 100%; max-width: 560px;"
+          style="width: min(560px, 100vw - 2rem);"
         >
-          <ng-container formArrayName="emails">
+          <div formArrayName="emails" cdkDropList (cdkDropListDropped)="move($event)" style="display: flex; flex-direction: column; gap: 1.5rem;">
             @for (control of emails.controls; track control; let i = $index) {
-              <andes-form-field [label]="i === 0 ? 'Notify' : undefined">
-                <div style="display: flex; gap: 0.5rem;">
-                  <input andesFormControl [formControlName]="i" type="email" placeholder="name@company.com" class="andes-demo-control" />
+              <andes-form-field [label]="i === 0 ? 'Notify' : undefined" cdkDrag>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                  <andes-button variant="ghost" size="icon" cdkDragHandle [aria-label]="'Move email ' + (i + 1)">⋮⋮</andes-button>
+                  <andes-input [formControlName]="i" type="email" placeholder="name@company.com" />
                   <andes-button variant="ghost" size="icon" [aria-label]="'Remove email ' + (i + 1)" (click)="remove(i)">✕</andes-button>
                 </div>
               </andes-form-field>
             }
-          </ng-container>
-          <andes-form-field
-            [label]="emails.length === 0 ? 'Notify' : undefined"
-            [validateStatus]="emails.errors && emails.touched ? 'error' : undefined"
-            [help]="emails.errors && emails.touched ? 'Add at least one email.' : undefined"
-          >
+          </div>
+          <andes-form-field [label]="emails.length === 0 ? 'Notify' : undefined">
             <div style="display: flex; gap: 0.5rem;">
               <andes-button variant="dashed" (click)="add()">Add email</andes-button>
               <andes-button type="submit">Save</andes-button>
             </div>
+            <andes-form-error [control]="emails" [errorMessages]="{ required: 'Add at least one email.' }" />
           </andes-form-field>
           @if (log()) {
             <pre style="${LOG_STYLE}">validSubmit {{ log() }}</pre>

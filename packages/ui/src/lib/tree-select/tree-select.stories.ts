@@ -312,6 +312,58 @@ export const Multiple: Story = {
 };
 
 /**
+ * Tag density. `maxTagCount="responsive"` keeps the tags on one row and shows as many as fit -
+ * resize the container - and the "+ N" tag opens a popover listing (and removing) the hidden
+ * ones, on hover, click or keyboard. `maxTagTextLength` cuts long tags short; `maxCount` caps
+ * the selection and disables every other node once it is reached; `maxTagPopover="false"`
+ * falls back to a native tooltip. The tags line up with a multiple select's.
+ */
+export const TagDensity: Story = {
+  name: 'Tag density',
+  render: () => ({
+    moduleMetadata: { imports: IMPORTS },
+    props: {
+      regionNodes: regions(),
+      many: [
+        'lima-cercado',
+        'lima-brena',
+        'lima-sur',
+        'arequipa-ciudad',
+        'arequipa-camana',
+        'cusco-ciudad',
+        'iquitos',
+      ] as AndesTreeKey[],
+      short: [
+        'lima-cercado',
+        'arequipa-camana',
+        'cusco-urubamba',
+      ] as AndesTreeKey[],
+      capped: ['iquitos'] as AndesTreeKey[],
+      checked: ['cusco-ciudad'] as AndesTreeKey[],
+    },
+    styles: [
+      ...STORY_STYLES,
+      `.resizable { resize: horizontal; overflow: hidden; width: 320px; min-width: 160px; max-width: 560px; padding-block-end: 4px; }`,
+    ],
+    template: `
+      <div class="stack">
+        <div class="resizable">
+          <andes-tree-select aria-label="Regions (responsive)" multiple allowClear maxTagCount="responsive" [nodes]="regionNodes" [(value)]="many" />
+        </div>
+        <p class="caption">maxTagCount="responsive" - drag the corner to resize</p>
+        <andes-tree-select aria-label="Regions (checkable, responsive)" checkable maxTagCount="responsive" [nodes]="regionNodes" [(value)]="checked" />
+        <andes-tree-select aria-label="Regions (short tags)" multiple [maxTagTextLength]="6" [nodes]="regionNodes" [(value)]="short" />
+        <p class="caption">maxTagTextLength=6</p>
+        <andes-tree-select aria-label="Regions (up to three)" multiple [maxCount]="3" placeholder="Pick up to three" [nodes]="regionNodes" [(value)]="capped" />
+        <p class="caption">maxCount=3 - the other nodes disable once three are picked</p>
+        <andes-tree-select aria-label="Regions (tooltip)" multiple [maxTagCount]="2" [maxTagPopover]="false" [nodes]="regionNodes" [(value)]="many" />
+        <p class="caption">maxTagPopover=false - a native tooltip instead</p>
+      </div>
+    `,
+  }),
+};
+
+/**
  * `checkable` shows cascading checkboxes. `showCheckedStrategy` decides what the value and the
  * tags hold when a parent is checked: only the leaves (`child`), the topmost checked nodes
  * (`parent`) or every checked node (`all`). With `checkStrictly` a parent and its children are

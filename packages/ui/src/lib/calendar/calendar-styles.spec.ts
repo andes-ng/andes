@@ -169,7 +169,7 @@ describe('AndesCalendar styles', () => {
       expect(
         declaredValue(
           forced,
-          '.andes-calendar__day--today > *',
+          '.andes-calendar__day--today > :is(.andes-calendar__cell-text, .andes-calendar__cell-content)',
           'border-style',
         ),
       ).toBe('dashed');
@@ -180,6 +180,18 @@ describe('AndesCalendar styles', () => {
           'border-style',
         ),
       ).toBe('solid');
+    });
+
+    it('outlines today with a rule as specific as the chip border it overrides', () => {
+      const today =
+        '.andes-calendar__day--today > :is(.andes-calendar__cell-text, .andes-calendar__cell-content)';
+      expect(declaredValue(source, today, 'border-color')).toBe(
+        'var(--andes-color-primary-text, var(--andes-color-primary))',
+      );
+      // After the chip rule, so that on equal specificity today wins.
+      expect(source.indexOf(today)).toBeGreaterThan(
+        source.indexOf('border: 1px solid transparent;'),
+      );
     });
 
     it('blanks the chip border, which would otherwise be painted around every day', () => {

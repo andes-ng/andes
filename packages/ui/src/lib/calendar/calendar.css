@@ -361,8 +361,10 @@
 /* Today is an outline, not a fill, so it stays distinguishable from a selected
    day rather than competing with it. */
 /* `-text` rather than the fill shade: plain primary only reaches 2.8:1 against the dark
-   popover, under the 3:1 a lone outline needs. */
-.andes-calendar__day--today > * {
+   popover, under the 3:1 a lone outline needs. Named like the chip rule it overrides, which
+   `> *` alone would lose to (it would leave today with no outline at all). */
+/* prettier-ignore */
+.andes-calendar__day--today > :is(.andes-calendar__cell-text, .andes-calendar__cell-content) {
   border-color: var(--andes-color-primary-text, var(--andes-color-primary));
 }
 
@@ -660,7 +662,8 @@
   }
 
   /* Today: a dashed edge, which the solid fill of a selected day is not. */
-  .andes-calendar__day--today > * {
+  /* prettier-ignore */
+  .andes-calendar__day--today > :is(.andes-calendar__cell-text, .andes-calendar__cell-content) {
     border-style: dashed;
     border-color: CanvasText;
   }

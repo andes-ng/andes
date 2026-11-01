@@ -352,11 +352,11 @@ export const DisabledDateAndTime: Story = {
     template: `<div style="display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; align-items: flex-start;">
       <div style="width: 30rem; min-height: 27rem;">
         <p [style]="caption">Working days and hours</p>
-        <andes-date-picker locale="en-GB" showTime [weekStartsOn]="1" [dateDisabled]="weekends" [timeDisabled]="officeHours" [ngModel]="picked" [open]="true" aria-label="Appointment" />
+        <andes-date-picker locale="en-GB" showTime [weekStartsOn]="1" [dateDisabled]="weekends" [timeDisabled]="officeHours" [value]="picked" [open]="true" aria-label="Appointment" />
       </div>
       <div style="width: 30rem; min-height: 27rem;">
         <p [style]="caption">hideDisabledOptions, 15 minutes</p>
-        <andes-date-picker locale="en-GB" [showTime]="hidden" [weekStartsOn]="1" [dateDisabled]="weekends" [timeDisabled]="officeHours" [ngModel]="picked" [open]="true" aria-label="Appointment, hidden options" />
+        <andes-date-picker locale="en-GB" [showTime]="hidden" [weekStartsOn]="1" [dateDisabled]="weekends" [timeDisabled]="officeHours" [value]="picked" [open]="true" aria-label="Appointment, hidden options" />
       </div>
       <div style="width: 100%; min-height: 28rem;">
         <p [style]="caption">Range: the end cannot be before the start on the same day</p>

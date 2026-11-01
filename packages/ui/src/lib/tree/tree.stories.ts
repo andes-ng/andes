@@ -4,6 +4,7 @@ import type { Meta, StoryObj } from '@storybook/angular';
 import { AndesTree } from './tree';
 import { AndesTreeNodeTemplate } from './tree-node-template';
 import type { AndesTreeNode } from './tree-types';
+import { andesTreeFromFlat } from './tree-utils';
 
 const TREE_IMPORTS = [JsonPipe, AndesTree, AndesTreeNodeTemplate];
 
@@ -425,6 +426,9 @@ export const DisabledNodes: Story = {
 /**
  * Data shape and node content. The first tree reads data with other property names through
  * `fieldNames`; the second draws the content of every node with an `andesTreeNode` template.
+ * The third is built with `andesTreeFromFlat` from flat rows that name their parent (`id` /
+ * `pId`), and replaces the expand arrow with a `switcherIcon` template, which turns as the
+ * node opens.
  */
 export const DataAndContent: Story = {
   name: 'Data and content',
@@ -461,6 +465,14 @@ export const DataAndContent: Story = {
         { key: 'cusco', title: 'Almacén Cusco', stock: 310 },
       ] satisfies AndesTreeNode[],
       stockExpanded: ['lima'],
+      flatNodes: andesTreeFromFlat([
+        { id: 1, pId: null, title: 'Perú' },
+        { id: 2, pId: 1, title: 'Lima' },
+        { id: 3, pId: 2, title: 'Miraflores' },
+        { id: 4, pId: 2, title: 'Barranco' },
+        { id: 5, pId: 1, title: 'Cusco' },
+      ]),
+      flatExpanded: [1, 2],
     },
     styles: [
       ...STORY_STYLES,
@@ -478,6 +490,14 @@ export const DataAndContent: Story = {
               <span class="stock">{{ node.stock }} u.</span>
             </ng-template>
           </andes-tree>
+        </div>
+        <div class="panel" style="width: 300px;">
+          <ng-template #plus>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M6 3.5 10.5 8 6 12.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </ng-template>
+          <andes-tree aria-label="Ubicaciones" [nodes]="flatNodes" [(expandedKeys)]="flatExpanded" [switcherIcon]="plus" />
         </div>
       </div>
     `,

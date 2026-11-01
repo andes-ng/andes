@@ -401,12 +401,17 @@
   background-color: var(--andes-calendar-band);
 }
 
-/* The hovered boundary of the preview is outlined, not filled, so the day the range would end
-   on is the one that stands out. The picked start keeps its solid fill. */
+/* The boundary of the preview that is not the picked start (the day the range would end on, or
+   begin on when it runs backwards) is filled with the band, so the half band behind it does not
+   show its edge through the chip, and it is outlined while hovered or focused. */
 /* prettier-ignore */
-:is(.andes-calendar__day--preview-start, .andes-calendar__day--preview-end):not(.andes-calendar__day--selected):hover:not([aria-disabled='true']) > * {
+:is(.andes-calendar__day--preview-start, .andes-calendar__day--preview-end):not(.andes-calendar__day--selected):not([aria-disabled='true']) > * {
+  background-color: var(--andes-calendar-band);
+}
+
+/* prettier-ignore */
+:is(.andes-calendar__day--preview-start, .andes-calendar__day--preview-end):not(.andes-calendar__day--selected):is(:hover, :focus-visible):not([aria-disabled='true']) > * {
   border-color: var(--andes-color-primary-text, var(--andes-color-primary));
-  background-color: transparent;
 }
 
 /* prettier-ignore */

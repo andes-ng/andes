@@ -81,6 +81,17 @@ describe('AndesCalendar styles', () => {
       ).toBe(true);
     });
 
+    it('fills the previewed boundary chip with the band so the half band does not show through it', () => {
+      const chip =
+        ":is(.andes-calendar__day--preview-start, .andes-calendar__day--preview-end):not(.andes-calendar__day--selected):not([aria-disabled='true']) > *";
+      expect(declaredValue(source, chip, 'background-color')).toBe(
+        'var(--andes-calendar-band)',
+      );
+      expect(source.indexOf(chip)).toBeGreaterThan(
+        source.indexOf(":hover:not([aria-disabled='true']) > * {"),
+      );
+    });
+
     it('declares the half bands after the full-width band they override', () => {
       expect(
         source.indexOf('.andes-calendar__day--preview-end::before {'),

@@ -413,10 +413,16 @@ export class AndesFormField implements AndesFormFieldApi {
     if (help !== undefined) {
       return help ? [help] : [];
     }
-    if (this.showError()) {
-      return this.errorPresent() ? [] : this.validationMessages();
-    }
-    return this.status() === 'warning' ? this.warningMessages() : [];
+    const messages = this.showError()
+      ? this.errorPresent()
+        ? []
+        : this.validationMessages()
+      : this.status() === 'warning'
+        ? this.warningMessages()
+        : [];
+    // Two validators can resolve to the same text; it is shown once, and the text is what each
+    // line is tracked (and animated in) by.
+    return [...new Set(messages)];
   });
 
   /** Generated errors interrupt (`alert`); generated warnings are announced politely. */

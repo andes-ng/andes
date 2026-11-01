@@ -24,7 +24,12 @@ import { ANDES_FORM_ERROR, ANDES_FORM_FIELD } from './form-field-tokens';
   selector: 'andes-form-error',
   imports: [],
   template: `@if (visible()) {
-    <p class="andes-form-error" [id]="field?.errorId() ?? null" role="alert">
+    <p
+      class="andes-form-error"
+      [id]="field?.errorId() ?? null"
+      role="alert"
+      animate.leave="andes-form-field__message--leave"
+    >
       <ng-content />
     </p>
   }`,

@@ -99,8 +99,9 @@
       class="andes-form-field__help"
       [id]="helpId()"
       [attr.role]="helpRole()"
+      animate.leave="andes-form-field__message--leave"
     >
-      @for (message of helpMessages(); track $index) {
+      @for (message of helpMessages(); track message) {
       <div class="andes-form-field__help-item">{{ message }}</div>
       }
     </div>

@@ -116,8 +116,53 @@ andes-form-label {
   min-width: 0;
 }
 
-.andes-form-field__messages--empty {
-  display: none;
+/* An empty messages area stays in the layout at zero height rather than leaving it: a message
+   on its way out (below) must still be drawn while it collapses. */
+.andes-form-field__messages {
+  interpolate-size: allow-keywords;
+}
+
+/* Message motion. A generated message, a help line and an <andes-form-error> slide down into
+   place as they appear, and fold up and fade as they go (Angular's `animate.leave` keeps the
+   element until the animation ends). The height is animated through `interpolate-size`, so the
+   control below the field moves smoothly where that is supported and snaps where it is not;
+   the fade and the 4px slide work everywhere. */
+.andes-form-field__help-item,
+.andes-form-error {
+  overflow: hidden;
+  animation: andes-form-field-message-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.andes-form-field__message--leave {
+  overflow: hidden;
+  pointer-events: none;
+  animation: andes-form-field-message-out 150ms cubic-bezier(0.4, 0, 1, 1)
+    forwards;
+}
+
+@keyframes andes-form-field-message-in {
+  from {
+    height: 0;
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes andes-form-field-message-out {
+  to {
+    height: 0;
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* Reduced motion: messages appear and disappear at once. */
+@media (prefers-reduced-motion: reduce) {
+  .andes-form-field__help-item,
+  .andes-form-error,
+  .andes-form-field__message--leave {
+    animation: none;
+  }
 }
 
 /* prettier-ignore */

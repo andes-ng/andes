@@ -600,22 +600,87 @@ describe('AndesDatePicker motion and layout', () => {
         expect(column(view, 'minutes').scrollTop).toBe(30 * 28);
       });
 
-      it('leaves a column where it is when an option is picked with the pointer', async () => {
+      it('eases a column to an option picked with the pointer, even one already selected', async () => {
         const view = await withTime();
         await view.open();
         manualFrames();
         column(view, 'hours').scrollTop = 3 * 28;
 
         column(view, 'hours')
-          .querySelector<HTMLElement>('[id$="-hours-14"]')
+          .querySelector<HTMLElement>('[id$="-hours-9"]')
           ?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
         view.detect();
         await view.fixture.whenStable();
         view.detect();
+        run(1000);
+        run(1200);
 
-        expect(selected(view, 'hours')).toBe('14');
+        expect(selected(view, 'hours')).toBe('09');
+        expect(column(view, 'hours').scrollTop).toBe(9 * 28);
+      });
+
+      it('leaves a column the user scrolled alone when another day is picked', async () => {
+        const view = await withTime();
+        await view.open();
+        manualFrames();
+        column(view, 'hours').scrollTop = 3 * 28;
+        column(view, 'minutes').scrollTop = 5 * 28;
+
+        Array.from(
+          document.querySelectorAll<HTMLElement>(
+            '.andes-calendar__day:not(.andes-calendar__day--outside)',
+          ),
+        )
+          .find((day) => day.textContent?.trim() === '20')
+          ?.click();
+        view.detect();
+        await view.fixture.whenStable();
+        view.detect();
+        run(1000);
+        run(1200);
+
+        expect(
+          document
+            .querySelector('.andes-calendar__day--selected')
+            ?.textContent?.trim(),
+        ).toBe('20');
+        expect(column(view, 'hours').scrollTop).toBe(3 * 28);
+        expect(column(view, 'minutes').scrollTop).toBe(5 * 28);
+        expect(frames.size).toBe(0);
+      });
+
+      it('does not move a scrolled column when a day gives it its first selected time', async () => {
+        const view = await create((host) => host.showTime.set(true));
+        await view.open();
+        manualFrames();
+        column(view, 'hours').scrollTop = 3 * 28;
+
+        Array.from(
+          document.querySelectorAll<HTMLElement>(
+            '.andes-calendar__day:not(.andes-calendar__day--outside)',
+          ),
+        )
+          .find((day) => day.textContent?.trim() === '20')
+          ?.click();
+        view.detect();
+        await view.fixture.whenStable();
+        view.detect();
+        run(1000);
+        run(1200);
+
+        expect(selected(view, 'hours')).toBe('00');
         expect(column(view, 'hours').scrollTop).toBe(3 * 28);
         expect(frames.size).toBe(0);
+      });
+
+      it('marks no time as selected until a day is picked', async () => {
+        const view = await create((host) => host.showTime.set(true));
+        await view.open();
+        expect(
+          document.querySelectorAll(
+            '[data-slot="date-picker-time"] [aria-selected="true"]',
+          ),
+        ).toHaveLength(0);
       });
 
       it('eases to an option picked afterwards, ending exactly on it', async () => {

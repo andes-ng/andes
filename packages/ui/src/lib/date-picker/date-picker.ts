@@ -420,8 +420,6 @@ const TIME_PAGE = 5;
 
 /** How long a time column eases to a newly picked option, as the `mid` motion token. */
 const TIME_SCROLL_MS = 150;
-/** How long after a pointer pick the time columns stay put instead of aligning to it. */
-const TIME_POINTER_KEEP_MS = 400;
 
 /** How long a scrolled time column must rest before `changeOnScroll` picks its top option. */
 const TIME_SCROLL_SETTLE_MS = 100;
@@ -1258,8 +1256,10 @@ export class AndesDatePicker implements ControlValueAccessor {
 
   /** The pane whose time columns have had their first, instant alignment. */
   private alignedPane: HTMLElement | null = null;
-  /** Until this time (ms) a pointer pick leaves the columns where the user has them. */
-  private keepColumnsUntil = 0;
+  /** The option each time column was last aligned to, so only a changed selection moves it. */
+  private readonly alignedSelection = new WeakMap<HTMLElement, string | null>();
+  /** Columns whose option was just picked: they align even if it was already the selected one. */
+  private readonly pickedColumns = new Set<string>();
 
   /** The animation frame of each time column's scroll under way. */
   private readonly columnScrolls = new Map<HTMLElement, number>();
@@ -1779,6 +1779,8 @@ export class AndesDatePicker implements ControlValueAccessor {
     const side = this.editedSide();
     const time = this.timeFor(side)();
     const rules = this.timeRules(side);
+    // Until the side has a day there is no time to mark: the columns start unselected.
+    const picked = this.sideValue(side) !== null;
     const twelve = units.twelve;
     const afternoon = time.hours >= 12 ? 12 : 0;
 
@@ -1811,10 +1813,10 @@ export class AndesDatePicker implements ControlValueAccessor {
           (entry) =>
             !options.hideDisabledOptions ||
             !entry.disabled ||
-            entry.value === current,
+            (picked && entry.value === current),
         )
         .map((entry) => {
-          const selected = entry.value === current;
+          const selected = picked && entry.value === current;
           return {
             ...entry,
             id: `${this.idPrefix}-${unit}-${entry.value}`,
@@ -2181,8 +2183,6 @@ export class AndesDatePicker implements ControlValueAccessor {
       return;
     }
     const animate = this.alignedPane === pane;
-    // The option under the pointer is already in view; moving the column under it is a jump.
-    const keep = animate && Date.now() < this.keepColumnsUntil;
     let found = false;
     pane
       .querySelectorAll<HTMLElement>('.andes-date-picker__time-column')
@@ -2192,7 +2192,18 @@ export class AndesDatePicker implements ControlValueAccessor {
           '[aria-selected="true"]',
         );
         const first = column.firstElementChild as HTMLElement | null;
-        if (selected && first && !keep) {
+        const key = selected?.id ?? null;
+        // A column the user scrolled stays put while its selection does: picking another day
+        // re-renders the options without changing which one is selected.
+        // A column that had nothing selected and gets a time because a day was picked does not
+        // move either: only a pick in the column, a key, or opening it brings an option up.
+        const before = this.alignedSelection.get(column);
+        const moved =
+          !this.alignedSelection.has(column) ||
+          (before !== null && before !== key) ||
+          this.pickedColumns.has(column.dataset['unit'] ?? '');
+        this.alignedSelection.set(column, key);
+        if (selected && first && moved) {
           this.scrollColumnTo(
             column,
             selected.offsetTop - first.offsetTop,
@@ -2200,6 +2211,7 @@ export class AndesDatePicker implements ControlValueAccessor {
           );
         }
       });
+    this.pickedColumns.clear();
     // Columns that have not rendered yet leave the next pass as the first one.
     this.alignedPane = found ? pane : null;
   }
@@ -3196,7 +3208,7 @@ export class AndesDatePicker implements ControlValueAccessor {
     option: TimeColumn['options'][number],
   ): void {
     if (event.button === 0 && !option.disabled) {
-      this.keepColumnsUntil = Date.now() + TIME_POINTER_KEEP_MS;
+      this.pickedColumns.add(unit);
       this.setTimePart(unit, option.value);
     }
   }

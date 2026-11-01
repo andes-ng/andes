@@ -97,45 +97,107 @@ export const Range: Story = {
   args: { mode: 'range' },
 };
 
+const MATRIX_PROPS = {
+  types: ['date', 'week', 'month', 'quarter', 'year'],
+  picked: FEB_15,
+  range: [new Date(2024, 1, 5), new Date(2024, 1, 12)],
+  several: [new Date(2024, 1, 2), new Date(2024, 1, 14), new Date(2024, 1, 20)],
+  caption:
+    'margin: 0 0 0.375rem; font: 0.75rem/1.25rem var(--andes-font-family), sans-serif; color: var(--andes-color-muted-foreground);',
+};
+
+/**
+ * The three sizes (`sm` 24px, `md` 32px, `lg` 40px) across every type: date, week, month,
+ * quarter and year, a range, a multiple picker and a time picker.
+ */
 export const Sizes: Story = {
   render: () => ({
     moduleMetadata: { imports: [FormsModule] },
-    props: { picked: FEB_15 },
-    template: `<div style="display: flex; flex-direction: column; gap: 0.75rem; width: 16rem;">
-      <andes-date-picker size="sm" locale="en-US" [ngModel]="picked" aria-label="Small" />
-      <andes-date-picker size="md" locale="en-US" [ngModel]="picked" aria-label="Medium" />
-      <andes-date-picker size="lg" locale="en-US" [ngModel]="picked" aria-label="Large" />
-    </div>`,
-  }),
-};
-
-export const Variants: Story = {
-  render: () => ({
-    moduleMetadata: { imports: [FormsModule] },
-    props: { picked: FEB_15 },
-    template: `<div style="display: flex; flex-direction: column; gap: 0.75rem; width: 16rem;">
-      <andes-date-picker variant="outlined" locale="en-US" [ngModel]="picked" aria-label="Outlined" />
-      <andes-date-picker variant="filled" locale="en-US" [ngModel]="picked" aria-label="Filled" />
-      <andes-date-picker variant="borderless" locale="en-US" [ngModel]="picked" aria-label="Borderless" />
-      <andes-date-picker variant="underlined" locale="en-US" [ngModel]="picked" aria-label="Underlined" />
+    props: { ...MATRIX_PROPS, sizes: ['sm', 'md', 'lg'] },
+    template: `<div style="display: flex; flex-direction: column; gap: 1.25rem;">
+      @for (size of sizes; track size) {
+        <div>
+          <p [style]="caption">size="{{ size }}"</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-start;">
+            @for (type of types; track type) {
+              <andes-date-picker style="width: 12.5rem;" [size]="size" [picker]="type" locale="en-US" [weekStartsOn]="1" [ngModel]="picked" [aria-label]="size + ' ' + type" />
+            }
+            <andes-date-picker style="width: 20rem;" [size]="size" mode="range" locale="en-US" [ngModel]="range" [aria-label]="size + ' range'" />
+            <andes-date-picker style="width: 18rem;" [size]="size" mode="multiple" locale="en-US" [maxTagCount]="1" [ngModel]="several" [aria-label]="size + ' multiple'" />
+            <andes-date-picker style="width: 9rem;" [size]="size" picker="time" locale="en-GB" [aria-label]="size + ' time'" />
+          </div>
+        </div>
+      }
     </div>`,
   }),
 };
 
 /**
- * `disabled` (single and range) and `status`, which colors the field; `error` also sets
- * `aria-invalid`.
+ * The four variants (`outlined`, `filled`, `borderless`, `underlined`) across every type,
+ * a range, a multiple picker and a time picker.
+ */
+export const Variants: Story = {
+  render: () => ({
+    moduleMetadata: { imports: [FormsModule] },
+    props: {
+      ...MATRIX_PROPS,
+      variants: ['outlined', 'filled', 'borderless', 'underlined'],
+    },
+    template: `<div style="display: flex; flex-direction: column; gap: 1.25rem;">
+      @for (variant of variants; track variant) {
+        <div>
+          <p [style]="caption">variant="{{ variant }}"</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-start;">
+            @for (type of types; track type) {
+              <andes-date-picker style="width: 12.5rem;" [variant]="variant" [picker]="type" locale="en-US" [weekStartsOn]="1" [ngModel]="picked" [aria-label]="variant + ' ' + type" />
+            }
+            <andes-date-picker style="width: 20rem;" [variant]="variant" mode="range" locale="en-US" [ngModel]="range" [aria-label]="variant + ' range'" />
+            <andes-date-picker style="width: 18rem;" [variant]="variant" mode="multiple" locale="en-US" [maxTagCount]="1" [ngModel]="several" [aria-label]="variant + ' multiple'" />
+            <andes-date-picker style="width: 9rem;" [variant]="variant" picker="time" locale="en-GB" [aria-label]="variant + ' time'" />
+          </div>
+        </div>
+      }
+    </div>`,
+  }),
+};
+
+/**
+ * `status` colours the field, with a matching ring while it is active, for every type, a
+ * range, a multiple picker and a time picker; `error` also sets `aria-invalid`. The last row
+ * is `disabled`.
  */
 export const States: Story = {
   render: () => ({
     moduleMetadata: { imports: [FormsModule] },
-    props: { picked: FEB_15 },
-    template: `<div style="display: flex; flex-direction: column; gap: 0.75rem; width: 16rem;">
-      <andes-date-picker disabled locale="en-US" [ngModel]="picked" aria-label="Disabled" />
-      <andes-date-picker disabled mode="range" locale="en-US" aria-label="Range, disabled" />
-      <andes-date-picker status="error" locale="en-US" aria-label="Error" />
-      <andes-date-picker status="warning" locale="en-US" aria-label="Warning" />
-      <andes-date-picker status="error" mode="range" locale="en-US" aria-label="Range error" />
+    props: {
+      ...MATRIX_PROPS,
+      statuses: ['error', 'warning'],
+    },
+    template: `<div style="display: flex; flex-direction: column; gap: 1.25rem;">
+      @for (status of statuses; track status) {
+        <div>
+          <p [style]="caption">status="{{ status }}"</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-start;">
+            @for (type of types; track type) {
+              <andes-date-picker style="width: 12.5rem;" [status]="status" [picker]="type" locale="en-US" [weekStartsOn]="1" [ngModel]="picked" [aria-label]="status + ' ' + type" />
+            }
+            <andes-date-picker style="width: 20rem;" [status]="status" mode="range" locale="en-US" [ngModel]="range" [aria-label]="status + ' range'" />
+            <andes-date-picker style="width: 18rem;" [status]="status" mode="multiple" locale="en-US" [maxTagCount]="1" [ngModel]="several" [aria-label]="status + ' multiple'" />
+            <andes-date-picker style="width: 9rem;" [status]="status" picker="time" locale="en-GB" [aria-label]="status + ' time'" />
+          </div>
+        </div>
+      }
+      <div>
+        <p [style]="caption">disabled</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-start;">
+          @for (type of types; track type) {
+            <andes-date-picker style="width: 12.5rem;" disabled [picker]="type" locale="en-US" [weekStartsOn]="1" [ngModel]="picked" [aria-label]="'disabled ' + type" />
+          }
+          <andes-date-picker style="width: 20rem;" disabled mode="range" locale="en-US" [ngModel]="range" aria-label="disabled range" />
+          <andes-date-picker style="width: 18rem;" disabled mode="multiple" locale="en-US" [maxTagCount]="1" [ngModel]="several" aria-label="disabled multiple" />
+          <andes-date-picker style="width: 9rem;" disabled picker="time" locale="en-GB" aria-label="disabled time" />
+        </div>
+      </div>
     </div>`,
   }),
 };

@@ -89,6 +89,7 @@ const LOG_STYLE =
   'margin: 0; padding: 0.5rem 0.75rem; border-radius: var(--andes-radius-md); background: var(--andes-color-muted); color: var(--andes-color-foreground); font-family: var(--andes-font-family), sans-serif; font-size: 0.75rem; line-height: 1.25rem; white-space: pre-wrap;';
 
 interface ExampleArgs {
+  layout?: 'horizontal' | 'vertical' | 'inline';
   size: AndesFormSize | undefined;
   variant: AndesFormVariant | undefined;
   disabled: boolean;
@@ -145,10 +146,18 @@ function everyControl() {
 
 /**
  * Every library control in one form, each required and none wired by hand. Submit it empty
- * to see each one show its error; change `size`, `variant` and `disabled` to see them cascade,
+ * to see each one show its error; change `layout`, `size`, `variant` and `disabled` to see them
+ * cascade,
  * and `status` to force one manual `validateStatus` on every field.
  */
 export const AllControls: Story = {
+  args: { layout: 'horizontal' },
+  argTypes: {
+    layout: {
+      control: 'inline-radio',
+      options: ['horizontal', 'vertical', 'inline'],
+    },
+  },
   render: (args) => ({
     moduleMetadata,
     props: {
@@ -165,7 +174,7 @@ export const AllControls: Story = {
       <form
         andesForm
         [formGroup]="form"
-        layout="horizontal"
+        [layout]="layout"
         [labelCol]="7"
         [size]="size"
         [variant]="variant"
@@ -739,7 +748,8 @@ export const InlineLogin: Story = {
  * `andesFormControl`, which gives it the id, the `aria-invalid` and the described-by the
  * library controls take by themselves. The end date must fall after the start; the group
  * validator reports it on the end field with `groupErrors`. The library's date picker will take
- * this place - same field, same `formControlName` - once it lands in this branch.
+ * this place - same field, same `formControlName` - once it lands in this branch. The inputs
+ * are native on purpose: the story is about wiring a native control into a field.
  */
 export const TimeRelated: Story = {
   render: () => {

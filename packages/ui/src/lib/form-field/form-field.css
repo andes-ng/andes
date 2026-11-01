@@ -105,9 +105,27 @@ andes-form-label {
   padding-block-end: var(--andes-space-2);
 }
 
+/* The control row. Every control sits on one 32px line (24px / 40px in a small / large form):
+   a text input fills it, and a control shorter than that - a checkbox, a radio, a switch, a
+   rating, a slider - is centred on it, so the label text, which is centred on the same line,
+   and the control line up whatever the control is, and the message below starts one line
+   under every control type. A taller control (a textarea, a group of options on several
+   lines) grows the row and keeps the label at its first line. `align-content` centres without
+   touching the width of the content, so a checkbox's click target stays as wide as its text. */
 .andes-form-field__control {
   position: relative;
   min-width: 0;
+  min-height: var(
+    --_andes-form-control-height,
+    var(--andes-control-height-md, 2rem)
+  );
+  align-content: center;
+}
+
+/* An inline control (a checkbox, a switch, a rating) is aligned to the top of its line instead
+   of sitting on the text baseline, which left it a pixel or two off the centre of the row. */
+.andes-form-field__control > :where(*) {
+  vertical-align: top;
 }
 
 .andes-form-field__messages {
@@ -453,6 +471,7 @@ andes-form-label {
 /* prettier-ignore */
 .andes-form-field--has-feedback > .andes-form-field__control:not(:has(> :is(input, textarea, select))) > :first-child {
   flex: 1 1 auto;
+  align-self: center;
   min-width: 0;
 }
 

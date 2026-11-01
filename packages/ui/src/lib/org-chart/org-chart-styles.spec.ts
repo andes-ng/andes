@@ -105,6 +105,7 @@ describe('AndesOrgChart styles', () => {
     expect(viewport.overflow).toBe('hidden');
     expect(viewport.touchAction).toBe('none');
     expect(viewport.cursor).toBe('grab');
+    expect(viewport.userSelect).toBe('none');
     const canvas = getComputedStyle(part('[data-slot="org-chart-canvas"]'));
     expect(canvas.position).toBe('absolute');
     expectLength(canvas.top, 0);

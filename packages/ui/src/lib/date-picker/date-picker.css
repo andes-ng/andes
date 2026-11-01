@@ -329,18 +329,22 @@
   padding-inline-start: calc(var(--andes-control-padding-x-sm, 0.4375rem) - 0.1875rem);
 }
 
-/* Narrow while idle, so the input does not push itself onto a row of its own beside a
-   full row of tags; room to type once focused (the field wraps then if it must). */
+/* Idle, the input takes no room of its own: it shares what the tags leave and its negative
+   margin cancels the row gap before it, so it never drops onto a row of its own below a full
+   row of tags and leaves the field a line too tall. Room to type once focused (the field wraps
+   then if it must). */
 .andes-date-picker__selection .andes-date-picker__input {
-  flex: 1 1 1.5rem;
+  flex: 1 1 0;
   width: auto;
-  min-width: 1.5rem;
+  min-width: 0;
+  margin-inline-start: -0.375rem;
   height: calc(var(--andes-control-height-md, 2rem) - 0.625rem);
 }
 
 .andes-date-picker__selection .andes-date-picker__input:focus,
 .andes-date-picker__field--multiple[data-empty] .andes-date-picker__input {
   min-width: 6rem;
+  margin-inline-start: 0;
 }
 
 /* `maxTagCount="responsive"`: one row, never wrapping. */

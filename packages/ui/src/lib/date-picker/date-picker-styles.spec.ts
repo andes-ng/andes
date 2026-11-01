@@ -517,4 +517,23 @@ describe('AndesDatePicker styles', () => {
       );
     });
   });
+
+  describe('multiple field input', () => {
+    const idle = '.andes-date-picker__selection .andes-date-picker__input';
+
+    it('takes no room of its own while idle, so it never wraps below a full row of tags', () => {
+      expect(declaredValue(source, idle, 'flex')).toBe('1 1 0');
+      expect(declaredValue(source, idle, 'min-width')).toBe('0');
+      // Its negative margin cancels the row gap before it.
+      expect(declaredValue(source, idle, 'margin-inline-start')).toBe(
+        '-0.375rem',
+      );
+    });
+
+    it('gets room to type and loses the negative margin once focused or empty', () => {
+      expect(css).toMatch(
+        /\.andes-date-picker__selection \.andes-date-picker__input:focus,\s*\.andes-date-picker__field--multiple\[data-empty\] \.andes-date-picker__input \{[^}]*min-width: 6rem; margin-inline-start: 0;/,
+      );
+    });
+  });
 });

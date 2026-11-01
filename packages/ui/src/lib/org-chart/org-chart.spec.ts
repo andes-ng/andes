@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { AndesOrgChart } from './org-chart';
 import type {
-  AndesOrgChartBadgeCount,
+  AndesOrgChartToggleCount,
   AndesOrgChartExpandEvent,
   AndesOrgChartHoverEvent,
   AndesOrgChartLoadChildren,
@@ -26,7 +26,8 @@ import type {
   AndesOrgChartOrientation,
 } from './org-chart-layout';
 import {
-  AndesOrgChartBadgeTemplate,
+  AndesOrgChartToggleIconTemplate,
+  AndesOrgChartToggleTemplate,
   AndesOrgChartConnectorTemplate,
   AndesOrgChartEmptyTemplate,
   AndesOrgChartNodeContext,
@@ -107,10 +108,11 @@ function report(person: Person, ...path: number[]): Person {
     [defaultExpandDepth]="depth()"
     [expandAll]="expandAll()"
     [expandOnClick]="expandOnClick()"
+    [collapsible]="collapsible()"
     [search]="search()"
     [secondaryLinks]="links()"
     [loadChildren]="loadChildren()"
-    [badge]="badge()"
+    [toggleCount]="toggleCount()"
     [leafLayout]="leafLayout()"
     [levelColors]="levelColors()"
     [nodeClass]="nodeClass()"
@@ -144,12 +146,13 @@ class HostComponent {
   readonly depth = signal(2);
   readonly expandAll = signal(false);
   readonly expandOnClick = signal(false);
+  readonly collapsible = signal(true);
   readonly search = signal('');
   readonly links = signal<readonly AndesOrgChartSecondaryLink[]>([]);
   readonly loadChildren = signal<AndesOrgChartLoadChildren<Person> | null>(
     null,
   );
-  readonly badge = signal<AndesOrgChartBadgeCount>('direct');
+  readonly toggleCount = signal<AndesOrgChartToggleCount>('none');
   readonly leafLayout = signal<AndesOrgChartLeafLayout>('tree');
   readonly levelColors = signal<readonly string[]>([]);
   readonly nodeClass = signal<string | ((node: Person) => string) | null>(null);
@@ -227,14 +230,14 @@ function key(
   return event;
 }
 
-function badgeOf(card: HTMLElement): HTMLButtonElement {
-  const badge = card.querySelector<HTMLButtonElement>(
-    '[data-slot="org-chart-badge"]',
+function toggleOf(card: HTMLElement): HTMLButtonElement {
+  const toggle = card.querySelector<HTMLButtonElement>(
+    '[data-slot="org-chart-toggle"]',
   );
-  if (!badge) {
-    throw new Error('No badge');
+  if (!toggle) {
+    throw new Error('No toggle');
   }
-  return badge;
+  return toggle;
 }
 
 function translateOf(element: HTMLElement): { x: number; y: number } {
@@ -655,12 +658,12 @@ describe('AndesOrgChart', () => {
       expect(stops).toEqual([card('ceo')]);
     });
 
-    it('hides the badge from assistive technology and the tab order', () => {
+    it('hides the toggle from assistive technology and the tab order', () => {
       const { card } = setup();
-      const badge = badgeOf(card('cto'));
-      expect(badge.getAttribute('aria-hidden')).toBe('true');
-      expect(badge.getAttribute('tabindex')).toBe('-1');
-      expect(badge.getAttribute('type')).toBe('button');
+      const toggle = toggleOf(card('cto'));
+      expect(toggle.getAttribute('aria-hidden')).toBe('true');
+      expect(toggle.getAttribute('tabindex')).toBe('-1');
+      expect(toggle.getAttribute('type')).toBe('button');
     });
 
     it('labels the zoom controls, with translatable texts', () => {
@@ -937,9 +940,9 @@ describe('AndesOrgChart', () => {
       ]);
     });
 
-    it('expands and collapses with the badge, without selecting', () => {
+    it('expands and collapses with the toggle, without selecting', () => {
       const s = setup();
-      badgeOf(s.card('cto')).click();
+      toggleOf(s.card('cto')).click();
       s.render();
       expect(s.cardOrNull('dev1')).toBeNull();
       expect(s.host.expanded()).not.toContain('cto');
@@ -947,22 +950,24 @@ describe('AndesOrgChart', () => {
       expect(s.host.expands.map((e) => [e.node.key, e.expanded])).toEqual([
         ['cto', false],
       ]);
-      badgeOf(s.card('cto')).click();
+      toggleOf(s.card('cto')).click();
       s.render();
       expect(s.cardOrNull('dev1')).not.toBeNull();
     });
 
-    it('counts direct reports, everyone below, or nothing in the badge', () => {
+    it('shows no count by default, or direct reports, or everyone below', () => {
       const s = setup();
       const count = () =>
-        badgeOf(s.card('cto')).textContent?.replace(/\s+/g, '').trim() ?? '';
+        toggleOf(s.card('cto')).textContent?.replace(/\s+/g, '').trim() ?? '';
+      expect(count()).toBe('');
+      expect(toggleOf(s.card('cto')).hasAttribute('data-count')).toBe(false);
+      s.host.toggleCount.set('direct');
+      s.render();
       expect(count()).toBe('2');
-      s.host.badge.set('total');
+      expect(toggleOf(s.card('cto')).hasAttribute('data-count')).toBe(true);
+      s.host.toggleCount.set('total');
       s.render();
       expect(count()).toBe('3');
-      s.host.badge.set('none');
-      s.render();
-      expect(count()).toBe('');
     });
 
     it('also toggles on card click with expandOnClick', () => {
@@ -979,7 +984,7 @@ describe('AndesOrgChart', () => {
         host.data.set(data);
       });
       s.card('cto').click();
-      badgeOf(s.card('cto')).click();
+      toggleOf(s.card('cto')).click();
       s.render();
       expect(s.host.clicks).toEqual([]);
       expect(s.card('cto').getAttribute('aria-expanded')).toBe('true');
@@ -1096,18 +1101,18 @@ describe('AndesOrgChart', () => {
       });
       expect(s.card('team').getAttribute('aria-expanded')).toBe('false');
       expect(s.card('solo').hasAttribute('aria-expanded')).toBe(false);
-      badgeOf(s.card('team')).click();
+      toggleOf(s.card('team')).click();
       s.render();
       expect(calls).toEqual(['team']);
       expect(s.card('team').getAttribute('aria-busy')).toBe('true');
-      expect(badgeOf(s.card('team')).hasAttribute('data-loading')).toBe(true);
+      expect(toggleOf(s.card('team')).hasAttribute('data-loading')).toBe(true);
       resolve([{ id: 'm1', name: 'Member One' }]);
       await flush();
       s.render();
       expect(s.card('team').hasAttribute('aria-busy')).toBe(false);
       expect(s.cardOrNull('m1')).not.toBeNull();
-      badgeOf(s.card('team')).click();
-      badgeOf(s.card('team')).click();
+      toggleOf(s.card('team')).click();
+      toggleOf(s.card('team')).click();
       expect(calls).toEqual(['team']);
     });
 
@@ -1135,8 +1140,8 @@ describe('AndesOrgChart', () => {
         host.data.set(lazyOrg());
         host.loadChildren.set(() => Promise.resolve([]));
       });
-      expect(badgeOf(s.card('team')).textContent?.trim()).toBe('');
-      expect(badgeOf(s.card('team')).querySelector('svg')).not.toBeNull();
+      expect(toggleOf(s.card('team')).textContent?.trim()).toBe('');
+      expect(toggleOf(s.card('team')).querySelector('svg')).not.toBeNull();
     });
 
     it('collapses again and reports a failed load', async () => {
@@ -1144,7 +1149,7 @@ describe('AndesOrgChart', () => {
         host.data.set(lazyOrg());
         host.loadChildren.set(() => Promise.reject(new Error('offline')));
       });
-      badgeOf(s.card('team')).click();
+      toggleOf(s.card('team')).click();
       await flush();
       s.render();
       expect(s.card('team').getAttribute('aria-expanded')).toBe('false');
@@ -1158,12 +1163,12 @@ describe('AndesOrgChart', () => {
         host.data.set(lazyOrg());
         host.loadChildren.set(() => Promise.resolve([]));
       });
-      badgeOf(s.card('team')).click();
+      toggleOf(s.card('team')).click();
       await flush();
       s.render();
       expect(s.card('team').hasAttribute('aria-expanded')).toBe(false);
       expect(
-        s.card('team').querySelector('[data-slot="org-chart-badge"]'),
+        s.card('team').querySelector('[data-slot="org-chart-toggle"]'),
       ).toBeNull();
     });
   });
@@ -1342,7 +1347,7 @@ describe('AndesOrgChart', () => {
         };
       };
       const before = onScreen('cto');
-      badgeOf(s.card('cto')).click();
+      toggleOf(s.card('cto')).click();
       s.render();
       expect(onScreen('cto').x).toBeCloseTo(before.x, 5);
       expect(onScreen('cto').y).toBeCloseTo(before.y, 5);
@@ -1360,12 +1365,201 @@ describe('AndesOrgChart', () => {
     });
   });
 
+  describe('checkbox selection', () => {
+    function checkbox(card: HTMLElement): HTMLElement {
+      const box = card.querySelector<HTMLElement>(
+        '[data-slot="org-chart-checkbox"]',
+      );
+      if (!box) {
+        throw new Error('No checkbox');
+      }
+      return box;
+    }
+
+    function checkboxSetup(configure?: (host: HostComponent) => void): Setup {
+      return setup((host) => {
+        host.selectionMode.set('checkbox');
+        host.expandAll.set(true);
+        configure?.(host);
+      });
+    }
+
+    it('gives every card a checkbox and announces aria-checked instead of aria-selected', () => {
+      const s = checkboxSetup();
+      expect(s.card('ceo').getAttribute('aria-checked')).toBe('false');
+      expect(s.card('ceo').hasAttribute('aria-selected')).toBe(false);
+      expect(checkbox(s.card('dev2')).getAttribute('aria-hidden')).toBe('true');
+      expect(
+        s.el.querySelectorAll('[data-slot="org-chart-checkbox"]'),
+      ).toHaveLength(8);
+    });
+
+    it('checks a whole team when the manager is checked', () => {
+      const s = checkboxSetup();
+      checkbox(s.card('cto')).click();
+      s.render();
+      for (const key of ['cto', 'dev1', 'intern', 'dev2']) {
+        expect(s.card(key).getAttribute('aria-checked')).toBe('true');
+      }
+      expect(s.card('ceo').getAttribute('aria-checked')).toBe('mixed');
+      expect(s.card('ceo').dataset['checked']).toBe('mixed');
+      expect([...s.host.selected()].sort()).toEqual([
+        'cto',
+        'dev1',
+        'dev2',
+        'intern',
+      ]);
+      expect(s.host.chart().partiallySelected()).toEqual(['ceo']);
+      const event = s.host.selects[0];
+      expect(event.node.key).toBe('cto');
+      expect(event.selected).toBe(true);
+      expect([...event.selectedKeys].sort()).toEqual([
+        'cto',
+        'dev1',
+        'dev2',
+        'intern',
+      ]);
+      expect(event.partiallySelected).toEqual(['ceo']);
+    });
+
+    it('shows a manager as mixed, then checked once every report is', () => {
+      const s = checkboxSetup();
+      checkbox(s.card('dev2')).click();
+      s.render();
+      expect(s.card('cto').getAttribute('aria-checked')).toBe('mixed');
+      checkbox(s.card('dev1')).click();
+      s.render();
+      expect(s.card('cto').getAttribute('aria-checked')).toBe('true');
+      expect(s.card('dev1').getAttribute('aria-checked')).toBe('true');
+      expect(s.card('intern').getAttribute('aria-checked')).toBe('true');
+    });
+
+    it('unchecks a team and reports the deselection', () => {
+      const s = checkboxSetup((host) => host.selected.set(['cfo']));
+      expect(s.card('acc').getAttribute('aria-checked')).toBe('true');
+      checkbox(s.card('cfo')).click();
+      s.render();
+      expect(s.card('acc').getAttribute('aria-checked')).toBe('false');
+      expect(s.host.selected()).toEqual([]);
+      expect(s.host.selects.map((e) => [e.node.key, e.selected])).toEqual([
+        ['cfo', false],
+      ]);
+    });
+
+    it('cascades a bound selection and writes the cascaded keys back', () => {
+      const s = checkboxSetup((host) => host.selected.set(['cfo']));
+      expect([...s.host.selected()].sort()).toEqual(['acc', 'cfo']);
+      s.host.selected.set(['dev1']);
+      s.render();
+      expect(s.card('intern').getAttribute('aria-checked')).toBe('true');
+      expect(s.card('cfo').getAttribute('aria-checked')).toBe('false');
+    });
+
+    it('toggles the active card with Space and Enter', () => {
+      const s = checkboxSetup();
+      document.body.append(s.el);
+      s.card('cfo').focus();
+      key(s.card('cfo'), ' ');
+      s.render();
+      expect(s.card('acc').getAttribute('aria-checked')).toBe('true');
+      key(s.card('cfo'), 'Enter');
+      s.render();
+      expect(s.card('acc').getAttribute('aria-checked')).toBe('false');
+      document.body.innerHTML = '';
+    });
+
+    it('locks disabled and read-only people out of the cascade', () => {
+      const s = checkboxSetup((host) => {
+        const data = org();
+        report(data, 1, 1).disabled = true;
+        host.data.set(data);
+      });
+      checkbox(s.card('cto')).click();
+      checkbox(s.card('dev2')).click();
+      s.render();
+      expect(s.card('dev2').getAttribute('aria-checked')).toBe('false');
+      expect(s.card('dev1').getAttribute('aria-checked')).toBe('true');
+      expect(s.card('cto').getAttribute('aria-checked')).toBe('true');
+    });
+
+    it('checks a lazy team that arrives under a checked manager', async () => {
+      const s = setup((host) => {
+        host.selectionMode.set('checkbox');
+        host.data.set({
+          id: 'root',
+          name: 'Root',
+          children: [{ id: 'team', name: 'Team' }],
+        });
+        host.loadChildren.set(() =>
+          Promise.resolve([{ id: 'm1', name: 'Member' }]),
+        );
+        host.selected.set(['team']);
+      });
+      toggleOf(s.card('team')).click();
+      await flush();
+      s.render();
+      expect(s.card('m1').getAttribute('aria-checked')).toBe('true');
+      expect(s.host.selected()).toContain('m1');
+    });
+  });
+
+  describe('collapsible', () => {
+    it('keeps every team open and hides the toggle when not collapsible', () => {
+      const s = setup((host) => {
+        host.collapsible.set(false);
+        host.depth.set(0);
+      });
+      expect(s.keys()).toContain('intern');
+      expect(s.el.querySelector('[data-slot="org-chart-toggle"]')).toBeNull();
+      expect(s.card('cto').hasAttribute('aria-expanded')).toBe(false);
+      s.host.chart().toggle('cto');
+      s.host.chart().collapse('cto');
+      s.render();
+      expect(s.keys()).toContain('dev1');
+    });
+
+    it('ignores the expand and collapse keys when not collapsible', () => {
+      const s = setup((host) => host.collapsible.set(false));
+      document.body.append(s.el);
+      s.card('cto').focus();
+      key(s.card('cto'), 'ArrowUp', { altKey: true });
+      key(s.card('cto'), 'ArrowLeft');
+      s.render();
+      expect(s.keys()).toContain('dev1');
+      document.body.innerHTML = '';
+    });
+
+    it('fetches lazy teams at once when not collapsible', async () => {
+      const calls: string[] = [];
+      const s = setup((host) => {
+        host.collapsible.set(false);
+        host.data.set({
+          id: 'root',
+          name: 'Root',
+          children: [{ id: 'team', name: 'Team' }],
+        });
+        host.loadChildren.set((person) => {
+          calls.push(person.id);
+          return Promise.resolve(
+            person.id === 'team'
+              ? [{ id: 'm1', name: 'Member', isLeaf: true }]
+              : [],
+          );
+        });
+      });
+      await flush();
+      s.render();
+      expect(calls).toContain('team');
+      expect(s.cardOrNull('m1')).not.toBeNull();
+    });
+  });
+
   describe('templates', () => {
     @Component({
       imports: [
         AndesOrgChart,
         AndesOrgChartNodeTemplate,
-        AndesOrgChartBadgeTemplate,
+        AndesOrgChartToggleTemplate,
         AndesOrgChartToolbarTemplate,
         AndesOrgChartConnectorTemplate,
       ],
@@ -1388,7 +1582,7 @@ describe('AndesOrgChart', () => {
             toggle
           </button>
         </ng-template>
-        <ng-template andesOrgChartBadge let-total="descendantCount"
+        <ng-template andesOrgChartToggle let-total="descendantCount"
           >({{ total }})</ng-template
         >
         <ng-template andesOrgChartToolbar let-chart>
@@ -1405,7 +1599,7 @@ describe('AndesOrgChart', () => {
       readonly data = org();
     }
 
-    it('renders the node, badge, toolbar and connector templates with their context', () => {
+    it('renders the node, toggle, toolbar and connector templates with their context', () => {
       const fixture = TestBed.createComponent(TemplateHost);
       fixture.detectChanges();
       const el = fixture.nativeElement as HTMLElement;
@@ -1413,7 +1607,9 @@ describe('AndesOrgChart', () => {
       expect(cto.querySelector('.custom')?.textContent).toBe('Bruno Díaz L2 *');
       expect(cto.querySelector('[data-slot="org-chart-name"]')).toBeNull();
       expect(
-        cto.querySelector('[data-slot="org-chart-badge"]')?.textContent?.trim(),
+        cto
+          .querySelector('[data-slot="org-chart-toggle"]')
+          ?.textContent?.trim(),
       ).toBe('(3)');
       const links = el.querySelectorAll('path.custom-link');
       expect(links.length).toBe(6);
@@ -1434,6 +1630,40 @@ describe('AndesOrgChart', () => {
       fixture.detectChanges();
       expect(cto.getAttribute('aria-expanded')).toBe('false');
       expect(cto.getAttribute('aria-selected')).toBe('false');
+    });
+
+    it('replaces only the toggle icon, keeping the count', () => {
+      @Component({
+        imports: [AndesOrgChart, AndesOrgChartToggleIconTemplate],
+        template: `<andes-org-chart
+          [data]="data"
+          [animated]="false"
+          toggleCount="direct"
+        >
+          <ng-template andesOrgChartToggleIcon let-expanded let-node="node">
+            <span class="icon"
+              >{{ expanded ? 'minus' : 'plus' }} {{ node.key }}</span
+            >
+          </ng-template>
+        </andes-org-chart>`,
+      })
+      class IconHost {
+        readonly data = org();
+      }
+      const fixture = TestBed.createComponent(IconHost);
+      fixture.detectChanges();
+      const el = fixture.nativeElement as HTMLElement;
+      const cto = el.querySelector('[data-key="cto"]') as HTMLElement;
+      expect(cto.querySelector('.icon')?.textContent?.trim()).toBe('minus cto');
+      expect(
+        cto.querySelector('.andes-org-chart__count')?.textContent?.trim(),
+      ).toBe('2');
+      expect(cto.querySelector('.andes-org-chart__chevron')).toBeNull();
+      (
+        cto.querySelector('[data-slot="org-chart-toggle"]') as HTMLElement
+      ).click();
+      fixture.detectChanges();
+      expect(cto.querySelector('.icon')?.textContent?.trim()).toBe('plus cto');
     });
 
     it('takes templates as inputs too, and an empty template', () => {

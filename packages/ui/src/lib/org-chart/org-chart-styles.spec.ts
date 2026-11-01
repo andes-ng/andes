@@ -94,7 +94,7 @@ describe('AndesOrgChart styles', () => {
       'var(--andes-org-chart-height, 32rem)',
     );
     expect(declared(':host', 'border')).toBe(
-      '1px solid var(--andes-org-chart-border-color, var(--andes-color-border))',
+      '1px solid var(--andes-org-chart-border-color, var(--_andes-org-chart-hairline))',
     );
   });
 
@@ -138,8 +138,22 @@ describe('AndesOrgChart styles', () => {
     expect(declared('.andes-org-chart__card', 'border-radius')).toBe(
       'var(--andes-org-chart-node-radius, var(--andes-radius-lg))',
     );
-    expect(declared('.andes-org-chart__card::before', 'inline-size')).toBe(
-      '3px',
+    // Quiet by default: no accent bar, no shadow, a hairline border.
+    expect(
+      declared('.andes-org-chart__card::before', 'content'),
+    ).toBeUndefined();
+    expect(declared('.andes-org-chart__card', 'box-shadow')).toBe(
+      'var(--andes-org-chart-node-shadow, none)',
+    );
+    expect(declared('.andes-org-chart__card', 'border')).toBe(
+      '1px solid var(--andes-org-chart-node-border-color, var(--_andes-org-chart-hairline))',
+    );
+    // The token spacing scale (16px across, 12px down) is not loaded in the unit tests.
+    expect(declared('.andes-org-chart__card', 'padding-inline')).toBe(
+      'var(--andes-space-4)',
+    );
+    expect(declared('.andes-org-chart__card', 'padding-block')).toBe(
+      'var(--andes-space-3)',
     );
   });
 
@@ -160,31 +174,81 @@ describe('AndesOrgChart styles', () => {
     const avatar = getComputedStyle(
       part('[data-key="b"] [data-slot="org-chart-avatar"]'),
     );
-    expectLength(avatar.inlineSize, '2.5rem');
-    expectLength(avatar.blockSize, '2.5rem');
+    expectLength(
+      avatar.inlineSize,
+      'var(--andes-org-chart-avatar-size, 2.5rem)',
+    );
+    expectLength(
+      avatar.blockSize,
+      'var(--andes-org-chart-avatar-size, 2.5rem)',
+    );
     expect(avatar.display).toBe('grid');
     expect(declared('.andes-org-chart__avatar', 'border-radius')).toBe(
       'var(--andes-radius-full)',
     );
   });
 
-  it('centers the badge on the card edge that faces the reports', () => {
+  it('centers the toggle on the card edge that faces the reports', () => {
     const s = setup();
-    const badge = () =>
-      getComputedStyle(s.part('[data-key="b"] [data-slot="org-chart-badge"]'));
-    expect(badge().position).toBe('absolute');
-    expect(badge().translate).toBe('-50% -50%');
-    expect(badge().top).toBe('100%');
-    expect(badge().left).toBe('50%');
+    const toggle = () =>
+      getComputedStyle(s.part('[data-key="b"] [data-slot="org-chart-toggle"]'));
+    expect(toggle().position).toBe('absolute');
+    expect(toggle().translate).toBe('-50% -50%');
+    expect(toggle().top).toBe('100%');
+    expect(toggle().left).toBe('50%');
 
     s.fixture.componentInstance.orientation.set('horizontal');
     s.fixture.detectChanges();
-    expect(badge().top).toBe('50%');
-    expect(badge().left).toBe('100%');
+    expect(toggle().top).toBe('50%');
+    expect(toggle().left).toBe('100%');
 
     s.fixture.componentInstance.reversed.set(true);
     s.fixture.detectChanges();
-    expectLength(badge().left, 0);
+    expectLength(toggle().left, 0);
+  });
+
+  it('draws the toggle as a small hairline circle that grows into a pill for a count', () => {
+    const s = setup();
+    const toggle = getComputedStyle(
+      s.part('[data-key="b"] [data-slot="org-chart-toggle"]'),
+    );
+    expectLength(
+      toggle.blockSize,
+      'var(--andes-org-chart-toggle-size, 1.25rem)',
+    );
+    expect(declared('.andes-org-chart__toggle', 'border-radius')).toBe(
+      'var(--andes-radius-full)',
+    );
+    expect(declared('.andes-org-chart__toggle', 'box-shadow')).toBeUndefined();
+    expect(
+      declared('.andes-org-chart__toggle[data-count]', 'padding-inline'),
+    ).toBe('0.375rem 0.25rem');
+  });
+
+  it('steps the canvas, card and hairline in the dark theme', () => {
+    const dark = ":host-context([data-andes-theme='dark'])";
+    expect(declared(':host', '--_andes-org-chart-canvas')).toBe(
+      'var(--andes-color-muted)',
+    );
+    expect(declared(dark, '--_andes-org-chart-canvas')).toBe(
+      'var(--andes-color-background)',
+    );
+    expect(declared(dark, '--_andes-org-chart-hairline')).toBe(
+      'var(--andes-color-border)',
+    );
+    expect(declared(':host', 'background')).toBe(
+      'var(--andes-org-chart-background, var(--_andes-org-chart-canvas))',
+    );
+  });
+
+  it('draws the checkbox, filled when checked or mixed', () => {
+    expect(declared('.andes-org-chart__checkbox', 'inline-size')).toBe('1rem');
+    expect(
+      declared(
+        '.andes-org-chart__node[data-checked] .andes-org-chart__checkbox',
+        'background',
+      ),
+    ).toBe('var(--andes-org-chart-checkbox-color, var(--andes-color-primary))');
   });
 
   it('draws the connectors unfilled with a hookable stroke', () => {
@@ -195,11 +259,11 @@ describe('AndesOrgChart styles', () => {
     );
     expect(declared('.andes-org-chart__link', 'fill')).toBe('none');
     expect(declared('.andes-org-chart__link', 'stroke-width')).toBe(
-      'var(--andes-org-chart-connector-width, 1.5px)',
+      'var(--andes-org-chart-connector-width, 1px)',
     );
     expect(
       declared('.andes-org-chart__link--secondary', 'stroke-dasharray'),
-    ).toBe('var(--andes-org-chart-secondary-dasharray, 6 4)');
+    ).toBe('var(--andes-org-chart-secondary-dasharray, 4 4)');
     const svg = getComputedStyle(part('[data-slot="org-chart-links"]'));
     expect(svg.pointerEvents).toBe('none');
   });
@@ -220,7 +284,7 @@ describe('AndesOrgChart styles', () => {
     ).toBe('var(--andes-color-muted-foreground)');
     expect(
       declared(
-        '.andes-org-chart__node[data-dimmed] .andes-org-chart__card::before',
+        '.andes-org-chart__node[data-dimmed] .andes-org-chart__toggle',
         'opacity',
       ),
     ).toBe('var(--andes-org-chart-dimmed-opacity, 0.35)');
@@ -273,7 +337,7 @@ describe('AndesOrgChart styles', () => {
     expect(block).toContain('animation: none !important');
   });
 
-  it('keeps cards, lines, selection and the badge visible in forced colors', () => {
+  it('keeps cards, lines, selection and the toggle visible in forced colors', () => {
     const block = mediaBlock('forced-colors: active');
     expect(block).toContain('border-color: CanvasText');
     expect(block).toContain('stroke: CanvasText');

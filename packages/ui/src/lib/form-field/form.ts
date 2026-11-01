@@ -14,6 +14,7 @@ import {
   signal,
   type Signal,
   type TemplateRef,
+  untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
@@ -24,6 +25,7 @@ import {
   FormResetEvent,
   NgForm,
 } from '@angular/forms';
+import { type FieldState, FormRoot } from '@angular/forms/signals';
 import { filter, first, map, of } from 'rxjs';
 
 import {
@@ -108,8 +110,11 @@ export function collectAndesFormErrors(
  * ```
  *
  * Form *state* (values, validation, reset, submit) stays with `FormGroupDirective` /
- * `NgForm`; nothing here duplicates a form store - `disabled` and the submit outputs simply
- * drive / read that same form. The defaults reach the fields through DI
+ * `NgForm`, or signal forms' `[formRoot]`; nothing here duplicates a form store - `disabled`
+ * and the submit outputs simply drive / read that same form. With `[formRoot]`, the submit
+ * outputs, `valuesChange`, `submitted`, `reset()` and the field paths follow the signal form;
+ * `disabled` cannot disable a signal form's model (use the schema's `disabled()` rule), so it
+ * only reaches the controls that read {@link injectAndesFormDisabled}. The defaults reach the fields through DI
  * (`ANDES_FORM`), and every field-level input of the same name overrides them.
  *
  * Its host classes (`andes-form`, `andes-form--<layout>`) are styled from `form-field.css`,
@@ -247,11 +252,35 @@ export class AndesForm implements AndesFormApi {
       : this.ownSubmitted();
   });
 
+  /** Signal forms' `[formRoot]` on the same `<form>`, if any. */
+  private readonly formRoot = inject(FormRoot, {
+    self: true,
+    optional: true,
+  }) as FormRoot<unknown> | null;
+
+  /** The state of the signal forms root field bound with `[formRoot]`. */
+  private readonly signalRoot = computed<FieldState<unknown> | null>(
+    () => (this.formRoot?.fieldTree()() as FieldState<unknown>) ?? null,
+  );
+
   /** Name of the signal forms root field bound with `[formRoot]`; `null` without one. */
-  readonly signalRootName = computed<string | null>(() => null);
+  readonly signalRootName = computed<string | null>(
+    () => this.signalRoot()?.name() ?? null,
+  );
 
   constructor() {
     const destroyRef = inject(DestroyRef);
+    if (this.formRoot) {
+      let initial = true;
+      effect(() => {
+        const value = this.signalRoot()?.value();
+        if (initial) {
+          initial = false;
+          return;
+        }
+        untracked(() => this.valuesChange.emit(value));
+      });
+    }
     const formDirective = this.formDirective;
     if (!formDirective) {
       return;
@@ -330,12 +359,75 @@ export class AndesForm implements AndesFormApi {
     // With an Angular form on the element, scrolling waits for its verdict (`afterSubmit`).
     if (!this.formDirective) {
       this.ownSubmitted.set(true);
-      this.scheduleScroll();
+      if (this.formRoot) {
+        this.afterSignalSubmit();
+      } else {
+        this.scheduleScroll();
+      }
     }
+  }
+
+  /** The submit verdict of a signal form, once its async validators settle. */
+  private afterSignalSubmit(): void {
+    const root = untracked(this.signalRoot);
+    if (!root) {
+      return;
+    }
+    const decide = (): boolean => {
+      if (root.pending()) {
+        return false;
+      }
+      untracked(() => {
+        if (root.valid()) {
+          this.validSubmit.emit(root.value());
+          return;
+        }
+        this.invalidSubmit.emit({
+          value: root.value(),
+          errors: this.signalErrors(root),
+        });
+        this.scheduleScroll();
+      });
+      return true;
+    };
+    if (untracked(decide)) {
+      return;
+    }
+    const watcher = effect(
+      () => {
+        if (decide()) {
+          watcher.destroy();
+        }
+      },
+      { injector: this.injector },
+    );
+  }
+
+  /** The errors of a signal form, grouped per field with its path from the root. */
+  private signalErrors(root: FieldState<unknown>): AndesFormFieldError[] {
+    const rootName = root.name();
+    const byField = new Map<string, AndesFormFieldError>();
+    for (const error of root.errorSummary()) {
+      const name = error.fieldTree().name();
+      const path =
+        name === rootName
+          ? []
+          : name
+              .slice(rootName.length + 1)
+              .split('.')
+              .map((key) => (/^\d+$/.test(key) ? Number(key) : key));
+      const entry = byField.get(name) ?? { path, errors: {} };
+      byField.set(name, {
+        path: entry.path,
+        errors: { ...entry.errors, [error.kind]: error },
+      });
+    }
+    return [...byField.values()];
   }
 
   protected onNativeReset(): void {
     if (!this.formDirective) {
+      this.untouchedSignalRoot();
       this.ownSubmitted.set(false);
     }
     // The Angular form directive resets itself on the same event; report it once it has.
@@ -369,9 +461,20 @@ export class AndesForm implements AndesFormApi {
     if (this.formDirective) {
       this.formDirective.resetForm(value);
     } else {
+      this.untouchedSignalRoot(value);
       this.ownSubmitted.set(false);
     }
     this.formReset.emit();
+  }
+
+  /** Resets a signal form's touched and dirty state, and its value when one is given. */
+  private untouchedSignalRoot(value?: unknown): void {
+    const root = untracked(this.signalRoot);
+    if (value === undefined) {
+      root?.reset();
+    } else {
+      root?.reset(value);
+    }
   }
 
   private scheduleScroll(): void {

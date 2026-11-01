@@ -875,6 +875,11 @@ export class AndesCascader
 
   protected readonly activeResultIndex = signal(-1);
 
+  /** What renders a search result: `showSearch.render`, else `optionTemplate`. */
+  protected readonly resultTemplate = computed(
+    () => this.searchConfig()?.render ?? this.optionTemplate(),
+  );
+
   protected resultParts(result: AndesCascaderSearchResult) {
     const text = this.searchValue();
     return result.labels.map((label) => highlightParts(label, text));

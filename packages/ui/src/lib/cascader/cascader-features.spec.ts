@@ -1,10 +1,11 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, type TemplateRef, viewChild } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { AndesCascader, type AndesCascaderModel } from './cascader';
 import type {
   AndesCascaderLoadData,
   AndesCascaderOption,
+  AndesCascaderOptionContext,
   AndesCascaderSearch,
 } from './cascader-types';
 
@@ -65,6 +66,9 @@ const PLACES: AndesCascaderOption[] = [
     <ng-template #clearGlyph><i class="my-clear">C</i></ng-template>
     <ng-template #removeGlyph><i class="my-remove">R</i></ng-template>
     <ng-template #loadingGlyph><i class="my-loading">L</i></ng-template>
+    <ng-template #resultGlyph let-label="label" let-search="searchValue"
+      ><b class="my-result">{{ search }}:{{ label }}</b></ng-template
+    >
     <ng-template #expandGlyph let-label="label">
       <i class="my-expand" [attr.data-label]="label"></i>
     </ng-template>
@@ -131,6 +135,8 @@ class FeaturesHost {
   readonly withIcons = signal(false);
   readonly suffixMode = signal<'default' | 'custom' | 'none'>('default');
   readonly loadData = signal<AndesCascaderLoadData | undefined>(undefined);
+  readonly resultGlyph =
+    viewChild.required<TemplateRef<AndesCascaderOptionContext>>('resultGlyph');
   readonly events: string[] = [];
   readonly scrolls: Event[] = [];
 }
@@ -838,6 +844,20 @@ describe('AndesCascader features', () => {
   });
 
   describe('templates', () => {
+    it('renders search results with showSearch.render, over optionTemplate', () => {
+      const { host, type, detect } = setup((h) => {
+        h.withTemplates.set(true);
+      });
+      host.showSearch.set({ render: host.resultGlyph() });
+      detect();
+      type('wan');
+      const result = document.querySelector('[data-slot="cascader-result"]');
+      expect(result?.querySelector('.my-result')?.textContent).toBe(
+        'wan:Wanchaq',
+      );
+      expect(result?.querySelector('.custom-option')).toBeNull();
+    });
+
     it('replaces the expand arrow of a branch with expandIcon, never on a leaf', () => {
       const { item, openWithPointer } = setup((h) => h.withIcons.set(true));
       openWithPointer();

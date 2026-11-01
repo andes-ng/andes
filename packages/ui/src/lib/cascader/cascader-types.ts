@@ -63,6 +63,11 @@ export interface AndesCascaderSearch {
   ) => number;
   /** Most results shown; `false` for all of them. Default `50`. */
   limit?: number | false;
+  /**
+   * Renders each search result, in place of the highlighted path - and of `optionTemplate`,
+   * which otherwise renders the results too. Its context's `searchValue` is the text typed.
+   */
+  render?: TemplateRef<AndesCascaderOptionContext>;
 }
 
 /** What `selectionChange` carries. */

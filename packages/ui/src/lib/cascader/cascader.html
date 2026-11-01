@@ -469,7 +469,7 @@
         />
         }
         <span class="andes-cascader__label">
-          @if (optionTemplate(); as template) {
+          @if (resultTemplate(); as template) {
           <ng-container
             [ngTemplateOutlet]="template"
             [ngTemplateOutletContext]="resultContext(result)"

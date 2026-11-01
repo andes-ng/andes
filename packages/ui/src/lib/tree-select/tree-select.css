@@ -469,6 +469,19 @@
   height: 0.75em;
 }
 
+/* The live region announcing added and removed tags: read, never seen. */
+.andes-tree-select__live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* Suffix: clear button, loading spinner and chevron. */
 
 .andes-tree-select__suffix {

@@ -88,4 +88,8 @@ export interface AndesTreeSelectLabels {
   more: (count: number) => string;
   /** Accessible name of that tag, and of the popover it opens, listing the hidden tags. */
   moreSelected: (count: number) => string;
+  /** Announced when the user adds nodes to a multiple select (their titles). */
+  tagsAdded: (titles: readonly string[]) => string;
+  /** Announced when the user takes nodes off a multiple select (their titles). */
+  tagsRemoved: (titles: readonly string[]) => string;
 }

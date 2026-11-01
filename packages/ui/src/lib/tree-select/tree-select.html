@@ -281,6 +281,15 @@
   <span hidden [id]="summaryId">{{ summary() }}</span>
 </div>
 
+<!-- The tags the user adds or removes, read out politely. -->
+<span
+  class="andes-tree-select__live"
+  role="status"
+  aria-live="polite"
+  aria-atomic="true"
+  [textContent]="announcement()"
+></span>
+
 <ng-template #panel>
   <div
     class="andes-tree-select__panel"

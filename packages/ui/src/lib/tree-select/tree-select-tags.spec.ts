@@ -407,4 +407,44 @@ describe('AndesTreeSelect tags', () => {
       expect(search.value).toBe('cus');
     });
   });
+
+  describe('announcements', () => {
+    const live = () =>
+      field().querySelector('.andes-tree-select__live') as HTMLElement;
+
+    it('announces a removed tag and the leaves a check adds, politely', () => {
+      setup((h) => {
+        h.maxTagCount.set(undefined);
+        h.checkable.set(true);
+        h.value.set(['lima', 'cusco']);
+      });
+      expect(live().getAttribute('role')).toBe('status');
+      expect(live().getAttribute('aria-live')).toBe('polite');
+      expect(live().textContent).toBe('');
+
+      (
+        field().querySelector('.andes-tree-select__tag-remove') as HTMLElement
+      ).click();
+      fixture.detectChanges();
+      expect(live().textContent).toBe('Removed Lima');
+
+      (
+        field().querySelector('.andes-tree-select__trigger') as HTMLElement
+      ).click();
+      fixture.detectChanges();
+      const peru = document.querySelector(
+        '.andes-tree-select__panel .andes-tree__checkbox',
+      ) as HTMLElement;
+      peru.click();
+      fixture.detectChanges();
+      expect(live().textContent).toBe('Added Lima, Arequipa, Trujillo');
+    });
+
+    it('stays quiet for a value written from outside', () => {
+      const host = setup((h) => h.maxTagCount.set(undefined));
+      host.value.set(['iquitos']);
+      fixture.detectChanges();
+      expect(live().textContent).toBe('');
+    });
+  });
 });

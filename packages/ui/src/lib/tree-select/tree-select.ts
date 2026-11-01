@@ -85,6 +85,8 @@ const DEFAULT_LABELS: AndesTreeSelectLabels = {
   remove: (title) => `Remove ${title}`,
   more: (count) => `+ ${count} ...`,
   moreSelected: (count) => `${count} more selected`,
+  tagsAdded: (titles) => `Added ${titles.join(', ')}`,
+  tagsRemoved: (titles) => `Removed ${titles.join(', ')}`,
 };
 
 /** Room kept on a responsive row for the in-field search input (its 4rem minimum), in px. */
@@ -623,6 +625,8 @@ export class AndesTreeSelect
 
   private readonly selection = viewChild<ElementRef<HTMLElement>>('selection');
   private readonly measure = viewChild<ElementRef<HTMLElement>>('measure');
+  /** What the live region last announced: the tags the user added or removed. */
+  protected readonly announcement = signal('');
   /** The open "+ N" popover's pane: focus moving into it has not left the select. */
   private readonly overflowPane = signal<HTMLElement | null>(null);
 
@@ -1174,15 +1178,37 @@ export class AndesTreeSelect
     this.selectionChange.emit(external);
     const beforeSet = new Set(before);
     const afterSet = new Set(after);
-    for (const key of after) {
-      if (!beforeSet.has(key)) {
-        this.optionSelect.emit(this.externalKey(key));
-      }
+    const added = after.filter((key) => !beforeSet.has(key));
+    const removed = before.filter((key) => !afterSet.has(key));
+    for (const key of added) {
+      this.optionSelect.emit(this.externalKey(key));
     }
-    for (const key of before) {
-      if (!afterSet.has(key)) {
-        this.optionDeselect.emit(this.externalKey(key));
-      }
+    for (const key of removed) {
+      this.optionDeselect.emit(this.externalKey(key));
+    }
+    this.announceTags(added, removed);
+  }
+
+  /**
+   * Tells a screen reader which tags came and went: a tag removed from the field, or the leaves
+   * a checked branch added, are otherwise silent. A single select's field already reads out its
+   * one value.
+   */
+  private announceTags(
+    added: readonly AndesTreeKey[],
+    removed: readonly AndesTreeKey[],
+  ): void {
+    if (!this.multiMode()) {
+      return;
+    }
+    const title = (key: AndesTreeKey) => this.optionFor(key).title;
+    const text = this.text();
+    const parts = [
+      added.length > 0 ? text.tagsAdded(added.map(title)) : '',
+      removed.length > 0 ? text.tagsRemoved(removed.map(title)) : '',
+    ].filter(Boolean);
+    if (parts.length > 0) {
+      this.announcement.set(parts.join('. '));
     }
   }
 

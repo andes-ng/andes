@@ -652,6 +652,35 @@ describe('AndesOverlayPrimitive', () => {
       expect(overlay.isOpen()).toBe(false);
     });
 
+    it('closes on a click on the page root, below a body shorter than the window', () => {
+      const { fixture, host, overlay } = createHost(
+        andesOverlayPreset('popover'),
+      );
+      const reasons: AndesOverlayCloseReason[] = [];
+      overlay.closed.subscribe((reason) => reasons.push(reason));
+      host.open();
+      fixture.detectChanges();
+
+      clickOn(document.documentElement);
+      fixture.detectChanges();
+
+      expect(overlay.isOpen()).toBe(false);
+      expect(reasons).toEqual(['outside-click']);
+    });
+
+    it('lets a click on the page root pass when the overlay opts out of outside clicks', () => {
+      const { fixture, host, overlay } = createHost(
+        andesOverlayPreset('alert-dialog'),
+      );
+      host.open();
+      fixture.detectChanges();
+
+      clickOn(document.documentElement);
+      fixture.detectChanges();
+
+      expect(overlay.isOpen()).toBe(true);
+    });
+
     it('reports "outside-click" as the close reason', () => {
       const { fixture, host, overlay, outside } = createHost(
         andesOverlayPreset('popover'),

@@ -1722,6 +1722,56 @@ describe('AndesTree', () => {
     });
   });
 
+  describe('switcherIcon', () => {
+    @Component({
+      imports: [AndesTree],
+      template: `
+        <ng-template #switcher let-expanded="expanded">
+          <i class="custom-switcher">{{ expanded ? 'open' : 'closed' }}</i>
+        </ng-template>
+        <andes-tree
+          [nodes]="nodes"
+          [(expandedKeys)]="expanded"
+          [switcherIcon]="switcher"
+          aria-label="Warehouses"
+        />
+      `,
+    })
+    class SwitcherHost {
+      readonly nodes = sample();
+      expanded: AndesTreeKey[] = [];
+    }
+
+    it('draws a custom expand icon on branches only, with the node context', () => {
+      const fixture = TestBed.createComponent(SwitcherHost);
+      fixture.detectChanges();
+      const root = fixture.nativeElement.querySelector(
+        '[role="treeitem"]',
+      ) as HTMLElement;
+      const icon = switcher(root).querySelector('.andes-tree__switcher-icon');
+
+      expect(icon?.classList).toContain('andes-tree__chevron');
+      expect(icon?.textContent?.trim()).toBe('closed');
+      expect(switcher(root).querySelector('svg')).toBeNull();
+
+      switcher(root).click();
+      fixture.detectChanges();
+      expect(
+        switcher(root).querySelector('.custom-switcher')?.textContent,
+      ).toBe('open');
+      // A leaf keeps an empty switcher.
+      const leaves = [
+        ...fixture.nativeElement.querySelectorAll(
+          '.andes-tree__switcher[data-leaf]',
+        ),
+      ] as HTMLElement[];
+      expect(leaves.length).toBeGreaterThan(0);
+      for (const leaf of leaves) {
+        expect(leaf.querySelector('.custom-switcher')).toBeNull();
+      }
+    });
+  });
+
   describe('stylesheet contract', () => {
     const css = cssText();
 

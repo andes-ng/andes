@@ -256,6 +256,15 @@ export class AndesTree {
   readonly iconTemplate = input<TemplateRef<AndesTreeNodeContext> | undefined>(
     undefined,
   );
+  /**
+   * Replaces the expand arrow of every branch, with or without `showLine`. Draw it pointing
+   * toward the inline end: it turns a quarter when the node opens and mirrors in right-to-left,
+   * as the default chevron does. The context is the node's, `expanded` and `loading` included;
+   * a loading node still shows the spinner.
+   */
+  readonly switcherIcon = input<TemplateRef<AndesTreeNodeContext> | undefined>(
+    undefined,
+  );
   readonly labels = input<Partial<AndesTreeLabels>>({});
 
   readonly ariaLabel = input<string | undefined>(undefined, {

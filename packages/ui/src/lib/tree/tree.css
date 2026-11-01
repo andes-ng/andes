@@ -132,6 +132,15 @@
   transform: rotate(90deg);
 }
 
+/* A custom `switcherIcon`, centred in the switcher and turned like the chevron. The icon is
+   the consumer's content, so it is sized by its own styles. */
+.andes-tree__switcher-icon {
+  display: inline-flex;
+  height: var(--_title-height);
+  align-items: center;
+  justify-content: center;
+}
+
 .andes-tree__spinner {
   animation: andes-tree-spin 0.9s linear infinite;
   color: var(--andes-color-primary, #2563eb);

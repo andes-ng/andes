@@ -77,7 +77,14 @@
             stroke-linecap="round"
           />
         </svg>
-        } @else if (!leaf) { @if (showLine()) {
+        } @else if (!leaf) { @if (switcherIcon(); as switcherTpl) {
+        <span class="andes-tree__chevron andes-tree__switcher-icon">
+          <ng-container
+            [ngTemplateOutlet]="switcherTpl"
+            [ngTemplateOutletContext]="nodeContext(row)"
+          />
+        </span>
+        } @else if (showLine()) {
         <svg class="andes-tree__box" viewBox="0 0 12 12" fill="none">
           <rect
             x="0.5"

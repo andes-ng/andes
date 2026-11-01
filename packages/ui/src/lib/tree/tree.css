@@ -142,7 +142,7 @@
 }
 
 .andes-tree__spinner {
-  animation: andes-tree-spin 0.9s linear infinite;
+  animation: andes-tree-spin 1.4s linear infinite;
   color: var(--andes-color-primary, #2563eb);
 }
 

@@ -117,7 +117,8 @@ export const DerivedStatus: Story = {
  * the control's real `ValidationErrors`. Messages resolve field `errorMessages` → the
  * `andesForm`'s → `provideAndesFormErrorMessages()` → built-in defaults, and may use
  * `{label}` or any key of the validator's error object (`{requiredLength}`), or be a function.
- * Here the form localizes to Spanish and one field overrides `pattern`.
+ * Here the form localizes three messages and one field overrides `pattern`; for a whole language
+ * provide `provideAndesFormLocale(ANDES_FORM_LOCALE_ES)` instead.
  */
 export const GeneratedErrorMessages: Story = {
   render: () => {

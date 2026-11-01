@@ -1,4 +1,10 @@
 export {
+  andesIdRefs,
+  injectAndesFieldBinding,
+  provideAndesFieldBoundary,
+} from './field-binding';
+export type { AndesFieldBinding } from './field-binding';
+export {
   AndesForm,
   collectAndesFormErrors,
   injectAndesFormDisabled,

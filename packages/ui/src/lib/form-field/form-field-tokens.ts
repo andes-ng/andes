@@ -162,6 +162,10 @@ export interface AndesFormFieldApi {
   readonly tooltipLabel: () => string;
   /** The resolved display gate - read by `AndesFormControl` for its `interacted` signal. */
   readonly resolvedShowErrorsOn: () => AndesFormShowErrorsOn;
+  /** The control the field labels and describes: the first one registered. Only that one
+   *  takes the field's id and ARIA, so a second control in the same field never duplicates
+   *  the id. */
+  readonly primaryControl: () => AndesFormControlApi | undefined;
   /** Called by `AndesFormControl` from its constructor; returns the unregister callback. */
   registerControl(control: AndesFormControlApi): () => void;
   /** Called by a nested `noStyle` field so its status/messages surface on this one. */

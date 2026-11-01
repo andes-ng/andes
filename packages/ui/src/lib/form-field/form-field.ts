@@ -263,6 +263,9 @@ export class AndesFormField implements AndesFormFieldApi {
 
   protected readonly controlApi = computed(() => this.controls()[0]);
 
+  /** The control the field labels and describes - the first one registered. */
+  readonly primaryControl = this.controlApi;
+
   /** `hidden`, or a signal forms schema hiding the control. */
   protected readonly isHidden = computed(
     () => this.hidden() || (this.controlApi()?.hidden() ?? false),

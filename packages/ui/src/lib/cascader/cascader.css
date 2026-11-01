@@ -706,7 +706,7 @@ button.andes-cascader__combobox {
   border: 2px solid currentColor;
   border-right-color: transparent;
   border-radius: var(--andes-radius-full);
-  animation: andes-cascader-spin 0.8s linear infinite;
+  animation: andes-cascader-spin 1.4s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

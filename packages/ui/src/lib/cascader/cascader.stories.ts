@@ -466,9 +466,11 @@ export const DisplayRender: Story = {
         <span>{{ option.label }} <span style="opacity: 0.6;">{{ path.length === 1 ? 'department' : search ? path.length + ' levels' : '' }}</span></span>
       </ng-template>
       <ng-template #tag let-tag let-onClose="onClose">
-        <span style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0 0.5rem; border-radius: var(--andes-radius-full); background: var(--andes-color-primary-subtle); color: var(--andes-color-primary);">
+        <span style="display: inline-flex; align-items: center; gap: 0.125rem; height: 1.375rem; padding: 0 0.125rem 0 0.625rem; border-radius: var(--andes-radius-full); background: var(--andes-color-primary-subtle); color: var(--andes-color-primary); font-size: 0.875rem; line-height: 1;">
           {{ tag.labels[tag.labels.length - 1] }}
-          <andes-button variant="ghost" size="icon-xs" aria-label="Drop" (click)="onClose()">×</andes-button>
+          <andes-button variant="ghost" size="icon-xs" aria-label="Drop" style="display: inline-flex; margin: 0;" (click)="onClose()">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+          </andes-button>
         </span>
       </ng-template>
       <ng-template #pin>

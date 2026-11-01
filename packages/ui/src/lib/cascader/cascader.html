@@ -262,64 +262,81 @@
   </div>
 
   <span class="andes-cascader__suffix">
-    @if (showClear()) {
     <!--
-      A Tab stop of its own (it only shows while the box is hovered or holds focus, so
-      tabbing on from the combobox reaches it); a mouse press is cancelled so focus stays
-      where it was.
+      The clear button and the indicator (chevron, spinner) share one cell and cross-fade:
+      the clear button fades in over the indicator while the pointer is on the field or it
+      holds focus. With no indicator to cover, the clear button simply appears.
     -->
-    <button
-      type="button"
-      class="andes-cascader__clear"
-      data-slot="cascader-clear"
-      [attr.aria-label]="text().clear"
-      (mousedown)="$event.preventDefault()"
-      (click)="onClearClick($event)"
+    <span
+      class="andes-cascader__swap"
+      [attr.data-alone]="!loading() && suffixIcon() === null ? '' : null"
     >
-      @if (clearIcon(); as clearTemplate) {
-      <ng-container [ngTemplateOutlet]="clearTemplate" />
-      } @else {
-      <svg
-        class="andes-cascader__clear-glyph"
-        viewBox="0 0 16 16"
+      @if (showClear()) {
+      <!--
+        A Tab stop of its own (it only shows while the box is hovered or holds focus, so
+        tabbing on from the combobox reaches it); a mouse press is cancelled so focus stays
+        where it was.
+      -->
+      <button
+        type="button"
+        class="andes-cascader__clear"
+        data-slot="cascader-clear"
+        [attr.aria-label]="text().clear"
+        (mousedown)="$event.preventDefault()"
+        (click)="onClearClick($event)"
+      >
+        @if (clearIcon(); as clearTemplate) {
+        <ng-container [ngTemplateOutlet]="clearTemplate" />
+        } @else {
+        <svg
+          class="andes-cascader__clear-glyph"
+          viewBox="0 0 16 16"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <circle cx="8" cy="8" r="8" />
+          <path d="M5.5 5.5l5 5m0-5-5 5" />
+        </svg>
+        }
+      </button>
+      } @if (loading()) { @if (loadingIcon(); as loadingTemplate) {
+      <span
+        class="andes-cascader__loading-icon andes-cascader__indicator"
+        data-slot="cascader-loading"
         aria-hidden="true"
-        focusable="false"
       >
-        <circle cx="8" cy="8" r="8" />
-        <path d="M5.5 5.5l5 5m0-5-5 5" />
-      </svg>
-      }
-    </button>
-    } @if (loading()) { @if (loadingIcon(); as loadingTemplate) {
-    <span
-      class="andes-cascader__loading-icon"
-      data-slot="cascader-loading"
-      aria-hidden="true"
-    >
-      <ng-container [ngTemplateOutlet]="loadingTemplate" />
-    </span>
-    } @else {
-    <span
-      class="andes-cascader__spinner"
-      data-slot="cascader-loading"
-      aria-hidden="true"
-    ></span>
-    } } @else if (suffixIcon() !== null) {
-    <span class="andes-cascader__chevron" aria-hidden="true">
-      @if (suffixIcon(); as suffixTemplate) {
-      <ng-container [ngTemplateOutlet]="suffixTemplate" />
+        <ng-container [ngTemplateOutlet]="loadingTemplate" />
+      </span>
       } @else {
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
+      <span
+        class="andes-cascader__spinner andes-cascader__indicator"
+        data-slot="cascader-loading"
+        aria-hidden="true"
+      ></span>
+      } } @else if (suffixIcon() !== null) {
+      <span
+        class="andes-cascader__chevron andes-cascader__indicator"
+        aria-hidden="true"
       >
-        <path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round" />
-      </svg>
+        @if (suffixIcon(); as suffixTemplate) {
+        <ng-container [ngTemplateOutlet]="suffixTemplate" />
+        } @else {
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            d="m6 9 6 6 6-6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        }
+      </span>
       }
     </span>
-    }
   </span>
 
   @if (name(); as fieldName) { @for (value of formValues(); track $index) {

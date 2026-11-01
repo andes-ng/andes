@@ -1948,6 +1948,31 @@ describe('AndesCascader', () => {
       ).toBe('0.375rem');
     });
 
+    it('cross-fades the clear button with the indicator instead of swapping them', () => {
+      expect(
+        declaredValue(source, '.andes-cascader__swap > *', 'grid-area'),
+      ).toBe('1 / 1');
+      expect(declaredValue(source, '.andes-cascader__clear', 'opacity')).toBe(
+        '0',
+      );
+      expect(
+        declaredValue(source, '.andes-cascader__clear', 'visibility'),
+      ).toBe('hidden');
+      expect(
+        declaredValue(
+          source,
+          '.andes-cascader__trigger[data-clearable]:focus-within .andes-cascader__clear',
+          'visibility',
+        ),
+      ).toBe('visible');
+      expect(style).toContain(
+        '.andes-cascader__trigger[data-clearable]:hover .andes-cascader__indicator',
+      );
+      expect(
+        declaredValue(source, '.andes-cascader__chevron', 'transition'),
+      ).toContain('opacity var(--andes-duration-base, 150ms) ease');
+    });
+
     it('isolates the "+ N ..." tag from the surrounding direction', () => {
       expect(
         declaredValue(source, '.andes-cascader__tag--rest', 'unicode-bidi'),

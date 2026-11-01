@@ -499,14 +499,10 @@ button.andes-cascader__combobox {
 .andes-cascader__chevron {
   display: inline-flex;
   flex: 0 0 auto;
-  transition: transform var(--andes-motion-duration-mid, 0.2s)
-    var(--andes-motion-ease-in-out, cubic-bezier(0.645, 0.045, 0.355, 1));
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .andes-cascader__chevron {
-    transition: none;
-  }
+  transition:
+    transform var(--andes-motion-duration-mid, 0.2s)
+      var(--andes-motion-ease-in-out, cubic-bezier(0.645, 0.045, 0.355, 1)),
+    opacity var(--andes-duration-base, 150ms) ease;
 }
 
 .andes-cascader__chevron svg {
@@ -520,13 +516,31 @@ button.andes-cascader__combobox {
 
 /*
   Clear button - the same design on every field: a small muted disc with the "x" knocked out
-  of it in the background colour, 1em across. It takes the chevron's place while the pointer
-  is over the box or the box holds focus - so tabbing on from the combobox lands on it - and
-  shows all the time on devices without hover. The padding grows the hit area to 24px and
-  the equal negative margin takes it back out of the layout, so the box never grows.
+  of it in the background colour, 1em across. It shares one grid cell with the indicator
+  (chevron or spinner) and cross-fades with it while the pointer is over the box or the box
+  holds focus - so tabbing on from the combobox lands on it - so the field never changes width;
+  it shows all the time on devices without hover. Hidden, it is also `visibility: hidden` once
+  its fade has ended, out of reach of the pointer, the Tab key and assistive technology. The
+  padding grows the hit area to 24px and the equal negative margin takes it back out of the
+  layout, so the box never grows.
 */
+.andes-cascader__swap {
+  display: inline-grid;
+  align-items: center;
+  justify-items: center;
+}
+
+.andes-cascader__swap > * {
+  grid-area: 1 / 1;
+}
+
+/* The chevron's own transition (above) also turns it; the spinner only fades. */
+.andes-cascader__indicator:not(.andes-cascader__chevron) {
+  transition: opacity var(--andes-duration-base, 150ms) ease;
+}
+
 .andes-cascader__clear {
-  display: none;
+  display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
@@ -544,7 +558,12 @@ button.andes-cascader__combobox {
   font-size: inherit;
   line-height: 1;
   cursor: pointer;
-  transition: color 150ms ease;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--andes-duration-base, 150ms) ease,
+    visibility 0s linear var(--andes-duration-base, 150ms),
+    color var(--andes-duration-base, 150ms) ease;
 }
 
 .andes-cascader__clear:hover {
@@ -575,17 +594,49 @@ button.andes-cascader__combobox {
 
 .andes-cascader__trigger[data-clearable]:hover .andes-cascader__clear,
 .andes-cascader__trigger[data-clearable]:focus-within .andes-cascader__clear {
-  display: inline-flex;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity var(--andes-duration-base, 150ms) ease,
+    visibility 0s,
+    color var(--andes-duration-base, 150ms) ease;
 }
 
-.andes-cascader__trigger[data-clearable]:hover .andes-cascader__chevron,
-.andes-cascader__trigger[data-clearable]:focus-within .andes-cascader__chevron {
+/* While the clear button shows, the indicator under it fades away. */
+.andes-cascader__trigger[data-clearable]:hover .andes-cascader__indicator,
+/* prettier-ignore */
+.andes-cascader__trigger[data-clearable]:focus-within .andes-cascader__indicator {
+  opacity: 0;
+}
+
+/* With no indicator (suffixIcon null) there is nothing to cover: the clear button takes no
+   room until it shows. */
+.andes-cascader__swap[data-alone] .andes-cascader__clear {
   display: none;
+}
+
+/* prettier-ignore */
+.andes-cascader__trigger[data-clearable]:is(:hover, :focus-within) .andes-cascader__swap[data-alone] .andes-cascader__clear {
+  display: inline-flex;
 }
 
 @media (hover: none) {
   .andes-cascader__trigger[data-clearable] .andes-cascader__clear {
     display: inline-flex;
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .andes-cascader__trigger[data-clearable] .andes-cascader__indicator {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .andes-cascader__chevron,
+  .andes-cascader__indicator,
+  .andes-cascader__clear {
+    transition: none;
   }
 }
 

@@ -513,6 +513,23 @@
   height: 1rem;
 }
 
+/* Nothing to show: a muted empty tray above the text. */
+.andes-tree__empty[data-empty] {
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-block: 0.75rem;
+}
+
+.andes-tree__empty > .andes-tree__empty-icon {
+  width: 1.75rem;
+  height: 1.75rem;
+  color: color-mix(
+    in srgb,
+    var(--andes-color-muted-foreground, #64748b) 70%,
+    transparent
+  );
+}
+
 .andes-tree__live {
   position: absolute;
   width: 1px;

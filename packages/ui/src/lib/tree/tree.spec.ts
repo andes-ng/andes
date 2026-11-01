@@ -318,9 +318,14 @@ describe('AndesTree', () => {
     it('renders an empty state instead of an empty tree', () => {
       const fixture = setup((h) => h.nodes.set([]));
       expect(fixture.nativeElement.querySelector('[role="tree"]')).toBeNull();
-      expect(
-        fixture.nativeElement.querySelector('.andes-tree__empty').textContent,
-      ).toContain('No data');
+      const empty = fixture.nativeElement.querySelector(
+        '.andes-tree__empty',
+      ) as HTMLElement;
+      expect(empty.textContent).toContain('No data');
+      // A decorative tray above the text; the loading state shows the spinner instead.
+      expect(empty.hasAttribute('data-empty')).toBe(true);
+      const icon = empty.querySelector('.andes-tree__empty-icon');
+      expect(icon?.getAttribute('aria-hidden')).toBe('true');
     });
 
     it('shows a loading state, with translated labels', () => {
@@ -334,6 +339,8 @@ describe('AndesTree', () => {
       ) as HTMLElement;
       expect(empty.textContent).toContain('Cargando');
       expect(empty.getAttribute('aria-busy')).toBe('true');
+      expect(empty.hasAttribute('data-empty')).toBe(false);
+      expect(empty.querySelector('.andes-tree__empty-icon')).toBeNull();
     });
 
     it('renders the data attributes that carry the look', () => {

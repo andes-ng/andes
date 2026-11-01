@@ -282,7 +282,11 @@
     } }
   </div>
   } @else {
-  <div class="andes-tree__empty" [attr.aria-busy]="loading() ? 'true' : null">
+  <div
+    class="andes-tree__empty"
+    [attr.data-empty]="loading() ? null : ''"
+    [attr.aria-busy]="loading() ? 'true' : null"
+  >
     @if (loading()) {
     <svg
       class="andes-tree__spinner"
@@ -305,7 +309,27 @@
         stroke-linecap="round"
       />
     </svg>
-    {{ text().loading }} } @else { {{ text().empty }} }
+    {{ text().loading }} } @else {
+    <svg
+      class="andes-tree__empty-icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M4 13.5 6.2 5.6A1.5 1.5 0 0 1 7.64 4.5h8.72a1.5 1.5 0 0 1 1.44 1.1L20 13.5v4.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18Z"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linejoin="round"
+      />
+      <path
+        d="M4 13.5h4.5l1 2h5l1-2H20"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linejoin="round"
+      />
+    </svg>
+    {{ text().empty }} }
   </div>
   }
   <div

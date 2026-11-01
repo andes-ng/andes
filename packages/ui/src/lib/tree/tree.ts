@@ -1426,9 +1426,47 @@ export class AndesTree {
       event.dataTransfer.effectAllowed = 'move';
       // Some browsers refuse to start a drag without data.
       event.dataTransfer.setData('text/plain', row.title);
+      this.setGhost(event);
     }
     this.announcement.set(this.text().grabbed(row.title));
     this.nodeDragStart.emit(this.dragEvent(event, row, row.key, null));
+  }
+
+  /**
+   * The picture that follows the pointer is the whole row, grip, switcher, icon and title, lifted
+   * on a card, whichever part of the row the drag started from. It is a clone of the row without
+   * its indentation, kept out of view just long enough for the browser to take its snapshot.
+   */
+  private setGhost(event: DragEvent): void {
+    const dataTransfer = event.dataTransfer;
+    const source = event.currentTarget;
+    const tree = this.host.nativeElement.querySelector('.andes-tree');
+    if (
+      !tree ||
+      !(source instanceof HTMLElement) ||
+      typeof dataTransfer?.setDragImage !== 'function'
+    ) {
+      return;
+    }
+    const ghost = tree.ownerDocument.createElement('div');
+    ghost.className = 'andes-tree__ghost';
+    ghost.setAttribute('aria-hidden', 'true');
+    const clone = source.cloneNode(true) as HTMLElement;
+    clone
+      .querySelectorAll('.andes-tree__indent, .andes-tree__drop-indicator')
+      .forEach((element) => element.remove());
+    for (const attribute of ['data-dragging', 'data-drop']) {
+      clone.removeAttribute(attribute);
+    }
+    ghost.append(clone);
+    tree.append(ghost);
+    const box = source.getBoundingClientRect();
+    dataTransfer.setDragImage(
+      ghost,
+      Math.min(Math.max(event.clientX - box.left, 0), 24),
+      Math.min(Math.max(event.clientY - box.top, 0), 24),
+    );
+    setTimeout(() => ghost.remove());
   }
 
   protected onDragEnter(event: DragEvent, row: AndesFlatTreeNode): void {

@@ -1743,12 +1743,18 @@ describe('AndesTree', () => {
   });
 
   describe('drag and drop', () => {
-    function dragEvent(type: string, clientY = 0): Event {
+    function dragEvent(
+      type: string,
+      clientY = 0,
+      dataTransfer: object = {
+        setData: vi.fn(),
+        effectAllowed: '',
+        dropEffect: '',
+      },
+    ): Event {
       const event = new Event(type, { bubbles: true, cancelable: true });
       Object.defineProperty(event, 'clientY', { value: clientY });
-      Object.defineProperty(event, 'dataTransfer', {
-        value: { setData: vi.fn(), effectAllowed: '', dropEffect: '' },
-      });
+      Object.defineProperty(event, 'dataTransfer', { value: dataTransfer });
       return event;
     }
 
@@ -1811,6 +1817,65 @@ describe('AndesTree', () => {
       expect(
         fixture.componentInstance.dragLog.filter((e) => e.startsWith('leave')),
       ).toEqual([]);
+    });
+
+    describe('drag picture', () => {
+      it('lifts the whole row on a card, without its indentation, whichever part starts the drag', () => {
+        const fixture = setup((h) => {
+          h.draggable.set(true);
+          h.expanded.set(['a']);
+        });
+        const setDragImage = vi.fn();
+        const start = dragEvent('dragstart', 0, {
+          setData: vi.fn(),
+          setDragImage,
+          effectAllowed: '',
+          dropEffect: '',
+        });
+        (
+          row(node(fixture, 'Pasillo 1')).querySelector(
+            ':scope > .andes-tree__handle',
+          ) as HTMLElement
+        ).dispatchEvent(start);
+
+        expect(setDragImage).toHaveBeenCalledTimes(1);
+        const ghost = setDragImage.mock.calls[0][0] as HTMLElement;
+        expect(ghost.classList).toContain('andes-tree__ghost');
+        expect(ghost.querySelector('.andes-tree__handle')).not.toBeNull();
+        expect(ghost.querySelector('.andes-tree__switcher')).not.toBeNull();
+        expect(
+          ghost.querySelector('.andes-tree__title')?.textContent,
+        ).toContain('Pasillo 1');
+        expect(ghost.querySelector('.andes-tree__indent')).toBeNull();
+        expect(fixture.nativeElement.contains(ghost)).toBe(true);
+      });
+
+      it('removes the picture once the browser has its snapshot', async () => {
+        const fixture = setup((h) => h.draggable.set(true));
+        const setDragImage = vi.fn();
+        const start = dragEvent('dragstart', 0, {
+          setData: vi.fn(),
+          setDragImage,
+        });
+        row(node(fixture, 'Archivo')).dispatchEvent(start);
+        await new Promise((resolve) => setTimeout(resolve));
+        expect(
+          fixture.nativeElement.querySelector('.andes-tree__ghost'),
+        ).toBeNull();
+      });
+
+      it('styles the picture as a raised card', () => {
+        const css = cssText();
+        expect(declaredValue(css, '.andes-tree__ghost', 'position')).toBe(
+          'fixed',
+        );
+        expect(declaredValue(css, '.andes-tree__ghost', 'pointer-events')).toBe(
+          'none',
+        );
+        expect(
+          declaredValue(css, '.andes-tree__ghost', 'box-shadow'),
+        ).toContain('rgb(0 0 0 / 0.12)');
+      });
     });
 
     describe('grips', () => {

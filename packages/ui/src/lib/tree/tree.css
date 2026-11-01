@@ -541,6 +541,34 @@
 }
 
 /*
+  The picture dragged along with the pointer: the row lifted on a card. It waits outside the
+  viewport until the browser has taken its snapshot.
+*/
+.andes-tree__ghost {
+  position: fixed;
+  inset-block-start: -9999px;
+  inset-inline-start: 0;
+  display: inline-block;
+  padding-inline-end: 0.5rem;
+  border-radius: var(--andes-radius-md, 0.375rem);
+  background-color: var(--andes-color-background, #fff);
+  box-shadow: var(
+    --andes-shadow-md,
+    0 6px 16px 0 rgb(0 0 0 / 0.12),
+    0 3px 6px -4px rgb(0 0 0 / 0.12)
+  );
+  pointer-events: none;
+}
+
+.andes-tree__ghost .andes-tree__row {
+  padding-block-end: 0;
+}
+
+.andes-tree__ghost .andes-tree__handle {
+  color: var(--andes-color-muted-foreground, #64748b);
+}
+
+/*
   Drop indicator: a 2px line with a ring at its start, drawn in the 4px gap between rows so it
   never covers a title. It starts 4px into the content of the level the node would land on:
   the target's own level before or after it, one step in when dropped inside, where the target

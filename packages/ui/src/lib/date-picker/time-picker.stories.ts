@@ -158,9 +158,9 @@ export const ThreeSizes: Story = {
         <div>
           <p [style]="caption">size="{{ size }}"</p>
           <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-start;">
-            <andes-date-picker style="width: 9rem;" picker="time" locale="en-GB" [size]="size" [ngModel]="time" [aria-label]="size + ' time'" />
-            <andes-date-picker style="width: 10rem;" picker="time" locale="en-GB" [size]="size" [showTime]="seconds" [ngModel]="time" [aria-label]="size + ' time with seconds'" />
-            <andes-date-picker style="width: 10rem;" picker="time" locale="en-US" [size]="size" [showTime]="twelve" [ngModel]="time" [aria-label]="size + ' 12-hour time'" />
+            <andes-date-picker style="width: 12.5rem;" picker="time" locale="en-GB" [size]="size" [ngModel]="time" [aria-label]="size + ' time'" />
+            <andes-date-picker style="width: 12.5rem;" picker="time" locale="en-GB" [size]="size" [showTime]="seconds" [ngModel]="time" [aria-label]="size + ' time with seconds'" />
+            <andes-date-picker style="width: 12.5rem;" picker="time" locale="en-US" [size]="size" [showTime]="twelve" [ngModel]="time" [aria-label]="size + ' 12-hour time'" />
             <andes-date-picker style="width: 16rem;" picker="time" mode="range" locale="en-GB" [size]="size" [ngModel]="range" [aria-label]="size + ' time range'" />
           </div>
         </div>

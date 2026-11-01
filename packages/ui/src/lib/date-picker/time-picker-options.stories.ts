@@ -165,9 +165,9 @@ export const Variants: Story = {
         <div>
           <p [style]="caption">variant="{{ variant }}"</p>
           <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-start;">
-            <andes-date-picker style="width: 9rem;" picker="time" locale="en-GB" [variant]="variant" [ngModel]="time" [aria-label]="variant + ' time'" />
-            <andes-date-picker style="width: 10rem;" picker="time" locale="en-GB" [variant]="variant" [showTime]="seconds" [ngModel]="time" [aria-label]="variant + ' time with seconds'" />
-            <andes-date-picker style="width: 10rem;" picker="time" locale="en-US" [variant]="variant" [showTime]="twelve" [ngModel]="time" [aria-label]="variant + ' 12-hour time'" />
+            <andes-date-picker style="width: 12.5rem;" picker="time" locale="en-GB" [variant]="variant" [ngModel]="time" [aria-label]="variant + ' time'" />
+            <andes-date-picker style="width: 12.5rem;" picker="time" locale="en-GB" [variant]="variant" [showTime]="seconds" [ngModel]="time" [aria-label]="variant + ' time with seconds'" />
+            <andes-date-picker style="width: 12.5rem;" picker="time" locale="en-US" [variant]="variant" [showTime]="twelve" [ngModel]="time" [aria-label]="variant + ' 12-hour time'" />
             <andes-date-picker style="width: 16rem;" picker="time" mode="range" locale="en-GB" [variant]="variant" [ngModel]="range" [aria-label]="variant + ' time range'" />
           </div>
         </div>
@@ -196,9 +196,9 @@ export const Status: Story = {
         <div>
           <p [style]="caption">status="{{ status }}"</p>
           <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-start;">
-            <andes-date-picker style="width: 9rem;" picker="time" locale="en-GB" [status]="status" [ngModel]="time" [aria-label]="status + ' time'" />
-            <andes-date-picker style="width: 10rem;" picker="time" locale="en-GB" [status]="status" [showTime]="seconds" [ngModel]="time" [aria-label]="status + ' time with seconds'" />
-            <andes-date-picker style="width: 10rem;" picker="time" locale="en-US" [status]="status" [showTime]="twelve" [ngModel]="time" [aria-label]="status + ' 12-hour time'" />
+            <andes-date-picker style="width: 12.5rem;" picker="time" locale="en-GB" [status]="status" [ngModel]="time" [aria-label]="status + ' time'" />
+            <andes-date-picker style="width: 12.5rem;" picker="time" locale="en-GB" [status]="status" [showTime]="seconds" [ngModel]="time" [aria-label]="status + ' time with seconds'" />
+            <andes-date-picker style="width: 12.5rem;" picker="time" locale="en-US" [status]="status" [showTime]="twelve" [ngModel]="time" [aria-label]="status + ' 12-hour time'" />
             <andes-date-picker style="width: 16rem;" picker="time" mode="range" locale="en-GB" [status]="status" [ngModel]="range" [aria-label]="status + ' time range'" />
           </div>
         </div>
@@ -541,10 +541,10 @@ export const DarkTheme: Story = {
     },
     template: `<div style="display: flex; flex-direction: column; gap: 1rem;">
       <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-start;">
-        <andes-date-picker style="width: 9rem;" picker="time" locale="en-GB" [ngModel]="time" aria-label="Outlined" />
-        <andes-date-picker style="width: 9rem;" picker="time" variant="filled" locale="en-GB" [ngModel]="time" aria-label="Filled" />
-        <andes-date-picker style="width: 9rem;" picker="time" status="error" locale="en-GB" [ngModel]="time" aria-label="Error" />
-        <andes-date-picker style="width: 9rem;" picker="time" disabled locale="en-GB" [ngModel]="time" aria-label="Disabled" />
+        <andes-date-picker style="width: 12.5rem;" picker="time" locale="en-GB" [ngModel]="time" aria-label="Outlined" />
+        <andes-date-picker style="width: 12.5rem;" picker="time" variant="filled" locale="en-GB" [ngModel]="time" aria-label="Filled" />
+        <andes-date-picker style="width: 12.5rem;" picker="time" status="error" locale="en-GB" [ngModel]="time" aria-label="Error" />
+        <andes-date-picker style="width: 12.5rem;" picker="time" disabled locale="en-GB" [ngModel]="time" aria-label="Disabled" />
       </div>
       <div style="display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; align-items: flex-start;">
         <div style="width: 15rem; min-height: 22rem;">

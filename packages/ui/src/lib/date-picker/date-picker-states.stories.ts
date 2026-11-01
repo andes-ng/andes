@@ -74,7 +74,7 @@ export const Disabled: Story = {
           }
           <andes-date-picker style="width: 20rem;" disabled mode="range" locale="en-US" [ngModel]="range" aria-label="Disabled range" />
           <andes-date-picker style="width: 18rem;" disabled mode="multiple" locale="en-US" [ngModel]="several" aria-label="Disabled multiple" />
-          <andes-date-picker style="width: 9rem;" disabled picker="time" locale="en-GB" aria-label="Disabled time" />
+          <andes-date-picker style="width: 12.5rem;" disabled picker="time" locale="en-GB" aria-label="Disabled time" />
         </div>
       </div>
       <div>

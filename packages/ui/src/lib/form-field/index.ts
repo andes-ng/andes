@@ -32,6 +32,7 @@ export type {
   AndesFormInvalidSubmit,
   AndesFormLabelAlign,
   AndesFormLayout,
+  AndesFormMessageMode,
   AndesFormRequiredMark,
   AndesFormRequiredMarkContext,
   AndesFormScrollOptions,

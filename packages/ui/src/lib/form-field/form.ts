@@ -36,6 +36,7 @@ import {
   type AndesFormInvalidSubmit,
   type AndesFormLabelAlign,
   type AndesFormLayout,
+  type AndesFormMessageMode,
   type AndesFormRequiredMark,
   type AndesFormScrollOptions,
   type AndesFormShowErrorsOn,
@@ -194,6 +195,15 @@ export class AndesForm implements AndesFormApi {
   >(undefined);
   /** Error messages for every field in this form. */
   readonly errorMessages = input<AndesFormErrorMessages | undefined>(undefined);
+  /** Every failing validator's message (`all`), or only the first; each field's own
+   *  `messageMode` wins. */
+  readonly messageMode = input<AndesFormMessageMode>('all');
+  /**
+   * Prefix of the ids the fields generate: a field whose control sits at `address.city` gets
+   * `<name>_address_city`, stable across renders and server-side rendering, instead of a
+   * counter. On a `<form>` it is also the form's native `name` attribute.
+   */
+  readonly name = input<string | undefined>(undefined);
   /**
    * On a submit that leaves the form invalid, scroll to and focus the first field in an error
    * state. Waits for pending async validators and one render, so that anything the submit

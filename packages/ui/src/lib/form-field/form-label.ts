@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  ElementRef,
   forwardRef,
   inject,
   signal,
@@ -33,6 +34,10 @@ import { ANDES_FORM_FIELD, ANDES_FORM_LABEL } from './form-field-tokens';
  *   name never gets folded into the control's.
  * - colon - `horizontal` layout only, `aria-hidden`.
  *
+ * Clicking the label focuses the control. A control that opens a popup (a select or color
+ * picker trigger, a combobox: anything with `aria-haspopup`) is only focused, not opened, as a
+ * native `<select>` behaves; a checkbox or switch still toggles, as a native checkbox does.
+ *
  * Renders as a plain, unassociated `<label>` when used outside an `AndesFormField` (`for` and
  * `id` are simply omitted, and there are no decorations).
  */
@@ -42,7 +47,7 @@ import { ANDES_FORM_FIELD, ANDES_FORM_LABEL } from './form-field-tokens';
   template: `<label
       class="andes-form-label"
       [attr.id]="field?.labelId() ?? null"
-      [attr.for]="field?.controlId() ?? null"
+      [attr.for]="field?.labelFor() ?? null"
     >
       @if (field?.showRequiredMark()) {
         <span class="andes-form-label__required" aria-hidden="true">*</span>
@@ -115,6 +120,9 @@ import { ANDES_FORM_FIELD, ANDES_FORM_LABEL } from './form-field-tokens';
   // `AndesFormField`; see the header comment in form-field.css for why the shared sheet is
   // unscoped rather than split per part.
   encapsulation: ViewEncapsulation.None,
+  // On the host rather than the <label>: a label is not focusable, the keyboard reaches the
+  // control directly, so this only ever handles a pointer click bubbling up from the label.
+  host: { '(click)': 'onLabelClick($event)' },
   providers: [
     {
       provide: ANDES_FORM_LABEL,
@@ -124,8 +132,25 @@ import { ANDES_FORM_FIELD, ANDES_FORM_LABEL } from './form-field-tokens';
 })
 export class AndesFormLabel {
   protected readonly field = inject(ANDES_FORM_FIELD, { optional: true });
+  private readonly element =
+    inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
 
   protected readonly tooltipOpen = signal(false);
+
+  protected onLabelClick(event: MouseEvent): void {
+    if (!(event.target as Element | null)?.closest?.('label')) {
+      return;
+    }
+    const id = this.field?.labelFor();
+    const root = this.element.getRootNode() as Document | ShadowRoot;
+    const target = id ? root.getElementById?.(id) : null;
+    const popup = target?.getAttribute('aria-haspopup');
+    if (target && popup && popup !== 'false') {
+      // The label's default action would click the control, opening its popup.
+      event.preventDefault();
+      target.focus();
+    }
+  }
 
   protected readonly tooltipTemplate = computed(() => {
     const tooltip = this.field?.tooltip();

@@ -5,6 +5,7 @@ import {
   computed,
   contentChild,
   DestroyRef,
+  effect,
   forwardRef,
   inject,
   input,
@@ -14,10 +15,12 @@ import {
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import {
+  type AbstractControl,
   type ValidationErrors,
   Validators,
   type ValidatorFn,
 } from '@angular/forms';
+import type { Subscription } from 'rxjs';
 
 import { resolveAndesFormErrorMessages } from './form-error-messages';
 import {
@@ -35,6 +38,7 @@ import {
   type AndesFormFieldChildApi,
   type AndesFormLabelAlign,
   type AndesFormLayout,
+  type AndesFormMessageMode,
   type AndesFormRequiredMark,
   type AndesFormRequiredMarkContext,
   type AndesFormShowErrorsOn,
@@ -131,8 +135,17 @@ export class AndesFormField implements AndesFormFieldApi {
     skipSelf: true,
   });
 
-  /** Optional explicit id for the control/label pair. Auto-generated when omitted. */
+  /** Optional explicit id for the control/label pair. Generated when omitted: from the form's
+   *  `name` and the control path (`signup_address_city`) when the form has a `name`, else a
+   *  unique `andes-form-field-<n>`. */
   readonly id = input<string | undefined>(undefined);
+
+  /**
+   * What the label's `for` points at. Leave unset for the control (the field's id); give
+   * another id to label something else, or `null` to render a label with no `for` at all - for
+   * a field whose content is not one labelable control.
+   */
+  readonly htmlFor = input<string | null | undefined>(undefined);
 
   /** Label text - shorthand for projecting an `<andes-form-label>`, which wins when both are
    *  given. Also what `{label}` interpolates to in error messages. */
@@ -190,6 +203,17 @@ export class AndesFormField implements AndesFormFieldApi {
 
   /** Error messages for this field only; merged over the form's and the provided ones. */
   readonly errorMessages = input<AndesFormErrorMessages | undefined>(undefined);
+
+  /** Overrides the form's `messageMode` - every failing validator's message, or the first. */
+  readonly messageMode = input<AndesFormMessageMode | undefined>(undefined);
+
+  /**
+   * Paths (from the form root, as `FormGroup.get()` takes them) of the controls whose changes
+   * re-validate this field's control: a validator on it that reads another control's value
+   * (`matchField('password')` on the confirmation) runs again when that control changes.
+   * Reactive and template-driven forms only; signal forms re-validate on their own.
+   */
+  readonly dependsOn = input<string | readonly string[] | undefined>(undefined);
 
   /** Overrides the form's `showErrorsOn` - when this field starts showing its status. */
   readonly showErrorsOn = input<AndesFormShowErrorsOn | undefined>(undefined);
@@ -254,7 +278,20 @@ export class AndesFormField implements AndesFormFieldApi {
     descendants: true,
   });
 
-  readonly controlId = computed(() => this.id() ?? this.autoId);
+  readonly controlId = computed(() => {
+    const id = this.id();
+    if (id !== undefined) {
+      return id;
+    }
+    const name = this.form?.name();
+    const path = this.controlApi()?.path();
+    return name && path ? `${name}_${path.replace(/\./g, '_')}` : this.autoId;
+  });
+
+  readonly labelFor = computed(() => {
+    const target = this.htmlFor();
+    return target === undefined ? this.controlId() : target;
+  });
   readonly labelId = computed(() => `${this.controlId()}-label`);
   readonly descriptionId = computed(() => `${this.controlId()}-description`);
   readonly errorId = computed(() => `${this.controlId()}-error`);
@@ -424,7 +461,8 @@ export class AndesFormField implements AndesFormFieldApi {
         : [];
     // Two validators can resolve to the same text; it is shown once, and the text is what each
     // line is tracked (and animated in) by.
-    return [...new Set(messages)];
+    const unique = [...new Set(messages)];
+    return this.resolvedMessageMode() === 'first' ? unique.slice(0, 1) : unique;
   });
 
   /** Generated errors interrupt (`alert`); generated warnings are announced politely. */
@@ -461,6 +499,10 @@ export class AndesFormField implements AndesFormFieldApi {
 
   protected readonly feedbackTemplate = computed(
     () => this.feedbackIcons() ?? this.form?.feedbackIcons() ?? null,
+  );
+
+  protected readonly resolvedMessageMode = computed<AndesFormMessageMode>(
+    () => this.messageMode() ?? this.form?.messageMode() ?? 'all',
   );
 
   readonly resolvedShowErrorsOn = computed<AndesFormShowErrorsOn>(
@@ -548,6 +590,42 @@ export class AndesFormField implements AndesFormFieldApi {
     if (unregister) {
       inject(DestroyRef).onDestroy(unregister);
     }
+    effect((onCleanup) => {
+      const subscriptions = this.watchDependencies();
+      onCleanup(() => subscriptions.forEach((s) => s.unsubscribe()));
+    });
+  }
+
+  /** Whether this field is re-validating its control right now - stops two fields that depend
+   *  on each other from re-validating one another forever. */
+  private revalidating = false;
+
+  private watchDependencies(): Subscription[] {
+    const paths = this.dependsOn();
+    const control = this.controlApi()?.control() as
+      (AbstractControl & { events?: unknown }) | null | undefined;
+    // Signal forms' stand-in control has no events: its validation is reactive already.
+    if (!paths || !control?.events) {
+      return [];
+    }
+    return (typeof paths === 'string' ? [paths] : paths).flatMap((path) => {
+      const dependency = control.root.get(path);
+      return dependency
+        ? [
+            dependency.valueChanges.subscribe(() => {
+              if (this.revalidating) {
+                return;
+              }
+              this.revalidating = true;
+              try {
+                control.updateValueAndValidity();
+              } finally {
+                this.revalidating = false;
+              }
+            }),
+          ]
+        : [];
+    });
   }
 
   registerControl(control: AndesFormControlApi): () => void {

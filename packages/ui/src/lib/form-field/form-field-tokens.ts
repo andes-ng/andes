@@ -51,6 +51,10 @@ export type AndesFormRequiredMark =
 export type AndesFormShowErrorsOn =
   'interacted' | 'touched' | 'dirty' | 'submitted' | 'always';
 
+/** How many messages a field shows while its control fails several validators at once: every
+ *  one (`all`, the default) or only the first, in the order the validators reported them. */
+export type AndesFormMessageMode = 'all' | 'first';
+
 /** Context of a custom `feedbackIcons` template. */
 export interface AndesFormFeedbackIconContext {
   /** The status to draw an icon for - same as `status`. */
@@ -131,6 +135,9 @@ export type AndesFormErrorMessages = Readonly<
 export interface AndesFormFieldApi {
   readonly controlId: () => string;
   readonly labelId: () => string;
+  /** What the label's `for` points at: the control id, another id (`htmlFor`), or `null` for
+   *  no association. */
+  readonly labelFor: () => string | null;
   readonly descriptionId: () => string;
   readonly errorId: () => string;
   /** The `<andes-form-label>` id, or `undefined` when the field has no label. */
@@ -235,6 +242,9 @@ export interface AndesFormApi {
     TemplateRef<AndesFormFeedbackIconContext> | undefined
   >;
   readonly errorMessages: Signal<AndesFormErrorMessages | undefined>;
+  readonly messageMode: Signal<AndesFormMessageMode>;
+  /** Prefix of the field ids the form generates from control paths, when set. */
+  readonly name: Signal<string | undefined>;
   /** Whether the form was submitted and not reset since. */
   readonly submitted: Signal<boolean>;
   /** Name of the signal forms root field bound with `[formRoot]`, which field paths are

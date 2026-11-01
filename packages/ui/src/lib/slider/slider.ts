@@ -23,6 +23,10 @@ import {
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 import {
+  andesIdRefs,
+  injectAndesFieldBinding,
+} from '../form-field/field-binding';
+import {
   AndesSliderMarkTemplate,
   AndesSliderThumbContext,
   AndesSliderTooltipTemplate,
@@ -242,6 +246,8 @@ interface AndesSliderThumbView {
   readonly ariaLabel: string | null;
   readonly ariaLabelledby: string | null;
   readonly ariaDescribedby: string | null;
+  /** The slider's id, on the thumb of a single slider. */
+  readonly id: string | null;
   readonly disabled: boolean;
   readonly removing: boolean;
   readonly dragging: boolean;
@@ -281,7 +287,10 @@ type AndesSliderDrag =
     '[attr.data-tooltip]': 'tooltip()',
     '[attr.data-disabled]': "isDisabled() ? '' : null",
     '[attr.data-readonly]': "readOnly() ? '' : null",
-    '[attr.data-size]': 'size()',
+    '[attr.data-size]': 'resolvedSize()',
+    '[attr.data-required]': "isRequired() ? '' : null",
+    // A range's group carries the id; a single slider's thumb does.
+    '[attr.id]': 'isRange() ? (controlId() ?? null) : null',
     '[attr.data-status]': 'visualStatus()',
     '[attr.data-no-track-click]': "trackClick() ? null : ''",
     '[attr.data-dragging]': "dragging() ? '' : null",
@@ -293,8 +302,8 @@ type AndesSliderDrag =
     // bug already fixed in AndesButton.
     '[attr.role]': "isRange() ? 'group' : null",
     '[attr.aria-label]': 'isRange() ? (ariaLabel() ?? null) : null',
-    '[attr.aria-labelledby]': 'isRange() ? (ariaLabelledby() ?? null) : null',
-    '[attr.aria-describedby]': 'isRange() ? (ariaDescribedby() ?? null) : null',
+    '[attr.aria-labelledby]': 'isRange() ? (labelledBy() ?? null) : null',
+    '[attr.aria-describedby]': 'isRange() ? (describedBy() ?? null) : null',
     // `aria-invalid` is announced on each `role="slider"` thumb, never on the host.
     '[attr.aria-invalid]': 'null',
   },
@@ -419,7 +428,14 @@ export class AndesSlider implements ControlValueAccessor {
   readonly readOnly = input(false, { transform: booleanAttribute });
 
   /** Track thickness and thumb size (`md`, the default, is the original look). */
-  readonly size = input<AndesSliderSize>('md');
+  /** `md` unless set, or the enclosing `andesForm`'s `size`. */
+  readonly size = input<AndesSliderSize | undefined>(undefined);
+  /** Id of the slider: the thumb of a single slider, the group of a range. Defaults to the
+   *  enclosing field's control id. */
+  readonly id = input<string | undefined>(undefined);
+  /** Marks the slider as required (`data-required`; the slider role has no `aria-required`).
+   *  Also set by a required field. */
+  readonly required = input(false, { transform: booleanAttribute });
 
   /**
    * Replaces the inside of every handle (the default ring-and-knob circle) with a template;
@@ -543,18 +559,53 @@ export class AndesSlider implements ControlValueAccessor {
       : Math.max(this.minCount(), Math.floor(maxCount));
   });
 
+  /** The enclosing form field and form: id, ARIA, status, size and disabled. */
+  protected readonly field = injectAndesFieldBinding();
+
+  /** The size in effect: `size`, else the form's, else `md`. */
+  readonly resolvedSize = computed<AndesSliderSize>(
+    () => this.size() ?? this.field.size() ?? 'md',
+  );
+
+  /** The status in effect: `status`, else the enclosing field's error or warning. */
+  readonly resolvedStatus = computed<AndesSliderStatus | undefined>(
+    () => this.status() ?? this.field.status(),
+  );
+
+  protected readonly controlId = computed(() => this.id() ?? this.field.id());
+
+  /** `aria-labelledby`, else the field's label - unless an `aria-label` names the slider. */
+  protected readonly labelledBy = computed(
+    () =>
+      this.ariaLabelledby() ??
+      (this.ariaLabel() ? undefined : this.field.labelledBy()),
+  );
+
+  protected readonly describedBy = computed(() =>
+    andesIdRefs(this.ariaDescribedby(), this.field.describedBy()),
+  );
+
+  protected readonly isRequired = computed(
+    () => this.required() || this.field.required(),
+  );
+
   protected readonly isDisabled = computed(
-    () => this.disabled() === true || this.cvaDisabled(),
+    () =>
+      this.disabled() === true || this.cvaDisabled() || this.field.disabled(),
   );
 
   /** `aria-invalid` and `status="error"` are one state: same look, same announcement. */
   protected readonly isInvalid = computed(
-    () => this.ariaInvalid() || this.status() === 'error',
+    () => this.ariaInvalid() || this.resolvedStatus() === 'error',
   );
 
   /** The status the stylesheet paints: `error` (also from `aria-invalid`), `warning` or none. */
   protected readonly visualStatus = computed<AndesSliderStatus | null>(() =>
-    this.isInvalid() ? 'error' : this.status() === 'warning' ? 'warning' : null,
+    this.isInvalid()
+      ? 'error'
+      : this.resolvedStatus() === 'warning'
+        ? 'warning'
+        : null,
   );
 
   /** `minDistance`, never negative or non-finite. */
@@ -731,8 +782,9 @@ export class AndesSlider implements ControlValueAccessor {
         label,
         valueText: formatted ?? null,
         ariaLabel,
-        ariaLabelledby: isRange ? null : (this.ariaLabelledby() ?? null),
-        ariaDescribedby: isRange ? null : (this.ariaDescribedby() ?? null),
+        id: isRange ? null : (this.controlId() ?? null),
+        ariaLabelledby: isRange ? null : (this.labelledBy() ?? null),
+        ariaDescribedby: isRange ? null : (this.describedBy() ?? null),
         disabled: this.isThumbDisabled(index),
         removing: removing === index,
         dragging: thumbDragging,

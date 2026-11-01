@@ -293,6 +293,70 @@ describe('AndesOverlayPrimitive', () => {
       );
     });
 
+    describe('an overlay opened from inside another overlay', () => {
+      const zIndexOf = (host: HTMLElement | null) =>
+        Number.parseInt(
+          (host?.style.getPropertyValue('z-index') ?? '').replace(
+            /^var\(.*,\s*(\d+)\)$/,
+            '$1',
+          ),
+          10,
+        );
+
+      function openFrom(outerPreset: 'dialog' | 'drawer', innerPreset: 'menu') {
+        const outer = createHost(andesOverlayPreset(outerPreset));
+        outer.host.open();
+        outer.fixture.detectChanges();
+        const inner = createHost(andesOverlayPreset(innerPreset));
+        inner.overlay.registerAnchor(outer.element('first'));
+        inner.host.open();
+        inner.fixture.detectChanges();
+        return { outer, inner };
+      }
+
+      it('stacks a dropdown-layer panel above the modal dialog its anchor sits in', () => {
+        const { outer, inner } = openFrom('dialog', 'menu');
+
+        expect(zIndexOf(inner.hostWrapper())).toBeGreaterThan(
+          zIndexOf(outer.hostWrapper()),
+        );
+      });
+
+      it('stacks it above a drawer too', () => {
+        const { outer, inner } = openFrom('drawer', 'menu');
+
+        expect(zIndexOf(inner.hostWrapper())).toBeGreaterThan(
+          zIndexOf(outer.hostWrapper()),
+        );
+      });
+
+      it('keeps the layer token when the anchor is not inside an overlay', () => {
+        const { fixture, host, hostWrapper } = createHost(
+          andesOverlayPreset('menu'),
+        );
+        host.open();
+        fixture.detectChanges();
+
+        expect(hostWrapper()?.style.getPropertyValue('z-index')).toBe(
+          'var(--andes-z-index-dropdown, 1000)',
+        );
+      });
+
+      it('keeps the layer token when it is already above the overlay it is opened from', () => {
+        const outer = createHost(andesOverlayPreset('drawer'));
+        outer.host.open();
+        outer.fixture.detectChanges();
+        const inner = createHost(andesOverlayPreset('tooltip'));
+        inner.overlay.registerAnchor(outer.element('first'));
+        inner.host.open();
+        inner.fixture.detectChanges();
+
+        expect(inner.hostWrapper()?.style.getPropertyValue('z-index')).toBe(
+          'var(--andes-z-index-tooltip, 1070)',
+        );
+      });
+    });
+
     it('re-applies the layer when reconfigured while open', () => {
       const { fixture, host, overlay, hostWrapper } = createHost(
         andesOverlayPreset('popover'),

@@ -28,7 +28,6 @@ import { ComponentPortal, TemplatePortal } from '@angular/cdk/portal';
 import { Subject, Subscription, type Observable } from 'rxjs';
 
 import {
-  andesOverlayZIndex,
   ANDES_OVERLAY_BACKDROP_CLASS,
   ANDES_OVERLAY_CLOSING_ATTRIBUTE,
   ANDES_OVERLAY_DEFAULT_CONFIG,
@@ -47,6 +46,7 @@ import {
   andesImpliedSize,
   createAndesPositionStrategy,
 } from './overlay-positioning';
+import { andesOverlayStackedZIndex } from './overlay-stacking';
 
 let nextUniqueId = 0;
 
@@ -384,7 +384,7 @@ export class AndesOverlayPrimitive {
       ANDES_OVERLAY_PANE_CLASS,
       ...toClassList(config.panelClass),
     ]);
-    this.styleBackdrop(ref, config);
+    this.styleBackdrop(ref);
     this.attachedContent = content;
     this.attachedContext = options.context;
     this._panelElement.set(ref.overlayElement);
@@ -673,19 +673,26 @@ export class AndesOverlayPrimitive {
   }
 
   private applyLayerStyles(ref: OverlayRef, config: AndesOverlayConfig): void {
-    const zIndex = andesOverlayZIndex(config.layer);
+    // An overlay opened from inside another one (a select in a dialog) stacks above it.
+    const zIndex = andesOverlayStackedZIndex(
+      config.layer,
+      this._anchor() ?? this.hostViewContainerRef?.element.nativeElement,
+    );
     // CDK declares its own `z-index: 1000` inside `@layer cdk-overlay`, so an
     // unlayered inline value always wins without `!important`.
     ref.hostElement.style.setProperty('z-index', zIndex);
     ref.backdropElement?.style.setProperty('z-index', zIndex);
   }
 
-  private styleBackdrop(ref: OverlayRef, config: AndesOverlayConfig): void {
+  private styleBackdrop(ref: OverlayRef): void {
     const backdrop = ref.backdropElement;
     if (!backdrop) {
       return;
     }
-    backdrop.style.setProperty('z-index', andesOverlayZIndex(config.layer));
+    backdrop.style.setProperty(
+      'z-index',
+      ref.hostElement.style.getPropertyValue('z-index'),
+    );
     backdrop.style.setProperty('background', ANDES_OVERLAY_SCRIM);
   }
 

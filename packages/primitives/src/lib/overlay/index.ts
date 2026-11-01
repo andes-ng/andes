@@ -35,6 +35,8 @@ export {
   createAndesPositionStrategy,
 } from './overlay-positioning';
 
+export { andesOverlayStackedZIndex } from './overlay-stacking';
+
 export { AndesOverlayInertRegistry } from './overlay-inert';
 export type { AndesOverlayInertHandle } from './overlay-inert';
 

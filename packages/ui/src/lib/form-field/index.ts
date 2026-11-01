@@ -12,6 +12,7 @@ export type { AndesControlErrors } from './form-error';
 export { AndesFormField } from './form-field';
 export { AndesFormFieldset } from './form-fieldset';
 export { AndesFormLabel } from './form-label';
+export { AndesValidators } from './form-validators';
 export {
   ANDES_DEFAULT_FORM_ERROR_MESSAGES,
   provideAndesFormErrorMessages,

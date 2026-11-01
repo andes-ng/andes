@@ -23,6 +23,12 @@ export const ANDES_DEFAULT_FORM_ERROR_MESSAGES: AndesFormErrorMessages = {
   min: 'Enter a value of at least {min}.',
   max: 'Enter a value of at most {max}.',
   pattern: 'The value does not match the expected format.',
+  // AndesValidators.
+  blank: 'This field cannot be blank.',
+  exactlength: 'Enter exactly {requiredLength} characters.',
+  url: 'Enter a valid URL.',
+  oneOf: 'Choose one of: {allowed}.',
+  mismatch: 'The values do not match.',
   default: 'This value is invalid.',
 };
 

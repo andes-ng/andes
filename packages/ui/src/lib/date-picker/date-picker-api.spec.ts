@@ -1070,9 +1070,9 @@ describe('AndesDatePicker switching picker', () => {
     };
 
     expect(
-      (['date', 'week', 'month', 'quarter', 'year', 'time', 'date'] as const).map(
-        text,
-      ),
+      (
+        ['date', 'week', 'month', 'quarter', 'year', 'time', 'date'] as const
+      ).map(text),
     ).toEqual([
       '15 Feb 2024',
       '2024-W07',

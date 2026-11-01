@@ -41,10 +41,7 @@ import {
  * cannot be inverted, so typed input then falls back to ISO).
  */
 export type AndesDateFormat =
-  | string
-  | readonly string[]
-  | ((date: Date) => string)
-  | AndesDateMaskFormat;
+  string | readonly string[] | ((date: Date) => string) | AndesDateMaskFormat;
 
 /**
  * A token pattern typed through a mask (`AndesDatePicker`): the input always holds the

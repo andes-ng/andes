@@ -12,7 +12,9 @@ describe('DateMask', () => {
   it('lays a pattern out as cells between its literals', () => {
     const date = mask('YYYY-MM-DD HH:mm');
     expect(date.template).toBe('YYYY-MM-DD HH:mm');
-    expect(date.cells.map(({ token, start, end }) => [token, start, end])).toEqual([
+    expect(
+      date.cells.map(({ token, start, end }) => [token, start, end]),
+    ).toEqual([
       ['YYYY', 0, 4],
       ['MM', 5, 7],
       ['DD', 8, 10],

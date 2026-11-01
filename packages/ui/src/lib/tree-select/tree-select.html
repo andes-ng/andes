@@ -51,7 +51,7 @@
       `remove` is set in the popover only: there each remove button is a Tab stop and removing
       keeps focus inside it.
     -->
-    <ng-template #tagSlot let-option let-remove="remove">
+    <ng-template #tagSlot let-option let-remove="remove" let-enter="enter">
       @if (tagTemplate(); as customTag) {
       <ng-container
         [ngTemplateOutlet]="customTag"
@@ -62,6 +62,7 @@
         class="andes-tree-select__tag"
         data-slot="tree-select-tag"
         [attr.title]="option.title"
+        [attr.data-enter]="enter ? '' : null"
       >
         <span class="andes-tree-select__tag-label">{{ tagText(option) }}</span>
         @if (option.closable) {
@@ -112,7 +113,10 @@
     @if (multiMode()) { @for (option of visibleTags(); track option.key) {
     <ng-container
       [ngTemplateOutlet]="tagSlot"
-      [ngTemplateOutletContext]="{ $implicit: option }"
+      [ngTemplateOutletContext]="{
+        $implicit: option,
+        enter: enteringKeys().has(option.key)
+      }"
     />
     } @if (omittedTags().length > 0) {
     <!--

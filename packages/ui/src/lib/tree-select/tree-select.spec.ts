@@ -1301,13 +1301,24 @@ describe('AndesTreeSelect', () => {
           'animation',
         ),
       ).toBeUndefined();
-      // Every scale in the file is the 97% of the enter and exit keyframes.
+      // Every scale in the file is the 97% of the enter and exit keyframes, but for the 90% a
+      // newly added tag grows from.
+      const [tagEnter] = atRuleBodies('@keyframes andes-tree-select-tag-enter');
       const scales = css
+        .replace(tagEnter, '')
         .split('scale(')
         .slice(1)
         .map((rest) => rest.slice(0, rest.indexOf(')')));
       expect(scales.length).toBeGreaterThan(0);
       expect(new Set(scales)).toEqual(new Set(['0.97']));
+      expect(declaredValue(tagEnter, 'from', 'transform')).toBe('scale(0.9)');
+      expect(
+        declaredInAtRule(
+          noPreference,
+          '.andes-tree-select__tag[data-enter]',
+          'animation',
+        ),
+      ).toContain('andes-tree-select-tag-enter');
     });
 
     it('sets the font on the panel root, which renders outside the host', () => {

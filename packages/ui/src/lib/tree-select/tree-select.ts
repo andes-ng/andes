@@ -89,6 +89,9 @@ const DEFAULT_LABELS: AndesTreeSelectLabels = {
   tagsRemoved: (titles) => `Removed ${titles.join(', ')}`,
 };
 
+/** How long a tag the user just added keeps its `data-enter` (its enter animation and more). */
+const TAG_ENTER_MS = 200;
+
 /** Room kept on a responsive row for the in-field search input (its 4rem minimum), in px. */
 const RESPONSIVE_SEARCH_RESERVE = 64;
 
@@ -625,6 +628,14 @@ export class AndesTreeSelect
 
   private readonly selection = viewChild<ElementRef<HTMLElement>>('selection');
   private readonly measure = viewChild<ElementRef<HTMLElement>>('measure');
+  /**
+   * The tags the user just added, which play a short enter animation; never the tags a value
+   * arrives with, nor those a responsive re-fit brings back.
+   */
+  protected readonly enteringKeys = signal<ReadonlySet<AndesTreeKey>>(
+    new Set(),
+  );
+  private enterTimer: ReturnType<typeof setTimeout> | null = null;
   /** What the live region last announced: the tags the user added or removed. */
   protected readonly announcement = signal('');
   /** The open "+ N" popover's pane: focus moving into it has not left the select. */
@@ -740,7 +751,12 @@ export class AndesTreeSelect
       this.onTouched();
       this.openState.set(false);
     });
-    this.destroyRef.onDestroy(() => this.unwatchPanelScroll());
+    this.destroyRef.onDestroy(() => {
+      this.unwatchPanelScroll();
+      if (this.enterTimer !== null) {
+        clearTimeout(this.enterTimer);
+      }
+    });
 
     afterNextRender(() => {
       if (this.defaultOpen() && !this.isOpen()) {
@@ -1187,6 +1203,21 @@ export class AndesTreeSelect
       this.optionDeselect.emit(this.externalKey(key));
     }
     this.announceTags(added, removed);
+    this.markEntering(added);
+  }
+
+  private markEntering(added: readonly AndesTreeKey[]): void {
+    if (!this.multiMode() || added.length === 0) {
+      return;
+    }
+    this.enteringKeys.set(new Set(added));
+    if (this.enterTimer !== null) {
+      clearTimeout(this.enterTimer);
+    }
+    this.enterTimer = setTimeout(() => {
+      this.enterTimer = null;
+      this.enteringKeys.set(new Set());
+    }, TAG_ENTER_MS);
   }
 
   /**

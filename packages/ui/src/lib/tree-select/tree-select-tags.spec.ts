@@ -447,4 +447,43 @@ describe('AndesTreeSelect tags', () => {
       expect(live().textContent).toBe('');
     });
   });
+
+  describe('tag motion', () => {
+    it('marks only the tags the user adds, and only for a moment', () => {
+      vi.useFakeTimers();
+      setup((h) => {
+        h.maxTagCount.set(undefined);
+        h.value.set(['lima']);
+      });
+      const entering = () =>
+        Array.from(
+          field().querySelectorAll<HTMLElement>(
+            '[data-slot="tree-select-tag"][data-enter]',
+          ),
+        ).map((tag) => tag.textContent?.trim());
+      // The tags a value arrives with stay still.
+      expect(entering()).toEqual([]);
+
+      (
+        field().querySelector('.andes-tree-select__trigger') as HTMLElement
+      ).click();
+      fixture.detectChanges();
+      const cusco = Array.from(
+        document.querySelectorAll<HTMLElement>(
+          '.andes-tree-select__panel .andes-tree__row',
+        ),
+      ).find(
+        (row) =>
+          row.querySelector('.andes-tree__title')?.textContent?.trim() ===
+          'Cusco',
+      ) as HTMLElement;
+      cusco.click();
+      fixture.detectChanges();
+      expect(entering()).toEqual(['Cusco']);
+
+      vi.advanceTimersByTime(200);
+      fixture.detectChanges();
+      expect(entering()).toEqual([]);
+    });
+  });
 });

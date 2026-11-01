@@ -1,0 +1,303 @@
+<!-- The whole gallery, drawn in place or inside the lightbox dialog. -->
+<ng-template #body>
+  <section
+    class="andes-gallery"
+    data-slot="gallery"
+    tabindex="-1"
+    [class.andes-gallery--lightbox]="fullscreen()"
+    [attr.data-position]="thumbnailPosition()"
+    [attr.data-single]="single() ? '' : null"
+    [attr.data-zoomed]="zoomed() ? '' : null"
+    [attr.role]="fullscreen() ? null : 'region'"
+    [attr.aria-label]="fullscreen() ? null : text().gallery"
+    (keydown)="onKeydown($event)"
+    (mouseenter)="setHovered(true)"
+    (mouseleave)="setHovered(false)"
+    (focusin)="onFocusChange($event, true)"
+    (focusout)="onFocusChange($event, false)"
+  >
+    <div class="andes-gallery__header" data-slot="gallery-header">
+      <div class="andes-gallery__header-start">
+        @if (counter() && !single()) {
+        <span
+          class="andes-gallery__counter"
+          data-slot="gallery-counter"
+          aria-hidden="true"
+          >{{ index() + 1 }} / {{ total() }}</span
+        >
+        } @if (headerTemplate(); as header) {
+        <ng-container
+          [ngTemplateOutlet]="header"
+          [ngTemplateOutletContext]="context()"
+        />
+        }
+      </div>
+
+      @if (toolbarActions().length || (autoplay() && !single())) {
+      <div
+        class="andes-gallery__toolbar"
+        data-slot="gallery-toolbar"
+        role="group"
+        [attr.aria-label]="text().toolbar"
+      >
+        @if (autoplay() && !single()) {
+        <button
+          type="button"
+          class="andes-gallery__button"
+          data-action="play"
+          [attr.aria-label]="playing() ? text().pause : text().play"
+          [attr.title]="playing() ? text().pause : text().play"
+          (click)="togglePlay()"
+        >
+          <andes-image-icon [name]="playing() ? 'pause' : 'play'" />
+        </button>
+        } @for (action of toolbarActions(); track action) { @if (action ===
+        'zoomIn' && ratioBefore()) {
+        <ng-container [ngTemplateOutlet]="ratioTemplate" />
+        } @if (action === 'fullscreen') {
+        <button
+          #fullscreenButton
+          type="button"
+          class="andes-gallery__button"
+          data-action="fullscreen"
+          [attr.aria-label]="label(action)"
+          [attr.title]="label(action)"
+          [attr.aria-pressed]="fullscreen()"
+          (click)="run(action)"
+        >
+          <andes-image-icon [name]="icon(action)" />
+        </button>
+        } @else {
+        <button
+          type="button"
+          class="andes-gallery__button"
+          [attr.data-action]="action"
+          [attr.aria-label]="label(action)"
+          [attr.title]="label(action)"
+          [attr.aria-disabled]="actionDisabled(action) ? 'true' : null"
+          (click)="actionDisabled(action) || run(action)"
+        >
+          <andes-image-icon [name]="icon(action)" />
+        </button>
+        } @if (action === 'zoomOut') {
+        <ng-container [ngTemplateOutlet]="ratioTemplate" />
+        } }
+      </div>
+      } @if (fullscreen()) {
+      <button
+        type="button"
+        class="andes-gallery__button andes-gallery__close"
+        data-slot="gallery-close"
+        [attr.aria-label]="text().close"
+        [attr.title]="text().close"
+        (click)="close()"
+      >
+        <andes-image-icon name="close" />
+      </button>
+      }
+    </div>
+
+    <div
+      #stage
+      class="andes-gallery__stage"
+      data-slot="gallery-stage"
+      role="group"
+      cdkFocusInitial
+      [attr.tabindex]="fullscreen() ? -1 : 0"
+      [attr.aria-label]="position()"
+      [class.andes-gallery__stage--movable]="canPan()"
+      [class.andes-gallery__stage--dragging]="dragging()"
+      (wheel)="onWheel($event)"
+      (pointerdown)="onPointerDown($event)"
+      (pointermove)="onPointerMove($event)"
+      (pointerup)="onPointerEnd($event)"
+      (pointercancel)="onPointerEnd($event)"
+      (click)="onStageClick($event)"
+      (keydown.escape)="onStageEscape($event)"
+    >
+      <div class="andes-gallery__canvas">
+        @if (leaving(); as frame) {
+        <img
+          class="andes-gallery__leaving"
+          data-slot="gallery-leaving"
+          alt=""
+          aria-hidden="true"
+          draggable="false"
+          [attr.src]="frame.src"
+          [style.transform]="frame.css"
+          (animationend)="onLeft()"
+        />
+        } @if (image(); as current) { @if (imageTemplate(); as custom) { @for
+        (key of [index()]; track key) {
+        <div
+          #picture
+          class="andes-gallery__image andes-gallery__custom"
+          data-slot="gallery-image"
+          [class.andes-gallery__image--entering]="leaving() !== null"
+          [style.transform]="css()"
+          (dblclick)="onDoubleClick($event)"
+        >
+          <ng-container
+            [ngTemplateOutlet]="custom"
+            [ngTemplateOutletContext]="imageContext()"
+          />
+        </div>
+        } } @else { @for (key of [index()]; track key) {
+        <img
+          #picture
+          class="andes-gallery__image"
+          data-slot="gallery-image"
+          draggable="false"
+          [class.andes-gallery__image--hidden]="loadState() === 'error'"
+          [class.andes-gallery__image--entering]="leaving() !== null"
+          [attr.src]="src()"
+          [attr.alt]="current.alt ?? ''"
+          [style.transform]="css()"
+          (load)="onLoad()"
+          (error)="onError()"
+          (dblclick)="onDoubleClick($event)"
+        />
+        } } }
+      </div>
+
+      @if (loadState() === 'loading') {
+      <span
+        class="andes-gallery__loading"
+        data-slot="gallery-loading"
+        aria-hidden="true"
+      ></span>
+      } @if (loadState() === 'error') {
+      <div class="andes-gallery__error" data-slot="gallery-error">
+        <andes-image-icon name="imageOff" class="andes-gallery__error-icon" />
+        <span>{{ text().loadError }}</span>
+      </div>
+      } @if (captionTemplate(); as caption) {
+      <div class="andes-gallery__caption" data-slot="gallery-caption">
+        <ng-container
+          [ngTemplateOutlet]="caption"
+          [ngTemplateOutletContext]="context()"
+        />
+      </div>
+      } @else if (image()?.title; as title) {
+      <div class="andes-gallery__caption" data-slot="gallery-caption">
+        {{ title }}
+      </div>
+      } @if (!single()) {
+      <button
+        type="button"
+        class="andes-gallery__nav andes-gallery__nav--previous"
+        data-slot="gallery-previous"
+        aria-keyshortcuts="ArrowLeft PageUp"
+        [attr.aria-label]="text().previous"
+        [attr.title]="text().previous"
+        [attr.aria-disabled]="canPrevious() ? null : 'true'"
+        (click)="onNav(-1)"
+      >
+        <andes-image-icon name="previous" class="andes-gallery__directional" />
+      </button>
+      <button
+        type="button"
+        class="andes-gallery__nav andes-gallery__nav--next"
+        data-slot="gallery-next"
+        aria-keyshortcuts="ArrowRight PageDown"
+        [attr.aria-label]="text().next"
+        [attr.title]="text().next"
+        [attr.aria-disabled]="canNext() ? null : 'true'"
+        (click)="onNav(1)"
+      >
+        <andes-image-icon name="next" class="andes-gallery__directional" />
+      </button>
+      }
+    </div>
+
+    @if (showStrip()) {
+    <div
+      #strip
+      class="andes-gallery__strip"
+      data-slot="gallery-thumbnails"
+      role="group"
+      [attr.aria-label]="text().thumbnails"
+      [attr.aria-orientation]="vertical() ? 'vertical' : 'horizontal'"
+      (keydown)="onStripKeydown($event)"
+    >
+      @for (item of list(); track $index; let i = $index) {
+      <button
+        #thumb
+        type="button"
+        class="andes-gallery__thumbnail"
+        data-slot="gallery-thumbnail"
+        [attr.aria-current]="i === index() ? 'true' : null"
+        [attr.tabindex]="i === index() ? 0 : -1"
+        [attr.aria-label]="thumbLabel(item, i)"
+        (click)="select(i)"
+      >
+        @if (thumbnailTemplate(); as template) {
+        <ng-container
+          [ngTemplateOutlet]="template"
+          [ngTemplateOutletContext]="{
+            $implicit: item,
+            image: item,
+            index: i,
+            active: i === index(),
+          }"
+        />
+        } @else if (thumbFailed(thumbSrc(item))) {
+        <andes-image-icon name="imageOff" class="andes-gallery__thumb-error" />
+        } @else {
+        <img
+          alt=""
+          loading="lazy"
+          decoding="async"
+          draggable="false"
+          [attr.src]="thumbSrc(item)"
+          (error)="onThumbError(thumbSrc(item))"
+        />
+        }
+      </button>
+      }
+    </div>
+    } @if (footerTemplate(); as footer) {
+    <div class="andes-gallery__footer" data-slot="gallery-footer">
+      <ng-container
+        [ngTemplateOutlet]="footer"
+        [ngTemplateOutletContext]="context()"
+      />
+    </div>
+    }
+
+    <div
+      class="andes-gallery__sr"
+      role="status"
+      [attr.aria-live]="advancing() ? 'off' : 'polite'"
+    >
+      {{ announcement() }}
+    </div>
+  </section>
+</ng-template>
+
+<ng-template #ratioTemplate>
+  <span class="andes-gallery__ratio" data-slot="gallery-ratio"
+    ><span class="andes-gallery__ratio-label">{{ text().zoomRatio }} </span>{{
+    ratio() }}</span
+  >
+</ng-template>
+
+<!-- The lightbox: the same gallery inside a modal dialog that grows out of its opener. -->
+<ng-template #lightbox>
+  <div
+    class="andes-gallery-lightbox"
+    andesOverlayContent
+    data-slot="gallery-lightbox"
+    [attr.aria-label]="text().gallery"
+    [style.--andes-gallery-origin]="originPoint()"
+  >
+    <ng-container [ngTemplateOutlet]="body" />
+  </div>
+</ng-template>
+
+@if (rendersInline()) {
+<ng-container [ngTemplateOutlet]="body" />
+} @else if (inline()) {
+<!-- Holds the gallery's place on the page while it is open as a lightbox. -->
+<div class="andes-gallery andes-gallery--placeholder" aria-hidden="true"></div>
+}

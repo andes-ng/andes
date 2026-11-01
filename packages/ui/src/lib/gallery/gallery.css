@@ -1,0 +1,625 @@
+/*
+ * The lightbox renders in the overlay container, outside the component host, so the stylesheet
+ * is unencapsulated and every class is namespaced `andes-gallery*`.
+ *
+ * The gallery always sits on a dark surface, whatever the page theme (a fixed dark fill
+ * inline, the dark scrim in the lightbox), so its controls are light icons:
+ * `--andes-color-ghost` is the library's fixed light ink for dark backdrops.
+ */
+
+.andes-gallery-host {
+  display: block;
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  /* An inline gallery fills its container; this keeps it usable in one with no height. */
+  min-height: var(--andes-gallery-min-height, 22rem);
+}
+
+/* A lightbox-only gallery has nothing to show in place. */
+.andes-gallery-host:not([data-inline]) {
+  display: none;
+}
+
+.andes-gallery,
+.andes-gallery-lightbox {
+  --andes-gallery-duration: 0.3s;
+  --andes-gallery-exit-duration: 0.25s;
+  --andes-gallery-ease: cubic-bezier(0.78, 0.14, 0.15, 0.86);
+  --andes-gallery-control-size: 2.5rem;
+  --andes-gallery-button-size: 2.25rem;
+  --andes-gallery-thumbnail-width: 4.5rem;
+  --andes-gallery-thumbnail-height: 3rem;
+  --andes-gallery-surface: var(--andes-color-ghost-foreground, #111827);
+  --andes-gallery-color: color-mix(
+    in srgb,
+    var(--andes-color-ghost, #fff) 82%,
+    transparent
+  );
+  --andes-gallery-color-strong: var(--andes-color-ghost, #fff);
+  --andes-gallery-color-disabled: color-mix(
+    in srgb,
+    var(--andes-color-ghost, #fff) 32%,
+    transparent
+  );
+  /* Discs of the light ink, faint enough to sit on the dark surface or the scrim. */
+  --andes-gallery-control-background: color-mix(
+    in srgb,
+    var(--andes-color-ghost, #fff) 12%,
+    transparent
+  );
+  --andes-gallery-control-background-hover: color-mix(
+    in srgb,
+    var(--andes-color-ghost, #fff) 22%,
+    transparent
+  );
+}
+
+.andes-gallery {
+  position: relative;
+  display: grid;
+  grid-template-areas: 'header' 'stage' 'strip' 'footer';
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr);
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: var(--andes-radius-lg, 0.5rem);
+  background: var(--andes-gallery-surface);
+  /* A hairline of the light ink keeps the edge visible on a dark page. */
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--andes-color-ghost, #fff) 8%, transparent);
+  color: var(--andes-gallery-color);
+  font-family: var(--andes-font-family), sans-serif;
+  font-size: var(--andes-text-font-size, 0.875rem);
+  line-height: var(--andes-text-line-height, 1.375rem);
+}
+
+/* Focusable only so its keyboard handling reaches every control inside; never a tab stop. */
+.andes-gallery:focus {
+  outline: none;
+}
+
+.andes-gallery[data-position='top'] {
+  grid-template-areas: 'header' 'strip' 'stage' 'footer';
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+
+/* Grid columns follow the writing direction, so `start` and `end` mirror in right-to-left. */
+.andes-gallery[data-position='start'] {
+  grid-template-areas: 'header header' 'strip stage' 'footer footer';
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.andes-gallery[data-position='end'] {
+  grid-template-areas: 'header header' 'stage strip' 'footer footer';
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+/* In the lightbox the dark surface, slightly see-through, lies over the scrim. */
+.andes-gallery--lightbox {
+  border-radius: 0;
+  background: color-mix(in srgb, var(--andes-gallery-surface) 82%, transparent);
+  box-shadow: none;
+}
+
+.andes-gallery--placeholder {
+  display: block;
+}
+
+/* --- Header: counter at the start, toolbar and close at the end ----------------------- */
+
+.andes-gallery__header {
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  gap: var(--andes-space-2, 0.5rem);
+  min-height: var(--andes-gallery-control-size);
+  padding: var(--andes-space-2, 0.5rem) var(--andes-space-3, 0.75rem);
+}
+
+.andes-gallery--lightbox .andes-gallery__header {
+  padding: var(--andes-space-4, 1rem) var(--andes-space-5, 1.25rem);
+}
+
+.andes-gallery__header-start {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--andes-space-3, 0.75rem);
+  min-width: 0;
+}
+
+.andes-gallery__counter {
+  font-variant-numeric: tabular-nums;
+  /* "3 / 30" keeps its order in right-to-left, where the bidi algorithm would flip it. */
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.andes-gallery__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.andes-gallery__ratio {
+  min-width: 3rem;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.andes-gallery__button,
+.andes-gallery__nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--andes-radius-full, 9999px);
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    color var(--andes-motion-duration-fast, 120ms) ease,
+    background-color var(--andes-motion-duration-fast, 120ms) ease;
+}
+
+.andes-gallery__button {
+  width: var(--andes-gallery-button-size);
+  height: var(--andes-gallery-button-size);
+  background: transparent;
+  color: var(--andes-gallery-color);
+  font-size: 1.125rem;
+}
+
+.andes-gallery__button:hover {
+  background-color: var(--andes-gallery-control-background-hover);
+  color: var(--andes-gallery-color-strong);
+}
+
+.andes-gallery__close {
+  margin-inline-start: var(--andes-space-2, 0.5rem);
+  background: var(--andes-gallery-control-background);
+}
+
+/* --- Stage ---------------------------------------------------------------------------- */
+
+.andes-gallery__stage {
+  grid-area: stage;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  padding: var(--andes-space-2, 0.5rem) 3.75rem;
+  overflow: hidden;
+  outline: none;
+  /* The gallery pans and pinches itself; the browser must not scroll or zoom the page. */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.andes-gallery[data-single] .andes-gallery__stage {
+  padding-inline: var(--andes-space-3, 0.75rem);
+}
+
+.andes-gallery__stage:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--andes-gallery-color-strong);
+}
+
+.andes-gallery__stage--movable {
+  cursor: grab;
+}
+
+.andes-gallery__stage--dragging {
+  cursor: grabbing;
+}
+
+/* One cell: the arriving and the leaving picture overlap there while they cross-fade. */
+.andes-gallery__canvas {
+  display: grid;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  place-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+.andes-gallery__canvas > * {
+  grid-area: 1 / 1;
+}
+
+.andes-gallery__image,
+.andes-gallery__leaving {
+  display: block;
+  box-sizing: border-box;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  transform-origin: center center;
+  user-select: none;
+  -webkit-user-drag: none;
+  transition: transform var(--andes-gallery-duration)
+    var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1));
+}
+
+.andes-gallery__custom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.andes-gallery__stage--dragging .andes-gallery__image {
+  transition: none;
+}
+
+.andes-gallery__image--hidden {
+  visibility: hidden;
+}
+
+.andes-gallery__image--entering {
+  animation: andes-gallery-fade-in var(--andes-gallery-duration)
+    var(--andes-gallery-ease);
+}
+
+.andes-gallery__leaving {
+  pointer-events: none;
+  animation: andes-gallery-fade-out var(--andes-gallery-duration)
+    var(--andes-gallery-ease) forwards;
+}
+
+.andes-gallery__loading {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  box-sizing: border-box;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin: -0.875rem;
+  border: 2px solid var(--andes-gallery-color-disabled);
+  border-top-color: var(--andes-gallery-color-strong);
+  border-radius: var(--andes-radius-full, 9999px);
+  animation: andes-gallery-spin 1s linear infinite;
+  pointer-events: none;
+}
+
+.andes-gallery__error {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: var(--andes-space-2, 0.5rem);
+  padding: var(--andes-space-2, 0.5rem) var(--andes-space-4, 1rem);
+  border-radius: var(--andes-radius-full, 9999px);
+  background: var(--andes-gallery-control-background);
+  color: var(--andes-gallery-color-strong);
+}
+
+.andes-gallery__error-icon {
+  font-size: 1.25rem;
+}
+
+.andes-gallery__caption {
+  position: absolute;
+  inset-block-end: var(--andes-space-3, 0.75rem);
+  inset-inline: 4rem;
+  margin-inline: auto;
+  width: fit-content;
+  max-width: calc(100% - 8rem);
+  padding: var(--andes-space-1, 0.25rem) var(--andes-space-3, 0.75rem);
+  border-radius: var(--andes-radius-md, 0.375rem);
+  background: var(--andes-gallery-control-background);
+  color: var(--andes-gallery-color-strong);
+  text-align: center;
+  pointer-events: none;
+}
+
+.andes-gallery__nav {
+  position: absolute;
+  inset-block-start: 50%;
+  width: var(--andes-gallery-control-size);
+  height: var(--andes-gallery-control-size);
+  margin-block-start: calc(var(--andes-gallery-control-size) / -2);
+  background: var(--andes-gallery-control-background);
+  color: var(--andes-gallery-color);
+  font-size: 1.25rem;
+}
+
+.andes-gallery__nav--previous {
+  inset-inline-start: var(--andes-space-3, 0.75rem);
+}
+
+.andes-gallery__nav--next {
+  inset-inline-end: var(--andes-space-3, 0.75rem);
+}
+
+.andes-gallery__nav:hover {
+  background-color: var(--andes-gallery-control-background-hover);
+  color: var(--andes-gallery-color-strong);
+}
+
+/* The chevrons point toward the edge they sit on, which swaps sides in right-to-left. */
+.andes-gallery__directional:dir(rtl) {
+  transform: scaleX(-1);
+}
+
+.andes-gallery__button:focus-visible,
+.andes-gallery__nav:focus-visible,
+.andes-gallery__thumbnail:focus-visible {
+  outline: 2px solid var(--andes-gallery-color-strong);
+  outline-offset: 2px;
+}
+
+.andes-gallery__button[aria-disabled='true'],
+.andes-gallery__nav[aria-disabled='true'] {
+  color: var(--andes-gallery-color-disabled);
+  cursor: not-allowed;
+}
+
+.andes-gallery__button[aria-disabled='true']:hover {
+  background-color: transparent;
+}
+
+.andes-gallery__nav[aria-disabled='true']:hover {
+  background-color: var(--andes-gallery-control-background);
+}
+
+/* --- Thumbnail strip ------------------------------------------------------------------ */
+
+.andes-gallery__strip {
+  grid-area: strip;
+  display: flex;
+  gap: var(--andes-space-2, 0.5rem);
+  padding: var(--andes-space-2, 0.5rem) var(--andes-space-3, 0.75rem)
+    var(--andes-space-3, 0.75rem);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--andes-gallery-color-disabled) transparent;
+}
+
+/* Centres a short strip, without losing its start to overflow when it is long. */
+.andes-gallery__strip > :first-child {
+  margin-inline-start: auto;
+}
+
+.andes-gallery__strip > :last-child {
+  margin-inline-end: auto;
+}
+
+.andes-gallery[data-position='top'] .andes-gallery__strip {
+  padding: 0 var(--andes-space-3, 0.75rem) var(--andes-space-2, 0.5rem);
+}
+
+.andes-gallery[data-position='start'] .andes-gallery__strip,
+.andes-gallery[data-position='end'] .andes-gallery__strip {
+  flex-direction: column;
+  padding: var(--andes-space-2, 0.5rem) var(--andes-space-3, 0.75rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.andes-gallery[data-position='start'] .andes-gallery__strip > :first-child,
+.andes-gallery[data-position='end'] .andes-gallery__strip > :first-child {
+  margin-inline-start: 0;
+  margin-block-start: auto;
+}
+
+.andes-gallery[data-position='start'] .andes-gallery__strip > :last-child,
+.andes-gallery[data-position='end'] .andes-gallery__strip > :last-child {
+  margin-inline-end: 0;
+  margin-block-end: auto;
+}
+
+.andes-gallery__thumbnail {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--andes-gallery-thumbnail-width);
+  height: var(--andes-gallery-thumbnail-height);
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--andes-radius-sm, 0.25rem);
+  background: var(--andes-gallery-control-background);
+  color: var(--andes-gallery-color);
+  font-size: 1.125rem;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity var(--andes-motion-duration-mid, 150ms) ease;
+}
+
+.andes-gallery__thumbnail img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.andes-gallery__thumbnail:hover {
+  opacity: 0.85;
+}
+
+/* The active thumbnail: full strength and ringed in the light ink. The ring is drawn by a
+   pseudo-element over the picture; an inset shadow on the button would sit under it. */
+.andes-gallery__thumbnail[aria-current='true'] {
+  opacity: 1;
+}
+
+.andes-gallery__thumbnail[aria-current='true']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 2px var(--andes-gallery-color-strong);
+}
+
+.andes-gallery__footer {
+  grid-area: footer;
+  padding: var(--andes-space-2, 0.5rem) var(--andes-space-3, 0.75rem);
+}
+
+/* Visually hidden, still announced. */
+.andes-gallery__sr,
+.andes-gallery__ratio-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* --- Lightbox and motion -------------------------------------------------------------- */
+
+.andes-gallery-lightbox {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  /* Grows out of the thumbnail that opened it (set inline), or the centre of the screen. */
+  transform-origin: var(--andes-gallery-origin, 50% 50%);
+  animation: andes-gallery-zoom-in var(--andes-gallery-duration)
+    var(--andes-gallery-ease);
+}
+
+.andes-gallery-lightbox[data-andes-closing] {
+  pointer-events: none;
+  animation: andes-gallery-zoom-out var(--andes-gallery-exit-duration)
+    var(--andes-gallery-ease) forwards;
+}
+
+.andes-gallery-backdrop {
+  transition-duration: var(--andes-gallery-duration, 0.3s);
+  transition-timing-function: var(
+    --andes-gallery-ease,
+    cubic-bezier(0.78, 0.14, 0.15, 0.86)
+  );
+}
+
+.andes-gallery-backdrop[data-andes-closing] {
+  pointer-events: none;
+  animation: andes-gallery-fade-out var(--andes-gallery-exit-duration, 0.25s)
+    var(--andes-gallery-ease, cubic-bezier(0.78, 0.14, 0.15, 0.86)) forwards;
+}
+
+@keyframes andes-gallery-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes andes-gallery-fade-out {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes andes-gallery-zoom-in {
+  from {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes andes-gallery-zoom-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+}
+
+@keyframes andes-gallery-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .andes-gallery-lightbox,
+  .andes-gallery-lightbox[data-andes-closing],
+  .andes-gallery-backdrop[data-andes-closing],
+  .andes-gallery__image--entering,
+  .andes-gallery__leaving,
+  .andes-gallery__loading {
+    animation: none;
+  }
+
+  .andes-gallery-backdrop,
+  .andes-gallery__image,
+  .andes-gallery__button,
+  .andes-gallery__nav,
+  .andes-gallery__thumbnail {
+    transition: none;
+  }
+}
+
+/* Windows high contrast: the translucent discs vanish, so the controls get system outlines
+   and the active thumbnail a highlight ring. */
+@media (forced-colors: active) {
+  .andes-gallery {
+    border: 1px solid CanvasText;
+  }
+
+  .andes-gallery__button,
+  .andes-gallery__nav,
+  .andes-gallery__caption,
+  .andes-gallery__error {
+    border: 1px solid ButtonText;
+    background: ButtonFace;
+    color: ButtonText;
+  }
+
+  .andes-gallery__button[aria-disabled='true'],
+  .andes-gallery__nav[aria-disabled='true'] {
+    color: GrayText;
+  }
+
+  .andes-gallery__thumbnail {
+    opacity: 1;
+    border: 1px solid ButtonText;
+  }
+
+  .andes-gallery__thumbnail[aria-current='true']::after {
+    box-shadow: inset 0 0 0 3px Highlight;
+  }
+
+  .andes-gallery__button:focus-visible,
+  .andes-gallery__nav:focus-visible,
+  .andes-gallery__thumbnail:focus-visible {
+    outline-color: Highlight;
+  }
+}

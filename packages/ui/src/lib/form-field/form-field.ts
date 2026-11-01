@@ -90,8 +90,8 @@ function toTrack(column: AndesFormColumn): string {
  * `id`/`for`/`aria-describedby`/`aria-invalid`/`aria-required` are all derived here (or on
  * `AndesFormControl`) and picked up by the nested parts through DI (see
  * `form-field-tokens.ts` for why that's token-based rather than a direct class reference) -
- * no id needs to be hand-authored or coordinated by hand for the common case of a native
- * form control. See `AndesFormControl`'s class comment for the wrapper-component caveat.
+ * no id needs to be hand-authored or coordinated by hand for a native form control. See
+ * `AndesFormControl`'s class comment for components.
  *
  * Layout, label column width, colon, required mark and error messages default from an
  * enclosing `AndesForm` (`[andesForm]`), and each has a same-named input here that wins.
@@ -269,13 +269,10 @@ export class AndesFormField implements AndesFormFieldApi {
    * The `<andes-form-label>`'s own element id, or `undefined` when no label was authored -
    * shaped to be bound straight through `[aria-labelledby]`.
    *
-   * This is the escape hatch for wrapper components that expose no `id` input, where the
-   * native `for`/`id` association cannot be completed from outside (see `AndesFormControl`'s
-   * class comment): every one of this library's wrappers already accepts an `aria-labelledby`
-   * input and forwards it onto its real internal control, so pointing that at the label's id
-   * gives assistive technology the accessible name without needing any change to the wrapper's
-   * own source. Returns `undefined` rather than a dangling id when there is no label, so a template
-   * binding it unconditionally never emits `aria-labelledby` pointing at nothing.
+   * It names a control whose focusable element is not labelable (a `role="slider"` thumb, a
+   * `role="radiogroup"`), which `for`/`id` cannot reach. Returns `undefined` rather than a
+   * dangling id when there is no label, so a template binding it unconditionally never emits
+   * `aria-labelledby` pointing at nothing.
    */
   readonly labelledBy = computed(() =>
     this.hasLabel() ? this.labelId() : undefined,

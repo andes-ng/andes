@@ -17,12 +17,11 @@ import { ANDES_FORM_FIELD, ANDES_FORM_LABEL } from './form-field-tokens';
  * associated to the control via native HTML semantics, using the id the enclosing
  * `AndesFormField` generated - no manual id coordination required.
  *
- * The `<label>` also carries an id of its own (`AndesFormField.labelId()`). That is what makes
- * `aria-labelledby` association possible for wrapper components that expose no `id` input of
- * their own (`AndesSelect`, `AndesCheckbox`, `AndesSwitch`, `AndesRadioGroup`, `AndesSlider`),
- * where `for`/`id` cannot work - see `AndesFormControl`'s class comment. It is registered with
- * the field through `ANDES_FORM_LABEL` so the field only ever advertises that id
- * (`labelledBy()`) when a label was actually authored.
+ * The `<label>` also carries an id of its own (`AndesFormField.labelId()`), exposed as the
+ * field's `labelledBy()`. A control whose focusable element is not labelable (a `role="slider"`
+ * thumb, a `role="radiogroup"`) is named through `aria-labelledby` with it, since `for`/`id`
+ * cannot reach it. It is registered with the field through `ANDES_FORM_LABEL` so the field only
+ * advertises that id when a label was actually authored.
  *
  * Decorations, all resolved by the enclosing field (and its `AndesForm`):
  * - required mark - a leading `*`, `aria-hidden` because `aria-required` on the control

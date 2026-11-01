@@ -278,6 +278,11 @@ export class AndesTreeSelect
   readonly filterFn = input<
     ((node: AndesTreeNode, query: string) => boolean) | undefined
   >(undefined);
+  /**
+   * In a multiple or checkable select, empties the search text after each pick, as the select
+   * does. Turn it off to keep the filtered tree while picking several matches.
+   */
+  readonly autoClearSearchValue = input(true, { transform: booleanAttribute });
 
   /**
    * Opens the panel once, right after the first render, as though the field had been clicked.
@@ -1098,6 +1103,7 @@ export class AndesTreeSelect
         return;
       }
       this.commit(event.selectedKeys);
+      this.clearSearchAfterPick();
     } else {
       this.commit(event.selected ? event.key : null);
       this.close();
@@ -1123,6 +1129,14 @@ export class AndesTreeSelect
       return;
     }
     this.commit(next);
+    this.clearSearchAfterPick();
+  }
+
+  /** `autoClearSearchValue`: a pick in a multiple select starts the next search afresh. */
+  private clearSearchAfterPick(): void {
+    if (this.autoClearSearchValue() && this.searchValue() !== '') {
+      this.searchValue.set('');
+    }
   }
 
   /** Whether a new selection grows past `maxCount` (shrinking one never does). */

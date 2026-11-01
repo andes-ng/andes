@@ -38,6 +38,8 @@ function cities(): AndesTreeNode[] {
       [maxTagPopover]="maxTagPopover()"
       [maxTagTextLength]="maxTagTextLength()"
       [maxCount]="maxCount()"
+      [showSearch]="showSearch()"
+      [autoClearSearchValue]="autoClear()"
       (selectionChange)="changes.push($event)"
     />
   `,
@@ -56,6 +58,8 @@ class TagsHost {
   readonly maxTagPopover = signal(true);
   readonly maxTagTextLength = signal<number | undefined>(undefined);
   readonly maxCount = signal<number | undefined>(undefined);
+  readonly showSearch = signal(false);
+  readonly autoClear = signal(true);
   readonly changes: AndesTreeSelectModel[] = [];
 }
 
@@ -345,6 +349,62 @@ describe('AndesTreeSelect tags', () => {
       fixture.detectChanges();
       expect(host.value()).toEqual(['lima', 'cusco', 'iquitos']);
       expect(item('Arequipa').getAttribute('aria-disabled')).toBe('true');
+    });
+  });
+
+  describe('autoClearSearchValue', () => {
+    function pickWhileSearching(configure: (host: TagsHost) => void) {
+      const host = setup((h) => {
+        h.maxTagCount.set(undefined);
+        h.showSearch.set(true);
+        h.value.set([]);
+        configure(h);
+      });
+      (
+        field().querySelector('.andes-tree-select__trigger') as HTMLElement
+      ).click();
+      fixture.detectChanges();
+      const search = document.querySelector(
+        '.andes-tree-select__search-input',
+      ) as HTMLInputElement;
+      search.value = 'cus';
+      search.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      const cusco = Array.from(
+        document.querySelectorAll<HTMLElement>(
+          '.andes-tree-select__panel .andes-tree__row',
+        ),
+      ).find(
+        (row) =>
+          row.querySelector('.andes-tree__title')?.textContent?.trim() ===
+          'Cusco',
+      ) as HTMLElement;
+      (host.checkable()
+        ? (cusco.querySelector('.andes-tree__checkbox') as HTMLElement)
+        : cusco
+      ).click();
+      fixture.detectChanges();
+      return { host, search };
+    }
+
+    it('empties the search after a pick in a multiple select', () => {
+      const { host, search } = pickWhileSearching(() => undefined);
+      expect(host.value()).toEqual(['cusco']);
+      expect(search.value).toBe('');
+    });
+
+    it('does the same after a check', () => {
+      const { host, search } = pickWhileSearching((h) => h.checkable.set(true));
+      expect(host.value()).toEqual(['cusco']);
+      expect(search.value).toBe('');
+    });
+
+    it('keeps the search when turned off', () => {
+      const { host, search } = pickWhileSearching((h) =>
+        h.autoClear.set(false),
+      );
+      expect(host.value()).toEqual(['cusco']);
+      expect(search.value).toBe('cus');
     });
   });
 });

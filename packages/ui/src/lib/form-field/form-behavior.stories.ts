@@ -265,7 +265,7 @@ export const DynamicRows: Story = {
                 <div class="demo-inline">
                   <andes-input [formControlName]="i" type="email" placeholder="name@company.com" />
                   <span class="demo-quiet demo-grip" cdkDragHandle role="img" [attr.aria-label]="'Move email ' + (i + 1)" style="display: inline-flex; padding: 0.25rem;"><andes-form-icon name="grip" /></span>
-                  <andes-button class="demo-remove" variant="ghost" size="icon-sm" [aria-label]="'Remove email ' + (i + 1)" (click)="remove(i)"><andes-form-icon name="minus-circle" /></andes-button>
+                  <andes-button class="demo-remove" variant="ghost" size="icon" [aria-label]="'Remove email ' + (i + 1)" (click)="remove(i)"><andes-form-icon name="minus-circle" /></andes-button>
                 </div>
               </andes-form-field>
             }

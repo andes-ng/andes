@@ -35,6 +35,7 @@ import type {
   AndesTreeAllowDrop,
   AndesTreeCheckEvent,
   AndesTreeCheckState,
+  AndesTreeDragEvent,
   AndesTreeDropEvent,
   AndesTreeDropInfo,
   AndesTreeDropPosition,
@@ -74,6 +75,7 @@ const DEFAULT_LABELS: AndesTreeLabels = {
   empty: 'No data',
   loading: 'Loading',
   results: (count) => (count === 1 ? '1 result' : `${count} results`),
+  grabbed: (title) => `${title} grabbed`,
   moved: (title, position, target) =>
     `${title} moved ${position === 'inside' ? 'into' : position} ${target}`,
 };
@@ -312,8 +314,19 @@ export class AndesTree {
   /** A node's children finished loading. */
   readonly nodeLoaded = output<AndesTreeLoadEvent>();
   readonly nodeLoadError = output<AndesTreeLoadErrorEvent>();
-  readonly nodeDragStart = output<AndesTreeNodeEvent>();
-  readonly nodeDragEnd = output<AndesTreeNodeEvent>();
+  /** A drag started on a node (`node` is the dragged one). */
+  readonly nodeDragStart = output<AndesTreeDragEvent>();
+  /** The pointer, dragging a node, entered a node's row. */
+  readonly nodeDragEnter = output<AndesTreeDragEvent>();
+  /**
+   * The drop the pointer would make changed: another node, or another part of one (`position`,
+   * `null` where nothing can be dropped). Emitted on change, not on every `dragover`.
+   */
+  readonly nodeDragOver = output<AndesTreeDragEvent>();
+  /** The pointer, dragging a node, left a node's row. */
+  readonly nodeDragLeave = output<AndesTreeDragEvent>();
+  /** The drag ended, dropped or not (`node` is the dragged one). */
+  readonly nodeDragEnd = output<AndesTreeDragEvent>();
   /** A node was dropped, or moved from the keyboard. Apply the move to `nodes`. */
   readonly nodeDrop = output<AndesTreeDropEvent>();
 
@@ -350,6 +363,11 @@ export class AndesTree {
   private dragExpandTimer: ReturnType<typeof setTimeout> | null = null;
   private expandAllApplied = false;
   private pendingMove: AndesTreePendingMove | null = null;
+  /** The node and drop position `nodeDragOver` last reported. */
+  private lastDragOver: {
+    key: AndesTreeKey;
+    position: AndesTreeDropPosition | null;
+  } | null = null;
   private readonly itemIds = new Map<AndesTreeKey, string>();
   private readonly itemKeys = new Map<string, AndesTreeKey>();
 
@@ -1299,12 +1317,30 @@ export class AndesTree {
       return;
     }
     this.dragKey.set(row.key);
+    this.lastDragOver = null;
+    this.pendingMove = null;
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = 'move';
       // Some browsers refuse to start a drag without data.
       event.dataTransfer.setData('text/plain', row.title);
     }
-    this.nodeDragStart.emit({ node: row.node, key: row.key, event });
+    this.announcement.set(this.text().grabbed(row.title));
+    this.nodeDragStart.emit(this.dragEvent(event, row, row.key, null));
+  }
+
+  protected onDragEnter(event: DragEvent, row: AndesFlatTreeNode): void {
+    const dragKey = this.dragKey();
+    if (dragKey === null || this.movesWithin(event)) {
+      return;
+    }
+    const resolved = this.resolveDrop(
+      dragKey,
+      row,
+      this.positionFromPointer(event),
+    );
+    this.nodeDragEnter.emit(
+      this.dragEvent(event, row, dragKey, resolved?.indicator.position ?? null),
+    );
   }
 
   protected onDragOver(event: DragEvent, row: AndesFlatTreeNode): void {
@@ -1317,6 +1353,19 @@ export class AndesTree {
       row,
       this.positionFromPointer(event),
     );
+    const position = resolved ? resolved.indicator.position : null;
+    const last = this.lastDragOver;
+    if (!last || last.key !== row.key || last.position !== position) {
+      this.lastDragOver = { key: row.key, position };
+      this.nodeDragOver.emit(
+        this.dragEvent(
+          event,
+          row,
+          dragKey,
+          resolved?.indicator.position ?? null,
+        ),
+      );
+    }
     if (!resolved) {
       this.clearDropIndicator();
       return;
@@ -1339,13 +1388,39 @@ export class AndesTree {
   }
 
   protected onDragLeave(event: DragEvent, row: AndesFlatTreeNode): void {
-    const related = event.relatedTarget as Node | null;
-    if (
-      this.dropIndicator()?.key === row.key &&
-      !(related && (event.currentTarget as HTMLElement).contains(related))
-    ) {
+    const dragKey = this.dragKey();
+    if (dragKey === null || this.movesWithin(event)) {
+      return;
+    }
+    if (this.dropIndicator()?.key === row.key) {
       this.clearDropIndicator();
     }
+    if (this.lastDragOver?.key === row.key) {
+      this.lastDragOver = null;
+    }
+    this.nodeDragLeave.emit(this.dragEvent(event, row, dragKey, null));
+  }
+
+  /** Whether a drag event only moves between the elements inside one row. */
+  private movesWithin(event: DragEvent): boolean {
+    const related = event.relatedTarget as Node | null;
+    return !!related && (event.currentTarget as HTMLElement).contains(related);
+  }
+
+  private dragEvent(
+    event: DragEvent,
+    row: AndesFlatTreeNode,
+    dragKey: AndesTreeKey,
+    position: AndesTreeDropPosition | null,
+  ): AndesTreeDragEvent {
+    return {
+      node: row.node,
+      key: row.key,
+      dragNode: this.index().byKey.get(dragKey)?.node ?? row.node,
+      dragKey,
+      position,
+      event,
+    };
   }
 
   protected onDrop(event: DragEvent, row: AndesFlatTreeNode): void {
@@ -1367,7 +1442,7 @@ export class AndesTree {
 
   protected onDragEnd(event: DragEvent, row: AndesFlatTreeNode): void {
     this.finishDrag();
-    this.nodeDragEnd.emit({ node: row.node, key: row.key, event });
+    this.nodeDragEnd.emit(this.dragEvent(event, row, row.key, null));
   }
 
   private positionFromPointer(event: DragEvent): AndesTreeDropPosition {
@@ -1464,6 +1539,7 @@ export class AndesTree {
 
   private finishDrag(): void {
     this.dragKey.set(null);
+    this.lastDragOver = null;
     this.clearDropIndicator();
   }
 

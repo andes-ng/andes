@@ -199,6 +199,18 @@ export interface AndesTreeDropEvent extends AndesTreeDropInfo {
   via: 'pointer' | 'keyboard';
 }
 
+/** A drag over the tree: the node it concerns, the dragged node and where it would land. */
+export interface AndesTreeDragEvent {
+  /** The node the event is about: the dragged one, or the one the pointer is over. */
+  node: AndesTreeNode;
+  key: AndesTreeKey;
+  dragNode: AndesTreeNode;
+  dragKey: AndesTreeKey;
+  /** Where the dragged node would land on `node`; `null` when it cannot be dropped there. */
+  position: AndesTreeDropPosition | null;
+  event: DragEvent;
+}
+
 export interface AndesTreeNodeEvent {
   node: AndesTreeNode;
   key: AndesTreeKey;
@@ -246,6 +258,8 @@ export interface AndesTreeLabels {
   loading: string;
   /** Announced when a filter changes. */
   results: (count: number) => string;
+  /** Announced when a drag starts. */
+  grabbed: (title: string) => string;
   /** Announced once a dropped (or keyboard-moved) node shows up in its new place. */
   moved: (
     title: string,

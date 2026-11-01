@@ -12,6 +12,7 @@ export type {
   AndesTreeCheckedStrategy,
   AndesTreeCheckEvent,
   AndesTreeCheckState,
+  AndesTreeDragEvent,
   AndesTreeDropEvent,
   AndesTreeDropInfo,
   AndesTreeDropPosition,

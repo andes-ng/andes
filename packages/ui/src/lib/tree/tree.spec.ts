@@ -13,6 +13,7 @@ import { AndesTreeNodeTemplate } from './tree-node-template';
 import { andesMoveTreeNode } from './tree-utils';
 import type {
   AndesTreeCheckEvent,
+  AndesTreeDragEvent,
   AndesTreeDropEvent,
   AndesTreeExpandEvent,
   AndesTreeFieldNames,
@@ -84,6 +85,11 @@ function sample(): AndesTreeNode[] {
       (nodeSelect)="selects.push($event)"
       (nodeCheck)="checks.push($event)"
       (nodeDrop)="onDrop($event)"
+      (nodeDragStart)="logDrag('start', $event)"
+      (nodeDragEnter)="logDrag('enter', $event)"
+      (nodeDragOver)="logDrag('over', $event)"
+      (nodeDragLeave)="logDrag('leave', $event)"
+      (nodeDragEnd)="logDrag('end', $event)"
       (nodeLoadError)="loadErrors.push($event)"
       (nodeClick)="clicks = clicks + 1"
     >
@@ -143,6 +149,15 @@ class HostComponent {
   drops: AndesTreeDropEvent[] = [];
   loadErrors: AndesTreeLoadErrorEvent[] = [];
   clicks = 0;
+
+  /** Each drag output as `type:node:dragged:position`. */
+  dragLog: string[] = [];
+
+  logDrag(type: string, event: AndesTreeDragEvent): void {
+    this.dragLog.push(
+      `${type}:${event.key}:${event.dragKey}:${event.position ?? '-'}`,
+    );
+  }
 
   onDrop(event: AndesTreeDropEvent): void {
     this.drops.push(event);
@@ -1501,6 +1516,52 @@ describe('AndesTree', () => {
       return { source, target, over };
     }
 
+    it('reports drag start, enter, changes of the drop it would make, leave and end', () => {
+      const fixture = setup((h) => h.draggable.set(true));
+      const { source, target } = drag(fixture, 'Archivo', 'Sucursal norte', 10);
+      expect(
+        fixture.nativeElement.querySelector('.andes-tree__live').textContent,
+      ).toBe('Archivo grabbed');
+      target.dispatchEvent(dragEvent('dragenter', 10));
+      // The same part of the same row again: nothing new to report.
+      target.dispatchEvent(dragEvent('dragover', 10));
+      target.dispatchEvent(dragEvent('dragover', 50));
+      target.dispatchEvent(dragEvent('dragleave', 50));
+      source.dispatchEvent(dragEvent('dragend'));
+      expect(fixture.componentInstance.dragLog).toEqual([
+        'start:c:c:-',
+        'over:b:c:before',
+        'enter:b:c:before',
+        'over:b:c:inside',
+        'leave:b:c:-',
+        'end:c:c:-',
+      ]);
+    });
+
+    it('reports a null position over a node the drag cannot land on', () => {
+      const fixture = setup((h) => {
+        h.draggable.set(true);
+        h.expanded.set(['a', 'a1']);
+      });
+      drag(fixture, 'Almacén central', 'Estante X', 50);
+      expect(fixture.componentInstance.dragLog).toEqual([
+        'start:a:a:-',
+        'over:a1x:a:-',
+      ]);
+    });
+
+    it('ignores enter and leave between the elements of one row', () => {
+      const fixture = setup((h) => h.draggable.set(true));
+      const { target } = drag(fixture, 'Archivo', 'Sucursal norte', 10);
+      const inner = target.querySelector('.andes-tree__title') as HTMLElement;
+      const leave = dragEvent('dragleave', 10);
+      Object.defineProperty(leave, 'relatedTarget', { value: inner });
+      target.dispatchEvent(leave);
+      expect(
+        fixture.componentInstance.dragLog.filter((e) => e.startsWith('leave')),
+      ).toEqual([]);
+    });
+
     it('only offers dragging for draggable trees and skips disabled nodes', () => {
       const fixture = setup((h) => h.expanded.set(['a']));
       const content = (t: string) =>
@@ -1556,7 +1617,8 @@ describe('AndesTree', () => {
       expect(before.map((n) => n.key)).toEqual(['a', 'b', 'c']);
       expect(titles(fixture)[0]).toBe('Almacén central');
       const live = fixture.nativeElement.querySelector('.andes-tree__live');
-      expect(live.textContent).toBe('');
+      // Only the grab was spoken: no move is announced before the data shows it.
+      expect(live.textContent).toBe('Archivo grabbed');
 
       // The consumer applies it later: the announcement follows.
       fixture.componentInstance.nodes.set(

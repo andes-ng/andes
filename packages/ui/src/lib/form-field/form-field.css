@@ -432,6 +432,43 @@ andes-form-label {
   gap: var(--andes-space-4);
 }
 
+/* Responsive horizontal layout. On a screen 575px wide or less (a phone) every horizontal
+   field stacks like a vertical one: label above the control, at the start, wrapping, with no
+   colon, and no empty label column under a label-less field (the submit row). A viewport
+   query rather than a container query on the form: size containment would give the form no
+   width of its own, collapsing it wherever its parent sizes to its content (a centred card, a
+   flex row). */
+@media (max-width: 575px) {
+  .andes-form-field--horizontal:not(.andes-form-field--no-style) {
+    display: flex;
+    flex-direction: column;
+    /* The grid's `align-items: start` would keep the control at its content width. */
+    align-items: stretch;
+  }
+
+  .andes-form-field--horizontal > .andes-form-field__label {
+    justify-content: flex-start;
+    min-height: 0;
+    padding-inline-end: 0;
+    padding-block-end: var(--andes-space-2);
+  }
+
+  /* prettier-ignore */
+  .andes-form-field--horizontal.andes-form-field--no-label > .andes-form-field__label {
+    display: none;
+  }
+
+  /* prettier-ignore */
+  .andes-form-field--horizontal:not(.andes-form-field--label-wrap) .andes-form-label {
+    overflow: visible;
+    white-space: normal;
+  }
+
+  .andes-form-field--horizontal .andes-form-label__colon {
+    display: none;
+  }
+}
+
 /* `hidden` on a field: gone from the layout, but still part of the form model. */
 andes-form-field[hidden] {
   display: none;

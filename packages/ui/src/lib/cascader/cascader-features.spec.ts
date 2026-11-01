@@ -65,6 +65,9 @@ const PLACES: AndesCascaderOption[] = [
     <ng-template #clearGlyph><i class="my-clear">C</i></ng-template>
     <ng-template #removeGlyph><i class="my-remove">R</i></ng-template>
     <ng-template #loadingGlyph><i class="my-loading">L</i></ng-template>
+    <ng-template #expandGlyph let-label="label">
+      <i class="my-expand" [attr.data-label]="label"></i>
+    </ng-template>
 
     <andes-cascader
       aria-label="Place"
@@ -99,6 +102,7 @@ const PLACES: AndesCascaderOption[] = [
       [clearIcon]="withIcons() ? clearGlyph : undefined"
       [removeIcon]="withIcons() ? removeGlyph : undefined"
       [loadingIcon]="withIcons() ? loadingGlyph : undefined"
+      [expandIcon]="withIcons() ? expandGlyph : undefined"
       (focused)="events.push('focused')"
       (blurred)="events.push('blurred')"
       (panelScroll)="scrolls.push($event)"
@@ -834,6 +838,22 @@ describe('AndesCascader features', () => {
   });
 
   describe('templates', () => {
+    it('replaces the expand arrow of a branch with expandIcon, never on a leaf', () => {
+      const { item, openWithPointer } = setup((h) => h.withIcons.set(true));
+      openWithPointer();
+      const custom = item('Lima').querySelector(
+        '.andes-cascader__expand--custom',
+      );
+      expect(
+        custom?.querySelector('.my-expand')?.getAttribute('data-label'),
+      ).toBe('Lima');
+      expect(custom?.getAttribute('aria-hidden')).toBe('true');
+      expect(document.querySelector('svg.andes-cascader__expand')).toBeNull();
+      expect(
+        item('Callao').querySelector('.andes-cascader__expand'),
+      ).toBeNull();
+    });
+
     it('renders a tagTemplate per path, and onClose removes it', () => {
       const { root, host, detect } = setup((h) => {
         h.multiple.set(true);

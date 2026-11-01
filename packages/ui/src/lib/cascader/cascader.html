@@ -559,7 +559,18 @@
           </span>
           } @else {
           <span class="andes-cascader__spinner" aria-hidden="true"></span>
-          } } @else if (isBranch(node)) {
+          } } @else if (isBranch(node)) { @if (expandIcon(); as expandTemplate)
+          {
+          <span
+            class="andes-cascader__expand andes-cascader__expand--custom"
+            aria-hidden="true"
+          >
+            <ng-container
+              [ngTemplateOutlet]="expandTemplate"
+              [ngTemplateOutletContext]="optionContext(node)"
+            />
+          </span>
+          } @else {
           <svg
             class="andes-cascader__expand"
             viewBox="0 0 24 24"
@@ -575,7 +586,7 @@
               stroke-linejoin="round"
             />
           </svg>
-          }
+          } }
         </li>
         }
       </ul>

@@ -990,6 +990,14 @@ button.andes-cascader__combobox {
   transform: scaleX(-1);
 }
 
+/* A custom `expandIcon`, sized by its own content and mirrored like the default arrow. */
+.andes-cascader__expand--custom {
+  display: inline-flex;
+  width: auto;
+  height: auto;
+  align-items: center;
+}
+
 .andes-cascader__option .andes-cascader__spinner {
   width: 0.75rem;
   height: 0.75rem;

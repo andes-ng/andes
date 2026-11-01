@@ -327,6 +327,14 @@ export class AndesCascader
   readonly optionTemplate = input<
     TemplateRef<AndesCascaderOptionContext> | undefined
   >(undefined);
+  /**
+   * Replaces the arrow of an option that opens a column. Draw it pointing toward the inline
+   * end: it mirrors in right-to-left pages, as the default arrow does. Context as for
+   * `optionTemplate`.
+   */
+  readonly expandIcon = input<
+    TemplateRef<AndesCascaderOptionContext> | undefined
+  >(undefined);
   readonly placeholder = input<string | undefined>(undefined);
   /** What the panel shows without options or search results. `null` shows nothing. */
   readonly notFoundContent = input<AndesCascaderNotFound>('No data');

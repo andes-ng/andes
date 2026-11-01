@@ -37,7 +37,13 @@ export interface AndesFieldBinding {
   /** The field is in the error status (derived or a manual `validateStatus="error"`): the
    *  control sets `aria-invalid` and paints its error state. */
   readonly invalid: Signal<boolean>;
-  /** `'error'` or `'warning'` while the field shows one, for a control's `status` styling. */
+  /** `'error'` or `'warning'` while the field shows one, for a control's `status` styling. One
+   *  rule for every control: a control with a box of its own (an input, a select, a color
+   *  picker, a segmented control) paints the box's border and ring in the status colour; a
+   *  control without one (a rating, a slider, a switch, a checkbox, a radio) never gets a box
+   *  drawn around it - it tints its own accent instead (the outline of the empty stars, the
+   *  thumb ring, the control's border) - and the focus ring stays for keyboard focus only. The
+   *  field's message carries the rest. */
   readonly status: Signal<'error' | 'warning' | undefined>;
   /** The field counts as required (a required validator or the field's `required` input):
    *  the control sets `required` or `aria-required`. */

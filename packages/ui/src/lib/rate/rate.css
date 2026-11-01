@@ -6,7 +6,7 @@
      --andes-rate-empty-color   empty colour
      --andes-rate-size          character box (set by `size`)
      --andes-rate-gap           space between characters (default: 0.35 x size)
-   `status` tints the empty characters and rings the row with the danger / warning token. */
+   `status` draws the empty characters in the danger / warning token (no box around the row). */
 
 :host {
   display: inline-block;
@@ -47,12 +47,6 @@
   cursor: not-allowed;
 }
 
-/* The row is rung in the status colour (a soft ring, so the keyboard outline stays free). */
-:host([data-status]) .andes-rate__stars {
-  box-shadow: 0 0 0 3px
-    color-mix(in srgb, var(--_andes-rate-status) 22%, transparent);
-}
-
 /* A non-bordered control: the keyboard ring, never shown for a mouse click. */
 .andes-rate__stars:focus-visible {
   outline: 2px solid var(--andes-color-focus-ring);
@@ -91,16 +85,15 @@
   );
 }
 
-/* Status tints the empty characters; an explicit empty colour still wins. */
+/* A status paints the empty characters, never a box around the row: a rating has no box of its
+   own, so the status shows as the outline of the empty stars in the status colour over a faint
+   tint of it, next to the field's message. An explicit empty colour still wins. */
 :host([data-status]) .andes-rate__layer--empty {
-  color: var(
-    --andes-rate-empty-color,
-    color-mix(
-      in srgb,
-      var(--_andes-rate-status) 45%,
-      var(--andes-color-background)
-    )
-  );
+  color: var(--andes-rate-empty-color, var(--_andes-rate-status));
+}
+
+:host([data-status]) .andes-rate__layer--empty .andes-rate__star-icon {
+  fill: color-mix(in srgb, currentcolor 12%, var(--andes-color-background));
 }
 
 .andes-rate__layer--filled {

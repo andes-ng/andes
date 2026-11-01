@@ -937,8 +937,20 @@ describe('AndesRate', () => {
       expect(css).toContain(
         ":host([data-status='warning']) { --_andes-rate-status: var(--andes-color-warning-hover); }",
       );
-      expect(css).toMatch(
-        /:host\(\[data-status\]\) \.andes-rate__layer--empty \{ color: var\( --andes-rate-empty-color,/,
+      expect(css).toContain(
+        ':host([data-status]) .andes-rate__layer--empty { color: var(--andes-rate-empty-color, var(--_andes-rate-status)); }',
+      );
+    });
+
+    it('draws no box around the row: the status is the outline of the empty stars', () => {
+      const css = readFileSync(
+        join(process.cwd(), 'packages/ui/src/lib/rate/rate.css'),
+        'utf8',
+      ).replace(/\s+/g, ' ');
+
+      expect(css).not.toMatch(/:host\(\[data-status\]\) \.andes-rate__stars/);
+      expect(css).toContain(
+        ':host([data-status]) .andes-rate__layer--empty .andes-rate__star-icon { fill: color-mix(',
       );
     });
   });

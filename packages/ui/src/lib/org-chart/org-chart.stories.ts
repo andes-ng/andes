@@ -1,26 +1,9 @@
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 
-import {
-  SAMPLE_ORG,
-  sampleAvatar,
-  sampleRows,
-  type SamplePerson,
-} from '../../testing/org-chart-sample';
+import { SAMPLE_ORG, sampleRows } from '../../testing/org-chart-sample';
 import { AndesSegmented } from '../segmented/segmented';
 import { AndesSwitch } from '../switch/switch';
 import { AndesOrgChart } from './org-chart';
-
-/** The sample company with photos on the first two levels. */
-function withPhotos(node: SamplePerson, depth = 0): SamplePerson {
-  return {
-    ...node,
-    avatar:
-      depth < 2
-        ? sampleAvatar((node.id.length * 47 + depth * 90) % 360)
-        : undefined,
-    children: node.children?.map((child) => withPhotos(child, depth + 1)),
-  };
-}
 
 const meta: Meta<AndesOrgChart> = {
   title: 'Data Display/Org Chart/Basics/Chart',
@@ -36,9 +19,10 @@ const meta: Meta<AndesOrgChart> = {
     leafLayout: { control: 'select', options: ['tree', 'compact', 'hanging'] },
     selectionMode: {
       control: 'select',
-      options: ['none', 'single', 'multiple'],
+      options: ['none', 'single', 'multiple', 'checkbox'],
     },
-    badge: { control: 'select', options: ['direct', 'total', 'none'] },
+    toggleCount: { control: 'select', options: ['none', 'direct', 'total'] },
+    collapsible: { control: 'boolean' },
     wheel: { control: 'select', options: ['zoom', 'pan'] },
     defaultExpandDepth: { control: 'number' },
     expandAll: { control: 'boolean' },
@@ -61,7 +45,8 @@ const meta: Meta<AndesOrgChart> = {
     connector: 'elbow',
     leafLayout: 'tree',
     selectionMode: 'single',
-    badge: 'direct',
+    toggleCount: 'none',
+    collapsible: true,
     wheel: 'zoom',
     defaultExpandDepth: 2,
     expandAll: false,
@@ -69,16 +54,16 @@ const meta: Meta<AndesOrgChart> = {
     nodeGap: 24,
     subtreeGap: 40,
     levelGap: 56,
-    connectorRadius: 8,
+    connectorRadius: 6,
     controls: true,
     animated: true,
-    animationDuration: 280,
+    animationDuration: 240,
     pannable: true,
     zoomable: true,
     fitOnInit: true,
   },
   render: (args) => ({
-    props: { ...args, data: withPhotos(SAMPLE_ORG) },
+    props: { ...args, data: SAMPLE_ORG },
     template: `
       <andes-org-chart
         aria-label="Company organization"
@@ -90,7 +75,8 @@ const meta: Meta<AndesOrgChart> = {
         [connector]="connector"
         [leafLayout]="leafLayout"
         [selectionMode]="selectionMode"
-        [badge]="badge"
+        [toggleCount]="toggleCount"
+        [collapsible]="collapsible"
         [wheel]="wheel"
         [defaultExpandDepth]="defaultExpandDepth"
         [expandAll]="expandAll"
@@ -116,13 +102,42 @@ type Story = StoryObj<AndesOrgChart>;
 
 /**
  * Playground: every layout and behavior input is a control. Drag to pan, scroll or pinch to
- * zoom, click the count badge to expand or collapse a team, and Tab into the chart to move with
- * the arrow keys.
+ * zoom, use the round toggle under a card to open or close a team, and Tab into the chart to
+ * move with the arrow keys.
  */
 export const Default: Story = {};
 
+/** The smallest setup: nested data with `id`, `name`, `title`, `avatar` and `children`. */
+export const Basic: Story = {
+  render: () => ({
+    props: {
+      data: {
+        id: 'ceo',
+        name: 'Elena Vargas',
+        title: 'Founder & CEO',
+        avatar: SAMPLE_ORG.avatar,
+        children: SAMPLE_ORG.children
+          ?.filter((child) => ['cto', 'design', 'product'].includes(child.id))
+          .map((lead) => ({
+            id: lead.id,
+            name: lead.name,
+            title: lead.title,
+            avatar: lead.avatar,
+          })),
+      },
+    },
+    template: `
+      <andes-org-chart
+        aria-label="Leadership team"
+        style="--andes-org-chart-height: 20rem"
+        [data]="data"
+      />
+    `,
+  }),
+};
+
 /**
- * `orientation` and `reversed`: reports below, above, after or before their manager. The badge
+ * `orientation` and `reversed`: reports below, above, after or before their manager. The toggle
  * follows the side the reports are on.
  */
 export const Orientation: Story = {
@@ -161,7 +176,7 @@ export const Connectors: Story = {
   render: () => ({
     props: {
       data: SAMPLE_ORG,
-      lineStyle: 'curved',
+      lineStyle: 'elbow',
       connectors: [
         { label: 'Elbow', value: 'elbow' },
         { label: 'Straight', value: 'straight' },
@@ -184,7 +199,7 @@ export const Connectors: Story = {
 
 /**
  * `leafLayout`: teams made only of individual contributors can stack in two columns around a
- * stem (`compact`) or hang in one indented column (`hanging`), which keeps wide organizations
+ * stem (`compact`) or hang in one indented column (`hanging`), which keeps a wide organization
  * readable. `leafLayoutMinCount` sets the smallest team that stacks.
  */
 export const LeafLayouts: Story = {
@@ -214,17 +229,25 @@ export const LeafLayouts: Story = {
 };
 
 /**
- * Assistants (`assistant: true`) sit beside their manager's stem, above the reports, and
- * `secondaryLinks` draw dotted-line relations between any two people without changing the
- * layout (hover a dotted line for its label).
+ * Assistants (`assistant: true`: the chief of staff and the CTO's executive assistant) sit beside
+ * their manager's stem, above the reports, and `secondaryLinks` draw dotted-line relations that
+ * do not change the layout (hover a dotted line for its label).
  */
 export const AssistantsAndSecondaryLinks: Story = {
   render: () => ({
     props: {
       data: SAMPLE_ORG,
       relations: [
-        { from: 'des', to: 'brand', label: 'Design partners with Brand' },
-        { from: 'fpa', to: 'sup', label: 'Analyst supports Supply Chain' },
+        {
+          from: 'research',
+          to: 'pm1',
+          label: 'Research partners with Product',
+        },
+        {
+          from: 'data',
+          to: 'analyst',
+          label: 'Data supports Finance reporting',
+        },
       ],
     },
     template: `
@@ -242,7 +265,8 @@ export const AssistantsAndSecondaryLinks: Story = {
 
 /**
  * Flat rows: `dataFormat="flat"` reads `{ id, parentId }` rows directly, and `fieldNames` maps
- * any other field names (here `key`, `manager`, `fullName`, `role`).
+ * any other field names (here `key`, `manager`, `fullName`, `role`). Without photos the cards
+ * show initials.
  */
 export const FlatData: Story = {
   render: () => ({

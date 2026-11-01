@@ -79,7 +79,7 @@ export class AndesFormControlState implements AndesFormControlApi {
   private ngControl: NgControl | null | undefined;
   private subscriptions: Subscription[] = [];
   private readonly bound = signal<AbstractControl | null>(null);
-  /** Bumped on every event of the bound control so the plain-property
+  /** Bumped on every event of the bound control (and its parent group), so the plain-property
    *  reads below are re-evaluated. Signal forms' getters are tracked on their own. */
   private readonly tick = signal(0);
   /** Bumped on submit and reset of the enclosing Angular form. */
@@ -144,6 +144,13 @@ export class AndesFormControlState implements AndesFormControlApi {
   /** The bound control's current `ValidationErrors`, as a signal. */
   readonly errors = this.read<ValidationErrors | null>(
     (c) => c.errors ?? null,
+    null,
+  );
+
+  /** The errors of the group or array the control belongs to (its parent), for a field that
+   *  shows a cross-field validator's error through `groupErrors`. */
+  readonly parentErrors = this.read<ValidationErrors | null>(
+    (c) => c.parent?.errors ?? null,
     null,
   );
 
@@ -271,6 +278,10 @@ export class AndesFormControlState implements AndesFormControlApi {
     const events = (control as ControlWithEvents | null)?.events;
     if (control && events) {
       this.subscriptions.push(events.subscribe(bump));
+      const parentEvents = (control.parent as ControlWithEvents | null)?.events;
+      if (parentEvents) {
+        this.subscriptions.push(parentEvents.subscribe(bump));
+      }
       const rootEvents = (control.root as ControlWithEvents | null)?.events;
       if (rootEvents) {
         this.subscriptions.push(

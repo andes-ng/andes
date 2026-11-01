@@ -13,7 +13,11 @@ import {
   ViewEncapsulation,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
-import { Validators, type ValidatorFn } from '@angular/forms';
+import {
+  type ValidationErrors,
+  Validators,
+  type ValidatorFn,
+} from '@angular/forms';
 
 import { resolveAndesFormErrorMessages } from './form-error-messages';
 import {
@@ -218,6 +222,16 @@ export class AndesFormField implements AndesFormFieldApi {
    */
   readonly noStyle = input(false, { transform: booleanAttribute });
 
+  /**
+   * Error keys of the control's parent group (or array) that this field shows as its own - the
+   * usual home of a cross-field validator: `{ validators: matchPasswords }` on the group
+   * reports `{ mismatch: true }`, and the confirmation field shows it with
+   * `groupErrors="mismatch"`. A string is a single key; an array lists several.
+   */
+  readonly groupErrors = input<string | readonly string[] | undefined>(
+    undefined,
+  );
+
   private readonly controls = signal<readonly AndesFormControlApi[]>([]);
   private readonly children = signal<readonly AndesFormFieldChildApi[]>([]);
 
@@ -267,6 +281,35 @@ export class AndesFormField implements AndesFormFieldApi {
     this.hasLabel() ? this.labelId() : undefined,
   );
 
+  /** The `groupErrors` keys present on the control's parent group, or `null`. */
+  private readonly adoptedGroupErrors = computed<ValidationErrors | null>(
+    () => {
+      const keys = this.groupErrors();
+      const errors = this.controlApi()?.parentErrors();
+      if (!keys || !errors) {
+        return null;
+      }
+      const picked = (typeof keys === 'string' ? [keys] : keys).filter((key) =>
+        Object.hasOwn(errors, key),
+      );
+      return picked.length > 0
+        ? Object.fromEntries(picked.map((key) => [key, errors[key]]))
+        : null;
+    },
+  );
+
+  /** The errors the field reports: the control's own, then the adopted group errors. */
+  private readonly fieldErrors = computed<ValidationErrors | null>(() => {
+    const own = this.controlApi()?.errors() ?? null;
+    const group = this.adoptedGroupErrors();
+    return own || group ? { ...own, ...group } : null;
+  });
+
+  /** Whether the control is invalid on its own or through an adopted group error. */
+  private readonly fieldInvalid = computed(
+    () => !!this.adoptedGroupErrors() || !!this.controlApi()?.showError(),
+  );
+
   /** Errors of the `warningValidators`, run against the control's current value. */
   private readonly warningErrors = computed(() => {
     const validators = this.warningValidators();
@@ -294,7 +337,7 @@ export class AndesFormField implements AndesFormFieldApi {
         statuses.push(
           control.pending()
             ? 'validating'
-            : control.showError()
+            : this.fieldInvalid()
               ? 'error'
               : this.warningErrors()
                 ? 'warning'
@@ -327,9 +370,9 @@ export class AndesFormField implements AndesFormFieldApi {
   readonly validationMessages = computed<readonly string[]>(() => {
     const control = this.controlApi();
     const own =
-      control?.showError() && this.status() === 'error'
+      control?.interacted() && this.status() === 'error'
         ? resolveAndesFormErrorMessages(
-            control.errors(),
+            this.fieldErrors(),
             [
               this.errorMessages(),
               this.form?.errorMessages(),

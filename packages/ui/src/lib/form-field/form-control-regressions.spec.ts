@@ -1,10 +1,12 @@
 import { Component, signal } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import {
+  type AbstractControl,
   FormControl,
   FormGroup,
   FormGroupDirective,
   ReactiveFormsModule,
+  type ValidationErrors,
   Validators,
 } from '@angular/forms';
 import { FormField, form, required } from '@angular/forms/signals';
@@ -108,6 +110,37 @@ class RebindHost {
   readonly first = new FormControl('', Validators.required);
   readonly second = new FormControl('ok', Validators.required);
   readonly current = signal(this.first);
+}
+
+const matching = (group: AbstractControl): ValidationErrors | null =>
+  group.get('password')?.value === group.get('confirm')?.value
+    ? null
+    : { mismatch: true };
+
+@Component({
+  selector: 'andes-test-group-error-host',
+  imports: [ReactiveFormsModule, AndesForm, AndesFormField, AndesFormControl],
+  template: `<form andesForm [formGroup]="group">
+    <andes-form-field label="Password">
+      <input andesFormControl formControlName="password" />
+    </andes-form-field>
+    <andes-form-field
+      label="Confirm"
+      groupErrors="mismatch"
+      [errorMessages]="{ mismatch: 'The passwords do not match.' }"
+    >
+      <input andesFormControl formControlName="confirm" />
+    </andes-form-field>
+  </form>`,
+})
+class GroupErrorHost {
+  readonly group = new FormGroup(
+    {
+      password: new FormControl('abc'),
+      confirm: new FormControl('xyz'),
+    },
+    { validators: matching },
+  );
 }
 
 /** Compiles only if the documented manual binding type-checks against a library control under
@@ -221,6 +254,43 @@ describe('AndesFormControl - regressions', () => {
     await settle(fixture);
 
     expect(fieldOf(fixture).dataset['status']).toBe('error');
+  });
+
+  describe('group validator errors', () => {
+    it('shows the adopted group error on the field once it is touched', async () => {
+      const fixture = TestBed.createComponent(GroupErrorHost);
+      await settle(fixture);
+
+      expect(fieldOf(fixture, 1).dataset['status']).toBeUndefined();
+
+      blur(fixture.nativeElement.querySelectorAll('input')[1]);
+      await settle(fixture);
+      const confirm = fieldOf(fixture, 1);
+
+      expect(confirm.classList).toContain('andes-form-field--invalid');
+      expect(confirm.textContent).toContain('The passwords do not match.');
+      expect(
+        fixture.nativeElement
+          .querySelectorAll('input')[1]
+          .getAttribute('aria-invalid'),
+      ).toBe('true');
+      // The field that does not adopt the key stays out of it.
+      expect(fieldOf(fixture, 0).classList).not.toContain(
+        'andes-form-field--invalid',
+      );
+    });
+
+    it('clears once the group validator passes after a change to the other control', async () => {
+      const fixture = TestBed.createComponent(GroupErrorHost);
+      await settle(fixture);
+      blur(fixture.nativeElement.querySelectorAll('input')[1]);
+      await settle(fixture);
+
+      fixture.componentInstance.group.controls.password.setValue('xyz');
+      await settle(fixture);
+
+      expect(fieldOf(fixture, 1).dataset['status']).toBe('success');
+    });
   });
 
   it('types the manual binding snippet for library controls under strictTemplates', async () => {

@@ -190,6 +190,8 @@ export interface AndesFormControlApi {
   /** The control's path from its form root, joined with `.` (`'address.city'`), or `null`
    *  for a standalone control. */
   readonly path: () => string | null;
+  /** The errors of the control's parent group or array (cross-field validators). */
+  readonly parentErrors: () => ValidationErrors | null;
   /** Whether a signal forms schema hides the control (`hidden()`). */
   readonly hidden: () => boolean;
   /** `Validators.required`/`requiredTrue`, or a native `required` attribute on the element -

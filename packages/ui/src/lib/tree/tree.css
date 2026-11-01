@@ -1,0 +1,742 @@
+:host {
+  display: block;
+}
+
+/*
+  Measurements: a node's title is 24px tall, the switcher and each indent step are 24px wide,
+  and the default density leaves 4px below every row, so a row is 28px (24px when compact). The
+  gap is padding on the row, not a margin, so connector lines and drop targets run unbroken:
+  every line reaches into the gap and meets the next row's line. The switcher sits 4px before
+  the content, and the boxed +/- of `showLine` is 14px.
+*/
+.andes-tree {
+  --_indent: 1.5rem;
+  --_title-height: 1.5rem;
+  --_gap: 0.25rem;
+  --_switcher-gap: 0.25rem;
+  --_box: 0.875rem;
+  /* The drag grip column that opens every row of a draggable tree. */
+  --_lead: 0rem;
+  --_row-height: calc(var(--_title-height) + var(--_gap));
+  --_dir: 1;
+  --_line: var(--andes-color-border, #e2e8f0);
+  --_hover: color-mix(
+    in srgb,
+    var(--andes-color-foreground, #0f172a) 4%,
+    transparent
+  );
+  --_selected: var(
+    --andes-color-primary-subtle,
+    color-mix(
+      in srgb,
+      var(--andes-color-primary, #2563eb) 12%,
+      var(--andes-color-background, #fff)
+    )
+  );
+  --_ring: var(--andes-color-focus-ring, #2563eb);
+
+  position: relative;
+  box-sizing: border-box;
+  color: var(--andes-color-foreground, #0f172a);
+  font-family: var(--andes-font-family), sans-serif;
+  font-size: var(--andes-text-font-size, 0.875rem);
+  line-height: var(--andes-text-line-height, 1.375rem);
+}
+
+.andes-tree:dir(rtl) {
+  --_dir: -1;
+}
+
+.andes-tree[data-density='compact'] {
+  --_gap: 0rem;
+}
+
+.andes-tree[data-handles] {
+  --_lead: var(--_indent);
+}
+
+.andes-tree__list {
+  display: block;
+}
+
+.andes-tree__item {
+  position: relative;
+  outline: none;
+}
+
+/*
+  The focus ring is drawn on the node's row: the treeitem also holds its children, and an
+  outline around the whole branch would be wrong. The ring hugs the title (or the full row for
+  block and directory trees, whose highlight is the row).
+*/
+.andes-tree__item:focus-visible > .andes-tree__row > .andes-tree__content {
+  outline: 2px solid var(--_ring);
+  outline-offset: 1px;
+}
+
+/* prettier-ignore */
+.andes-tree[data-block] .andes-tree__item:focus-visible > .andes-tree__row > .andes-tree__content {
+  outline-offset: -2px;
+}
+
+.andes-tree__row {
+  position: relative;
+  display: flex;
+  box-sizing: border-box;
+  min-height: var(--_row-height);
+  align-items: flex-start;
+  padding-block-end: var(--_gap);
+}
+
+/*
+  Drag grip: six dots in a 24px column before the indentation, so the grips line up down the
+  tree and the connector lines keep their columns. Quiet until the row is hovered or focused.
+*/
+.andes-tree__handle {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--_lead);
+  height: var(--_title-height);
+  color: color-mix(
+    in srgb,
+    var(--andes-color-muted-foreground, #64748b) 55%,
+    transparent
+  );
+  cursor: grab;
+  user-select: none;
+  transition: color var(--andes-motion-duration-mid, 150ms) ease;
+}
+
+.andes-tree__handle[data-disabled] {
+  cursor: default;
+}
+
+.andes-tree__handle > svg {
+  width: var(--_box);
+  height: var(--_box);
+}
+
+/* prettier-ignore */
+.andes-tree__row:hover > .andes-tree__handle,
+.andes-tree__item:focus-visible > .andes-tree__row > .andes-tree__handle {
+  color: var(--andes-color-muted-foreground, #64748b);
+}
+
+/* Indentation: one cell per ancestor level. */
+.andes-tree__indent {
+  position: relative;
+  flex: none;
+  align-self: stretch;
+  width: var(--_indent);
+  user-select: none;
+}
+
+.andes-tree__switcher {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-self: stretch;
+  justify-content: center;
+  width: var(--_indent);
+  margin-inline-end: var(--_switcher-gap);
+  color: var(--andes-color-muted-foreground, #64748b);
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--andes-motion-duration-mid, 150ms) ease;
+}
+
+.andes-tree__switcher[data-leaf] {
+  cursor: default;
+}
+
+.andes-tree__switcher:not([data-leaf]):hover {
+  color: var(--andes-color-foreground, #0f172a);
+}
+
+.andes-tree__switcher > svg {
+  width: 1rem;
+  height: var(--_title-height);
+}
+
+.andes-tree__switcher > .andes-tree__box {
+  width: var(--_box);
+}
+
+.andes-tree__switcher > .andes-tree__leaf-icon {
+  width: var(--_box);
+}
+
+.andes-tree__switcher > .andes-tree__spinner {
+  width: 0.875rem;
+}
+
+.andes-tree__chevron {
+  transform: scaleX(var(--_dir));
+  transition: transform var(--andes-motion-duration-mid, 150ms)
+    var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1));
+}
+
+.andes-tree__row[data-state='open'] .andes-tree__chevron {
+  transform: rotate(90deg);
+}
+
+/* A custom `switcherIcon`, centred in the switcher and turned like the chevron. The icon is
+   the consumer's content, so it is sized by its own styles. */
+.andes-tree__switcher-icon {
+  display: inline-flex;
+  height: var(--_title-height);
+  align-items: center;
+  justify-content: center;
+}
+
+.andes-tree__spinner {
+  animation: andes-tree-spin 1.4s linear infinite;
+  color: var(--andes-color-primary, #2563eb);
+}
+
+@keyframes andes-tree-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/*
+  Connector lines. A child's elbow sits under its parent's box; every vertical runs the full
+  height of its row, gap included, so a guide is one stroke from row to row, and the open box's
+  stem continues straight into its children's elbows. A tick reaches the box of a parent row,
+  or the content (the label, or the check box before it) of a leaf row.
+*/
+
+/* prettier-ignore */
+.andes-tree[data-line] .andes-tree__indent[data-line]::before,
+.andes-tree[data-line] .andes-tree__indent[data-elbow]::before {
+  content: '';
+  position: absolute;
+  inset-block: 0 calc(-1 * var(--_gap));
+  inset-inline-start: 50%;
+  border-inline-start: 1px solid var(--_line);
+}
+
+/* An elbow whose node is the last child turns at the title's middle instead of running on. */
+/* prettier-ignore */
+.andes-tree[data-line] .andes-tree__indent[data-elbow]:not([data-line])::before {
+  inset-block-end: auto;
+  height: calc(var(--_title-height) / 2);
+}
+
+.andes-tree[data-line] .andes-tree__indent[data-elbow]::after {
+  content: '';
+  position: absolute;
+  top: calc(var(--_title-height) / 2);
+  inset-inline-start: 50%;
+  width: calc(var(--_indent) / 2 + (var(--_indent) - var(--_box)) / 2);
+  border-top: 1px solid var(--_line);
+}
+
+/* A leaf has no box: its tick crosses the empty switcher and stops where the content starts.
+   With `showLeafIcon` the leaf's icon stands where the box would, and the tick stops at it. */
+/* prettier-ignore */
+.andes-tree[data-line] .andes-tree__row[data-leaf]:not([data-leaf-icon]) .andes-tree__indent[data-elbow]::after {
+  width: calc(var(--_indent) / 2 + var(--_indent) + var(--_switcher-gap));
+}
+
+/* Below an open parent's box, the stem that leads down into its children's elbows. */
+/* prettier-ignore */
+.andes-tree[data-line] .andes-tree__row[data-state='open'] .andes-tree__switcher::after {
+  content: '';
+  position: absolute;
+  inset-block: calc((var(--_title-height) + var(--_box)) / 2) calc(-1 * var(--_gap));
+  inset-inline-start: 50%;
+  border-inline-start: 1px solid var(--_line);
+}
+
+.andes-tree__box {
+  position: relative;
+  z-index: 1;
+  background: var(--andes-color-background, #fff);
+}
+
+.andes-tree__box rect {
+  fill: var(--andes-color-background, #fff);
+}
+
+/* Checkbox: a presentational box; the treeitem carries aria-checked. */
+
+.andes-tree__checkbox {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 1rem;
+  height: 1rem;
+  margin-block-start: calc((var(--_title-height) - 1rem) / 2);
+  margin-inline-end: 0.25rem;
+  /* The input colour alone is about 1.5:1 against the surface; mixed 35% towards the
+     foreground it clears the 3:1 minimum for a control's edge, light and dark, as the
+     checkbox's own box does. */
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--andes-color-input, #cbd5e1),
+      var(--andes-color-foreground, #0f172a) 35%
+    );
+  border-radius: var(--andes-radius-sm, 0.25rem);
+  background-color: var(--andes-color-background, #fff);
+  color: var(--andes-color-primary-foreground, #fff);
+  cursor: pointer;
+  transition:
+    background-color var(--andes-motion-duration-mid, 150ms) ease,
+    border-color var(--andes-motion-duration-mid, 150ms) ease;
+}
+
+.andes-tree__checkbox > svg {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.andes-tree__checkbox:hover:not([data-disabled]) {
+  border-color: var(--andes-color-primary, #2563eb);
+}
+
+/* prettier-ignore */
+.andes-tree__checkbox[data-state='checked'],
+.andes-tree__checkbox[data-state='indeterminate'] {
+  border-color: var(--andes-color-primary, #2563eb);
+  background-color: var(--andes-color-primary, #2563eb);
+}
+
+.andes-tree__checkbox[data-disabled] {
+  border-color: var(--andes-color-input, #cbd5e1);
+  background-color: var(--andes-color-muted, #f1f5f9);
+  color: var(--andes-color-muted-foreground, #64748b);
+  cursor: not-allowed;
+}
+
+/* prettier-ignore */
+.andes-tree__checkbox[data-disabled][data-state='checked'],
+.andes-tree__checkbox[data-disabled][data-state='indeterminate'] {
+  border-color: var(--andes-color-input, #cbd5e1);
+}
+
+/* Content: icon and title. */
+
+.andes-tree__content {
+  display: inline-flex;
+  min-width: 0;
+  min-height: var(--_title-height);
+  align-items: center;
+  gap: 0.25rem;
+  box-sizing: border-box;
+  padding-inline: 0.5rem;
+  border-radius: var(--andes-radius-md, 0.375rem);
+  cursor: pointer;
+  transition: background-color var(--andes-motion-duration-mid, 150ms) ease;
+}
+
+.andes-tree[data-block] .andes-tree__content {
+  flex: 1 1 auto;
+}
+
+.andes-tree__content:hover {
+  background-color: var(--_hover);
+}
+
+.andes-tree__row[data-selected] .andes-tree__content {
+  background-color: var(--_selected);
+}
+
+.andes-tree__icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  color: var(--andes-color-muted-foreground, #64748b);
+}
+
+.andes-tree__icon > svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.andes-tree__title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.andes-tree[data-virtual] .andes-tree__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.andes-tree__match {
+  background: transparent;
+  color: var(--andes-color-primary-text, var(--andes-color-primary, #2563eb));
+  font-weight: var(--andes-font-weight-medium, 500);
+}
+
+/* Disabled */
+
+.andes-tree__row[data-disabled] .andes-tree__content {
+  color: var(--andes-color-muted-foreground, #64748b);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.andes-tree__row[data-disabled] .andes-tree__content:hover {
+  background-color: transparent;
+}
+
+/* Directory: the whole row is the highlight - a hover fill, and a solid selected fill. */
+
+.andes-tree[data-directory] .andes-tree__row {
+  isolation: isolate;
+}
+
+/* The fill is a pseudo-element that stops above the row's bottom gap. Clipping the row's own
+   background to its content box would cut the fill square at the bottom. */
+.andes-tree[data-directory] .andes-tree__row::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 var(--_gap);
+  border-radius: var(--andes-radius-md, 0.375rem);
+  background-color: transparent;
+  content: '';
+  transition: background-color var(--andes-motion-duration-mid, 150ms) ease;
+}
+
+/* prettier-ignore */
+.andes-tree[data-directory] .andes-tree__row:not([data-selected]):not([data-disabled]):hover::before {
+  background-color: var(--_hover);
+}
+
+/* prettier-ignore */
+.andes-tree[data-directory] .andes-tree__row[data-selected]::before {
+  background-color: var(--andes-color-primary, #2563eb);
+}
+
+/* prettier-ignore */
+.andes-tree[data-directory] .andes-tree__row[data-selected] {
+  color: var(--andes-color-primary-foreground, #fff);
+}
+
+/* The row draws the fills; the content keeps none of its own. */
+/* prettier-ignore */
+.andes-tree[data-directory] .andes-tree__content:hover,
+.andes-tree[data-directory] .andes-tree__row[data-selected] .andes-tree__content {
+  background-color: transparent;
+}
+
+/* prettier-ignore */
+.andes-tree[data-directory] .andes-tree__row[data-selected] .andes-tree__switcher,
+.andes-tree[data-directory] .andes-tree__row[data-selected] .andes-tree__icon,
+.andes-tree[data-directory] .andes-tree__row[data-selected] .andes-tree__handle {
+  color: inherit;
+}
+
+/* Expanding and collapsing a branch: its height eases between 0 and its natural size. */
+
+.andes-tree__collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  visibility: hidden;
+}
+
+.andes-tree__collapse[data-expanded] {
+  grid-template-rows: 1fr;
+  visibility: visible;
+}
+
+.andes-tree__collapse-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.andes-tree__group {
+  display: block;
+}
+
+@keyframes andes-tree-expand {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+
+  to {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+}
+
+@keyframes andes-tree-collapse {
+  from {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    visibility: visible;
+  }
+
+  to {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .andes-tree__collapse[data-animate][data-expanded] {
+    animation: andes-tree-expand var(--andes-motion-duration-slow, 200ms)
+      var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1));
+  }
+
+  .andes-tree__collapse[data-animate]:not([data-expanded]) {
+    animation: andes-tree-collapse var(--andes-motion-duration-mid, 150ms)
+      var(--andes-motion-ease-in, ease-in) forwards;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .andes-tree__chevron,
+  .andes-tree__handle,
+  .andes-tree__switcher,
+  .andes-tree__content,
+  .andes-tree__checkbox {
+    transition: none;
+  }
+
+  .andes-tree[data-directory] .andes-tree__row::before {
+    transition: none;
+  }
+
+  .andes-tree__row[data-dragging]::after {
+    animation-duration: 0.01ms;
+  }
+
+  /* Slower, not frozen: a ring that stands still no longer says something is loading. */
+  .andes-tree__spinner {
+    animation-duration: 2.4s;
+  }
+}
+
+/* Virtual list: fixed-height rows; the viewport scrolls. */
+
+.andes-tree__viewport {
+  display: block;
+  overflow-y: auto;
+}
+
+.andes-tree[data-virtual] .andes-tree__item {
+  height: var(--_row-height);
+}
+
+/* Drag and drop */
+
+/* prettier-ignore */
+.andes-tree[data-dragging] .andes-tree__content,
+.andes-tree[data-dragging] .andes-tree__handle {
+  cursor: grabbing;
+}
+
+/* The row being dragged is framed where it stands, from the grip to the end of the row. */
+.andes-tree__row[data-dragging]::after {
+  animation: andes-tree-frame var(--andes-motion-duration-slow, 200ms) ease
+    forwards;
+}
+
+@keyframes andes-tree-frame {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/*
+  The picture dragged along with the pointer: the row lifted on a card. It waits outside the
+  viewport until the browser has taken its snapshot.
+*/
+.andes-tree__ghost {
+  position: fixed;
+  inset-block-start: -9999px;
+  inset-inline-start: 0;
+  display: inline-block;
+  padding-inline-end: 0.5rem;
+  border-radius: var(--andes-radius-md, 0.375rem);
+  background-color: var(--andes-color-background, #fff);
+  box-shadow: var(
+    --andes-shadow-md,
+    0 6px 16px 0 rgb(0 0 0 / 0.12),
+    0 3px 6px -4px rgb(0 0 0 / 0.12)
+  );
+  pointer-events: none;
+}
+
+.andes-tree__ghost .andes-tree__row {
+  padding-block-end: 0;
+}
+
+/* The card is as wide as its content and never shows a selection or a hover fill. */
+.andes-tree .andes-tree__ghost {
+  width: max-content;
+}
+
+/* prettier-ignore */
+.andes-tree .andes-tree__ghost .andes-tree__content,
+.andes-tree .andes-tree__ghost .andes-tree__content:hover {
+  flex: none;
+  background-color: transparent;
+}
+
+.andes-tree .andes-tree__ghost .andes-tree__row::before,
+.andes-tree .andes-tree__ghost .andes-tree__row::after {
+  display: none;
+}
+
+.andes-tree__ghost .andes-tree__handle {
+  color: var(--andes-color-muted-foreground, #64748b);
+}
+
+/*
+  Drop indicator: a 2px line with a ring at its start, drawn in the 4px gap between rows so it
+  never covers a title. It starts 4px into the content of the level the node would land on:
+  the target's own level before or after it. Dropped inside, the target row is framed instead.
+*/
+/* Dropped inside, the whole row is framed (grip, switcher, icon and title) and no line is drawn. */
+/* prettier-ignore */
+.andes-tree__row[data-dragging]::after,
+.andes-tree__row[data-drop='inside']::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0 0 var(--_gap);
+  box-sizing: border-box;
+  border: 1px solid var(--andes-color-primary, #2563eb);
+  border-radius: var(--andes-radius-md, 0.375rem);
+  background-color: color-mix(
+    in srgb,
+    var(--andes-color-primary, #2563eb) 8%,
+    transparent
+  );
+  content: '';
+  pointer-events: none;
+}
+
+.andes-tree__drop-indicator[data-position='inside'] {
+  display: none;
+}
+
+.andes-tree__drop-indicator {
+  /* Where the content of the landing level starts: grip, indent steps, switcher, its gap. */
+  --_content-start: calc(
+    var(--_lead) + var(--_drop-level, 1) * var(--_indent) + var(--_switcher-gap)
+  );
+
+  position: absolute;
+  z-index: 2;
+  inset-inline: calc(var(--_content-start) + 0.25rem) 0;
+  height: 2px;
+  border-radius: 1px;
+  background-color: var(--andes-color-primary, #2563eb);
+  pointer-events: none;
+}
+
+.andes-tree__drop-indicator::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  inset-inline-start: -0.375rem;
+  box-sizing: border-box;
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--andes-color-primary, #2563eb);
+  border-radius: 50%;
+  background-color: var(--andes-color-background, #fff);
+}
+
+/* Centred in the gap above the row (the previous row's), or in the row's own gap below. */
+.andes-tree__drop-indicator[data-position='before'] {
+  top: calc(var(--_gap) / -2 - 1px);
+}
+
+/* prettier-ignore */
+.andes-tree__drop-indicator[data-position='after'],
+.andes-tree__drop-indicator[data-position='inside'] {
+  top: calc(var(--_title-height) + var(--_gap) / 2 - 1px);
+}
+
+/* Empty and loading states, and the screen-reader announcements. */
+
+.andes-tree__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  color: var(--andes-color-muted-foreground, #64748b);
+  text-align: center;
+}
+
+.andes-tree__empty > svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Nothing to show: a muted empty tray above the text. */
+.andes-tree__empty[data-empty] {
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-block: 0.75rem;
+}
+
+.andes-tree__empty > .andes-tree__empty-icon {
+  width: 1.75rem;
+  height: 1.75rem;
+  color: color-mix(
+    in srgb,
+    var(--andes-color-muted-foreground, #64748b) 70%,
+    transparent
+  );
+}
+
+.andes-tree__live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (forced-colors: active) {
+  .andes-tree__row[data-selected] .andes-tree__content {
+    outline: 1px solid Highlight;
+  }
+
+  .andes-tree__drop-indicator {
+    forced-color-adjust: none;
+    background-color: Highlight;
+  }
+
+  .andes-tree__drop-indicator::before {
+    border-color: Highlight;
+    background-color: Canvas;
+  }
+
+  .andes-tree__row[data-drop='inside']::after {
+    border-color: Highlight;
+    background-color: transparent;
+  }
+
+  .andes-tree__checkbox[data-state='checked'],
+  .andes-tree__checkbox[data-state='indeterminate'] {
+    forced-color-adjust: none;
+    background-color: Highlight;
+  }
+}

@@ -1,7 +1,20 @@
 import { readFileSync } from 'node:fs';
 
-import { Component, signal, TemplateRef, viewChild } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  TemplateRef,
+  viewChild,
+} from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
+
+import {
+  andesOverlayPreset,
+  AndesOverlayContentPrimitive,
+  AndesOverlayPrimitive,
+  provideAndesOverlay,
+} from '@andes-ng/primitives';
 
 import { AndesImage, type AndesImagePlaceholder } from './image';
 import type { AndesImageLabels, AndesImagePreviewConfig } from './image-types';
@@ -502,5 +515,112 @@ describe('AndesImage', () => {
         expect(withoutFallbacks).not.toMatch(/#[0-9a-f]{3,8}\b|rgb\(/i);
       }
     });
+  });
+});
+
+@Component({
+  imports: [AndesImage, AndesOverlayContentPrimitive],
+  providers: [provideAndesOverlay()],
+  template: `
+    <button type="button" id="open-dialog" (click)="openDialog()">Open</button>
+    <ng-template #panel>
+      <div andesOverlayContent aria-label="Photos" data-test="dialog">
+        <andes-image id="inner" src="/a.jpg" alt="Inside" />
+        <button type="button" id="dialog-done">Done</button>
+      </div>
+    </ng-template>
+  `,
+})
+class DialogHost {
+  readonly overlay = inject(AndesOverlayPrimitive);
+  readonly panel = viewChild.required<TemplateRef<unknown>>('panel');
+  constructor() {
+    this.overlay.configure(andesOverlayPreset('dialog'));
+  }
+  openDialog() {
+    this.overlay.open(this.panel());
+  }
+}
+
+describe('AndesImage inside a modal dialog', () => {
+  withElementGeometry();
+
+  function openBoth() {
+    const f = TestBed.createComponent(DialogHost);
+    f.detectChanges();
+    f.componentInstance.openDialog();
+    f.detectChanges();
+    const thumb = q<HTMLButtonElement>('#inner .andes-image__mask');
+    thumb?.focus();
+    thumb?.click();
+    f.detectChanges();
+    return { f, thumb };
+  }
+
+  it('stacks the viewer above the dialog', () => {
+    openBoth();
+    const panes = Array.from(
+      document.querySelectorAll(
+        '.cdk-overlay-connected-position-bounding-box, .cdk-global-overlay-wrapper',
+      ),
+    );
+    const dialogHost = q('[data-test="dialog"]')?.closest(
+      '.cdk-global-overlay-wrapper',
+    );
+    const viewerHost = viewer()?.closest('.cdk-global-overlay-wrapper');
+    expect(dialogHost).toBeTruthy();
+    expect(viewerHost).toBeTruthy();
+    expect(panes.indexOf(viewerHost as Element)).toBeGreaterThan(
+      panes.indexOf(dialogHost as Element),
+    );
+    // The same modal layer: the later overlay paints on top.
+    expect((viewerHost as HTMLElement).style.zIndex).toBe(
+      (dialogHost as HTMLElement).style.zIndex,
+    );
+  });
+
+  function pressEscapeOnFocus() {
+    (document.activeElement ?? document.body).dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Escape',
+        keyCode: 27,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+  }
+
+  it('closes only the viewer on Escape and returns focus to the thumbnail in the dialog', () => {
+    const { f, thumb } = openBoth();
+    // Focus sits on the viewer's stage, as it does after opening.
+    expect(document.activeElement?.classList).toContain(
+      'andes-image-preview__stage',
+    );
+    pressEscapeOnFocus();
+    f.detectChanges();
+    expect(viewer()).toBeNull();
+    expect(q('[data-test="dialog"]')).not.toBeNull();
+    expect(f.componentInstance.overlay.isOpen()).toBe(true);
+    expect(document.activeElement).toBe(thumb);
+    pressEscapeOnFocus();
+    f.detectChanges();
+    expect(q('[data-test="dialog"]')).toBeNull();
+  });
+
+  it('closes only the viewer on Escape from a toolbar button too', () => {
+    const { f } = openBoth();
+    q<HTMLButtonElement>('.andes-image-preview__button')?.focus();
+    pressEscapeOnFocus();
+    f.detectChanges();
+    expect(viewer()).toBeNull();
+    expect(f.componentInstance.overlay.isOpen()).toBe(true);
+  });
+
+  it('keeps the dialog usable again once the viewer is gone', () => {
+    const { f } = openBoth();
+    expect(q('[data-test="dialog"]')?.closest('[inert]')).toBeTruthy();
+    pressEscape();
+    f.detectChanges();
+    expect(q('[data-test="dialog"]')?.closest('[inert]')).toBeNull();
   });
 });

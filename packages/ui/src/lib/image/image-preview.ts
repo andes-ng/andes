@@ -672,11 +672,15 @@ export class AndesImagePreview {
   }
 
   /**
-   * Escape from the stage: the keyboard counterpart of clicking its empty area. The overlay
-   * closes on Escape by itself, this only keeps the two dismissals paired on the element.
+   * Escape from the stage: the keyboard counterpart of clicking its empty area. The event
+   * stops here: closing has already released this overlay's keyboard subscription, so letting
+   * it bubble on would hand the same Escape to the overlay underneath (a dialog the viewer was
+   * opened from) and close that too.
    */
-  protected onStageEscape(): void {
+  protected onStageEscape(event: Event): void {
     if (this.cfg().closeOnEscape) {
+      event.stopPropagation();
+      event.preventDefault();
       this.close('escape-key');
     }
   }

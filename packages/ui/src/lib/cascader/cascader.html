@@ -49,7 +49,7 @@
       `remove` is set in the popover only: there each remove button is a Tab stop and removing
       keeps focus inside it.
     -->
-    <ng-template #tagSlot let-tag let-remove="remove">
+    <ng-template #tagSlot let-tag let-remove="remove" let-enter="enter">
       @if (tagTemplate(); as customTag) {
       <ng-container
         [ngTemplateOutlet]="customTag"
@@ -60,6 +60,7 @@
         class="andes-cascader__tag"
         data-slot="cascader-tag"
         [attr.title]="tagTitle(tag)"
+        [attr.data-enter]="enter ? '' : null"
       >
         <span class="andes-cascader__tag-label">
           @if (displayRender(); as template) {
@@ -118,7 +119,10 @@
     @if (multiple()) { @for (tag of visibleTags(); track tagKey(tag)) {
     <ng-container
       [ngTemplateOutlet]="tagSlot"
-      [ngTemplateOutletContext]="{ $implicit: tag }"
+      [ngTemplateOutletContext]="{
+        $implicit: tag,
+        enter: enteringTags().has(tagKey(tag))
+      }"
     />
     } @if (omittedTags().length > 0) {
     <!--
@@ -485,6 +489,7 @@
         role="group"
         class="andes-cascader__column"
         [attr.aria-label]="columnLabel(column)"
+        [attr.data-enter]="column.level === enteringLevel() ? '' : null"
         (scroll)="onPanelScroll($event)"
       >
         @for (node of column.nodes; track node.key; let i = $index) {

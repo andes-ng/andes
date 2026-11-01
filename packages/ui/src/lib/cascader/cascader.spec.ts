@@ -1973,6 +1973,36 @@ describe('AndesCascader', () => {
       ).toContain('opacity var(--andes-duration-base, 150ms) ease');
     });
 
+    it('eases the weight of a picked path and keeps the enter motion to opacity and transform', () => {
+      expect(
+        declaredValue(source, '.andes-cascader__option', 'transition'),
+      ).toContain('font-weight 150ms ease');
+      for (const name of [
+        '@keyframes andes-cascader-tag-enter',
+        '@keyframes andes-cascader-column-enter',
+      ]) {
+        const start = style.indexOf(name);
+        const body = style.slice(start, style.indexOf('@', start + 1));
+        expect(body).toContain('opacity');
+        expect(body).not.toMatch(/width|height|margin/);
+      }
+      expect(
+        declaredInAtRule(
+          source,
+          noPreference,
+          '.andes-cascader__column[data-enter]',
+          'animation',
+        ),
+      ).toContain('andes-cascader-column-enter');
+      expect(
+        declaredValue(
+          source,
+          '.andes-cascader__column:dir(rtl)',
+          '--_column-dir',
+        ),
+      ).toBe('-1');
+    });
+
     it('isolates the "+ N ..." tag from the surrounding direction', () => {
       expect(
         declaredValue(source, '.andes-cascader__tag--rest', 'unicode-bidi'),

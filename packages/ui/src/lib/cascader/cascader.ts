@@ -91,6 +91,8 @@ type CheckMotion = 'check' | 'uncheck' | 'indeterminate';
 
 /** How long a check box keeps its `data-motion`: the click ring's length. */
 const CHECK_MOTION_MS = 1000;
+/** How long a just-added tag or column keeps its `data-enter` (its enter animation and more). */
+const ENTER_MS = 200;
 
 const NAVIGATION_KEYS: ReadonlySet<string> = new Set([
   'ArrowDown',
@@ -584,6 +586,15 @@ export class AndesCascader
     new Map(),
   );
   private checkMotionTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** The paths the user just added, whose tags grow in; never those a value arrives with. */
+  protected readonly enteringTags = signal<ReadonlySet<string>>(new Set());
+  /** The level of a column that just opened beside the others, which slides in. */
+  protected readonly enteringLevel = signal<number | null>(null);
+  private enterTimer: ReturnType<typeof setTimeout> | null = null;
+  private columnTimer: ReturnType<typeof setTimeout> | null = null;
+  /** How many columns were on show, while open; `null` while closed, so opening never slides. */
+  private shownColumns: number | null = null;
 
   protected checkState(node: AndesCascaderNode): CheckState {
     const checked = this.checkedKeys();
@@ -1126,8 +1137,27 @@ export class AndesCascader
       untracked(() => this.fitTags());
     });
 
+    // A column that opens beside the others, while the panel is open, slides in.
+    effect(() => {
+      const count = this.columns().length;
+      const open = this.overlay.isOpen();
+      untracked(() => {
+        if (open && this.shownColumns !== null && count > this.shownColumns) {
+          this.enteringLevel.set(count - 1);
+          clearTimeout(this.columnTimer ?? undefined);
+          this.columnTimer = setTimeout(() => {
+            this.columnTimer = null;
+            this.enteringLevel.set(null);
+          }, ENTER_MS);
+        }
+        this.shownColumns = open ? count : null;
+      });
+    });
+
     this.destroyRef.onDestroy(() => {
       this.destroyed = true;
+      clearTimeout(this.enterTimer ?? undefined);
+      clearTimeout(this.columnTimer ?? undefined);
       if (this.checkMotionTimer !== null) {
         clearTimeout(this.checkMotionTimer);
       }
@@ -1893,9 +1923,30 @@ export class AndesCascader
     value: AndesCascaderValue[] | AndesCascaderValue[][],
     selectedOptions: AndesCascaderOption[] | AndesCascaderOption[][],
   ): void {
+    const before = new Set(this.entries().map((entry) => pathKey(entry.path)));
     this.value.set(value);
+    this.markEntering(before);
     this.onChange(value);
     this.selectionChange.emit({ value, selectedOptions });
+  }
+
+  /** Marks the tags the commit just added, so they grow in. */
+  private markEntering(before: ReadonlySet<string>): void {
+    if (!this.multiple()) {
+      return;
+    }
+    const added = this.entries()
+      .map((entry) => pathKey(entry.path))
+      .filter((key) => !before.has(key));
+    if (added.length === 0) {
+      return;
+    }
+    this.enteringTags.set(new Set(added));
+    clearTimeout(this.enterTimer ?? undefined);
+    this.enterTimer = setTimeout(() => {
+      this.enterTimer = null;
+      this.enteringTags.set(new Set());
+    }, ENTER_MS);
   }
 
   // ----- Internals ----------------------------------------------------------------------

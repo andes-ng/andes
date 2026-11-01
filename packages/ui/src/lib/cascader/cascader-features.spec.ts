@@ -767,6 +767,72 @@ describe('AndesCascader features', () => {
     });
   });
 
+  describe('enter motion', () => {
+    afterEach(() => vi.useRealTimers());
+
+    it('grows in only the tags the user adds, for a moment', () => {
+      vi.useFakeTimers();
+      const { root, item, openWithPointer, detect } = setup((h) => {
+        h.multiple.set(true);
+        h.value.set([['callao']]);
+      });
+      const entering = () =>
+        Array.from(
+          root.querySelectorAll<HTMLElement>(
+            '[data-slot="cascader-tag"][data-enter]',
+          ),
+        ).map((tag) => tag.getAttribute('title'));
+      expect(entering()).toEqual([]);
+
+      openWithPointer();
+      item('Cusco').click();
+      detect();
+      item('Wanchaq').click();
+      detect();
+      expect(entering()).toEqual(['Cusco / Wanchaq']);
+
+      vi.advanceTimersByTime(200);
+      detect();
+      expect(entering()).toEqual([]);
+    });
+
+    it('slides in a column that opens beside the others, never the ones shown on open', () => {
+      vi.useFakeTimers();
+      const { item, openWithPointer, detect } = setup((h) =>
+        h.value.set(['cusco', 'wanchaq']),
+      );
+      const entering = () =>
+        Array.from(
+          document.querySelectorAll<HTMLElement>(
+            '.andes-cascader__column[data-enter]',
+          ),
+        ).map((column) => column.getAttribute('aria-label'));
+
+      openWithPointer();
+      detect();
+      expect(entering()).toEqual([]);
+
+      item('Lima').click();
+      detect();
+      detect();
+      expect(entering()).toEqual([]);
+      item('Lima').click();
+      detect();
+      const lima = Array.from(
+        document.querySelectorAll<HTMLElement>('[data-slot="cascader-option"]'),
+      ).filter((el) => el.textContent?.trim() === 'Lima');
+      // The second-level "Lima" opens a third column.
+      lima[lima.length - 1].click();
+      detect();
+      detect();
+      expect(entering()).toEqual(['Level 3']);
+
+      vi.advanceTimersByTime(200);
+      detect();
+      expect(entering()).toEqual([]);
+    });
+  });
+
   describe('templates', () => {
     it('renders a tagTemplate per path, and onClose removes it', () => {
       const { root, host, detect } = setup((h) => {

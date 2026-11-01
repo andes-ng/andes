@@ -333,6 +333,51 @@ button.andes-cascader__combobox {
   cursor: default;
 }
 
+/* A tag the user just added grows in, and a column that opens beside the others slides in
+   from its parent's side. Opacity and transform only, so the widths a responsive row is
+   fitted from never move. */
+@keyframes andes-cascader-tag-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes andes-cascader-column-enter {
+  from {
+    opacity: 0;
+    transform: translateX(calc(-4px * var(--_column-dir, 1)));
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .andes-cascader__tag[data-enter] {
+    animation: andes-cascader-tag-enter var(--andes-motion-duration-fast, 120ms)
+      var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1));
+  }
+
+  .andes-cascader__column[data-enter] {
+    animation: andes-cascader-column-enter
+      var(--andes-motion-duration-fast, 120ms)
+      var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1));
+  }
+}
+
+/* Right to left, the next column opens on the left: it slides in from the right. */
+.andes-cascader__column:dir(rtl) {
+  --_column-dir: -1;
+}
+
 .andes-cascader__tag--rest {
   padding-inline-end: var(--andes-space-2);
   color: var(--andes-color-muted-foreground);
@@ -828,7 +873,10 @@ button.andes-cascader__combobox {
   border-radius: var(--andes-radius-sm);
   cursor: pointer;
   user-select: none;
-  transition: background-color 150ms ease;
+  /* The weight eases too, as a path turns semibold when it is picked. */
+  transition:
+    background-color 150ms ease,
+    font-weight 150ms ease;
 }
 
 .andes-cascader__option + .andes-cascader__option {

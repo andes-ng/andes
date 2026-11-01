@@ -12,7 +12,8 @@
 */
 .andes-tree-select__trigger {
   --_padding-x: var(--andes-control-padding-x-md, 0.6875rem);
-  --_tag-height: calc(var(--andes-control-height-md, 2rem) - 0.5rem);
+  --_tag-inset: 0.25rem;
+  --_tag-height: calc(var(--andes-control-height-md, 2rem) - 0.625rem);
   --_ring: color-mix(
     in srgb,
     var(--andes-color-primary, #2563eb) 20%,
@@ -162,6 +163,7 @@
 
 .andes-tree-select__trigger[data-size='sm'] {
   --_padding-x: var(--andes-control-padding-x-sm, 0.4375rem);
+  --_tag-inset: 0.1875rem;
   --_tag-height: calc(var(--andes-control-height-sm, 1.5rem) - 0.5rem);
 
   min-height: var(--andes-control-height-sm, 1.5rem);
@@ -170,7 +172,7 @@
 
 .andes-tree-select__trigger[data-size='lg'] {
   --_padding-x: var(--andes-control-padding-x-lg, 0.6875rem);
-  --_tag-height: calc(var(--andes-control-height-lg, 2.5rem) - 0.5rem);
+  --_tag-height: calc(var(--andes-control-height-lg, 2.5rem) - 0.625rem);
 
   min-height: var(--andes-control-height-lg, 2.5rem);
   border-radius: var(--andes-control-radius-lg, 0.5rem);
@@ -179,15 +181,18 @@
 }
 
 /*
-  Tags sit 3px inside the border, so a tag is the control height minus 8px and one row of tags
-  keeps the box at its single-line height; wrapped rows are 4px apart.
+  The select's tag geometry, so a multiple tree select lines up beside a multiple select: at the
+  medium and large sizes the tags sit 4px inside the border (5px with it), top, bottom and start,
+  so a tag is the control height minus 10px (22px / 30px); the 24px small box keeps 3px and 16px
+  tags. One row of tags keeps the box at its single-line height. Neighbouring tags are 6px
+  apart and wrapped rows 4px.
 */
 .andes-tree-select__trigger[data-multiple] {
-  padding-block: 0.1875rem;
-  padding-inline-start: 0.1875rem;
+  padding-block: var(--_tag-inset);
+  padding-inline-start: var(--_tag-inset);
 }
 
-/* Content in front of the selection. In a multiple box the tags sit 3px from the border, so
+/* Content in front of the selection. In a multiple box the tags sit close to the border, so
    the prefix is pushed in to the size's padding. */
 .andes-tree-select__prefix {
   display: inline-flex;
@@ -197,7 +202,7 @@
 }
 
 .andes-tree-select__trigger[data-multiple] .andes-tree-select__prefix {
-  margin-inline-start: calc(var(--_padding-x) - 0.1875rem);
+  margin-inline-start: calc(var(--_padding-x) - var(--_tag-inset));
 }
 
 .andes-tree-select__selection {
@@ -212,12 +217,13 @@
 
 .andes-tree-select__trigger[data-multiple] .andes-tree-select__selection {
   flex-wrap: wrap;
+  column-gap: 0.375rem;
 }
 
 /* With no tags, the placeholder and an empty input start at the size's padding. */
 /* prettier-ignore */
 .andes-tree-select__trigger[data-multiple][data-placeholder] .andes-tree-select__selection {
-  padding-inline-start: calc(var(--_padding-x) - 0.1875rem);
+  padding-inline-start: calc(var(--_padding-x) - var(--_tag-inset));
 }
 
 .andes-tree-select__value,
@@ -311,6 +317,10 @@
   border-radius: 0.125rem;
   /* The 16px tags of the small box take the caption size. */
   font-size: 0.75rem;
+}
+
+.andes-tree-select__trigger[data-size='lg'] .andes-tree-select__tag {
+  border-radius: var(--andes-control-radius-md, 0.375rem);
 }
 
 .andes-tree-select__trigger[data-variant='filled'] .andes-tree-select__tag {

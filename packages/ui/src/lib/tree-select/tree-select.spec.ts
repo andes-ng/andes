@@ -1332,6 +1332,37 @@ describe('AndesTreeSelect', () => {
       ).toBe('none');
     });
 
+    it('sizes and spaces the tags as the select does', () => {
+      // 22 / 30px tags 4px inside the border at md and lg; the 24px box keeps 16px tags at 3px.
+      expect(
+        declaredValue(css, '.andes-tree-select__trigger', '--_tag-height'),
+      ).toBe('calc(var(--andes-control-height-md, 2rem) - 0.625rem)');
+      expect(
+        declaredValue(
+          css,
+          ".andes-tree-select__trigger[data-size='lg']",
+          '--_tag-height',
+        ),
+      ).toBe('calc(var(--andes-control-height-lg, 2.5rem) - 0.625rem)');
+      expect(
+        declaredValue(
+          css,
+          ".andes-tree-select__trigger[data-size='sm']",
+          '--_tag-height',
+        ),
+      ).toBe('calc(var(--andes-control-height-sm, 1.5rem) - 0.5rem)');
+      expect(
+        declaredValue(css, '.andes-tree-select__trigger', '--_tag-inset'),
+      ).toBe('0.25rem');
+      expect(
+        declaredValue(
+          css,
+          '.andes-tree-select__trigger[data-multiple] .andes-tree-select__selection',
+          'column-gap',
+        ),
+      ).toBe('0.375rem');
+    });
+
     it('isolates the "+ N ..." tag from the surrounding direction', () => {
       expect(
         declaredValue(css, '.andes-tree-select__tag--rest', 'unicode-bidi'),

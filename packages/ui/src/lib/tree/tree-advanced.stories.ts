@@ -2,10 +2,14 @@ import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
 import { AndesInput } from '../input/input';
+import { AndesSelect } from '../select/select';
+import { AndesSwitch } from '../switch/switch';
 import { AndesTree } from './tree';
 import { AndesTreeNodeTemplate } from './tree-node-template';
 import type {
+  AndesTreeDragEvent,
   AndesTreeDropEvent,
+  AndesTreeDropInfo,
   AndesTreeKey,
   AndesTreeLoadData,
   AndesTreeNode,
@@ -17,6 +21,8 @@ const TREE_IMPORTS = [
   AndesTreeNodeTemplate,
   AndesButton,
   AndesInput,
+  AndesSelect,
+  AndesSwitch,
 ];
 
 /** Layout helpers for the demo panels; the search boxes are the library's own `andes-input`. */
@@ -38,6 +44,8 @@ const STORY_STYLES = [
   .field { display: block; margin-bottom: 12px; }
   .caption { margin: 12px 0 0; color: var(--andes-color-muted-foreground); font-size: 0.75rem; line-height: 1.25rem; }
   .caption code { font-size: inherit; }
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 12px; }
+  .log { margin: 8px 0 0; padding: 0; list-style: none; color: var(--andes-color-muted-foreground); font-size: 0.75rem; line-height: 1.25rem; }
   `,
 ];
 
@@ -91,6 +99,24 @@ function large(groups: number, perGroup: number): AndesTreeNode[] {
     children: Array.from({ length: perGroup }, (__, i) => ({
       key: `g${g}-${i}`,
       title: `Producto ${g + 1}-${String(i + 1).padStart(3, '0')}`,
+    })),
+  }));
+}
+
+const REGIONS = ['Lima', 'Arequipa', 'Cusco', 'Piura', 'Trujillo', 'Iquitos'];
+
+/** Three levels deep: region › warehouse › product, a few thousand nodes. */
+function nested(): AndesTreeNode[] {
+  return REGIONS.map((region, r) => ({
+    key: `r${r}`,
+    title: `Región ${region}`,
+    children: Array.from({ length: 8 }, (_, w) => ({
+      key: `r${r}-w${w}`,
+      title: `Almacén ${region} ${w + 1}`,
+      children: Array.from({ length: 60 }, (__, p) => ({
+        key: `r${r}-w${w}-p${p}`,
+        title: `SKU ${r + 1}${w + 1}-${String(p + 1).padStart(3, '0')}`,
+      })),
     })),
   }));
 }
@@ -207,20 +233,41 @@ export const LoadOnDemand: Story = {
 };
 
 /**
- * Drag a node onto another: the top and bottom quarter of a row drop before or after it, the
- * middle drops inside. Without a pointer, Alt + arrow keys move the focused node: Up and Down past
- * a sibling, Right into the sibling above, Left out to the parent's level. The `nodeDrop` output
- * reports each move; the story applies it to its data with `andesMoveTreeNode`.
+ * Drag a node by its grip (or its title) onto another: the top and bottom quarter of a row drop
+ * before or after it, the middle drops inside, and a closed parent opens when the pointer rests on
+ * it. A line in the gap between rows, starting at the level the node would land on, shows where it
+ * goes; a drop inside also tints the target. "En tránsito" cannot move (a `draggable` predicate)
+ * and nothing can be dropped into it (`allowDrop`). Without a pointer, Alt + arrow keys move the
+ * focused node. The tree only reports: the story applies each `nodeDrop` with `andesMoveTreeNode`
+ * and lists the drag outputs below.
  */
 export const DragAndDrop: Story = {
+  name: 'Drag and drop',
   render: () => ({
     moduleMetadata: { imports: TREE_IMPORTS },
     props: {
       nodes: warehouses(),
-      expanded: ['lima'],
-      moves: [] as string[],
-      recordMove: function (
-        this: { moves: string[]; nodes: AndesTreeNode[] },
+      expanded: ['lima', 'lima-a'],
+      grips: true,
+      block: true,
+      log: [] as string[],
+      canDrag: (node: AndesTreeNode) => node.key !== 'transito',
+      canDrop: (info: AndesTreeDropInfo) =>
+        !(info.position === 'inside' && info.targetKey === 'transito'),
+      pushLog: function (this: { log: string[] }, line: string) {
+        this.log = [line, ...this.log].slice(0, 5);
+      },
+      recordDrag: function (
+        this: { pushLog(line: string): void },
+        type: string,
+        event: AndesTreeDragEvent,
+      ) {
+        this.pushLog(
+          `${type}: ${String(event.node['title'])}${event.position ? ` (${event.position})` : ''}`,
+        );
+      },
+      applyDrop: function (
+        this: { nodes: AndesTreeNode[]; pushLog(line: string): void },
         event: AndesTreeDropEvent,
       ) {
         this.nodes =
@@ -230,25 +277,125 @@ export const DragAndDrop: Story = {
             event.targetKey,
             event.position,
           ) ?? this.nodes;
-        this.moves = [
-          `${String(event.dragKey)} → ${event.position} ${String(event.targetKey)}`,
-          ...this.moves,
-        ].slice(0, 4);
+        this.pushLog(
+          `drop (${event.via}): ${String(event.dragNode['title'])} ${event.position} ${String(event.targetNode['title'])}`,
+        );
       },
     },
     styles: STORY_STYLES,
     template: `
       <div class="panel">
+        <div class="controls">
+          <andes-switch size="sm" [(checked)]="grips">dragHandle</andes-switch>
+          <andes-switch size="sm" [(checked)]="block">blockNode</andes-switch>
+        </div>
         <andes-tree
           aria-label="Reordenar almacenes"
-          draggable
-          blockNode
+          [draggable]="canDrag"
+          [allowDrop]="canDrop"
+          [dragHandle]="grips"
+          [blockNode]="block"
           [nodes]="nodes"
           [(expandedKeys)]="expanded"
-          (nodeDrop)="recordMove($event)"
+          (nodeDragStart)="recordDrag('start', $event)"
+          (nodeDragEnter)="recordDrag('enter', $event)"
+          (nodeDragLeave)="recordDrag('leave', $event)"
+          (nodeDragEnd)="recordDrag('end', $event)"
+          (nodeDrop)="applyDrop($event)"
         />
-        <p class="caption">Alt + arrow keys moves the focused node.</p>
-        <p class="caption">{{ moves.length ? moves.join('  ·  ') : 'No moves yet' }}</p>
+        <p class="caption">Alt + arrow keys move the focused node.</p>
+        <ul class="log" aria-label="Drag events">
+          @for (line of log; track $index) { <li>{{ line }}</li> } @empty { <li>No drag yet</li> }
+        </ul>
+      </div>
+    `,
+  }),
+};
+
+/**
+ * A controlled tree: expanded, selected and checked keys all live in the story and are shown
+ * below. The checked keys start with "Zona A · Abarrotes" alone: the tree checks its aisles and
+ * half-checks "Almacén Lima", and a click writes the conducted keys back into the model.
+ * `autoExpandParent` opens the ancestors of the one expanded key ("Zona B") at first and is
+ * turned off on the first expand or collapse, so a parent can close again.
+ */
+export const Controlled: Story = {
+  render: () => ({
+    moduleMetadata: { imports: TREE_IMPORTS },
+    props: {
+      nodes: warehouses(),
+      expanded: ['lima-b'] as AndesTreeKey[],
+      selected: [] as AndesTreeKey[],
+      checked: ['lima-a'] as AndesTreeKey[],
+      autoExpand: true,
+    },
+    styles: STORY_STYLES,
+    template: `
+      <div class="panel">
+        <andes-tree
+          aria-label="Almacenes (controlado)"
+          checkable
+          [autoExpandParent]="autoExpand"
+          [nodes]="nodes"
+          [(expandedKeys)]="expanded"
+          [(selectedKeys)]="selected"
+          [(checkedKeys)]="checked"
+          (nodeExpand)="autoExpand = false"
+          #tree
+        />
+        <p class="caption">Expanded: <code>{{ expanded.join(', ') }}</code></p>
+        <p class="caption">Selected: <code>{{ selected.join(', ') || '—' }}</code></p>
+        <p class="caption">Checked: <code>{{ checked.join(', ') || '—' }}</code></p>
+        <p class="caption">Half-checked: <code>{{ tree.halfCheckedKeys().join(', ') || '—' }}</code></p>
+        <div class="controls" style="margin: 8px 0 0;">
+          <andes-button size="sm" variant="outline" (click)="expanded = []; selected = []; checked = []; autoExpand = true">Clear</andes-button>
+        </div>
+      </div>
+    `,
+  }),
+};
+
+/**
+ * Scrolling to a node deep in a long, virtual tree. Pick a product: the controlled way reads the
+ * node's path with `getNodePath()`, opens it through `expandedKeys` and then calls
+ * `scrollToKey()`; `scrollToKey()` alone also opens the closed ancestors before it scrolls.
+ */
+export const ScrollToNode: Story = {
+  name: 'Scroll to a nested node',
+  render: () => ({
+    moduleMetadata: { imports: TREE_IMPORTS },
+    props: {
+      nodes: nested(),
+      expanded: [] as AndesTreeKey[],
+      target: 'r3-w5-p41',
+      path: '',
+      targets: [
+        { value: 'r0-w2-p7', label: 'SKU 13-008 · Lima' },
+        { value: 'r3-w5-p41', label: 'SKU 46-042 · Piura' },
+        { value: 'r5-w7-p59', label: 'SKU 68-060 · Iquitos' },
+      ],
+    },
+    styles: STORY_STYLES,
+    template: `
+      <div class="panel">
+        <div class="controls">
+          <andes-select size="sm" aria-label="Node to scroll to" style="width: 200px;" [options]="targets" [(value)]="target" />
+          <andes-button
+            size="sm"
+            variant="outline"
+            (click)="path = tree.getNodePath(target).join(' › '); expanded = tree.getNodePath(target).slice(0, -1); tree.scrollToKey(target, { align: 'center', focus: true })"
+          >Open path and scroll</andes-button>
+          <andes-button size="sm" variant="outline" (click)="tree.collapseAll(); path = ''">Collapse all</andes-button>
+        </div>
+        <andes-tree
+          #tree
+          aria-label="Catálogo"
+          virtualScroll
+          [height]="280"
+          [nodes]="nodes"
+          [(expandedKeys)]="expanded"
+        />
+        <p class="caption">Path: <code>{{ path || '—' }}</code></p>
       </div>
     `,
   }),
@@ -319,15 +466,39 @@ export const EmptyAndLoading: Story = {
   }),
 };
 
-/** Arrow keys, indentation and the switcher all mirror in a right-to-left layout. */
+/**
+ * Arrow keys, indentation, connector lines, the switcher, the drag grips and the drop line all
+ * mirror in a right-to-left layout. The tree is draggable; the story applies each drop.
+ */
 export const RightToLeft: Story = {
   render: () => ({
     moduleMetadata: { imports: TREE_IMPORTS },
-    props: { nodes: warehouses() },
+    props: {
+      nodes: warehouses(),
+      applyDrop: function (
+        this: { nodes: AndesTreeNode[] },
+        event: AndesTreeDropEvent,
+      ) {
+        this.nodes =
+          andesMoveTreeNode(
+            this.nodes,
+            event.dragKey,
+            event.targetKey,
+            event.position,
+          ) ?? this.nodes;
+      },
+    },
     styles: STORY_STYLES,
     template: `
       <div class="panel" dir="rtl">
-        <andes-tree aria-label="Almacenes" showLine defaultExpandAll [nodes]="nodes" />
+        <andes-tree
+          aria-label="Almacenes"
+          showLine
+          draggable
+          defaultExpandAll
+          [nodes]="nodes"
+          (nodeDrop)="applyDrop($event)"
+        />
       </div>
     `,
   }),

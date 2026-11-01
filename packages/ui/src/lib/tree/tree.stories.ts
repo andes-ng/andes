@@ -1,12 +1,20 @@
 import { JsonPipe } from '@angular/common';
 import type { Meta, StoryObj } from '@storybook/angular';
 
+import { AndesSegmented } from '../segmented/segmented';
+import { AndesSwitch } from '../switch/switch';
 import { AndesTree } from './tree';
 import { AndesTreeNodeTemplate } from './tree-node-template';
-import type { AndesTreeNode } from './tree-types';
+import type { AndesTreeKey, AndesTreeNode } from './tree-types';
 import { andesTreeFromFlat } from './tree-utils';
 
-const TREE_IMPORTS = [JsonPipe, AndesTree, AndesTreeNodeTemplate];
+const TREE_IMPORTS = [
+  JsonPipe,
+  AndesTree,
+  AndesTreeNodeTemplate,
+  AndesSwitch,
+  AndesSegmented,
+];
 
 /** Panel and caption styles shared by the stories. */
 const STORY_STYLES = [
@@ -25,6 +33,7 @@ const STORY_STYLES = [
   }
   .caption { margin: 12px 0 0; color: var(--andes-color-muted-foreground); font-size: 0.75rem; line-height: 1.25rem; }
   .caption code { font-size: inherit; }
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 12px; }
   `,
 ];
 
@@ -157,6 +166,10 @@ const meta: Meta<AndesTree> = {
     nodeTemplate: { control: false },
     iconTemplate: { control: false },
     labels: { control: false },
+    classNames: { control: false },
+    styles: { control: false },
+    switcherIcon: { control: false },
+    showLeafIcon: { control: 'boolean' },
     density: { control: 'select', options: ['default', 'compact'] },
     expandAction: {
       control: 'select',
@@ -177,6 +190,9 @@ const meta: Meta<AndesTree> = {
     blockNode: false,
     density: 'default',
     draggable: false,
+    dragHandle: true,
+    autoExpandParent: false,
+    showLeafIcon: false,
     virtualScroll: false,
     loading: false,
   },
@@ -202,6 +218,9 @@ const meta: Meta<AndesTree> = {
           [blockNode]="blockNode"
           [density]="density"
           [draggable]="draggable"
+          [dragHandle]="dragHandle"
+          [autoExpandParent]="autoExpandParent"
+          [showLeafIcon]="showLeafIcon"
           [loading]="loading"
         />
       </div>
@@ -218,6 +237,48 @@ type Story = StoryObj<AndesTree>;
  * `defaultExpandAll` control opens every branch from the start.
  */
 export const Default: Story = {};
+
+/**
+ * The everyday tree, checkable and selectable at once: some branches start open, one node
+ * selected and two checked. "Zona B" is disabled (it still opens) and the "Cámara 2" box is
+ * locked, so neither takes part in the cascade. Below the tree, what each output reported.
+ */
+export const Basic: Story = {
+  render: () => ({
+    moduleMetadata: { imports: TREE_IMPORTS },
+    props: {
+      nodes: (() => {
+        const nodes = warehouses();
+        const lima = nodes[0].children as AndesTreeNode[];
+        lima[1] = { ...lima[1], disabled: true };
+        const camaras = lima[1].children as AndesTreeNode[];
+        camaras[1] = { ...camaras[1], disableCheckbox: true };
+        return nodes;
+      })(),
+      expanded: ['lima', 'lima-a', 'lima-b'],
+      selected: ['lima-a-2'],
+      checked: ['lima-a-1', 'lima-a-3'],
+      lastEvent: 'Nothing yet',
+    },
+    styles: STORY_STYLES,
+    template: `
+      <div class="panel">
+        <andes-tree
+          aria-label="Almacenes"
+          checkable
+          [nodes]="nodes"
+          [(expandedKeys)]="expanded"
+          [(selectedKeys)]="selected"
+          [(checkedKeys)]="checked"
+          (nodeSelect)="lastEvent = ($event.selected ? 'Selected ' : 'Deselected ') + $event.node.title"
+          (nodeCheck)="lastEvent = ($event.checked ? 'Checked ' : 'Unchecked ') + $event.node.title"
+        />
+        <p class="caption">{{ lastEvent }}</p>
+        <p class="caption">Selected: <code>{{ selected | json }}</code> · checked: <code>{{ checked | json }}</code></p>
+      </div>
+    `,
+  }),
+};
 
 /**
  * Selection. In the single tree a click selects a node and a second click clears it; in the
@@ -356,7 +417,8 @@ export const Appearance: Story = {
 
 /**
  * `showIcon` draws a folder or a file for nodes that have no icon of their own. A node can bring
- * a glyph in its `icon`, and a tree-wide `iconTemplate` replaces them all.
+ * a glyph in its `icon`. The second tree gives every node one `iconTemplate`, which gets the node
+ * context: its pin fills in while the node is selected.
  */
 export const Icons: Story = {
   render: () => ({
@@ -380,11 +442,36 @@ export const Icons: Story = {
         },
       ] satisfies AndesTreeNode[],
       expanded: ['a', 'c'],
+      placeNodes: warehouses().slice(0, 3),
+      placeExpanded: ['lima'],
+      placeSelected: ['lima-b'],
     },
     styles: STORY_STYLES,
     template: `
-      <div class="panel">
-        <andes-tree aria-label="Iconos" showIcon [nodes]="nodes" [(expandedKeys)]="expanded" />
+      <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start;">
+        <div class="panel" style="width: 300px;">
+          <andes-tree aria-label="Iconos" showIcon [nodes]="nodes" [(expandedKeys)]="expanded" />
+        </div>
+        <div class="panel" style="width: 300px;">
+          <ng-template #pin let-selected="selected">
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+              <path
+                d="M8 14.5s4.5-4.2 4.5-7.75a4.5 4.5 0 0 0-9 0C3.5 10.3 8 14.5 8 14.5Z"
+                stroke="currentColor"
+                stroke-linejoin="round"
+                [attr.fill]="selected ? 'currentColor' : 'none'"
+              />
+            </svg>
+          </ng-template>
+          <andes-tree
+            aria-label="Ubicaciones con icono propio"
+            showIcon
+            [iconTemplate]="pin"
+            [nodes]="placeNodes"
+            [(expandedKeys)]="placeExpanded"
+            [(selectedKeys)]="placeSelected"
+          />
+        </div>
       </div>
     `,
   }),
@@ -499,6 +586,143 @@ export const DataAndContent: Story = {
           </ng-template>
           <andes-tree aria-label="Ubicaciones" [nodes]="flatNodes" [(expandedKeys)]="flatExpanded" [switcherIcon]="plus" />
         </div>
+      </div>
+    `,
+  }),
+};
+
+/**
+ * Connector lines. Every guide runs unbroken from row to row, the open box's stem leads straight
+ * into its children's elbows, and each tick reaches the box of a parent or the label of a leaf.
+ * `showLeafIcon` puts a file (or a template of your own) in each leaf's switcher instead, and
+ * the leaf's tick stops at it. The switches and the segmented control drive the tree.
+ */
+export const Lines: Story = {
+  render: () => ({
+    moduleMetadata: { imports: TREE_IMPORTS },
+    props: {
+      nodes: warehouses(),
+      expanded: ['lima', 'lima-a', 'lima-b', 'arequipa'],
+      selected: ['lima-a-2'],
+      showLine: true,
+      showIcon: false,
+      leafIcon: 'off',
+      leafIconOptions: [
+        { label: 'No leaf icon', value: 'off' },
+        { label: 'File', value: 'file' },
+        { label: 'Custom', value: 'custom' },
+      ],
+    },
+    styles: STORY_STYLES,
+    template: `
+      <div class="panel">
+        <div class="controls">
+          <andes-switch size="sm" [(checked)]="showLine">showLine</andes-switch>
+          <andes-switch size="sm" [(checked)]="showIcon">showIcon</andes-switch>
+          <andes-segmented
+            size="sm"
+            aria-label="showLeafIcon"
+            [options]="leafIconOptions"
+            [(value)]="leafIcon"
+          />
+        </div>
+        <ng-template #dot>
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+            <circle cx="7" cy="7" r="2.5" fill="currentColor" />
+          </svg>
+        </ng-template>
+        <andes-tree
+          aria-label="Almacenes con líneas"
+          [showLine]="showLine"
+          [showIcon]="showIcon"
+          [showLeafIcon]="leafIcon === 'custom' ? dot : leafIcon === 'file'"
+          [nodes]="nodes"
+          [(expandedKeys)]="expanded"
+          [(selectedKeys)]="selected"
+        />
+      </div>
+    `,
+  }),
+};
+
+/**
+ * A directory tree is a file browser: folder and file icons, a row that highlights as one bar
+ * across the full width on hover, a solid selected row, and a folder opens on click (or on
+ * double click, chosen below). It is `multiple` here: a click selects one file, Ctrl / Cmd +
+ * click adds or removes one, Shift + click selects a range; Ctrl / Cmd + Space from the keyboard.
+ */
+export const Directory: Story = {
+  render: () => ({
+    moduleMetadata: { imports: TREE_IMPORTS },
+    props: {
+      nodes: files(),
+      expanded: ['reportes'],
+      selected: ['r-2026'] as AndesTreeKey[],
+      expandAction: 'click',
+      actions: [
+        { label: 'Open on click', value: 'click' },
+        { label: 'Open on double click', value: 'doubleClick' },
+      ],
+    },
+    styles: STORY_STYLES,
+    template: `
+      <div class="panel">
+        <div class="controls">
+          <andes-segmented size="sm" aria-label="expandAction" [options]="actions" [(value)]="expandAction" />
+        </div>
+        <andes-tree
+          aria-label="Archivos"
+          directory
+          multiple
+          [expandAction]="expandAction"
+          [nodes]="nodes"
+          [(expandedKeys)]="expanded"
+          [(selectedKeys)]="selected"
+        />
+        <p class="caption">Selected: <code>{{ selected | json }}</code></p>
+      </div>
+    `,
+  }),
+};
+
+/**
+ * Restyling one part. `styles` sets inline styles on the tree (`root`), every row (`item`),
+ * its icon (`itemIcon`) and its title (`itemTitle`); `classNames` adds classes to the same
+ * parts, styled here from the story's stylesheet with `::ng-deep` because the parts live in the
+ * tree's own view.
+ */
+export const PartStyles: Story = {
+  name: 'Part classes and styles',
+  render: () => ({
+    moduleMetadata: { imports: TREE_IMPORTS },
+    props: {
+      nodes: warehouses(),
+      expanded: ['lima', 'lima-a'],
+      partStyles: {
+        root: {
+          padding: '4px',
+          'border-radius': '8px',
+          background: 'var(--andes-color-muted)',
+        },
+        itemIcon: { color: 'var(--andes-color-primary)' },
+      },
+      partClasses: { item: 'story-row', itemTitle: 'story-title' },
+    },
+    styles: [
+      ...STORY_STYLES,
+      `::ng-deep .story-title { font-weight: 500; letter-spacing: 0.01em; }
+       ::ng-deep .story-row[data-selected] .story-title { text-decoration: underline; text-underline-offset: 3px; }`,
+    ],
+    template: `
+      <div class="panel">
+        <andes-tree
+          aria-label="Almacenes con estilos propios"
+          showIcon
+          [styles]="partStyles"
+          [classNames]="partClasses"
+          [nodes]="nodes"
+          [(expandedKeys)]="expanded"
+        />
       </div>
     `,
   }),

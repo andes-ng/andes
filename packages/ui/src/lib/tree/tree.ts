@@ -1491,7 +1491,8 @@ export class AndesTree {
 
     let target = row.entry;
     let resolved = position;
-    let level = row.level;
+    // A node dropped inside becomes a child: the line is drawn one step in.
+    let level = position === 'inside' ? row.level + 1 : row.level;
     if (
       position === 'after' &&
       row.hasChildren &&

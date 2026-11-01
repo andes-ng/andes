@@ -515,15 +515,29 @@
   opacity: 0.5;
 }
 
+/*
+  Drop indicator: a 2px line with a ring at its start, drawn in the 4px gap between rows so it
+  never covers a title. It starts 4px into the content of the level the node would land on:
+  the target's own level before or after it, one step in when dropped inside, where the target
+  also takes a soft primary fill.
+*/
 .andes-tree__row[data-drop='inside'] .andes-tree__content {
-  outline: 2px solid var(--andes-color-primary, #2563eb);
-  outline-offset: -2px;
+  background-color: color-mix(
+    in srgb,
+    var(--andes-color-primary, #2563eb) 12%,
+    transparent
+  );
 }
 
 .andes-tree__drop-indicator {
+  /* Where the content of the landing level starts: grip, indent steps, switcher, its gap. */
+  --_content-start: calc(
+    var(--_lead) + var(--_drop-level, 1) * var(--_indent) + var(--_switcher-gap)
+  );
+
   position: absolute;
   z-index: 2;
-  inset-inline: calc(var(--_lead) + var(--_drop-level, 1) * var(--_indent)) 0;
+  inset-inline: calc(var(--_content-start) + 0.25rem) 0;
   height: 2px;
   border-radius: 1px;
   background-color: var(--andes-color-primary, #2563eb);
@@ -534,7 +548,7 @@
   content: '';
   position: absolute;
   top: -3px;
-  inset-inline-start: -4px;
+  inset-inline-start: -0.375rem;
   box-sizing: border-box;
   width: 8px;
   height: 8px;
@@ -543,12 +557,15 @@
   background-color: var(--andes-color-background, #fff);
 }
 
+/* Centred in the gap above the row (the previous row's), or in the row's own gap below. */
 .andes-tree__drop-indicator[data-position='before'] {
-  top: -1px;
+  top: calc(var(--_gap) / -2 - 1px);
 }
 
-.andes-tree__drop-indicator[data-position='after'] {
-  bottom: calc(var(--_gap) - 1px);
+/* prettier-ignore */
+.andes-tree__drop-indicator[data-position='after'],
+.andes-tree__drop-indicator[data-position='inside'] {
+  top: calc(var(--_title-height) + var(--_gap) / 2 - 1px);
 }
 
 /* Empty and loading states, and the screen-reader announcements. */
@@ -600,6 +617,21 @@
 @media (forced-colors: active) {
   .andes-tree__row[data-selected] .andes-tree__content {
     outline: 1px solid Highlight;
+  }
+
+  .andes-tree__drop-indicator {
+    forced-color-adjust: none;
+    background-color: Highlight;
+  }
+
+  .andes-tree__drop-indicator::before {
+    border-color: Highlight;
+    background-color: Canvas;
+  }
+
+  .andes-tree__row[data-drop='inside'] .andes-tree__content {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
   }
 
   .andes-tree__checkbox[data-state='checked'],

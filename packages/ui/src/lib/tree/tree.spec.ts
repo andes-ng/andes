@@ -1689,7 +1689,109 @@ describe('AndesTree', () => {
       ).toBe('after');
       ({ target } = drag(fixture, 'Archivo', 'Sucursal norte', 50));
       expect(target.getAttribute('data-drop')).toBe('inside');
-      expect(target.querySelector('.andes-tree__drop-indicator')).toBeNull();
+      const inside = target.querySelector(
+        '.andes-tree__drop-indicator',
+      ) as HTMLElement;
+      expect(inside.getAttribute('data-position')).toBe('inside');
+      // Dropped inside, the node becomes a child: the line is one level in.
+      expect(inside.style.getPropertyValue('--_drop-level')).toBe('2');
+    });
+
+    it('draws the line at the level the node would land on', () => {
+      const fixture = setup((h) => {
+        h.draggable.set(true);
+        h.expanded.set(['b']);
+      });
+      const level = (target: HTMLElement) =>
+        (
+          target.querySelector('.andes-tree__drop-indicator') as HTMLElement
+        ).style.getPropertyValue('--_drop-level');
+      expect(level(drag(fixture, 'Archivo', 'Sucursal norte', 10).target)).toBe(
+        '1',
+      );
+      // After an open parent means before its first child, a level in.
+      expect(level(drag(fixture, 'Archivo', 'Sucursal norte', 90).target)).toBe(
+        '2',
+      );
+      expect(level(drag(fixture, 'Archivo', 'Caja', 90).target)).toBe('2');
+    });
+
+    it('places the line in the gaps between rows, 4px into the landing content', () => {
+      const css = cssText();
+      const indicator = '.andes-tree__drop-indicator';
+      const content = declaredValue(
+        css,
+        indicator,
+        '--_content-start',
+      ) as string;
+      const at = (level: number, lead = '0rem') =>
+        treeLength(
+          css,
+          content
+            .replace('var(--_drop-level, 1)', String(level))
+            .replace('var(--_lead)', lead),
+        );
+      // A root node's content starts after its switcher and the switcher's gap: 28px.
+      expect(at(1)).toBe(24 + 4);
+      expect(at(2)).toBe(24 + 24 + 4);
+      // A draggable tree's grip column pushes everything 24px further.
+      expect(at(1, 'var(--_indent)')).toBe(24 + 24 + 4);
+      expect(declaredValue(css, indicator, 'inset-inline')).toBe(
+        'calc(var(--_content-start) + 0.25rem) 0',
+      );
+      // 2px tall: centred in the 4px gap above (-3px) or below (25px) the 24px title.
+      expect(declaredValue(css, indicator, 'height')).toBe('2px');
+      expect(
+        treeLength(
+          css,
+          declaredValue(
+            css,
+            `${indicator}[data-position='before']`,
+            'top',
+          ) as string,
+        ),
+      ).toBe(-3);
+      expect(
+        treeLength(
+          css,
+          declaredValue(
+            css,
+            `${indicator}[data-position='after']`,
+            'top',
+          ) as string,
+        ),
+      ).toBe(25);
+      expect(
+        declaredValue(css, `${indicator}[data-position='inside']`, 'top'),
+      ).toBe(declaredValue(css, `${indicator}[data-position='after']`, 'top'));
+      // An 8px ring with a 2px edge opens the line.
+      expect(declaredValue(css, `${indicator}::before`, 'width')).toBe('8px');
+      expect(declaredValue(css, `${indicator}::before`, 'border')).toBe(
+        '2px solid var(--andes-color-primary, #2563eb)',
+      );
+      expect(
+        declaredValue(css, `${indicator}::before`, 'inset-inline-start'),
+      ).toBe('-0.375rem');
+    });
+
+    it('tints the node a drop would go into, and outlines it in forced colours', () => {
+      const css = cssText();
+      expect(
+        declaredValue(
+          css,
+          ".andes-tree__row[data-drop='inside'] .andes-tree__content",
+          'background-color',
+        ),
+      ).toBe(
+        'color-mix( in srgb, var(--andes-color-primary, #2563eb) 12%, transparent )',
+      );
+      const forced = css.slice(css.indexOf('@media (forced-colors: active)'));
+      expect(forced).toMatch(
+        /\.andes-tree__drop-indicator\s*{[^}]*background-color: Highlight/,
+      );
+      expect(forced).toMatch(
+        /\[data-drop='inside'\] \.andes-tree__content\s*{[^}]*outline: 2px solid Highlight/,
+      );
     });
 
     it('reports a drop without touching the nodes, and stays quiet until they carry it', () => {

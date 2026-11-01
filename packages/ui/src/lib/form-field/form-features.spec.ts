@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, viewChild } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import {
   type AbstractControl,
@@ -126,6 +126,43 @@ class LabelClickHost {
   readonly accept = new FormControl(false);
 }
 
+@Component({
+  selector: 'andes-test-imperative-host',
+  imports: [ReactiveFormsModule, AndesForm, AndesFormField, AndesFormControl],
+  template: `<form
+      andesForm
+      #f="andesForm"
+      [formGroup]="group"
+      scrollToFirstError
+      (ngSubmit)="submits = submits + 1"
+      (validSubmit)="valid.push($event)"
+      (invalidSubmit)="invalid = invalid + 1"
+      (valuesChange)="values.push($event)"
+      (formReset)="resets = resets + 1"
+    >
+      <andes-form-field label="Secret" hidden>
+        <input andesFormControl formControlName="secret" />
+      </andes-form-field>
+      <andes-form-field label="Name">
+        <input andesFormControl formControlName="name" />
+      </andes-form-field>
+      <button type="reset">Clear</button>
+    </form>
+    <button type="button" (click)="f.submit()">Save from outside</button>`,
+})
+class ImperativeHost {
+  readonly form = viewChild.required<AndesForm>('f');
+  submits = 0;
+  invalid = 0;
+  resets = 0;
+  readonly valid: unknown[] = [];
+  readonly values: unknown[] = [];
+  readonly group = new FormGroup({
+    secret: new FormControl('', Validators.required),
+    name: new FormControl('', Validators.required),
+  });
+}
+
 const helpOf = (el: HTMLElement, index: number): string[] =>
   Array.from(
     el
@@ -218,6 +255,64 @@ describe('AndesForm - field features', () => {
       acceptLabel.click();
 
       expect(fixture.componentInstance.accept.value).toBe(true);
+    });
+  });
+
+  describe('submit(), reset() and their outputs', () => {
+    it('submits from outside the form, and skips a hidden invalid field when focusing', async () => {
+      const fixture = TestBed.createComponent(ImperativeHost);
+      await settle(fixture);
+      const outside = fixture.nativeElement.querySelector(
+        'form + button',
+      ) as HTMLButtonElement;
+
+      outside.click();
+      await settle(fixture);
+      await settle(fixture);
+
+      expect(fixture.componentInstance.submits).toBe(1);
+      expect(fixture.componentInstance.invalid).toBe(1);
+      expect(document.activeElement).toBe(
+        fixture.nativeElement.querySelectorAll('input')[1],
+      );
+    });
+
+    it('emits every value change, and resets values, state and errors with reset()', async () => {
+      const fixture = TestBed.createComponent(ImperativeHost);
+      await settle(fixture);
+      const host = fixture.componentInstance;
+      const name = fixture.nativeElement.querySelectorAll('input')[1];
+
+      type(name, 'Ada');
+      await settle(fixture);
+
+      expect(host.values.at(-1)).toEqual({ secret: '', name: 'Ada' });
+
+      host.form().submit();
+      await settle(fixture);
+      host.form().reset({ secret: 'x', name: '' });
+      await settle(fixture);
+
+      expect(host.resets).toBe(1);
+      expect(host.group.value).toEqual({ secret: 'x', name: '' });
+      expect(host.form().submitted()).toBe(false);
+      expect(
+        fixture.nativeElement.querySelector('.andes-form-field--invalid'),
+      ).toBeNull();
+    });
+
+    it('reports a reset button too', async () => {
+      const fixture = TestBed.createComponent(ImperativeHost);
+      await settle(fixture);
+
+      (
+        fixture.nativeElement.querySelector(
+          'button[type=reset]',
+        ) as HTMLButtonElement
+      ).click();
+      await settle(fixture);
+
+      expect(fixture.componentInstance.resets).toBe(1);
     });
   });
 });

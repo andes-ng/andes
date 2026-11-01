@@ -228,6 +228,16 @@ export class AndesForm implements AndesFormApi {
    *  after any pending async validators settle. */
   readonly invalidSubmit = output<AndesFormInvalidSubmit>();
 
+  /** Emits the form's whole value each time it changes - typed by the user or set from code.
+   *  Needs an Angular form on the same element. */
+  // The value's shape is the consumer's own form model.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  readonly valuesChange = output<any>();
+
+  /** Emits after the form is reset - by {@link reset}, a `type="reset"` button or the Angular
+   *  form directive's `resetForm()`. */
+  readonly formReset = output<void>();
+
   /** Whether the form was submitted and not reset since - the Angular form directive's
    *  `submitted` when there is one, as a signal. */
   readonly submitted = computed(() => {
@@ -271,6 +281,9 @@ export class AndesForm implements AndesFormApi {
               queueMicrotask(() => this.submitTick.update((n) => n + 1));
             }
           });
+        formDirective.form.valueChanges
+          .pipe(takeUntilDestroyed(destroyRef))
+          .subscribe((value) => this.valuesChange.emit(value));
       },
       { injector: this.injector },
     );
@@ -325,6 +338,40 @@ export class AndesForm implements AndesFormApi {
     if (!this.formDirective) {
       this.ownSubmitted.set(false);
     }
+    // The Angular form directive resets itself on the same event; report it once it has.
+    queueMicrotask(() => this.formReset.emit());
+  }
+
+  /**
+   * Submits the form as its submit button would - from a dialog footer, a keyboard shortcut,
+   * anywhere outside the `<form>` - running the same `ngSubmit`, `validSubmit` /
+   * `invalidSubmit` and `scrollToFirstError` path.
+   */
+  submit(): void {
+    const form = this.element as HTMLFormElement;
+    if (typeof form.requestSubmit === 'function') {
+      form.requestSubmit();
+    } else {
+      this.element.dispatchEvent(
+        new Event('submit', { bubbles: true, cancelable: true }),
+      );
+    }
+  }
+
+  /**
+   * Resets the form: values (to `value`, or each control's initial value), touched, dirty and
+   * submitted, so no error stays on screen - `resetForm()` of the Angular form directive.
+   * Emits {@link formReset}.
+   */
+  // The value's shape is the consumer's own form model.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  reset(value?: any): void {
+    if (this.formDirective) {
+      this.formDirective.resetForm(value);
+    } else {
+      this.ownSubmitted.set(false);
+    }
+    this.formReset.emit();
   }
 
   private scheduleScroll(): void {
@@ -342,9 +389,17 @@ export class AndesForm implements AndesFormApi {
    *  was found. Public so it can also be called after a programmatic (non-submit) check. */
   focusFirstError(options?: AndesFormScrollOptions): boolean {
     return this.reveal(
-      this.element.querySelector<HTMLElement>('.andes-form-field--invalid'),
+      this.visibleFields('.andes-form-field--invalid')[0] ?? null,
       options,
     );
+  }
+
+  /** Fields matching `selector` that are on screen: a `hidden` field keeps validating, but
+   *  there is nothing to scroll to or focus in it. */
+  private visibleFields(selector: string): HTMLElement[] {
+    return Array.from(
+      this.element.querySelectorAll<HTMLElement>(selector),
+    ).filter((field) => !field.closest('[hidden]'));
   }
 
   /**
@@ -357,11 +412,9 @@ export class AndesForm implements AndesFormApi {
     options?: AndesFormScrollOptions,
   ): boolean {
     const key = typeof path === 'string' ? path : path.join('.');
-    const field = Array.from(
-      this.element.querySelectorAll<HTMLElement>(
-        '.andes-form-field[data-path]',
-      ),
-    ).find((candidate) => candidate.dataset['path'] === key);
+    const field = this.visibleFields('.andes-form-field[data-path]').find(
+      (candidate) => candidate.dataset['path'] === key,
+    );
     return this.reveal(field ?? null, options);
   }
 

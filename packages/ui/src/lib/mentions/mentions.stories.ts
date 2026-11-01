@@ -1,9 +1,16 @@
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import type { Meta, StoryObj } from '@storybook/angular';
 
+import { AndesAvatar, AndesAvatarFallback } from '../avatar';
+import { AndesButton } from '../button/button';
 import { AndesMentions, type AndesMentionsSearchEvent } from './mentions';
-import type { AndesMentionOption } from './mentions-context';
+import {
+  andesMentionsGetMentions,
+  type AndesMentionOption,
+} from './mentions-context';
 
 const PEOPLE: AndesMentionOption[] = [
   { value: 'ana.torres', label: 'Ana Torres', data: 'Finance' },
@@ -75,7 +82,7 @@ class StoryAsyncMentions {
 
 @Component({
   selector: 'andes-story-reactive-mentions',
-  imports: [AndesMentions, ReactiveFormsModule],
+  imports: [AndesMentions, AndesButton, ReactiveFormsModule],
   template: `
     <div style="width: 26rem;">
       <label
@@ -90,19 +97,19 @@ class StoryAsyncMentions {
         [maxLength]="120"
         [showCount]="true"
         [status]="comment.invalid && comment.touched ? 'error' : undefined"
-        placeholder="Required. Mention a colleague with @"
+        placeholder="Required. Mention at least two colleagues with @"
       />
       <p style="${CAPTION}">
-        Value: {{ comment.value || '(empty)' }} &middot;
+        Mentions: {{ mentioned().join(', ') || '(none)' }} &middot;
         {{ comment.valid ? 'valid' : 'invalid' }}
       </p>
-      <button
-        type="button"
-        (click)="comment.reset('')"
-        style="font: inherit; padding: 0.125rem 0.5rem;"
+      <andes-button
+        size="sm"
+        variant="outline"
+        (click)="comment.reset(''); comment.markAsUntouched()"
       >
         Reset
-      </button>
+      </andes-button>
     </div>
   `,
 })
@@ -110,8 +117,74 @@ class StoryReactiveMentions {
   protected readonly people = PEOPLE;
   protected readonly comment = new FormControl('', {
     nonNullable: true,
-    validators: [Validators.required],
+    validators: [
+      Validators.required,
+      (control) =>
+        andesMentionsGetMentions(control.value).length >= 2
+          ? null
+          : { mentions: true },
+    ],
   });
+  private readonly value = toSignal(this.comment.valueChanges, {
+    initialValue: this.comment.value,
+  });
+  protected readonly mentioned = computed(() =>
+    andesMentionsGetMentions(this.value()).map((mention) => mention.value),
+  );
+}
+
+/** Pretends to load more rows when the list is scrolled to its end. */
+@Component({
+  selector: 'andes-story-popup-mentions',
+  imports: [AndesMentions, AndesButton, NgTemplateOutlet],
+  template: `
+    <div style="width: 26rem;">
+      <andes-mentions
+        [options]="people"
+        [popupTemplate]="popup"
+        placeholder="Type @ - the list has a header and a footer"
+        aria-label="Comment"
+        (popupScroll)="scrolled.set(scrolled() + 1)"
+        (optionSelected)="
+          picked.set($event.option.label ?? $event.option.value)
+        "
+      />
+      <p style="${CAPTION}">
+        Scroll events: {{ scrolled() }} &middot; last pick:
+        {{ picked() || '(none)' }}
+      </p>
+      <ng-template #popup let-body let-query="query">
+        <div
+          style="padding: 0.25rem 0.75rem; font-family: var(--andes-font-family), sans-serif; font-size: 0.75rem; color: var(--andes-color-muted-foreground);"
+        >
+          People matching "{{ query }}"
+        </div>
+        <ng-container *ngTemplateOutlet="body" />
+        <div
+          style="border-top: 1px solid var(--andes-color-border); padding-top: 0.25rem;"
+        >
+          <andes-button
+            size="sm"
+            variant="ghost"
+            (click)="invited.set(invited() + 1)"
+          >
+            Invite someone new ({{ invited() }})
+          </andes-button>
+        </div>
+      </ng-template>
+    </div>
+  `,
+})
+class StoryPopupMentions {
+  protected readonly people = [
+    ...PEOPLE,
+    { value: 'diego.luna', label: 'Diego Luna' },
+    { value: 'elena.rios', label: 'Elena Rios' },
+    { value: 'felipe.mora', label: 'Felipe Mora' },
+  ];
+  protected readonly scrolled = signal(0);
+  protected readonly picked = signal('');
+  protected readonly invited = signal(0);
 }
 
 const meta: Meta<AndesMentions> = {
@@ -141,6 +214,11 @@ const meta: Meta<AndesMentions> = {
     readonly: { control: 'boolean' },
     loading: { control: 'boolean' },
     showCount: { control: 'boolean' },
+    allowClear: { control: 'boolean' },
+    resize: {
+      control: 'inline-radio',
+      options: ['none', 'vertical', 'horizontal', 'both'],
+    },
     maxLength: { control: 'number' },
     rows: { control: 'number' },
     autoSize: { control: 'boolean' },
@@ -159,6 +237,8 @@ const meta: Meta<AndesMentions> = {
     readonly: false,
     loading: false,
     showCount: false,
+    allowClear: false,
+    resize: 'none',
     maxLength: undefined,
     rows: 3,
     autoSize: false,
@@ -182,6 +262,8 @@ const meta: Meta<AndesMentions> = {
           [readonly]="readonly"
           [loading]="loading"
           [showCount]="showCount"
+          [allowClear]="allowClear"
+          [resize]="resize"
           [maxLength]="maxLength"
           [rows]="rows"
           [autoSize]="autoSize"
@@ -200,6 +282,68 @@ type Story = StoryObj<AndesMentions>;
 
 /** Type `@` and a few letters of a name. */
 export const Default: Story = {};
+
+/** An initial text: the field opens with a mention already in it, and still suggests. */
+export const DefaultValue: Story = {
+  render: () => ({
+    props: { people: PEOPLE },
+    template: `
+      <div style="width: 26rem; padding-bottom: 14rem;">
+        <andes-mentions [options]="people" value="@ana.torres " aria-label="Comment" />
+      </div>
+    `,
+  }),
+};
+
+/**
+ * `allowClear` adds a button that empties the field while it holds text; `clearIcon` swaps
+ * the round "x" for your own. `(cleared)` fires when it is used.
+ */
+export const Clearable: Story = {
+  render: () => ({
+    props: { people: PEOPLE },
+    template: `
+      <div style="display: flex; flex-direction: column; gap: 1rem; width: 26rem; padding-bottom: 12rem;">
+        <andes-mentions allowClear [options]="people" value="Thanks @ana.torres" aria-label="Comment" />
+        <andes-mentions allowClear type="input" [options]="people" value="Single line @maria.soto" aria-label="Reply" />
+        <andes-mentions allowClear [clearIcon]="icon" [rows]="2" [options]="people" value="With a custom icon" aria-label="Note" />
+        <ng-template #icon>
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path d="M3 3l10 10M13 3L3 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </ng-template>
+      </div>
+    `,
+  }),
+};
+
+/**
+ * `resize` lets the user drag the field's corner (vertical, horizontal or both); the list
+ * keeps following the mention while it grows. `autoSize` takes over the height instead, and
+ * `(resized)` reports the box either way.
+ */
+export const Resizable: Story = {
+  render: () => ({
+    props: { people: PEOPLE, size: { width: 0, height: 0 } },
+    template: `
+      <div style="width: 26rem; padding-bottom: 14rem;">
+        <andes-mentions resize="vertical" [rows]="2" [options]="people" placeholder="Drag the corner, then type @" aria-label="Comment" (resized)="size = $event" />
+        <p style="${CAPTION}">Box: {{ size.width }} x {{ size.height }}</p>
+      </div>
+    `,
+  }),
+};
+
+/**
+ * A list with a header and a footer action around the options (`popupTemplate`), and
+ * `(popupScroll)` for loading more rows as the list is scrolled.
+ */
+export const CustomPopup: Story = {
+  render: () => ({
+    moduleMetadata: { imports: [StoryPopupMentions] },
+    template: `<div style="padding-bottom: 16rem;"><andes-story-popup-mentions /></div>`,
+  }),
+};
 
 /**
  * Field types and limits: `type="input"` gives a single line instead of a text area; a
@@ -253,16 +397,17 @@ export const AsyncSearch: Story = {
   }),
 };
 
-/** A custom row: initials, name and team, with the typed text in the template context. */
+/** A custom row: an avatar, the name and the team, with the typed text in the context. */
 export const CustomOption: Story = {
   render: () => ({
+    moduleMetadata: { imports: [AndesAvatar, AndesAvatarFallback] },
     props: { people: PEOPLE },
     template: `
       <div style="width: 26rem; padding-bottom: 14rem;">
         <andes-mentions [options]="people" [optionTemplate]="row" aria-label="Comment" placeholder="Type @" />
         <ng-template #row let-option>
           <span style="display: flex; flex: 1; align-items: center; gap: 0.5rem;">
-            <span style="display: inline-flex; width: 1.5rem; height: 1.5rem; align-items: center; justify-content: center; border-radius: 9999px; background: var(--andes-color-muted); font-size: 0.75rem; font-weight: 600;" aria-hidden="true">{{ option.label.charAt(0) }}</span>
+            <andes-avatar size="xs"><andes-avatar-fallback>{{ option.label.charAt(0) }}</andes-avatar-fallback></andes-avatar>
             <span style="flex: 1;">{{ option.label }}</span>
             <span style="font-size: 0.75rem; color: var(--andes-color-muted-foreground);">{{ option.data }}</span>
           </span>
@@ -327,7 +472,10 @@ export const TopPlacement: Story = {
   }),
 };
 
-/** With reactive forms: `formControl`, validation and a counter. */
+/**
+ * With reactive forms: `formControl`, validation and a counter. The validator reads the
+ * mentions back with `andesMentionsGetMentions`: at least two are required.
+ */
 export const WithForms: Story = {
   render: () => ({
     moduleMetadata: { imports: [StoryReactiveMentions] },

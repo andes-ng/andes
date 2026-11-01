@@ -16,6 +16,7 @@
 */
 .andes-cascader__trigger {
   --_padding-x: var(--andes-control-padding-x-md, 0.6875rem);
+  --_tag-inset: 0.25rem;
   --_ring: color-mix(in srgb, var(--andes-color-primary) 20%, transparent);
 
   position: relative;
@@ -162,6 +163,7 @@
    can wrap onto more rows. */
 .andes-cascader__trigger[data-size='sm'] {
   --_padding-x: var(--andes-control-padding-x-sm, 0.4375rem);
+  --_tag-inset: 0.1875rem;
 
   min-height: var(--andes-control-height-sm, 1.5rem);
   border-radius: var(--andes-control-radius-sm, 0.25rem);
@@ -182,15 +184,17 @@
   line-height: 1.5rem;
 }
 
-/* Multiple: the tags sit 3px inside the border, top, bottom and start, so a tag is the
-   control height minus 8px (16/24/32px) and one row of tags keeps the box at its
-   single-line height. Wrapped rows are 4px apart. */
+/* Multiple: the select's tag geometry, so a multiple cascader lines up beside a multiple
+   select. At the medium and large sizes the tags sit 4px inside the border (5px with it),
+   top, bottom and start, so a tag is the control height minus 10px (22/30px); the 24px small
+   box keeps 3px and 16px tags. One row of tags keeps the box at its single-line height.
+   Neighbouring tags are 6px apart and wrapped rows 4px. */
 .andes-cascader__trigger[data-multiple] {
-  padding-block: 0.1875rem;
-  padding-inline-start: 0.1875rem;
+  padding-block: var(--_tag-inset);
+  padding-inline-start: var(--_tag-inset);
 }
 
-/* Content in front of the selection. In a multiple box the tags sit 3px from the border, so
+/* Content in front of the selection. In a multiple box the tags sit close to the border, so
    the prefix is pushed in to the size's padding. */
 .andes-cascader__prefix {
   display: inline-flex;
@@ -200,7 +204,7 @@
 }
 
 .andes-cascader__trigger[data-multiple] .andes-cascader__prefix {
-  margin-inline-start: calc(var(--_padding-x) - 0.1875rem);
+  margin-inline-start: calc(var(--_padding-x) - var(--_tag-inset));
 }
 
 .andes-cascader__selection {
@@ -214,12 +218,13 @@
 
 .andes-cascader__trigger[data-multiple] .andes-cascader__selection {
   flex-wrap: wrap;
+  column-gap: 0.375rem;
 }
 
 /* With no tags the placeholder (or the empty input) starts at the size's padding. */
 .andes-cascader__trigger[data-multiple][data-placeholder]
   .andes-cascader__selection {
-  padding-inline-start: calc(var(--_padding-x) - 0.1875rem);
+  padding-inline-start: calc(var(--_padding-x) - var(--_tag-inset));
 }
 
 /* The combobox, button or input, carries no chrome of its own: the box draws it. */
@@ -309,13 +314,13 @@ button.andes-cascader__combobox {
   color: var(--andes-color-muted-foreground);
 }
 
-/* Tags: the control height minus 8px, the box's own font size, 8px before the label and 4px
+/* Tags: the control height minus 10px, the box's own font size, 8px before the label and 4px
    after the remove icon. */
 .andes-cascader__tag {
   display: inline-flex;
   max-width: 100%;
   box-sizing: border-box;
-  height: calc(var(--andes-control-height-md, 2rem) - 0.5rem);
+  height: calc(var(--andes-control-height-md, 2rem) - 0.625rem);
   align-items: center;
   gap: var(--andes-space-1);
   padding-inline: var(--andes-space-2) var(--andes-space-1);
@@ -324,7 +329,7 @@ button.andes-cascader__combobox {
   background-color: var(--andes-color-muted);
   color: var(--andes-color-foreground);
   font-size: inherit;
-  line-height: calc(var(--andes-control-height-md, 2rem) - 0.625rem);
+  line-height: calc(var(--andes-control-height-md, 2rem) - 0.75rem);
   cursor: default;
 }
 
@@ -346,9 +351,9 @@ button.andes-cascader__combobox {
 }
 
 .andes-cascader__trigger[data-size='lg'] .andes-cascader__tag {
-  height: calc(var(--andes-control-height-lg, 2.5rem) - 0.5rem);
+  height: calc(var(--andes-control-height-lg, 2.5rem) - 0.625rem);
   border-radius: var(--andes-control-radius-md, 0.375rem);
-  line-height: calc(var(--andes-control-height-lg, 2.5rem) - 0.625rem);
+  line-height: calc(var(--andes-control-height-lg, 2.5rem) - 0.75rem);
 }
 
 /* The filled box is tinted with the tag's own colour, so its tags take the plain background

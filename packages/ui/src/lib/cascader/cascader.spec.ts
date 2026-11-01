@@ -1915,6 +1915,36 @@ describe('AndesCascader', () => {
       );
     });
 
+    it('sizes and spaces the tags as the select does', () => {
+      expect(declaredValue(source, '.andes-cascader__tag', 'height')).toBe(
+        'calc(var(--andes-control-height-md, 2rem) - 0.625rem)',
+      );
+      expect(
+        declaredValue(
+          source,
+          ".andes-cascader__trigger[data-size='lg'] .andes-cascader__tag",
+          'height',
+        ),
+      ).toBe('calc(var(--andes-control-height-lg, 2.5rem) - 0.625rem)');
+      expect(
+        declaredValue(
+          source,
+          ".andes-cascader__trigger[data-size='sm'] .andes-cascader__tag",
+          'height',
+        ),
+      ).toBe('calc(var(--andes-control-height-sm, 1.5rem) - 0.5rem)');
+      expect(
+        declaredValue(source, '.andes-cascader__trigger', '--_tag-inset'),
+      ).toBe('0.25rem');
+      expect(
+        declaredValue(
+          source,
+          '.andes-cascader__trigger[data-multiple] .andes-cascader__selection',
+          'column-gap',
+        ),
+      ).toBe('0.375rem');
+    });
+
     it('isolates the "+ N ..." tag from the surrounding direction', () => {
       expect(
         declaredValue(source, '.andes-cascader__tag--rest', 'unicode-bidi'),

@@ -43,8 +43,8 @@ export const LIST_ROW_STYLE = `
     .demo-quiet:hover andes-form-icon { color: var(--andes-color-foreground); }
     /* Only the glyph reacts: it gets darker, the button keeps no background of its own. */
     andes-button.demo-remove andes-form-icon { font-size: 1.5rem; }
-    andes-button.demo-remove:hover:not(:disabled):not([data-disabled]),
-    andes-button.demo-remove:active:not(:disabled):not([data-disabled]) { background-color: transparent; }
+    andes-button.demo-remove button:hover:not(:disabled):not([data-disabled]),
+    andes-button.demo-remove button:active:not(:disabled):not([data-disabled]) { background-color: transparent; }
     andes-button.demo-remove:hover andes-form-icon { color: var(--andes-color-foreground); }
     .demo-grip { cursor: grab; }
 

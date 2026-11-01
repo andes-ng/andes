@@ -80,7 +80,7 @@ export const ShowErrorsOn: Story = {
       <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: 1.5rem; max-width: 960px;">
         @for (gate of gates; track gate; let i = $index) {
           <form andesForm [showErrorsOn]="gate" [formGroup]="forms[i]">
-            <andes-form-field [label]="gate" hasFeedback>
+            <andes-form-field [label]="gate">
               <input andesFormControl formControlName="code" class="andes-demo-control" />
             </andes-form-field>
             <andes-button type="submit" variant="outline" size="sm" style="align-self: flex-start;">Submit</andes-button>
@@ -172,7 +172,7 @@ export const SubmitOutputs: Story = {
           (invalidSubmit)="onInvalid($event)"
           style="width: 100%; max-width: 560px;"
         >
-          <andes-form-field label="Username" hasFeedback [errorMessages]="{ taken: 'That username is taken.' }">
+          <andes-form-field label="Username" [errorMessages]="{ taken: 'That username is taken.' }">
             <input andesFormControl formControlName="username" class="andes-demo-control" />
           </andes-form-field>
           <ng-container formGroupName="address">

@@ -13,6 +13,7 @@ import { AndesTreeNodeTemplate } from './tree-node-template';
 import { andesMoveTreeNode } from './tree-utils';
 import type {
   AndesTreeCheckEvent,
+  AndesTreeClassNames,
   AndesTreeDragEvent,
   AndesTreeDropEvent,
   AndesTreeExpandEvent,
@@ -22,6 +23,7 @@ import type {
   AndesTreeLoadErrorEvent,
   AndesTreeNode,
   AndesTreeSelectEvent,
+  AndesTreeStyles,
 } from './tree-types';
 
 function sample(): AndesTreeNode[] {
@@ -86,6 +88,8 @@ function sample(): AndesTreeNode[] {
       [virtualScroll]="virtual()"
       [height]="200"
       [labels]="labels()"
+      [classNames]="classNames()"
+      [styles]="partStyles()"
       aria-label="Warehouses"
       (nodeExpand)="expands.push($event)"
       (nodeSelect)="selects.push($event)"
@@ -149,6 +153,8 @@ class HostComponent {
   readonly filterMode = signal<'filter' | 'highlight'>('filter');
   readonly virtual = signal(false);
   readonly labels = signal({});
+  readonly classNames = signal<AndesTreeClassNames>({});
+  readonly partStyles = signal<AndesTreeStyles>({});
   readonly customTemplate = signal(false);
 
   expands: AndesTreeExpandEvent[] = [];
@@ -1374,6 +1380,51 @@ describe('AndesTree', () => {
       expect(row(node(fixture, 'Pasillo 1')).hasAttribute('data-leaf')).toBe(
         false,
       );
+    });
+  });
+
+  describe('classes and styles per part', () => {
+    it('adds classes and inline styles to the root, every row, its icon and its title', () => {
+      const fixture = setup((h) => {
+        h.showIcon.set(true);
+        h.classNames.set({
+          root: 'my-tree',
+          item: 'my-row',
+          itemIcon: 'my-icon',
+          itemTitle: 'my-title',
+        });
+        h.partStyles.set({
+          root: { 'max-width': '20rem' },
+          item: { 'font-weight': 600 },
+          itemIcon: { color: 'rebeccapurple' },
+          itemTitle: { 'letter-spacing': '0.01em' },
+        });
+      });
+      const root = fixture.nativeElement.querySelector(
+        '.andes-tree',
+      ) as HTMLElement;
+      expect(root.classList).toContain('my-tree');
+      expect(root.style.maxWidth).toBe('20rem');
+
+      const archivo = row(node(fixture, 'Archivo'));
+      // The tree's own classes stay.
+      expect([...archivo.classList]).toEqual(['andes-tree__row', 'my-row']);
+      expect(archivo.style.fontWeight).toBe('600');
+      const icon = archivo.querySelector('.andes-tree__icon') as HTMLElement;
+      expect(icon.classList).toContain('my-icon');
+      expect(icon.style.color).toBe('rebeccapurple');
+      const title = archivo.querySelector('.andes-tree__title') as HTMLElement;
+      expect(title.classList).toContain('my-title');
+      expect(title.style.letterSpacing).toBe('0.01em');
+    });
+
+    it('takes them off again', () => {
+      const fixture = setup((h) => h.classNames.set({ item: 'my-row' }));
+      fixture.componentInstance.classNames.set({});
+      fixture.detectChanges();
+      expect([...row(node(fixture, 'Archivo')).classList]).toEqual([
+        'andes-tree__row',
+      ]);
     });
   });
 

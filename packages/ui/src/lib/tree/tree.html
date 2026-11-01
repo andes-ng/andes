@@ -30,6 +30,8 @@
   >
     <div
       class="andes-tree__row"
+      [class]="classNames().item ?? ''"
+      [style]="styles().item ?? null"
       [attr.data-selected]="selectableRow && isSelected(key) ? '' : null"
       [attr.data-disabled]="row.entry.disabled ? '' : null"
       [attr.data-last]="row.isLast ? '' : null"
@@ -187,7 +189,12 @@
         [attr.draggable]="isDraggable(row) ? 'true' : null"
       >
         @if (iconsShown()) {
-        <span class="andes-tree__icon" aria-hidden="true">
+        <span
+          class="andes-tree__icon"
+          aria-hidden="true"
+          [class]="classNames().itemIcon ?? ''"
+          [style]="styles().itemIcon ?? null"
+        >
           @if (iconTemplateFor(row); as iconTpl) {
           <ng-container
             [ngTemplateOutlet]="iconTpl"
@@ -231,7 +238,12 @@
           }
         </span>
         }
-        <span class="andes-tree__title" [id]="titleId(key)">
+        <span
+          class="andes-tree__title"
+          [id]="titleId(key)"
+          [class]="classNames().itemTitle ?? ''"
+          [style]="styles().itemTitle ?? null"
+        >
           @if (customNodeTemplate(); as nodeTpl) {
           <ng-container
             [ngTemplateOutlet]="nodeTpl"
@@ -280,6 +292,8 @@
 
 <div
   class="andes-tree"
+  [class]="classNames().root ?? ''"
+  [style]="styles().root ?? null"
   [attr.data-density]="density()"
   [attr.data-line]="showLine() ? '' : null"
   [attr.data-block]="blockNode() || directory() ? '' : null"

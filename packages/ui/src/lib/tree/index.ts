@@ -12,6 +12,7 @@ export type {
   AndesTreeCheckedStrategy,
   AndesTreeCheckEvent,
   AndesTreeCheckState,
+  AndesTreeClassNames,
   AndesTreeDragEvent,
   AndesTreeDropEvent,
   AndesTreeDropInfo,
@@ -30,8 +31,10 @@ export type {
   AndesTreeNode,
   AndesTreeNodeContext,
   AndesTreeNodeEvent,
+  AndesTreePart,
   AndesTreeScrollOptions,
   AndesTreeSelectEvent,
+  AndesTreeStyles,
   AndesTreeTextSegment,
 } from './tree-types';
 export {

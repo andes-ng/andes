@@ -35,6 +35,7 @@ import type {
   AndesTreeAllowDrop,
   AndesTreeCheckEvent,
   AndesTreeCheckState,
+  AndesTreeClassNames,
   AndesTreeDragEvent,
   AndesTreeDropEvent,
   AndesTreeDropInfo,
@@ -53,6 +54,7 @@ import type {
   AndesTreeNodeEvent,
   AndesTreeScrollOptions,
   AndesTreeSelectEvent,
+  AndesTreeStyles,
   AndesTreeTextSegment,
 } from './tree-types';
 import {
@@ -329,6 +331,13 @@ export class AndesTree {
     undefined,
   );
   readonly labels = input<Partial<AndesTreeLabels>>({});
+  /**
+   * Classes for the tree's parts: `root`, every row (`item`), its `itemIcon` and `itemTitle`.
+   * They are added beside the tree's own classes; style them from a global stylesheet.
+   */
+  readonly classNames = input<AndesTreeClassNames>({});
+  /** Inline styles for the same parts, as `{ item: { 'font-weight': 600 } }`. */
+  readonly styles = input<AndesTreeStyles>({});
 
   readonly ariaLabel = input<string | undefined>(undefined, {
     alias: 'aria-label',

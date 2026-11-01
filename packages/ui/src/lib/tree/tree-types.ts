@@ -211,6 +211,21 @@ export interface AndesTreeDragEvent {
   event: DragEvent;
 }
 
+/** The parts of the tree that take a consumer's classes and inline styles. */
+export type AndesTreePart = 'root' | 'item' | 'itemIcon' | 'itemTitle';
+
+/**
+ * Classes added to each part: `root` the tree, `item` every node's row, `itemIcon` its icon and
+ * `itemTitle` its title. The parts live inside the tree's own view, so style those classes from
+ * a global stylesheet (or `::ng-deep`); `styles` reaches them from anywhere.
+ */
+export type AndesTreeClassNames = Partial<Record<AndesTreePart, string>>;
+
+/** Inline styles set on each part, keyed like {@link AndesTreeClassNames}. */
+export type AndesTreeStyles = Partial<
+  Record<AndesTreePart, Record<string, string | number>>
+>;
+
 export interface AndesTreeNodeEvent {
   node: AndesTreeNode;
   key: AndesTreeKey;

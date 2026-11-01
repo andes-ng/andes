@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-/** Glyphs the image and preview draw. */
+/** Glyphs the image, its preview and the gallery draw. */
 export type AndesImageIconName =
   | 'zoomIn'
   | 'zoomOut'
@@ -14,7 +14,11 @@ export type AndesImageIconName =
   | 'previous'
   | 'next'
   | 'eye'
-  | 'imageOff';
+  | 'imageOff'
+  | 'fullscreen'
+  | 'fullscreenExit'
+  | 'play'
+  | 'pause';
 
 /**
  * Decorative 24px stroke icon. Inline SVG keeps the image component free of an icon-font or
@@ -82,6 +86,25 @@ export type AndesImageIconName =
             d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"
           />
           <circle cx="12" cy="12" r="3" />
+        }
+        @case ('fullscreen') {
+          <path
+            d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M16 21h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"
+          />
+        }
+        @case ('fullscreenExit') {
+          <path
+            d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M16 21v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"
+          />
+        }
+        @case ('play') {
+          <path
+            d="M6 3.5v17a.5.5 0 0 0 .76.43l14-8.5a.5.5 0 0 0 0-.86l-14-8.5A.5.5 0 0 0 6 3.5"
+          />
+        }
+        @case ('pause') {
+          <rect x="6" y="4" width="4" height="16" rx="1" />
+          <rect x="14" y="4" width="4" height="16" rx="1" />
         }
         @case ('imageOff') {
           <path d="m2 2 20 20M10.41 10.41a2 2 0 1 1-2.83-2.83M13.5 13.5 6 21" />

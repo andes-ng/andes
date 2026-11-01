@@ -4,6 +4,8 @@ import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
 import { ANDES_DIALOG_IMPORTS } from '../dialog/dialog';
+import { AndesImage } from '../image/image';
+import { AndesSelect } from '../select/select';
 import { AndesGallery } from './gallery';
 import { AndesGalleryItem } from './gallery-item';
 import type {
@@ -102,7 +104,11 @@ const meta: Meta<AndesGallery> = {
   title: 'Data Display/Gallery',
   component: AndesGallery,
   tags: ['autodocs'],
-  decorators: [moduleMetadata({ imports: [AndesGallery, AndesGalleryItem] })],
+  decorators: [
+    moduleMetadata({
+      imports: [AndesGallery, AndesGalleryItem, AndesButton, AndesImage],
+    }),
+  ],
   parameters: { layout: 'padded' },
   argTypes: {
     thumbnailPosition: {
@@ -129,7 +135,7 @@ export const Basic: Story = {
     docs: {
       description: {
         story:
-          'Inline, the gallery fills its container: one picture on a dark stage with round previous / next buttons, the toolbar and the counter at the top, the caption (the `title`) and the thumbnail strip at the bottom. Drag a zoomed picture, wheel or double click to zoom, swipe to change image, or use the arrow keys.',
+          'Inline, the gallery fills its container as a raised card in the page theme: the picture on a faint wash of the primary colour with round previous / next buttons, the toolbar and the counter pill at the top, the caption (the `title`) and the thumbnail strip at the bottom. Icons are the foreground colour and turn primary on hover and focus. Drag a zoomed picture, wheel or double click to zoom, swipe to change image, or use the arrow keys.',
       },
     },
   },
@@ -183,24 +189,16 @@ export const Toolbar: Story = {
 
 @Component({
   selector: 'andes-story-gallery-strips',
-  imports: [AndesGallery],
+  imports: [AndesGallery, AndesSelect],
   template: `
-    <div
-      role="radiogroup"
-      aria-label="Thumbnail position"
-      style="display: flex; gap: 0.5rem; margin-bottom: 1rem; font: 14px/22px system-ui;"
-    >
-      @for (option of positions; track option) {
-        <label style="display: flex; gap: 0.25rem; align-items: center;">
-          <input
-            type="radio"
-            name="strip-position"
-            [checked]="position() === option"
-            (change)="position.set(option)"
-          />
-          {{ option }}
-        </label>
-      }
+    <div style="width: 12rem; margin-bottom: 1rem;">
+      <andes-select
+        aria-label="Thumbnail position"
+        size="sm"
+        [options]="positions"
+        [value]="position()"
+        (valueChange)="position.set($any($event))"
+      />
     </div>
     <div style="height: 30rem; max-width: 56rem;">
       <andes-gallery [images]="images" [thumbnailPosition]="position()" />
@@ -209,12 +207,9 @@ export const Toolbar: Story = {
 })
 class StripDemo {
   protected readonly images = THIRTY;
-  protected readonly positions: AndesGalleryThumbnailPosition[] = [
-    'bottom',
-    'top',
-    'start',
-    'end',
-  ];
+  protected readonly positions = (
+    ['bottom', 'top', 'start', 'end'] as AndesGalleryThumbnailPosition[]
+  ).map((value) => ({ value, label: value }));
   protected readonly position = signal<AndesGalleryThumbnailPosition>('bottom');
 }
 
@@ -248,28 +243,50 @@ export const Single: Story = {
 
 @Component({
   selector: 'andes-story-gallery-grid',
-  imports: [AndesGallery],
+  imports: [AndesGallery, AndesButton, AndesImage],
+  // The tile is the library's button holding the library's image: the button's fixed height is
+  // swapped for the picture's own 3:2 shape.
+  styles: `
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
+      gap: 0.5rem;
+      max-width: 56rem;
+    }
+
+    .tile ::ng-deep .andes-button {
+      width: 100%;
+      height: auto;
+      padding: 0;
+      border-radius: var(--andes-radius-md);
+      cursor: zoom-in;
+    }
+  `,
   template: `
-    <ul
-      style="display: grid; grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr)); gap: 0.5rem; max-width: 56rem; margin: 0; padding: 0; list-style: none;"
-    >
+    <div class="grid" role="list">
       @for (image of images; track image.src; let i = $index) {
-        <li>
-          <button
-            type="button"
-            [attr.aria-label]="'Open ' + image.title"
-            style="display: block; width: 100%; aspect-ratio: 3 / 2; padding: 0; border: 0; border-radius: var(--andes-radius-md); overflow: hidden; cursor: zoom-in;"
+        <div class="tile" role="listitem">
+          <andes-button
+            variant="ghost"
+            size="icon"
+            fullWidth
+            [ripple]="false"
+            [aria-label]="'Open ' + image.title"
             (click)="open(i)"
           >
-            <img
-              [src]="image.thumbnail"
+            <andes-image
               alt=""
-              style="display: block; width: 100%; height: 100%; object-fit: cover;"
+              width="100%"
+              fit="cover"
+              style="aspect-ratio: 3 / 2;"
+              [src]="image.thumbnail"
+              [placeholder]="true"
+              [preview]="false"
             />
-          </button>
-        </li>
+          </andes-button>
+        </div>
       }
-    </ul>
+    </div>
     <andes-gallery
       [images]="images"
       [inline]="false"
@@ -332,14 +349,14 @@ export const CustomTemplates: Story = {
     props: { images: SIX, box: BOX },
     template: `
       <ng-template #header let-image>
-        <strong style="color: var(--andes-color-ghost); font-weight: 600;">{{ image.title }}</strong>
-        <a [href]="image.src" target="_blank" rel="noopener" style="color: inherit;">Open in a new tab</a>
+        <strong style="color: var(--andes-gallery-color-strong); font-weight: 600;">{{ image.title }}</strong>
+        <andes-button variant="link" size="sm" [href]="image.src" target="_blank">Open in a new tab</andes-button>
       </ng-template>
       <ng-template #caption let-image let-index="index" let-total="total">
         <span>{{ image.alt }} <span style="opacity: 0.7;">({{ index + 1 }} of {{ total }})</span></span>
       </ng-template>
       <ng-template #thumb let-image let-index="index" let-active="active">
-        <img [src]="image.thumbnail" alt="" style="width: 100%; height: 100%; object-fit: cover;" />
+        <andes-image [src]="image.thumbnail" alt="" width="100%" height="100%" [preview]="false" />
         <span style="position: absolute; inset-block-end: 2px; inset-inline-end: 4px; font: 600 11px/14px system-ui; color: white; text-shadow: 0 1px 2px black;">{{ index + 1 }}</span>
       </ng-template>
       <ng-template #footer let-image>

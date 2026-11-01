@@ -152,9 +152,18 @@ const all = (selector: string) =>
 const gallery = () => q('.andes-gallery') as HTMLElement;
 const stage = () => q('.andes-gallery__stage') as HTMLElement;
 const picture = () => q<HTMLImageElement>('img.andes-gallery__image');
-const button = (action: string) =>
-  q<HTMLButtonElement>(`.andes-gallery__button[data-action="${action}"]`);
+/** The native `<button>` an `andes-button` renders: what a user clicks, focuses and hears. */
+const native = (host: Element | null | undefined) =>
+  host?.querySelector<HTMLButtonElement>(':scope > button') ?? null;
+const hook = (action: string) =>
+  q(`.andes-gallery__button[data-action="${action}"]`);
+const button = (action: string) => native(hook(action));
+const nav = (side: 'previous' | 'next') =>
+  native(q(`.andes-gallery__nav--${side}`));
+/** The `andes-button` hosts of the thumbnails, and the native buttons inside them. */
 const thumbs = () => all('.andes-gallery__thumbnail');
+const thumbButtons = () =>
+  thumbs().map((thumb) => native(thumb) as HTMLButtonElement);
 const counter = () =>
   q('.andes-gallery__counter')?.textContent?.replace(/\s+/g, ' ').trim();
 const live = () => q('.andes-gallery__sr[role="status"]');
@@ -259,18 +268,18 @@ describe('AndesGallery', () => {
   describe('navigation', () => {
     it('steps with the round buttons and updates the model', () => {
       const f = setup();
-      q<HTMLButtonElement>('.andes-gallery__nav--next')?.click();
+      nav('next')?.click();
       f.detectChanges();
       expect(f.componentInstance.index()).toBe(1);
       expect(picture()?.getAttribute('src')).toBe('/two.jpg');
-      q<HTMLButtonElement>('.andes-gallery__nav--previous')?.click();
+      nav('previous')?.click();
       f.detectChanges();
       expect(f.componentInstance.index()).toBe(0);
     });
 
     it('marks the ends aria-disabled and stops there, unless it loops', () => {
       const f = setup();
-      const previous = q('.andes-gallery__nav--previous') as HTMLElement;
+      const previous = nav('previous') as HTMLElement;
       expect(previous.getAttribute('aria-disabled')).toBe('true');
       previous.click();
       f.detectChanges();
@@ -348,7 +357,9 @@ describe('AndesGallery', () => {
       expect(toolbar.getAttribute('role')).toBe('group');
       expect(toolbar.getAttribute('aria-label')).toBe('Image tools');
       expect(
-        all('.andes-gallery__button').map((b) => b.getAttribute('aria-label')),
+        all('.andes-gallery__button').map((b) =>
+          native(b)?.getAttribute('aria-label'),
+        ),
       ).toEqual([
         'Zoom out',
         'Zoom in',
@@ -488,13 +499,10 @@ describe('AndesGallery', () => {
       expect(strip.getAttribute('role')).toBe('group');
       expect(strip.getAttribute('aria-label')).toBe('Thumbnails');
       expect(thumbs()).toHaveLength(4);
-      expect(thumbs().map((t) => t.getAttribute('aria-current'))).toEqual([
-        null,
-        'true',
-        null,
-        null,
-      ]);
-      expect(thumbs()[0].getAttribute('aria-label')).toBe(
+      expect(thumbButtons().map((t) => t.getAttribute('aria-current'))).toEqual(
+        [null, 'true', null, null],
+      );
+      expect(thumbButtons()[0].getAttribute('aria-label')).toBe(
         'Image 1 of 4: First',
       );
       // The small source when there is one, the full one otherwise.
@@ -508,7 +516,7 @@ describe('AndesGallery', () => {
 
     it('is one tab stop: only the active thumbnail is tabbable', () => {
       setup((h) => h.index.set(2));
-      expect(thumbs().map((t) => t.getAttribute('tabindex'))).toEqual([
+      expect(thumbButtons().map((t) => t.getAttribute('tabindex'))).toEqual([
         '-1',
         '-1',
         '0',
@@ -518,26 +526,26 @@ describe('AndesGallery', () => {
 
     it('shows a picture on click', () => {
       const f = setup();
-      thumbs()[3].click();
+      thumbButtons()[3].click();
       f.detectChanges();
       expect(f.componentInstance.index()).toBe(3);
     });
 
     it('moves focus and the picture with the arrow keys, Home and End', async () => {
       const f = setup();
-      thumbs()[0].focus();
-      const event = key('ArrowRight', thumbs()[0]);
+      thumbButtons()[0].focus();
+      const event = key('ArrowRight', thumbButtons()[0]);
       expect(event.defaultPrevented).toBe(true);
       f.detectChanges();
       await f.whenStable();
       expect(f.componentInstance.index()).toBe(1);
-      expect(document.activeElement).toBe(thumbs()[1]);
-      key('End', thumbs()[1]);
+      expect(document.activeElement).toBe(thumbButtons()[1]);
+      key('End', thumbButtons()[1]);
       f.detectChanges();
       await f.whenStable();
       expect(f.componentInstance.index()).toBe(3);
-      expect(document.activeElement).toBe(thumbs()[3]);
-      key('Home', thumbs()[3]);
+      expect(document.activeElement).toBe(thumbButtons()[3]);
+      key('Home', thumbButtons()[3]);
       f.detectChanges();
       expect(f.componentInstance.index()).toBe(0);
     });
@@ -548,10 +556,10 @@ describe('AndesGallery', () => {
       expect(q('.andes-gallery__strip')?.getAttribute('aria-orientation')).toBe(
         'vertical',
       );
-      key('ArrowDown', thumbs()[0]);
+      key('ArrowDown', thumbButtons()[0]);
       f.detectChanges();
       expect(f.componentInstance.index()).toBe(1);
-      key('ArrowRight', thumbs()[1]);
+      key('ArrowRight', thumbButtons()[1]);
       f.detectChanges();
       // Right is the stage's key in a vertical strip: it steps the picture.
       expect(f.componentInstance.index()).toBe(2);
@@ -582,12 +590,20 @@ describe('AndesGallery', () => {
       expect(q('.andes-gallery__strip')).toBeNull();
     });
 
-    it('draws an icon for a thumbnail that fails', () => {
+    it('draws a thumbnail with the library image, which shows its own error state', () => {
       const f = setup();
+      const image = thumbs()[1].querySelector('andes-image') as HTMLElement;
+      expect(image).not.toBeNull();
+      expect(image.dataset['state']).toBe('loading');
       thumbs()[1].querySelector('img')?.dispatchEvent(new Event('error'));
       f.detectChanges();
-      expect(thumbs()[1].querySelector('img')).toBeNull();
-      expect(thumbs()[1].querySelector('andes-image-icon')).not.toBeNull();
+      expect(image.dataset['state']).toBe('error');
+      expect(image.querySelector('andes-image-icon')).not.toBeNull();
+    });
+
+    it('opens no preview from a thumbnail', () => {
+      setup();
+      expect(thumbs()[0].querySelector('.andes-image__mask')).toBeNull();
     });
   });
 
@@ -679,9 +695,9 @@ describe('AndesGallery', () => {
       expect(
         dialog.querySelector('.andes-gallery')?.getAttribute('role'),
       ).toBeNull();
-      expect(q('[data-slot="gallery-close"]')?.getAttribute('aria-label')).toBe(
-        'Close',
-      );
+      expect(
+        native(q('[data-slot="gallery-close"]'))?.getAttribute('aria-label'),
+      ).toBe('Close');
       // The page keeps the gallery's place with an empty box.
       expect(
         f.nativeElement.querySelector('.andes-gallery--placeholder'),
@@ -701,7 +717,7 @@ describe('AndesGallery', () => {
 
       f.componentInstance.fullscreen.set(true);
       f.detectChanges();
-      q<HTMLButtonElement>('[data-slot="gallery-close"]')?.click();
+      native(q('[data-slot="gallery-close"]'))?.click();
       f.detectChanges();
       expect(q('.andes-gallery-lightbox')).toBeNull();
 
@@ -917,9 +933,7 @@ describe('AndesGallery', () => {
         }),
       );
       expect(gallery().getAttribute('aria-label')).toBe('Galería');
-      expect(
-        q('.andes-gallery__nav--previous')?.getAttribute('aria-label'),
-      ).toBe('Anterior');
+      expect(nav('previous')?.getAttribute('aria-label')).toBe('Anterior');
       expect(q('.andes-gallery__strip')?.getAttribute('aria-label')).toBe(
         'Miniaturas',
       );
@@ -979,6 +993,176 @@ describe('AndesGallery', () => {
     });
   });
 
+  describe('the library components', () => {
+    it('draws every control as an andes-button holding the native button', () => {
+      setup((h) => h.autoplay.set(true));
+      const controls = all(
+        '.andes-gallery__button, .andes-gallery__nav, .andes-gallery__thumbnail',
+      );
+      expect(controls.length).toBeGreaterThan(10);
+      for (const control of controls) {
+        expect(control.tagName).toBe('ANDES-BUTTON');
+        expect(native(control)?.dataset['slot']).toBe('button');
+      }
+      // No bare native button anywhere in the gallery: each sits inside an andes-button.
+      for (const bare of all('.andes-gallery button')) {
+        expect(bare.parentElement?.tagName).toBe('ANDES-BUTTON');
+      }
+      expect(button('play')?.getAttribute('type')).toBe('button');
+    });
+
+    it('draws every thumbnail with andes-image, with no preview of its own', () => {
+      setup();
+      for (const thumb of thumbs()) {
+        const image = thumb.querySelector('andes-image') as HTMLElement;
+        expect(image).not.toBeNull();
+        expect(image.hasAttribute('data-preview')).toBe(false);
+        expect(image.querySelector('[data-slot="image-img"]')).not.toBeNull();
+      }
+      expect(
+        all('.andes-gallery__strip img:not(.andes-image__img)'),
+      ).toHaveLength(0);
+    });
+
+    it('keeps the stage picture a native image for the transform engine', () => {
+      setup();
+      expect(picture()?.closest('andes-image')).toBeNull();
+      expect(picture()?.style.transform).toContain('scale3d');
+    });
+
+    it('keeps names, tooltips and hooks on the andes-button host', () => {
+      setup();
+      expect(hook('zoomIn')?.getAttribute('title')).toBe('Zoom in');
+      expect(native(hook('zoomIn'))?.getAttribute('aria-label')).toBe(
+        'Zoom in',
+      );
+      // The host is not a second control: the name lives on the native button alone.
+      expect(hook('zoomIn')?.hasAttribute('aria-label')).toBe(false);
+      expect(
+        native(q('[data-slot="gallery-next"]'))?.getAttribute(
+          'aria-keyshortcuts',
+        ),
+      ).toBe('ArrowRight PageDown');
+      expect(nav('previous')?.getAttribute('aria-keyshortcuts')).toBe(
+        'ArrowLeft PageUp',
+      );
+    });
+
+    describe('a control at its limit', () => {
+      it('stays in the tab order and announced, but ignores the click', () => {
+        const f = setup();
+        const zoomOut = button('zoomOut') as HTMLButtonElement;
+        expect(zoomOut.getAttribute('aria-disabled')).toBe('true');
+        expect(zoomOut.hasAttribute('disabled')).toBe(false);
+        expect(zoomOut.hasAttribute('tabindex')).toBe(false);
+        expect(zoomOut.tabIndex).toBe(0);
+        zoomOut.focus();
+        expect(document.activeElement).toBe(zoomOut);
+        zoomOut.click();
+        f.detectChanges();
+        expect(f.componentInstance.events).toEqual([]);
+        expect(picture()?.style.transform).toContain('scale3d(1, 1, 1)');
+      });
+
+      it('takes the disabled look of the button, and no hover', () => {
+        setup();
+        // `data-disabled` is what the button's own disabled and hover rules read.
+        expect(button('zoomOut')?.hasAttribute('data-disabled')).toBe(true);
+        expect(button('zoomIn')?.hasAttribute('data-disabled')).toBe(false);
+        expect(getComputedStyle(button('zoomOut') as Element).cursor).toBe(
+          'not-allowed',
+        );
+      });
+
+      it('wakes up when the limit is left, and sleeps again when it is reached', () => {
+        const f = setup();
+        button('zoomIn')?.click();
+        f.detectChanges();
+        expect(button('zoomOut')?.getAttribute('aria-disabled')).toBeNull();
+        expect(button('zoomOut')?.hasAttribute('data-disabled')).toBe(false);
+        expect(button('reset')?.getAttribute('aria-disabled')).toBeNull();
+        button('zoomOut')?.click();
+        f.detectChanges();
+        expect(button('zoomOut')?.getAttribute('aria-disabled')).toBe('true');
+        expect(button('reset')?.getAttribute('aria-disabled')).toBe('true');
+      });
+
+      it('keeps the focused control focused while it goes to its limit', async () => {
+        const f = setup();
+        button('zoomIn')?.click();
+        f.detectChanges();
+        const zoomOut = button('zoomOut') as HTMLButtonElement;
+        zoomOut.focus();
+        zoomOut.click();
+        f.detectChanges();
+        await f.whenStable();
+        expect(zoomOut.getAttribute('aria-disabled')).toBe('true');
+        expect(document.activeElement).toBe(zoomOut);
+      });
+
+      it('lets previous / next at the ends keep the focus without stepping', () => {
+        const f = setup();
+        const previous = nav('previous') as HTMLButtonElement;
+        previous.focus();
+        expect(document.activeElement).toBe(previous);
+        expect(previous.hasAttribute('data-disabled')).toBe(true);
+        previous.click();
+        f.detectChanges();
+        expect(f.componentInstance.index()).toBe(0);
+        f.componentInstance.index.set(3);
+        f.detectChanges();
+        expect(previous.hasAttribute('data-disabled')).toBe(false);
+        expect(nav('next')?.getAttribute('aria-disabled')).toBe('true');
+      });
+    });
+
+    describe('the thumbnails', () => {
+      it('move the current marker and the tab stop with the picture, leaving no stale one', () => {
+        const f = setup();
+        f.componentInstance.index.set(2);
+        f.detectChanges();
+        expect(
+          thumbButtons().map((t) => t.getAttribute('aria-current')),
+        ).toEqual([null, null, 'true', null]);
+        expect(thumbButtons().map((t) => t.tabIndex)).toEqual([-1, -1, 0, -1]);
+        f.componentInstance.index.set(0);
+        f.detectChanges();
+        expect(
+          thumbButtons().map((t) => t.getAttribute('aria-current')),
+        ).toEqual(['true', null, null, null]);
+        expect(thumbButtons().map((t) => t.tabIndex)).toEqual([0, -1, -1, -1]);
+      });
+
+      it('are reached by Tab as a single stop and walked with the arrows', async () => {
+        const f = setup((h) => h.index.set(1));
+        expect(thumbButtons().filter((t) => t.tabIndex >= 0)).toHaveLength(1);
+        thumbButtons()[1].focus();
+        key('ArrowRight', thumbButtons()[1]);
+        f.detectChanges();
+        await f.whenStable();
+        expect(document.activeElement).toBe(thumbButtons()[2]);
+        expect(thumbButtons()[2].getAttribute('aria-current')).toBe('true');
+      });
+
+      it('are picked with Enter and Space on the native button', () => {
+        const f = setup();
+        const target = thumbButtons()[2];
+        // A native button turns Enter and Space into a click; the gallery listens to that.
+        target.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        f.detectChanges();
+        expect(f.componentInstance.index()).toBe(2);
+      });
+    });
+
+    it('marks the full screen button pressed on its native button', () => {
+      const f = setup();
+      expect(button('fullscreen')?.getAttribute('aria-pressed')).toBe('false');
+      f.componentInstance.fullscreen.set(true);
+      f.detectChanges();
+      expect(button('fullscreen')?.getAttribute('aria-pressed')).toBe('true');
+    });
+  });
+
   describe('stylesheet', () => {
     const css = readFileSync('packages/ui/src/lib/gallery/gallery.css', 'utf8');
 
@@ -1026,18 +1210,35 @@ describe('AndesGallery', () => {
       );
     });
 
-    it('rings the active thumbnail', () => {
-      expect(css).toMatch(
-        /\.andes-gallery__thumbnail\[aria-current='true'\]::after\s*\{[^}]*box-shadow: inset 0 0 0 2px var\(--andes-gallery-ring\)/,
+    it('rings the active thumbnail in the ring colour with a glow, and dims the others', () => {
+      expect(
+        declaredValue(
+          css,
+          '.andes-gallery__thumbnail[data-active]::after',
+          'box-shadow',
+        ),
+      ).toBe('inset 0 0 0 2px var(--andes-gallery-ring)');
+      expect(
+        declaredValue(
+          css,
+          '.andes-gallery__thumbnail[data-active]',
+          'box-shadow',
+        ),
+      ).toContain('var(--andes-gallery-glow');
+      expect(declaredValue(css, '.andes-gallery__thumbnail', 'opacity')).toBe(
+        '0.55',
       );
+      expect(
+        declaredValue(css, '.andes-gallery__thumbnail[data-active]', 'opacity'),
+      ).toBe('1');
     });
 
     it('takes the page theme inline and keeps the dark surface for the lightbox', () => {
       const inline = css.match(
         /\.andes-gallery:not\(\.andes-gallery--lightbox\)\s*\{[^}]*\}/,
       )?.[0];
-      expect(inline).toContain(
-        '--andes-gallery-surface: var(--andes-color-background',
+      expect(inline).toMatch(
+        /--andes-gallery-surface: var\(\s*--andes-color-card/,
       );
       expect(inline).toContain(
         '--andes-gallery-color-strong: var(--andes-color-foreground',
@@ -1048,6 +1249,150 @@ describe('AndesGallery', () => {
       expect(css).toMatch(
         /\.andes-gallery,\s*\.andes-gallery-lightbox\s*\{[^}]*--andes-gallery-surface: var\(--andes-color-ghost-foreground/,
       );
+    });
+
+    describe('the inline look', () => {
+      const inlineBlock = css.match(
+        /\.andes-gallery:not\(\.andes-gallery--lightbox\)\s*\{[^}]*\}/,
+      )?.[0] as string;
+
+      it('has no outline: the edge is the elevation token, with a radius token', () => {
+        const shadow = declaredValue(css, '.andes-gallery', 'box-shadow');
+        expect(shadow).toContain('--andes-shadow-md');
+        expect(shadow).not.toContain('inset');
+        expect(declaredValue(css, '.andes-gallery', 'border')).toBeUndefined();
+        expect(declaredValue(css, '.andes-gallery', 'border-radius')).toContain(
+          'var(--andes-radius-xl',
+        );
+        // The forced-colours border is the one exception: shadows do not draw there.
+        const forced = css.slice(css.indexOf('@media (forced-colors: active)'));
+        expect(forced).toMatch(
+          /\.andes-gallery\s*\{\s*border: 1px solid CanvasText/,
+        );
+      });
+
+      it('rests the picture on a faint wash of the primary colour, not on the muted grey', () => {
+        expect(inlineBlock).toMatch(
+          /--andes-gallery-stage: color-mix\(\s*in srgb,\s*var\(--andes-color-primary, #2563eb\) 5%,\s*var\(--andes-gallery-surface\)/,
+        );
+        expect(css).not.toContain('--andes-color-muted,');
+        expect(css).not.toContain('--andes-gallery-edge');
+        expect(declaredValue(css, '.andes-gallery__stage', 'background')).toBe(
+          'var(--andes-gallery-stage, transparent)',
+        );
+      });
+
+      it('draws icons in the foreground and turns them primary on hover and focus', () => {
+        expect(inlineBlock).toContain(
+          '--andes-gallery-icon: var(--andes-color-foreground',
+        );
+        expect(inlineBlock).toContain(
+          '--andes-gallery-accent: var(--andes-color-primary-text',
+        );
+        const hover =
+          '.andes-gallery .andes-gallery__button > .andes-button.andes-button:hover:not([data-disabled])';
+        expect(declaredValue(css, hover, 'color')).toBe(
+          'var(--andes-gallery-accent)',
+        );
+        expect(
+          declaredValue(
+            css,
+            '.andes-gallery .andes-gallery__button > .andes-button.andes-button:focus-visible',
+            'color',
+          ),
+        ).toBe('var(--andes-gallery-accent)');
+        expect(
+          declaredValue(
+            css,
+            '.andes-gallery .andes-gallery__button > .andes-button.andes-button',
+            'color',
+          ),
+        ).toBe('var(--andes-gallery-icon)');
+      });
+
+      it('makes previous / next surface discs with a soft shadow that turn primary-tinted', () => {
+        expect(inlineBlock).toContain(
+          '--andes-gallery-nav-background: var(--andes-gallery-surface)',
+        );
+        expect(inlineBlock).toMatch(
+          /--andes-gallery-nav-background-hover: color-mix\(\s*in srgb,\s*var\(--andes-color-primary, #2563eb\) 12%/,
+        );
+        expect(inlineBlock).toContain('--andes-shadow-md');
+        expect(
+          declaredValue(
+            css,
+            '.andes-gallery .andes-gallery__nav > .andes-button.andes-button',
+            'box-shadow',
+          ),
+        ).toBe('var(--andes-gallery-nav-shadow)');
+      });
+
+      it('sets the caption as a blurred surface pill and the counter as a small pill', () => {
+        expect(inlineBlock).toMatch(
+          /--andes-gallery-caption-background: color-mix\(\s*in srgb,\s*var\(--andes-gallery-surface\) 90%/,
+        );
+        expect(inlineBlock).toContain(
+          '--andes-gallery-caption-radius: var(--andes-radius-full',
+        );
+        expect(
+          declaredValue(
+            css,
+            '.andes-gallery:not(.andes-gallery--lightbox) .andes-gallery__caption',
+            'backdrop-filter',
+          ),
+        ).toBe('blur(8px)');
+        expect(
+          declaredValue(
+            css,
+            '.andes-gallery:not(.andes-gallery--lightbox) .andes-gallery__counter',
+            'border-radius',
+          ),
+        ).toBe('var(--andes-radius-full, 9999px)');
+      });
+
+      it('separates the header, stage and strip by spacing, with no divider line', () => {
+        expect(css).not.toMatch(
+          /border-(top|bottom|block|block-start|block-end)(-width|-style)?\s*:/,
+        );
+        expect(css).not.toMatch(/<hr|divider/);
+        expect(inlineBlock).toContain(
+          '--andes-gallery-stage-inset: var(--andes-space-3',
+        );
+        expect(
+          declaredValue(css, '.andes-gallery__stage', 'margin-inline'),
+        ).toBe('var(--andes-gallery-stage-inset)');
+      });
+
+      it('keeps the lightbox on its dark scrim with light controls and no inset stage', () => {
+        const base = css.match(
+          /\.andes-gallery,\s*\.andes-gallery-lightbox\s*\{[^}]*\}/,
+        )?.[0] as string;
+        expect(base).toContain('--andes-gallery-stage-inset: 0px');
+        expect(base).toContain(
+          '--andes-gallery-icon: var(--andes-gallery-color)',
+        );
+        expect(base).toContain('--andes-gallery-nav-shadow: none');
+        expect(base).not.toContain('--andes-gallery-stage:');
+        expect(
+          declaredValue(css, '.andes-gallery--lightbox', 'box-shadow'),
+        ).toBe('none');
+      });
+
+      it('dims the inactive thumbnails and lights the active one in the strip', () => {
+        const f = setup((h) => h.index.set(1));
+        expect(thumbs().map((t) => t.hasAttribute('data-active'))).toEqual([
+          false,
+          true,
+          false,
+          false,
+        ]);
+        expect(getComputedStyle(thumbs()[0]).opacity).toBe('0.55');
+        expect(getComputedStyle(thumbs()[1]).opacity).toBe('1');
+        f.componentInstance.index.set(3);
+        f.detectChanges();
+        expect(getComputedStyle(thumbs()[1]).opacity).toBe('0.55');
+        expect(getComputedStyle(thumbs()[3]).opacity).toBe('1');
+      });
     });
 
     it('moves on the reference curve and drops motion when asked', () => {
@@ -1064,7 +1409,7 @@ describe('AndesGallery', () => {
         /\.andes-gallery__leaving,[\s\S]*animation: none/,
       );
       expect(reduced).toMatch(
-        /\.andes-gallery__thumbnail\s*\{\s*transition: none/,
+        /\.andes-gallery__thumbnail,[^{]*\.andes-gallery__nav > \.andes-button\.andes-button\s*\{\s*transition: none/,
       );
     });
 
@@ -1072,6 +1417,8 @@ describe('AndesGallery', () => {
       const forced = css.slice(css.indexOf('@media (forced-colors: active)'));
       expect(forced).toMatch(/border: 1px solid ButtonText/);
       expect(forced).toMatch(/Highlight/);
+      expect(forced).toContain('[data-active]::after');
+      expect(forced).toContain('[data-disabled]');
     });
 
     it('keeps the counter in reading order in right-to-left', () => {

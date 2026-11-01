@@ -41,59 +41,75 @@
         [attr.aria-label]="text().toolbar"
       >
         @if (autoplay() && !single()) {
-        <button
-          type="button"
+        <andes-button
           class="andes-gallery__button"
           data-action="play"
-          [attr.aria-label]="playing() ? text().pause : text().play"
+          variant="ghost"
+          size="icon"
+          shape="circle"
+          [ripple]="false"
+          [aria-label]="playing() ? text().pause : text().play"
           [attr.title]="playing() ? text().pause : text().play"
           (click)="togglePlay()"
         >
           <andes-image-icon [name]="playing() ? 'pause' : 'play'" />
-        </button>
+        </andes-button>
         } @for (action of toolbarActions(); track action) { @if (action ===
         'zoomIn' && ratioBefore()) {
         <ng-container [ngTemplateOutlet]="ratioTemplate" />
         } @if (action === 'fullscreen') {
-        <button
-          #fullscreenButton
-          type="button"
+        <andes-button
+          #fullscreenButton="andesGalleryControl"
           class="andes-gallery__button"
           data-action="fullscreen"
-          [attr.aria-label]="label(action)"
+          variant="ghost"
+          size="icon"
+          shape="circle"
+          [ripple]="false"
+          [aria-label]="label(action)"
           [attr.title]="label(action)"
-          [attr.aria-pressed]="fullscreen()"
+          [andesGalleryControl]="{
+            'aria-pressed': fullscreen() ? 'true' : 'false',
+          }"
           (click)="run(action)"
         >
           <andes-image-icon [name]="icon(action)" />
-        </button>
+        </andes-button>
         } @else {
-        <button
-          type="button"
+        <andes-button
           class="andes-gallery__button"
+          variant="ghost"
+          size="icon"
+          shape="circle"
+          [ripple]="false"
           [attr.data-action]="action"
-          [attr.aria-label]="label(action)"
+          [aria-label]="label(action)"
           [attr.title]="label(action)"
-          [attr.aria-disabled]="actionDisabled(action) ? 'true' : null"
+          [andesGalleryControl]="{
+            'aria-disabled': actionDisabled(action) ? 'true' : null,
+          }"
           (click)="actionDisabled(action) || run(action)"
         >
           <andes-image-icon [name]="icon(action)" />
-        </button>
+        </andes-button>
         } @if (action === 'zoomOut') {
         <ng-container [ngTemplateOutlet]="ratioTemplate" />
         } }
       </div>
       } @if (fullscreen()) {
-      <button
-        type="button"
+      <andes-button
         class="andes-gallery__button andes-gallery__close"
         data-slot="gallery-close"
-        [attr.aria-label]="text().close"
+        variant="ghost"
+        size="icon"
+        shape="circle"
+        [ripple]="false"
+        [aria-label]="text().close"
         [attr.title]="text().close"
         (click)="close()"
       >
         <andes-image-icon name="close" />
-      </button>
+      </andes-button>
       }
     </div>
 
@@ -183,30 +199,40 @@
         {{ title }}
       </div>
       } @if (!single()) {
-      <button
-        type="button"
+      <andes-button
         class="andes-gallery__nav andes-gallery__nav--previous"
         data-slot="gallery-previous"
-        aria-keyshortcuts="ArrowLeft PageUp"
-        [attr.aria-label]="text().previous"
+        variant="ghost"
+        size="icon-lg"
+        shape="circle"
+        [ripple]="false"
+        [aria-label]="text().previous"
         [attr.title]="text().previous"
-        [attr.aria-disabled]="canPrevious() ? null : 'true'"
+        [andesGalleryControl]="{
+          'aria-keyshortcuts': 'ArrowLeft PageUp',
+          'aria-disabled': canPrevious() ? null : 'true',
+        }"
         (click)="onNav(-1)"
       >
         <andes-image-icon name="previous" class="andes-gallery__directional" />
-      </button>
-      <button
-        type="button"
+      </andes-button>
+      <andes-button
         class="andes-gallery__nav andes-gallery__nav--next"
         data-slot="gallery-next"
-        aria-keyshortcuts="ArrowRight PageDown"
-        [attr.aria-label]="text().next"
+        variant="ghost"
+        size="icon-lg"
+        shape="circle"
+        [ripple]="false"
+        [aria-label]="text().next"
         [attr.title]="text().next"
-        [attr.aria-disabled]="canNext() ? null : 'true'"
+        [andesGalleryControl]="{
+          'aria-keyshortcuts': 'ArrowRight PageDown',
+          'aria-disabled': canNext() ? null : 'true',
+        }"
         (click)="onNav(1)"
       >
         <andes-image-icon name="next" class="andes-gallery__directional" />
-      </button>
+      </andes-button>
       }
     </div>
 
@@ -221,14 +247,19 @@
       (keydown)="onStripKeydown($event)"
     >
       @for (item of list(); track $index; let i = $index) {
-      <button
-        #thumb
-        type="button"
+      <andes-button
+        #thumb="andesGalleryControl"
         class="andes-gallery__thumbnail"
         data-slot="gallery-thumbnail"
-        [attr.aria-current]="i === index() ? 'true' : null"
-        [attr.tabindex]="i === index() ? 0 : -1"
-        [attr.aria-label]="thumbLabel(item, i)"
+        variant="ghost"
+        size="icon"
+        [ripple]="false"
+        [aria-label]="thumbLabel(item, i)"
+        [attr.data-active]="i === index() ? '' : null"
+        [andesGalleryControl]="{
+          'aria-current': i === index() ? 'true' : null,
+          tabindex: i === index() ? '0' : '-1',
+        }"
         (click)="select(i)"
       >
         @if (thumbnailTemplate(); as template) {
@@ -241,19 +272,19 @@
             active: i === index(),
           }"
         />
-        } @else if (thumbFailed(thumbSrc(item))) {
-        <andes-image-icon name="imageOff" class="andes-gallery__thumb-error" />
         } @else {
-        <img
+        <andes-image
+          class="andes-gallery__thumbnail-image"
           alt=""
-          loading="lazy"
-          decoding="async"
-          draggable="false"
-          [attr.src]="thumbSrc(item)"
-          (error)="onThumbError(thumbSrc(item))"
+          width="100%"
+          height="100%"
+          fit="cover"
+          [src]="thumbSrc(item)"
+          [placeholder]="true"
+          [preview]="false"
         />
         }
-      </button>
+      </andes-button>
       }
     </div>
     } @if (footerTemplate(); as footer) {

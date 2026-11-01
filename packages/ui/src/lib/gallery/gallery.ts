@@ -30,6 +30,8 @@ import {
   ViewEncapsulation,
 } from '@angular/core';
 
+import { AndesButton } from '../button/button';
+import { AndesImage } from '../image/image';
 import { AndesImageIcon, type AndesImageIconName } from '../image/image-icon';
 import {
   ANDES_IMAGE_IDENTITY_TRANSFORM,
@@ -50,6 +52,7 @@ import {
   ANDES_IMAGE_VIEWER_SCRIM,
   AndesImageViewerController,
 } from '../image/image-viewer';
+import { AndesGalleryControl } from './gallery-control';
 import { AndesGalleryItem } from './gallery-item';
 import {
   ANDES_GALLERY_ACTIONS,
@@ -103,9 +106,10 @@ function isTextEntry(element: EventTarget | null): boolean {
 }
 
 /**
- * An image viewer for a set of pictures: one picture on a dark stage with round previous /
- * next buttons at its sides, a toolbar at the top (zoom, rotate, flip, reset, download, full
- * screen), a counter, a caption, and a strip of thumbnails that keeps the active one in view.
+ * An image viewer for a set of pictures: one picture on a soft, raised surface with round
+ * previous / next buttons at its sides, a toolbar at the top (zoom, rotate, flip, reset,
+ * download, full screen), a counter, a caption, and a strip of thumbnails that keeps the
+ * active one in view.
  *
  * Inline it fills its container. With `[(fullscreen)]` it becomes a lightbox: a modal dialog
  * over a dark scrim, closed by Escape, its close button or a click beside the picture; with
@@ -122,7 +126,14 @@ function isTextEntry(element: EventTarget | null): boolean {
  */
 @Component({
   selector: 'andes-gallery',
-  imports: [AndesImageIcon, AndesOverlayContentPrimitive, NgTemplateOutlet],
+  imports: [
+    AndesButton,
+    AndesGalleryControl,
+    AndesImage,
+    AndesImageIcon,
+    AndesOverlayContentPrimitive,
+    NgTemplateOutlet,
+  ],
   templateUrl: './gallery.html',
   styleUrl: './gallery.css',
   // The lightbox renders in the overlay container, outside this host: the stylesheet is
@@ -285,10 +296,9 @@ export class AndesGallery {
   private readonly stage = viewChild<ElementRef<HTMLElement>>('stage');
   private readonly picture = viewChild<ElementRef<HTMLElement>>('picture');
   private readonly strip = viewChild<ElementRef<HTMLElement>>('strip');
-  private readonly thumbs =
-    viewChildren<ElementRef<HTMLButtonElement>>('thumb');
+  private readonly thumbs = viewChildren<AndesGalleryControl>('thumb');
   private readonly fullscreenButton =
-    viewChild<ElementRef<HTMLButtonElement>>('fullscreenButton');
+    viewChild<AndesGalleryControl>('fullscreenButton');
   private readonly lightbox = viewChild<TemplateRef<unknown>>('lightbox');
 
   private readonly viewer = new AndesImageViewerController(this.transform, {
@@ -334,7 +344,6 @@ export class AndesGallery {
 
   /** `x y` of the element the lightbox grows out of. */
   protected readonly originPoint = signal<string | null>(null);
-  private failedThumbs = signal<ReadonlySet<string>>(new Set());
   private readonly preloaded = new Map<string, HTMLImageElement>();
   private openedFromInside = false;
 
@@ -436,11 +445,14 @@ export class AndesGallery {
         // The inline gallery is drawn again after the lightbox; its fullscreen button (the
         // opener, now a new element) takes the focus back.
         afterNextRender(
-          () =>
-            (
-              this.fullscreenButton()?.nativeElement ??
-              this.stage()?.nativeElement
-            )?.focus(),
+          () => {
+            const button = this.fullscreenButton();
+            if (button) {
+              button.focus();
+            } else {
+              this.stage()?.nativeElement.focus();
+            }
+          },
           { injector: this.injector },
         );
       }
@@ -473,7 +485,7 @@ export class AndesGallery {
       write: () => {
         const index = this.index();
         const strip = this.strip()?.nativeElement;
-        const thumb = this.thumbs()[index]?.nativeElement;
+        const thumb = this.thumbs()[index]?.element;
         if (strip && thumb) {
           untracked(() => this.revealThumbnail(strip, thumb));
         }
@@ -607,9 +619,10 @@ export class AndesGallery {
     this.goTo(index);
     if (focus) {
       afterNextRender(
-        () =>
-          this.thumbs()[index]?.nativeElement.focus({ preventScroll: true }),
-        { injector: this.injector },
+        () => this.thumbs()[index]?.focus({ preventScroll: true }),
+        {
+          injector: this.injector,
+        },
       );
     }
   }
@@ -780,14 +793,6 @@ export class AndesGallery {
       return;
     }
     this.loadState.set('error');
-  }
-
-  protected onThumbError(src: string): void {
-    this.failedThumbs.update((failed) => new Set(failed).add(src));
-  }
-
-  protected thumbFailed(src: string): boolean {
-    return this.failedThumbs().has(src);
   }
 
   protected thumbSrc(image: AndesGalleryImage): string {

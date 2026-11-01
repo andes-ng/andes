@@ -178,10 +178,10 @@ function toKeys(
  *
  * ## Keyboard
  *
- * With the field focused, ArrowDown, Enter and Space open the panel and move focus into its
- * tree (ArrowDown on the field while the panel is open does the same, when focus came back to
- * it). Escape closes the panel and returns focus to the field, and Tab leaves. Backspace removes
- * the last tag of a multiple select. Inside the tree the usual treeview keys apply. The field
+ * With the field focused, ArrowDown, ArrowUp, Enter and Space open the panel and move focus
+ * into its tree (ArrowDown on the field while the panel is open does the same, when focus came
+ * back to it). Escape closes the panel and returns focus to the field, and Tab leaves.
+ * Backspace removes the last tag of a multiple select. Inside the tree the usual treeview keys apply. The field
  * is the combobox and names the tree in `aria-controls`.
  *
  * ## Value
@@ -964,6 +964,9 @@ export class AndesTreeSelect
         if (event.altKey && this.isOpen()) {
           event.preventDefault();
           this.close();
+        } else if (!this.isOpen()) {
+          event.preventDefault();
+          this.open();
         }
         break;
       case 'Enter':

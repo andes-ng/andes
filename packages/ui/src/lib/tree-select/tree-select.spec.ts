@@ -193,15 +193,19 @@ const checkbox = (el: HTMLElement) =>
     ':scope > .andes-tree__row .andes-tree__checkbox',
   ) as HTMLElement;
 
-function key(el: HTMLElement, name: string, init: KeyboardEventInit = {}) {
-  el.dispatchEvent(
-    new KeyboardEvent('keydown', {
-      key: name,
-      bubbles: true,
-      cancelable: true,
-      ...init,
-    }),
-  );
+function key(
+  el: HTMLElement,
+  name: string,
+  init: KeyboardEventInit = {},
+): KeyboardEvent {
+  const event = new KeyboardEvent('keydown', {
+    key: name,
+    bubbles: true,
+    cancelable: true,
+    ...init,
+  });
+  el.dispatchEvent(event);
+  return event;
 }
 
 function open(f: Fixture) {
@@ -372,6 +376,17 @@ describe('AndesTreeSelect', () => {
       fixture.detectChanges();
       key(box(fixture), 'ArrowDown');
       expect(document.activeElement?.getAttribute('role')).toBe('treeitem');
+    });
+
+    it('opens with ArrowUp too, but not when already open', () => {
+      const fixture = setup();
+      const event = key(box(fixture), 'ArrowUp');
+      fixture.detectChanges();
+      expect(panel()).not.toBeNull();
+      expect(event.defaultPrevented).toBe(true);
+      key(box(fixture), 'ArrowUp');
+      fixture.detectChanges();
+      expect(panel()).not.toBeNull();
     });
 
     it('closes with Alt+ArrowUp', () => {

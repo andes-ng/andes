@@ -154,10 +154,10 @@ const signUpTemplate = (extra = '') => `
     (ngSubmit)="form.markAllAsTouched()"
     style="width: min(560px, 100vw - 2rem);"
   >
-    <andes-form-field label="Full name" tooltip="As printed on your ID." hasFeedback>
+    <andes-form-field label="Full name" tooltip="As printed on your ID.">
       <andes-input formControlName="name" />
     </andes-form-field>
-    <andes-form-field label="Work email address" hasFeedback>
+    <andes-form-field label="Work email address">
       <andes-input formControlName="email" type="email" />
     </andes-form-field>
     <andes-form-field label="Company" extra="Leave blank if you are signing up alone.">
@@ -202,10 +202,10 @@ export const Layouts: Story = {
     horizontal.controls.email.setValue('ada@lovelace.dev');
     horizontal.controls.email.markAsTouched();
     const fields = (extra: string) => `
-      <andes-form-field label="Full name" tooltip="As printed on your ID." hasFeedback>
+      <andes-form-field label="Full name" tooltip="As printed on your ID.">
         <andes-input formControlName="name" />
       </andes-form-field>
-      <andes-form-field label="Work email address" hasFeedback>
+      <andes-form-field label="Work email address">
         <andes-input formControlName="email" type="email" />
       </andes-form-field>
       <andes-form-field label="Company" extra="Leave blank if you are signing up alone.">

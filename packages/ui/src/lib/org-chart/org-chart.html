@@ -114,14 +114,17 @@
         [attr.aria-level]="node.level"
         [attr.aria-posinset]="node.posInSet"
         [attr.aria-setsize]="node.setSize"
-        [attr.aria-expanded]="node.context.expandable ? node.context.expanded : null"
-        [attr.aria-selected]="selectionMode() === 'none' ? null : node.context.selected"
+        [attr.aria-expanded]="node.toggleable ? node.context.expanded : null"
+        [attr.aria-selected]="selectable() ? node.context.selected : null"
+        [attr.aria-checked]="checkable() ? node.checkState : null"
         [attr.aria-disabled]="node.record.disabled ? 'true' : null"
         [attr.aria-busy]="node.context.loading ? 'true' : null"
         [attr.data-key]="node.key"
         [attr.data-kind]="node.kind"
         [attr.data-expanded]="node.context.expanded ? '' : null"
-        [attr.data-selected]="node.context.selected ? '' : null"
+        [attr.data-selected]="selectable() && node.context.selected ? '' : null"
+        [attr.data-checked]="checkable() && node.checkState !== 'false' ? (node.checkState === 'mixed' ? 'mixed' : 'checked') : null"
+        [attr.data-accent]="node.context.color ? '' : null"
         [attr.data-matched]="node.context.matched ? '' : null"
         [attr.data-highlighted]="node.context.highlighted ? '' : null"
         [attr.data-dimmed]="searching() && !node.context.highlighted ? '' : null"
@@ -143,7 +146,41 @@
         (pointerleave)="onNodeHover(node, $event, false)"
       >
         <div class="andes-org-chart__card" data-slot="org-chart-card">
-          @if (resolvedNodeTemplate(); as nodeTemplate) {
+          @if (checkable()) {
+          <!--
+            Pointer-only, like the toggle: the card itself is announced with aria-checked and
+            Space toggles it.
+          -->
+          <span
+            class="andes-org-chart__checkbox"
+            data-slot="org-chart-checkbox"
+            aria-hidden="true"
+            (click)="onCheckboxClick(node, $event)"
+          >
+            @if (node.checkState === 'true') {
+            <svg viewBox="0 0 12 12" focusable="false">
+              <path
+                d="M2.5 6.25 5 8.5l4.5-5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            } @else if (node.checkState === 'mixed') {
+            <svg viewBox="0 0 12 12" focusable="false">
+              <path
+                d="M3 6h6"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+              />
+            </svg>
+            }
+          </span>
+          } @if (resolvedNodeTemplate(); as nodeTemplate) {
           <ng-container
             [ngTemplateOutlet]="nodeTemplate"
             [ngTemplateOutletContext]="node.context"
@@ -158,7 +195,6 @@
             <img
               class="andes-org-chart__avatar-image"
               alt=""
-              loading="lazy"
               decoding="async"
               [src]="node.context.avatar"
               (error)="onAvatarError(node.key)"
@@ -177,7 +213,7 @@
           </span>
           }
         </div>
-        @if (node.context.expandable) {
+        @if (node.toggleable) {
         <!--
           Pointer-only shortcut, hidden from assistive technology and the tab order: keyboard
           users expand and collapse with Right/Left or Alt+Down/Alt+Up on the card, which already
@@ -187,16 +223,17 @@
           type="button"
           tabindex="-1"
           aria-hidden="true"
-          class="andes-org-chart__badge"
-          data-slot="org-chart-badge"
+          class="andes-org-chart__toggle"
+          data-slot="org-chart-toggle"
           [attr.data-expanded]="node.context.expanded ? '' : null"
           [attr.data-loading]="node.context.loading ? '' : null"
+          [attr.data-count]="node.count ? '' : null"
           [attr.title]="node.context.loading ? text().loading : null"
-          (click)="onBadgeClick(node, $event)"
+          (click)="onToggleClick(node, $event)"
         >
-          @if (resolvedBadgeTemplate(); as badgeTemplate) {
+          @if (resolvedToggleTemplate(); as toggleTemplate) {
           <ng-container
-            [ngTemplateOutlet]="badgeTemplate"
+            [ngTemplateOutlet]="toggleTemplate"
             [ngTemplateOutletContext]="node.context"
           />
           } @else if (node.context.loading) {
@@ -214,23 +251,32 @@
               stroke-width="2"
             />
           </svg>
-          } @else { @if (node.badge) {
-          <span class="andes-org-chart__count">{{ node.badge }}</span>
+          } @else { @if (node.count) {
+          <span class="andes-org-chart__count">{{ node.count }}</span>
           }
-          <svg
-            class="andes-org-chart__chevron"
-            viewBox="0 0 16 16"
-            focusable="false"
-          >
-            <path
-              d="M4.5 6.5 8 10l3.5-3.5"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.75"
-              stroke-linecap="round"
-              stroke-linejoin="round"
+          <span class="andes-org-chart__toggle-icon">
+            @if (resolvedToggleIconTemplate(); as iconTemplate) {
+            <ng-container
+              [ngTemplateOutlet]="iconTemplate"
+              [ngTemplateOutletContext]="{ $implicit: node.context.expanded, node: node.context }"
             />
-          </svg>
+            } @else {
+            <svg
+              class="andes-org-chart__chevron"
+              viewBox="0 0 12 12"
+              focusable="false"
+            >
+              <path
+                d="M3.5 4.75 6 7.25l2.5-2.5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.25"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            }
+          </span>
           }
         </button>
         }

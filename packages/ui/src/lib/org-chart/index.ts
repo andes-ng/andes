@@ -1,6 +1,5 @@
 export { AndesOrgChart } from './org-chart';
 export type {
-  AndesOrgChartBadgeCount,
   AndesOrgChartConnectorClass,
   AndesOrgChartConnectorInfo,
   AndesOrgChartDirection,
@@ -18,20 +17,23 @@ export type {
   AndesOrgChartSelectionMode,
   AndesOrgChartSize,
   AndesOrgChartSubscribable,
+  AndesOrgChartToggleCount,
   AndesOrgChartViewOptions,
   AndesOrgChartViewport,
   AndesOrgChartWheel,
 } from './org-chart';
 export {
-  AndesOrgChartBadgeTemplate,
   AndesOrgChartConnectorTemplate,
   AndesOrgChartEmptyTemplate,
   AndesOrgChartNodeTemplate,
+  AndesOrgChartToggleIconTemplate,
+  AndesOrgChartToggleTemplate,
   AndesOrgChartToolbarTemplate,
 } from './org-chart-templates';
 export type {
   AndesOrgChartConnectorContext,
   AndesOrgChartNodeContext,
+  AndesOrgChartToggleIconContext,
 } from './org-chart-templates';
 export {
   ANDES_ORG_CHART_FIELD_NAMES,

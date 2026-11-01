@@ -1,4 +1,5 @@
 import {
+  AndesCheckedTree,
   andesElementSize,
   andesPrefersReducedMotion,
   AndesTreeNavigation,
@@ -59,20 +60,31 @@ import {
   OrgChartNodeHost,
 } from './org-chart-node';
 import {
-  AndesOrgChartBadgeTemplate,
   AndesOrgChartConnectorContext,
   AndesOrgChartConnectorTemplate,
   AndesOrgChartEmptyTemplate,
   AndesOrgChartNodeContext,
   AndesOrgChartNodeTemplate,
+  AndesOrgChartToggleIconContext,
+  AndesOrgChartToggleIconTemplate,
+  AndesOrgChartToggleTemplate,
   AndesOrgChartToolbarTemplate,
 } from './org-chart-templates';
 
-/** Whether clicking a card selects nothing, one card, or toggles cards in a set. */
-export type AndesOrgChartSelectionMode = 'none' | 'single' | 'multiple';
+/**
+ * How cards are selected.
+ *
+ * - `none`: not at all.
+ * - `single`: a click selects one card (Ctrl/Cmd + click deselects it).
+ * - `multiple`: a click adds or removes a card.
+ * - `checkbox`: every card has a checkbox; checking a card checks everyone below it, a manager
+ *   whose reports are all checked is checked, and one with only some checked is mixed.
+ */
+export type AndesOrgChartSelectionMode =
+  'none' | 'single' | 'multiple' | 'checkbox';
 
-/** What the count badge counts: direct reports, everyone below, or nothing (an arrow only). */
-export type AndesOrgChartBadgeCount = 'direct' | 'total' | 'none';
+/** The small number next to the toggle icon: direct reports, everyone below, or none. */
+export type AndesOrgChartToggleCount = 'direct' | 'total' | 'none';
 
 /** What the mouse wheel does. Pinch and Ctrl/Cmd + wheel always zoom. */
 export type AndesOrgChartWheel = 'zoom' | 'pan';
@@ -158,7 +170,12 @@ export interface AndesOrgChartExpandEvent<T> {
 /** Payload of `nodeSelect`: a user selected or deselected a card. */
 export interface AndesOrgChartSelectEvent<T> {
   readonly node: AndesOrgChartNodeContext<T>;
+  /** `true` when the node became selected (checked), `false` when it was deselected. */
   readonly selected: boolean;
+  /** Every selected key after the change (in `checkbox` mode, every checked key). */
+  readonly selectedKeys: readonly AndesOrgChartKey[];
+  /** `checkbox` mode: the managers now in the mixed state. Empty in the other modes. */
+  readonly partiallySelected: readonly AndesOrgChartKey[];
 }
 
 /** Payload of `loadError`: `loadChildren` failed; the card collapses again. */
@@ -209,9 +226,9 @@ const DEFAULT_LABELS: AndesOrgChartLabels = {
   loading: 'Loading reports',
 };
 
-const DEFAULT_NODE_SIZE: AndesOrgChartSize = { width: 232, height: 72 };
+const DEFAULT_NODE_SIZE: AndesOrgChartSize = { width: 240, height: 72 };
 
-/** Space around the cards inside the canvas, so badges and shadows are never clipped. */
+/** Space around the cards inside the canvas, so toggles and focus rings are never clipped. */
 const CANVAS_PADDING = 32;
 
 /**
@@ -283,12 +300,17 @@ interface NodeView<T> {
   readonly fromX: number;
   readonly fromY: number;
   readonly kind: 'root' | 'branch' | 'leaf';
+  /** Shows the expand / collapse toggle and `aria-expanded`. */
+  readonly toggleable: boolean;
+  /** `checkbox` mode: the card's `aria-checked`. */
+  readonly checkState: 'true' | 'false' | 'mixed';
   readonly context: AndesOrgChartNodeContext<T>;
   readonly classes: string | readonly string[] | null;
   readonly level: number;
   readonly posInSet: number;
   readonly setSize: number;
-  readonly badge: string;
+  /** The optional count next to the toggle icon, `''` for none. */
+  readonly count: string;
 }
 
 /** A connector as the template renders it. */
@@ -310,7 +332,7 @@ interface LinkView<T> {
  *   (`dataFormat="flat"`); every field name is configurable through `fieldNames`.
  * - **Layout**: a tidy tree for cards of any size, vertical or horizontal, reversed, right to
  *   left; compact or hanging teams of leaves; assistants beside the stem.
- * - **Interaction**: expand and collapse with the count badge, selection, search with the
+ * - **Interaction**: expand and collapse with the toggle, selection, search with the
  *   path to the root highlighted, pan by dragging, zoom with the wheel, a pinch or the
  *   floating controls, and lazy loading of reports.
  * - **Keyboard** (the WAI-ARIA tree pattern, following the reading order rather than the
@@ -376,7 +398,7 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
   /**
    * Fetches a node's reports the first time it is expanded. Nodes without children are then
    * expandable unless their `isLeaf` field is `true`. May return an array, a promise or an
-   * observable; the badge shows a spinner meanwhile.
+   * observable; the toggle shows a spinner meanwhile.
    */
   readonly loadChildren = input<AndesOrgChartLoadChildren<T> | null>(null);
 
@@ -391,8 +413,8 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
   /** `elbow` (default), `straight` or `curved`. */
   readonly connector = input<AndesOrgChartConnectorStyle>('elbow');
   /** Corner radius of elbow connectors, in pixels. */
-  readonly connectorRadius = input(8, { transform: numberAttribute });
-  /** Card size, fixed or per item. Default 232 x 72. */
+  readonly connectorRadius = input(6, { transform: numberAttribute });
+  /** Card size, fixed or per item. Default 240 x 72. */
   readonly nodeSize = input<AndesOrgChartNodeSize<T>>(DEFAULT_NODE_SIZE);
   /** Space between sibling cards. */
   readonly nodeGap = input(24, { transform: numberAttribute });
@@ -418,9 +440,14 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
   readonly defaultExpandDepth = input(2, { transform: numberAttribute });
   /** Start with every node expanded (wins over `defaultExpandDepth`). */
   readonly expandAll = input(false, { transform: booleanAttribute });
-  /** Clicking a card also expands or collapses it (the badge always does). */
+  /**
+   * Whether teams can be expanded and collapsed. `false` hides the toggle and keeps every team
+   * open (lazy teams are fetched as soon as they are shown).
+   */
+  readonly collapsible = input(true, { transform: booleanAttribute });
+  /** Clicking a card also expands or collapses it (the toggle always does). */
   readonly expandOnClick = input(false, { transform: booleanAttribute });
-  /** `single` (default), `multiple` or `none`. */
+  /** `single` (default), `multiple`, `checkbox` or `none`. */
   readonly selectionMode = input<AndesOrgChartSelectionMode>('single');
   /** Keys of the selected nodes; two-way bindable. */
   readonly selected = model<readonly AndesOrgChartKey[]>([]);
@@ -430,8 +457,8 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
   readonly searchFn = input<((node: T, query: string) => boolean) | null>(null);
   /** Expand the managers of every match so the matches are visible. */
   readonly searchExpand = input(true, { transform: booleanAttribute });
-  /** What the badge counts. */
-  readonly badge = input<AndesOrgChartBadgeCount>('direct');
+  /** The optional count next to the toggle icon: `none` (default), `direct` or `total`. */
+  readonly toggleCount = input<AndesOrgChartToggleCount>('none');
 
   // ------------------------------------------------------------------ view inputs
 
@@ -460,9 +487,16 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
   readonly nodeTemplate = input<TemplateRef<
     AndesOrgChartNodeContext<T>
   > | null>(null);
-  /** Replaces the badge content (or use `<ng-template andesOrgChartBadge>`). */
-  readonly badgeTemplate = input<TemplateRef<
+  /** Replaces the whole toggle content (or use `<ng-template andesOrgChartToggle>`). */
+  readonly toggleTemplate = input<TemplateRef<
     AndesOrgChartNodeContext<T>
+  > | null>(null);
+  /**
+   * Replaces only the toggle icon (or use `<ng-template andesOrgChartToggleIcon>`); receives
+   * `{ $implicit: expanded, node }`.
+   */
+  readonly toggleIconTemplate = input<TemplateRef<
+    AndesOrgChartToggleIconContext<T>
   > | null>(null);
   /** Extra controls in the top start corner (or use `<ng-template andesOrgChartToolbar>`). */
   readonly toolbarTemplate = input<TemplateRef<unknown> | null>(null);
@@ -505,7 +539,10 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
   // ------------------------------------------------------------------ content templates
 
   private readonly nodeDef = contentChild(AndesOrgChartNodeTemplate);
-  private readonly badgeDef = contentChild(AndesOrgChartBadgeTemplate);
+  private readonly toggleDef = contentChild(AndesOrgChartToggleTemplate);
+  private readonly toggleIconDef = contentChild(
+    AndesOrgChartToggleIconTemplate,
+  );
   private readonly toolbarDef = contentChild(AndesOrgChartToolbarTemplate);
   private readonly emptyDef = contentChild(AndesOrgChartEmptyTemplate);
   private readonly connectorDef = contentChild(AndesOrgChartConnectorTemplate);
@@ -516,10 +553,20 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
       (this.nodeDef()?.template as TemplateRef<AndesOrgChartNodeContext<T>>) ??
       null,
   );
-  protected readonly resolvedBadgeTemplate = computed(
+  protected readonly resolvedToggleTemplate = computed(
     () =>
-      this.badgeTemplate() ??
-      (this.badgeDef()?.template as TemplateRef<AndesOrgChartNodeContext<T>>) ??
+      this.toggleTemplate() ??
+      (this.toggleDef()?.template as TemplateRef<
+        AndesOrgChartNodeContext<T>
+      >) ??
+      null,
+  );
+  protected readonly resolvedToggleIconTemplate = computed(
+    () =>
+      this.toggleIconTemplate() ??
+      (this.toggleIconDef()?.template as TemplateRef<
+        AndesOrgChartToggleIconContext<T>
+      >) ??
       null,
   );
   protected readonly resolvedToolbarTemplate = computed(
@@ -592,6 +639,20 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
     ),
   );
 
+  /**
+   * The cascade of `checkbox` mode: checking a manager checks the whole team, and a manager is
+   * checked or mixed from the team. Disabled and read-only people are locked.
+   */
+  private readonly checkedTree = new AndesCheckedTree<
+    OrgChartRecord<T>,
+    AndesOrgChartKey
+  >({
+    nodes: () => this.tree().roots,
+    childrenOf: (record) => record.children,
+    keyOf: (record) => record.key,
+    isDisabled: (record) => record.disabled || record.readonly,
+  });
+
   protected readonly resolvedDirection = computed<'ltr' | 'rtl'>(() => {
     const direction = this.direction();
     return direction === 'auto' ? this.domDirection() : direction;
@@ -601,7 +662,7 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
     () => this.animated() && !this.reducedMotion(),
   );
 
-  /** The card edge facing the reports, where the badge sits. */
+  /** The card edge facing the reports, where the toggle sits. */
   protected readonly childrenSide = computed(() => {
     const reversed = this.reversed();
     if (this.orientation() === 'vertical') {
@@ -613,8 +674,28 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
 
   protected readonly searching = computed(() => this.search().trim() !== '');
 
-  protected readonly selectedSet = computed(
-    () => new Set<AndesOrgChartKey>(this.selected()),
+  /** `single` or `multiple`: cards announce `aria-selected`. */
+  protected readonly selectable = computed(
+    () =>
+      this.selectionMode() === 'single' || this.selectionMode() === 'multiple',
+  );
+  /** `checkbox`: cards announce `aria-checked` and show a checkbox. */
+  protected readonly checkable = computed(
+    () => this.selectionMode() === 'checkbox',
+  );
+
+  protected readonly selectedSet = computed(() =>
+    this.checkable()
+      ? this.checkedTree.checked()
+      : new Set<AndesOrgChartKey>(this.selected()),
+  );
+
+  /**
+   * `checkbox` mode: the managers with some, but not all, reports checked (shown and announced
+   * as mixed). Empty in the other modes.
+   */
+  readonly partiallySelected = computed<readonly AndesOrgChartKey[]>(() =>
+    this.checkable() ? [...this.checkedTree.halfChecked()] : [],
   );
 
   /** Keys of every node that matches the search, in reading order. */
@@ -705,6 +786,7 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
   /** The records currently on screen and the layout input built from them. */
   private readonly visible = computed(() => {
     const expanded = this.expandedState();
+    const everything = !this.collapsible();
     const size = this.sizeOf();
     const records: OrgChartRecord<T>[] = [];
     const toNode = (record: OrgChartRecord<T>): AndesOrgChartLayoutNode => {
@@ -719,7 +801,7 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
         leaf: !this.isExpandable(record),
         children,
       };
-      if (expanded.has(record.key)) {
+      if (everything || expanded.has(record.key)) {
         for (const child of record.children) {
           children.push(toNode(child));
         }
@@ -770,7 +852,9 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
         (colors.length ? colors[record.depth % colors.length] : null),
       childCount: record.children.length,
       descendantCount: record.descendants,
-      expanded: this.expandedState().has(key),
+      expanded:
+        (!this.collapsible() && record.children.length > 0) ||
+        this.expandedState().has(key),
       expandable: this.isExpandable(record),
       loading: this.loadingKeys().has(key),
       selected: this.selectedSet().has(key),
@@ -787,7 +871,10 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
   protected readonly nodes = computed<readonly NodeView<T>[]>(() => {
     const layout = this.layout();
     const nodeClass = this.nodeClass();
-    const badge = this.badge();
+    const countMode = this.toggleCount();
+    const collapsible = this.collapsible();
+    const checkable = this.checkable();
+    const half = this.checkedTree.halfChecked();
     const roots = this.tree().roots;
     const position = this.siblingIndex();
     const views: NodeView<T>[] = [];
@@ -817,12 +904,22 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
         level: record.depth + 1,
         posInSet: (position.get(record.key) ?? 0) + 1,
         setSize: siblings.length,
-        // A team that has not been loaded yet has no count to show, only the arrow.
-        badge:
-          badge === 'none' || this.isLazy(record)
+        toggleable: collapsible && context.expandable,
+        checkState: !checkable
+          ? 'false'
+          : context.selected
+            ? 'true'
+            : half.has(record.key)
+              ? 'mixed'
+              : 'false',
+        // A team that has not been loaded yet has no count to show, only the icon.
+        count:
+          countMode === 'none' || this.isLazy(record)
             ? ''
             : String(
-                badge === 'total' ? record.descendants : record.children.length,
+                countMode === 'total'
+                  ? record.descendants
+                  : record.children.length,
               ),
       });
     }
@@ -948,7 +1045,7 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
       this.inOrder().map<AndesTreeNavigationNode>((record) => ({
         key: record.key,
         parentKey: record.parent?.key ?? null,
-        expandable: this.isExpandable(record),
+        expandable: this.collapsible() && this.isExpandable(record),
         label: record.name || record.title,
       })),
     );
@@ -961,6 +1058,46 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
       this.afterUserToggle(change.key, change.expanded),
     );
     this.destroyRef.onDestroy(() => subscription.unsubscribe());
+
+    // Checkbox mode: the bound keys seed the cascade, and the cascaded keys are written back
+    // (also when a lazy team arrives under a checked manager).
+    effect(() => {
+      if (!this.checkable()) {
+        return;
+      }
+      const keys = this.selected();
+      untracked(() => {
+        if (!sameKeys(new Set(this.checkedTree.checkedKeys()), keys)) {
+          this.checkedTree.setChecked(keys);
+        }
+      });
+    });
+    effect(() => {
+      if (!this.checkable()) {
+        return;
+      }
+      const keys = this.checkedTree.checkedKeys();
+      untracked(() => {
+        if (!sameKeys(new Set(keys), this.selected())) {
+          this.selected.set(keys);
+        }
+      });
+    });
+
+    // Not collapsible: every team is open, so lazy teams are fetched as soon as they show.
+    effect(() => {
+      if (this.collapsible()) {
+        return;
+      }
+      const records = this.visible().records;
+      untracked(() => {
+        for (const record of records) {
+          if (this.isLazy(record)) {
+            this.load(record);
+          }
+        }
+      });
+    });
 
     // A bound `expanded` value wins over the current state.
     effect(() => {
@@ -1153,7 +1290,7 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
   /** Expands a collapsed node and collapses an expanded one. */
   toggle(key: AndesOrgChartKey): void {
     const record = this.recordOf(key);
-    if (!record || record.disabled) {
+    if (!record || record.disabled || !this.collapsible()) {
       return;
     }
     this.navigation.toggle(key);
@@ -1313,6 +1450,9 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
 
   /** Clears the selection. */
   clearSelection(): void {
+    if (this.checkable()) {
+      this.checkedTree.clear();
+    }
     if (this.selected().length) {
       this.selected.set([]);
     }
@@ -1323,16 +1463,29 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
     if (!this.canSelect(record) || this.selectedSet().has(key) === on) {
       return;
     }
-    const current = this.selected();
-    const next = on
-      ? this.selectionMode() === 'single'
-        ? [key]
-        : [...current, key]
-      : current.filter((entry) => entry !== key);
-    this.selected.set(next);
+    if (this.checkable()) {
+      // A mixed manager counts as unchecked here, so toggling it checks the whole team.
+      if (on) {
+        this.checkedTree.check(key);
+      } else {
+        this.checkedTree.uncheck(key);
+      }
+      this.selected.set(this.checkedTree.checkedKeys());
+    } else {
+      const current = this.selected();
+      this.selected.set(
+        on
+          ? this.selectionMode() === 'single'
+            ? [key]
+            : [...current, key]
+          : current.filter((entry) => entry !== key),
+      );
+    }
     this.nodeSelect.emit({
       node: this.contextFor(record as OrgChartRecord<T>),
       selected: on,
+      selectedKeys: this.selected(),
+      partiallySelected: this.partiallySelected(),
     });
   }
 
@@ -1629,7 +1782,7 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
   }
 
   private toggleOrSelect(key: AndesOrgChartKey, event: Event): void {
-    if (this.selectionMode() === 'multiple') {
+    if (this.selectionMode() === 'multiple' || this.checkable()) {
       this.toggleSelection(key);
     } else if (this.selectionMode() === 'single') {
       const multiKey =
@@ -1660,7 +1813,18 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
     this.nodeHover.emit({ node: view.context, event, hovered });
   }
 
-  protected onBadgeClick(view: NodeView<T>, event: MouseEvent): void {
+  protected onCheckboxClick(view: NodeView<T>, event: MouseEvent): void {
+    event.stopPropagation();
+    if (this.suppressClick) {
+      this.suppressClick = false;
+      return;
+    }
+    if (!view.record.disabled) {
+      this.toggleSelection(view.key);
+    }
+  }
+
+  protected onToggleClick(view: NodeView<T>, event: MouseEvent): void {
     event.stopPropagation();
     if (this.suppressClick) {
       this.suppressClick = false;

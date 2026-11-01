@@ -163,10 +163,11 @@ export const CaptionDropdowns: Story = {
 };
 
 /**
- * One picker whose `picker` a select switches between `time`, `date`, `week`, `month`,
- * `quarter` and `year`. The component is not rebuilt: the value stays what it was and is
- * shown in the new picker's format (a week, a month...), the calendar opens on its grid,
- * and the next pick is a period of the new kind.
+ * One select switches the `picker` of three fields at once, a single, a range and a multiple
+ * picker (the multiple one is hidden for `time`, which has no multiple mode): `time`, `date`,
+ * `week`, `month`, `quarter` and `year`. The components are not rebuilt: each value stays what
+ * it was and is shown in the new picker's format (a week, a month...), the calendar opens on
+ * its grid, and the next pick is a period of the new kind.
  */
 export const SwitchablePicker: Story = {
   render: () => ({
@@ -177,12 +178,19 @@ export const SwitchablePicker: Story = {
         (value) => ({ value, label: value }),
       ),
       picked: FEB_15,
+      span: [new Date(2024, 1, 5), new Date(2024, 1, 12)],
+      // Different weeks, months, quarters and years, so every picker shows two distinct tags.
+      several: [new Date(2024, 1, 2), new Date(2025, 5, 14)],
       mono: MONO,
     },
-    template: `<div style="min-height: 26rem; display: flex; flex-direction: column; gap: 0.75rem;">
-      <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
-        <andes-select [options]="types" [(value)]="type" aria-label="Picker" style="width: 7.5rem;" />
-        <andes-date-picker [picker]="type" locale="en-US" [(ngModel)]="picked" aria-label="Switchable" />
+    template: `<div style="min-height: 28rem; display: flex; flex-direction: column; gap: 0.75rem;">
+      <andes-select [options]="types" [(value)]="type" aria-label="Picker" style="width: 7.5rem;" />
+      <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-start;">
+        <andes-date-picker style="width: 13rem;" [picker]="type" locale="en-US" [(ngModel)]="picked" aria-label="Switchable" />
+        <andes-date-picker style="width: 22rem;" mode="range" [picker]="type" locale="en-US" [ngModel]="span" aria-label="Switchable range" />
+        @if (type !== 'time') {
+          <andes-date-picker style="width: 18rem;" mode="multiple" [picker]="type" locale="en-US" [ngModel]="several" aria-label="Switchable multiple" />
+        }
       </div>
       <pre [style]="mono">picker: {{ type }}
 value: {{ picked | json }}</pre>

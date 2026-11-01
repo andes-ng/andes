@@ -1378,6 +1378,31 @@ describe('AndesTreeSelect', () => {
       ).toBe('0.375rem');
     });
 
+    it('cross-fades the clear button with the indicator instead of swapping them', () => {
+      expect(
+        declaredValue(css, '.andes-tree-select__swap > *', 'grid-area'),
+      ).toBe('1 / 1');
+      expect(declaredValue(css, '.andes-tree-select__clear', 'opacity')).toBe(
+        '0',
+      );
+      expect(
+        declaredValue(css, '.andes-tree-select__clear', 'visibility'),
+      ).toBe('hidden');
+      expect(
+        declaredValue(
+          css,
+          '.andes-tree-select__trigger:hover .andes-tree-select__clear',
+          'opacity',
+        ),
+      ).toBe('1');
+      expect(css).toContain(
+        '.andes-tree-select__trigger[data-clearable]:focus-within .andes-tree-select__indicator',
+      );
+      expect(
+        declaredValue(css, '.andes-tree-select__chevron', 'transition'),
+      ).toContain('opacity var(--andes-duration-base, 150ms) ease');
+    });
+
     it('isolates the "+ N ..." tag from the surrounding direction', () => {
       expect(
         declaredValue(css, '.andes-tree-select__tag--rest', 'unicode-bidi'),

@@ -228,54 +228,71 @@
   </div>
 
   <span class="andes-tree-select__suffix">
-    @if (showClear()) {
-    <button
-      type="button"
-      tabindex="-1"
-      class="andes-tree-select__clear"
-      data-slot="tree-select-clear"
-      [attr.aria-label]="text().clear"
-      (click)="clear($event)"
-    >
-      @if (clearIcon(); as clearTemplate) {
-      <ng-container [ngTemplateOutlet]="clearTemplate" />
-      } @else {
-      <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-        <circle cx="8" cy="8" r="8" />
-        <path d="M5.5 5.5l5 5m0-5-5 5" />
-      </svg>
-      }
-    </button>
-    } @if (loading()) { @if (loadingIcon(); as loadingTemplate) {
+    <!--
+      The clear button and the indicator (chevron, spinner) share one cell and cross-fade:
+      the clear button fades in over the indicator while the pointer is on the field or it
+      holds focus. With no indicator to cover, the clear button simply appears.
+    -->
     <span
-      class="andes-tree-select__loading-icon"
-      data-slot="tree-select-loading"
-      aria-hidden="true"
+      class="andes-tree-select__swap"
+      [attr.data-alone]="!loading() && suffixIcon() === null ? '' : null"
     >
-      <ng-container [ngTemplateOutlet]="loadingTemplate" />
-    </span>
-    } @else {
-    <span
-      class="andes-tree-select__spinner"
-      data-slot="tree-select-loading"
-      aria-hidden="true"
-    ></span>
-    } } @else if (suffixIcon() !== null) {
-    <span class="andes-tree-select__chevron" aria-hidden="true">
-      @if (suffixIcon(); as suffixTemplate) {
-      <ng-container [ngTemplateOutlet]="suffixTemplate" />
-      } @else {
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
+      @if (showClear()) {
+      <button
+        type="button"
+        tabindex="-1"
+        class="andes-tree-select__clear"
+        data-slot="tree-select-clear"
+        [attr.aria-label]="text().clear"
+        (click)="clear($event)"
       >
-        <path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round" />
-      </svg>
+        @if (clearIcon(); as clearTemplate) {
+        <ng-container [ngTemplateOutlet]="clearTemplate" />
+        } @else {
+        <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+          <circle cx="8" cy="8" r="8" />
+          <path d="M5.5 5.5l5 5m0-5-5 5" />
+        </svg>
+        }
+      </button>
+      } @if (loading()) { @if (loadingIcon(); as loadingTemplate) {
+      <span
+        class="andes-tree-select__loading-icon andes-tree-select__indicator"
+        data-slot="tree-select-loading"
+        aria-hidden="true"
+      >
+        <ng-container [ngTemplateOutlet]="loadingTemplate" />
+      </span>
+      } @else {
+      <span
+        class="andes-tree-select__spinner andes-tree-select__indicator"
+        data-slot="tree-select-loading"
+        aria-hidden="true"
+      ></span>
+      } } @else if (suffixIcon() !== null) {
+      <span
+        class="andes-tree-select__chevron andes-tree-select__indicator"
+        aria-hidden="true"
+      >
+        @if (suffixIcon(); as suffixTemplate) {
+        <ng-container [ngTemplateOutlet]="suffixTemplate" />
+        } @else {
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            d="m6 9 6 6 6-6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        }
+      </span>
       }
     </span>
-    }
   </span>
 
   <span hidden [id]="summaryId">{{ summary() }}</span>

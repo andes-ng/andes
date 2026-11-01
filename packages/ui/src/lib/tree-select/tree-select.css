@@ -494,8 +494,10 @@
 
 .andes-tree-select__chevron {
   display: inline-flex;
-  transition: transform var(--andes-motion-duration-mid, 150ms)
-    var(--andes-motion-ease-in-out, cubic-bezier(0.645, 0.045, 0.355, 1));
+  transition:
+    transform var(--andes-motion-duration-mid, 150ms)
+      var(--andes-motion-ease-in-out, cubic-bezier(0.645, 0.045, 0.355, 1)),
+    opacity var(--andes-duration-base, 150ms) ease;
 }
 
 .andes-tree-select__trigger[data-state='open'] .andes-tree-select__chevron {
@@ -507,19 +509,31 @@
   height: 0.875em;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .andes-tree-select__chevron {
-    transition: none;
-  }
+/*
+  The clear button: a muted disc with the "x" knocked out of it, 1em across. It shares one grid
+  cell with the indicator (chevron or spinner) and cross-fades with it while the pointer is over
+  the box or the box holds focus: the clear button fades in as the indicator fades out, so the
+  field never changes width. Hidden, it is also `visibility: hidden` - out of reach of the
+  pointer and of assistive technology - once its fade has ended. The padding grows its hit area
+  to 24px and the equal negative margin takes it back out of the layout.
+*/
+.andes-tree-select__swap {
+  display: inline-grid;
+  align-items: center;
+  justify-items: center;
 }
 
-/*
-  The clear button: a muted disc with the "x" knocked out of it, 1em across. It replaces the
-  chevron while the pointer is over the box or the box holds focus. The padding grows its hit
-  area to 24px and the equal negative margin takes it back out of the layout.
-*/
+.andes-tree-select__swap > * {
+  grid-area: 1 / 1;
+}
+
+/* The chevron's own transition (above) also turns it; the spinner only fades. */
+.andes-tree-select__indicator:not(.andes-tree-select__chevron) {
+  transition: opacity var(--andes-duration-base, 150ms) ease;
+}
+
 .andes-tree-select__clear {
-  display: none;
+  display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
@@ -536,7 +550,12 @@
   font: inherit;
   line-height: 1;
   cursor: pointer;
-  transition: color 150ms ease;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--andes-duration-base, 150ms) ease,
+    visibility 0s linear var(--andes-duration-base, 150ms),
+    color var(--andes-duration-base, 150ms) ease;
 }
 
 .andes-tree-select__clear:hover {
@@ -561,23 +580,49 @@
 
 .andes-tree-select__trigger:hover .andes-tree-select__clear,
 .andes-tree-select__trigger:focus-within .andes-tree-select__clear {
-  display: inline-flex;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity var(--andes-duration-base, 150ms) ease,
+    visibility 0s,
+    color var(--andes-duration-base, 150ms) ease;
 }
 
-/* While the clear button shows, it takes the chevron's place. */
-.andes-tree-select__trigger[data-clearable]:hover .andes-tree-select__chevron,
+/* While the clear button shows, the indicator under it fades away. */
+.andes-tree-select__trigger[data-clearable]:hover .andes-tree-select__indicator,
 /* prettier-ignore */
-.andes-tree-select__trigger[data-clearable]:focus-within .andes-tree-select__chevron {
+.andes-tree-select__trigger[data-clearable]:focus-within .andes-tree-select__indicator {
+  opacity: 0;
+}
+
+/* With no indicator (suffixIcon null) there is nothing to cover: the clear button takes no
+   room until it shows. */
+.andes-tree-select__swap[data-alone] .andes-tree-select__clear {
   display: none;
 }
 
+/* prettier-ignore */
+.andes-tree-select__trigger:is(:hover, :focus-within) .andes-tree-select__swap[data-alone] .andes-tree-select__clear {
+  display: inline-flex;
+}
+
 @media (hover: none) {
-  .andes-tree-select__clear {
+  .andes-tree-select__swap .andes-tree-select__clear {
     display: inline-flex;
+    opacity: 1;
+    visibility: visible;
   }
 
-  .andes-tree-select__trigger[data-clearable] .andes-tree-select__chevron {
-    display: none;
+  .andes-tree-select__trigger[data-clearable] .andes-tree-select__indicator {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .andes-tree-select__chevron,
+  .andes-tree-select__indicator,
+  .andes-tree-select__clear {
+    transition: none;
   }
 }
 

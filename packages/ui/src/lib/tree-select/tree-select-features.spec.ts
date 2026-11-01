@@ -690,6 +690,37 @@ describe('AndesTreeSelect features', () => {
       expect(root.querySelector('.andes-tree-select__chevron')).toBeNull();
     });
 
+    it('puts the clear button and the indicator in one cell, alone with no indicator', () => {
+      const host = setup((h) => {
+        h.allowClear.set(true);
+        h.value.set('iquitos');
+      });
+      const root = fixture.nativeElement as HTMLElement;
+      const swap = root.querySelector(
+        '.andes-tree-select__swap',
+      ) as HTMLElement;
+      expect(
+        swap.querySelector('[data-slot="tree-select-clear"]'),
+      ).not.toBeNull();
+      expect(
+        swap.querySelector(
+          '.andes-tree-select__chevron.andes-tree-select__indicator',
+        ),
+      ).not.toBeNull();
+      expect(swap.hasAttribute('data-alone')).toBe(false);
+
+      host.loading.set(true);
+      detect();
+      expect(
+        swap.querySelector('[data-slot="tree-select-loading"]')?.classList,
+      ).toContain('andes-tree-select__indicator');
+
+      host.loading.set(false);
+      host.suffixMode.set('none');
+      detect();
+      expect(swap.hasAttribute('data-alone')).toBe(true);
+    });
+
     it('replaces the clear and remove icons', () => {
       setup((h) => {
         h.withIcons.set(true);

@@ -428,6 +428,242 @@ describe('AndesDatePicker motion and layout', () => {
     });
   });
 
+  describe('range panel following the active input', () => {
+    const field = new DOMRect(40, 100, 300, 32);
+    const start = new DOMRect(52, 100, 100, 32);
+    const end = new DOMRect(192, 100, 100, 32);
+
+    /**
+     * Lays the field and inputs out, and the pane where the overlay would draw it: at
+     * `paneLeft` plus the `alignOffset` the picker last configured, as the overlay applies it.
+     */
+    async function followView(
+      setup: (host: MotionHost) => void,
+      pane: { left: number; width: number; top?: number },
+      inputs: { start: DOMRect; end: DOMRect } = { start, end },
+    ) {
+      const view = await create((host) => {
+        host.mode.set('range');
+        setup(host);
+      });
+      const picker = view.fixture.debugElement.query(
+        (debug) => debug.componentInstance instanceof AndesDatePicker,
+      ).componentInstance as AndesDatePicker;
+      const configure = vi.spyOn(picker.overlay, 'configure');
+      const offset = () => {
+        const last = configure.mock.calls.at(-1)?.[0].positioning;
+        return last && 'alignOffset' in last ? (last.alignOffset ?? 0) : 0;
+      };
+      await view.open();
+      vi.spyOn(
+        HTMLElement.prototype,
+        'getBoundingClientRect',
+      ).mockImplementation(function (this: HTMLElement) {
+        if (this === view.field()) {
+          return field;
+        }
+        if (this === view.pane()) {
+          return new DOMRect(
+            pane.left + offset(),
+            pane.top ?? 138,
+            pane.width,
+            280,
+          );
+        }
+        if (this === view.input()) {
+          return inputs.start;
+        }
+        if (this === view.endInput()) {
+          return inputs.end;
+        }
+        return new DOMRect();
+      });
+      await resizeAndSettle(view);
+      const edit = async (input: HTMLInputElement | null) => {
+        input?.click();
+        view.detect();
+        await view.fixture.whenStable();
+        view.detect();
+      };
+      return { view, offset, edit };
+    }
+
+    it('moves a panel narrower than the field under the end input, and back', async () => {
+      const { view, offset, edit } = await followView(() => undefined, {
+        left: 40,
+        width: 120,
+      });
+      expect(offset()).toBe(0);
+      expect(view.arrow()?.style.left).toBe('32px');
+
+      await edit(view.endInput());
+      // As far as the end input lies from the start one: 192 - 52.
+      expect(offset()).toBe(140);
+      // The arrow keeps its place in the panel: 212 - (40 + 140).
+      expect(view.arrow()?.style.left).toBe('32px');
+      expect(view.panel()?.getAttribute('data-align')).toBe('end');
+
+      await edit(view.input());
+      expect(offset()).toBe(0);
+      expect(view.arrow()?.style.left).toBe('32px');
+    });
+
+    it('slides the pane when the active input changes, and drops the mark when it ends', async () => {
+      const { view, edit } = await followView(() => undefined, {
+        left: 40,
+        width: 120,
+      });
+      expect(view.pane()?.classList).not.toContain(
+        'andes-date-picker__pane--shifting',
+      );
+
+      await edit(view.endInput());
+      const pane = view.pane();
+      expect(pane?.classList).toContain('andes-date-picker__pane--shifting');
+
+      // Another property ending leaves the mark; the transform ending removes it.
+      pane?.dispatchEvent(
+        Object.assign(new Event('transitionend'), { propertyName: 'opacity' }),
+      );
+      expect(pane?.classList).toContain('andes-date-picker__pane--shifting');
+      pane?.dispatchEvent(
+        Object.assign(new Event('transitionend'), {
+          propertyName: 'transform',
+        }),
+      );
+      expect(pane?.classList).not.toContain(
+        'andes-date-picker__pane--shifting',
+      );
+    });
+
+    it('jumps rather than slides when the field is resized', async () => {
+      const { view, offset, edit } = await followView(() => undefined, {
+        left: 40,
+        width: 120,
+      });
+      await edit(view.endInput());
+      view.pane()?.dispatchEvent(
+        Object.assign(new Event('transitionend'), {
+          propertyName: 'transform',
+        }),
+      );
+
+      // The field grows; the end input moves right with it.
+      vi.spyOn(
+        HTMLElement.prototype,
+        'getBoundingClientRect',
+      ).mockImplementation(function (this: HTMLElement) {
+        if (this === view.field()) {
+          return new DOMRect(40, 100, 400, 32);
+        }
+        if (this === view.pane()) {
+          return new DOMRect(40 + offset(), 138, 120, 280);
+        }
+        if (this === view.input()) {
+          return start;
+        }
+        if (this === view.endInput()) {
+          return new DOMRect(242, 100, 150, 32);
+        }
+        return new DOMRect();
+      });
+      await resizeAndSettle(view);
+      expect(offset()).toBe(190);
+      expect(view.pane()?.classList).not.toContain(
+        'andes-date-picker__pane--shifting',
+      );
+    });
+
+    it('keeps the panel inside the field', async () => {
+      const { view, offset, edit } = await followView(() => undefined, {
+        left: 40,
+        width: 200,
+      });
+      await edit(view.endInput());
+      // 140 would leave the panel past the field's right edge (340): 340 - 200 - 40.
+      expect(offset()).toBe(100);
+    });
+
+    it('leaves a panel as wide as the field where it is: only the arrow moves', async () => {
+      const { view, offset, edit } = await followView(() => undefined, {
+        left: 40,
+        width: 576,
+      });
+      await edit(view.endInput());
+      expect(offset()).toBe(0);
+      expect(view.arrow()?.style.left).toBe('172px');
+    });
+
+    it('lines the panel up with the right edge of the active input in an RTL field', async () => {
+      // Right to left: the start input is on the right.
+      const { view, offset, edit } = await followView(
+        (host) => host.dir.set('rtl'),
+        { left: 40, width: 120 },
+        {
+          start: new DOMRect(228, 100, 100, 32),
+          end: new DOMRect(88, 100, 100, 32),
+        },
+      );
+      // Under the start input: the panel's right edge on the field's (340).
+      expect(offset()).toBe(180);
+
+      await edit(view.endInput());
+      // As far left as the end input lies from the start one: 340 - 140 - 120 - 40.
+      expect(offset()).toBe(40);
+      // 188 - 20 inside the end input, from the pane's left edge (40 + 40).
+      expect(view.arrow()?.style.left).toBe('88px');
+    });
+
+    it('follows the end input on a panel flipped above the field too', async () => {
+      const { view, offset, edit } = await followView(
+        (host) => host.placement.set('topLeft'),
+        { left: 40, width: 120, top: -190 },
+      );
+      await edit(view.endInput());
+      expect(offset()).toBe(140);
+      expect(view.arrow()?.getAttribute('data-side')).toBe('top');
+      expect(view.arrow()?.style.left).toBe('32px');
+    });
+
+    it('starts over from the overlay own place once closed', async () => {
+      const { view, offset, edit } = await followView(() => undefined, {
+        left: 40,
+        width: 120,
+      });
+      await edit(view.endInput());
+      expect(offset()).toBe(140);
+
+      document.body.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'Escape',
+          keyCode: 27,
+          bubbles: true,
+        }),
+      );
+      view.detect();
+      await view.fixture.whenStable();
+      view.detect();
+      expect(offset()).toBe(0);
+    });
+
+    it('does not move a single picker panel', async () => {
+      const view = await create();
+      const picker = view.fixture.debugElement.query(
+        (debug) => debug.componentInstance instanceof AndesDatePicker,
+      ).componentInstance as AndesDatePicker;
+      const configure = vi.spyOn(picker.overlay, 'configure');
+      await view.open();
+      layOut(view, { field, pane: new DOMRect(40, 138, 120, 280), start });
+      await resizeAndSettle(view);
+      expect(
+        configure.mock.calls.some(
+          ([patch]) =>
+            !!patch.positioning && 'alignOffset' in patch.positioning,
+        ),
+      ).toBe(false);
+    });
+  });
+
   describe('time columns', () => {
     const FEB_15_0930 = new Date(2024, 1, 15, 9, 30);
 

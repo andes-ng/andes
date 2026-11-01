@@ -1010,6 +1010,19 @@
   }
 }
 
+/*
+  A range panel narrower than the field follows the active input: the picker shifts the pane
+  through the overlay's own offset, which the overlay draws as a transform on the pane. While
+  the picker marks the pane, that transform slides like the arrow and the active bar (300ms);
+  the overlay's own moves (a flip, a scroll) stay instant. Reduced motion: it jumps.
+*/
+@media (prefers-reduced-motion: no-preference) {
+  ::ng-deep .andes-date-picker__pane--shifting {
+    transition: transform calc(var(--andes-motion-duration-slow, 200ms) * 1.5)
+      var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1));
+  }
+}
+
 /* Presets: a side list of one-click values. */
 
 .andes-date-picker__presets {

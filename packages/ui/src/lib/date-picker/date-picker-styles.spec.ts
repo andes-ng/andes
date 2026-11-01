@@ -333,6 +333,16 @@ describe('AndesDatePicker styles', () => {
     });
   });
 
+  describe('panel following the active input', () => {
+    it('slides the marked pane for 300ms, with motion allowed only', () => {
+      const pane = '::ng-deep .andes-date-picker__pane--shifting';
+      expect(declaredValue(source, pane, 'transition')).toBeUndefined();
+      expect(declaredValue(motion, pane, 'transition')).toBe(
+        'transform calc(var(--andes-motion-duration-slow, 200ms) * 1.5) var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1))',
+      );
+    });
+  });
+
   describe('forced colors', () => {
     const forced = atRule(source, '@media (forced-colors: active)');
 

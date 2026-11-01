@@ -430,6 +430,19 @@ const ARROW_INSET = 20;
 /** The closest the panel arrow gets to the panel's own corners, in pixels. */
 const ARROW_EDGE_MARGIN = 16;
 
+/** The room the overlay keeps between a panel and the viewport's edges, in pixels. */
+const VIEWPORT_MARGIN = 8;
+
+/** Marks the pane while it slides under the other input of a range (see `date-picker.css`). */
+const SHIFT_SLIDE_CLASS = 'andes-date-picker__pane--shifting';
+
+/** The longest that slide may take (300ms in the stylesheet), after which the mark goes. */
+const SHIFT_SLIDE_MAX_MS = 400;
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
 /** Room kept free for typing beside responsive tags, when the input has no min-width. */
 const RESPONSIVE_INPUT_RESERVE = 48;
 
@@ -1255,6 +1268,16 @@ export class AndesDatePicker implements ControlValueAccessor {
    */
   protected readonly arrowLeft = signal<number | null>(null);
 
+  /**
+   * How far the open range panel is moved along the field, in pixels to the right, so that a
+   * panel narrower than the field sits under the active input. It reaches the overlay as the
+   * placement's `alignOffset`; 0 while closed and for a panel as wide as the field.
+   */
+  private panelShift = 0;
+
+  /** Ends the slide of the pane between two shifts, if one is under way. */
+  private endShiftSlide: (() => void) | null = null;
+
   /** The animation frame of a pending re-measure of the open panel, if any. */
   private panelFrame: number | null = null;
 
@@ -1970,8 +1993,10 @@ export class AndesDatePicker implements ControlValueAccessor {
     });
 
     effect(() => {
-      const positioning = PLACEMENTS[this.placement()];
-      untracked(() => this.overlay.configure({ positioning }));
+      const placement = this.placement();
+      untracked(() =>
+        this.overlay.configure({ positioning: this.positioning(placement) }),
+      );
     });
 
     this.overlay.closed
@@ -2059,10 +2084,11 @@ export class AndesDatePicker implements ControlValueAccessor {
         if (!box) {
           return;
         }
-        this.activeBarAnimated.set(this.activeBarVisible());
+        const slide = this.activeBarVisible();
+        this.activeBarAnimated.set(slide);
         this.activeBarBox.set(box);
         this.activeBarVisible.set(true);
-        this.measurePanel();
+        this.measurePanel(slide);
       });
     });
 
@@ -2436,7 +2462,7 @@ export class AndesDatePicker implements ControlValueAccessor {
    * panel: the panel's entrance animation scales it, and `getBoundingClientRect()`
    * includes transforms. A no-op without layout (jsdom).
    */
-  private measurePanel(): void {
+  private measurePanel(slide = false): void {
     const pane = this.overlay.panelElement();
     if (!pane || !this.overlay.isOpen()) {
       return;
@@ -2451,11 +2477,138 @@ export class AndesDatePicker implements ControlValueAccessor {
         ? 'bottom'
         : 'top',
     );
+    // Where the overlay itself put the pane, before the shift under the active input, and
+    // where the shift takes it.
+    const left = panel.left - this.paneTranslation(pane);
+    const shift = this.shiftFor(left, panel.width, field);
+    this.shiftPanel(shift, slide);
+    const shifted = new DOMRect(
+      left + shift,
+      panel.top,
+      panel.width,
+      panel.height,
+    );
     const leftAligned =
-      Math.abs(panel.left - field.left) <= Math.abs(panel.right - field.right);
+      Math.abs(shifted.left - field.left) <=
+      Math.abs(shifted.right - field.right);
     const rtl = this.panelDirection() === 'rtl';
     this.panelAlign.set(leftAligned !== rtl ? 'start' : 'end');
-    this.measureArrow(panel, rtl);
+    this.measureArrow(shifted, rtl);
+  }
+
+  /** The overlay placement for `placement`, carrying the panel's current shift. */
+  private positioning(
+    placement: AndesDatePickerPlacement,
+  ): AndesOverlayAnchoredPositioning {
+    const base = PLACEMENTS[placement];
+    return this.panelShift ? { ...base, alignOffset: this.panelShift } : base;
+  }
+
+  /**
+   * How far the pane is translated sideways right now, mid-slide included: the overlay draws
+   * `alignOffset` as a transform on the pane. Where the transform cannot be read (no
+   * `DOMMatrixReadOnly`, as in jsdom) it is the shift last asked for.
+   */
+  private paneTranslation(pane: HTMLElement): number {
+    const transform =
+      pane.ownerDocument.defaultView?.getComputedStyle(pane).transform;
+    if (
+      !transform ||
+      transform === 'none' ||
+      typeof DOMMatrixReadOnly === 'undefined'
+    ) {
+      return this.panelShift;
+    }
+    try {
+      return new DOMMatrixReadOnly(transform).m41;
+    } catch {
+      return this.panelShift;
+    }
+  }
+
+  /**
+   * The shift that puts a range panel narrower than the field under the active input. The
+   * placement lines the panel up with one edge of the field, in the panel's own direction
+   * (`bottomLeft` with the start edge: the left one, the right one under `dir="rtl"`); the
+   * input at that edge is home, and the panel keeps the same place relative to the active input
+   * as it has to home, so it lines up with the active input's edge on that side. Clamped so the
+   * panel stays within the field's width and on screen. A panel as wide as the field (two
+   * calendars) stays where the overlay put it; only its arrow moves.
+   */
+  private shiftFor(left: number, width: number, field: DOMRect): number {
+    const align = PLACEMENTS[this.placement()].align ?? 'start';
+    const home = this.inputFor(align === 'start' ? 'start' : 'end');
+    const active = this.inputFor(this.activeSide());
+    if (!this.isRange() || !home || !active || width >= field.width) {
+      return 0;
+    }
+    const a = active.getBoundingClientRect();
+    const h = home.getBoundingClientRect();
+    const rtl = this.panelDirection() === 'rtl';
+    let target =
+      (align === 'start') !== rtl
+        ? field.left + a.left - h.left
+        : field.right + a.right - h.right - width;
+    target = clamp(target, field.left, field.right - width);
+    const viewport =
+      this.field().nativeElement.ownerDocument.defaultView?.innerWidth ?? 0;
+    if (viewport > 0) {
+      target = clamp(
+        target,
+        Math.min(left, VIEWPORT_MARGIN),
+        Math.max(left, viewport - VIEWPORT_MARGIN - width),
+      );
+    }
+    return Math.round(target - left);
+  }
+
+  /**
+   * Moves the pane to `shift` through the overlay's own `alignOffset`, so the overlay keeps
+   * positioning, flipping and repositioning it. `slide` animates the move like the arrow's
+   * (the stylesheet animates the pane's transform only while it carries SHIFT_SLIDE_CLASS, and
+   * not under reduced motion); otherwise the pane jumps there.
+   */
+  private shiftPanel(shift: number, slide: boolean): void {
+    if (shift === this.panelShift) {
+      return;
+    }
+    this.panelShift = shift;
+    this.endShiftSlide?.();
+    const pane = this.overlay.panelElement();
+    const view = pane?.ownerDocument.defaultView;
+    if (slide && pane && view) {
+      const done = () => {
+        pane.classList.remove(SHIFT_SLIDE_CLASS);
+        pane.removeEventListener('transitionend', onEnd);
+        view.clearTimeout(timer);
+        if (this.endShiftSlide === done) {
+          this.endShiftSlide = null;
+        }
+      };
+      const onEnd = (event: TransitionEvent) => {
+        if (event.target === pane && event.propertyName === 'transform') {
+          done();
+        }
+      };
+      pane.classList.add(SHIFT_SLIDE_CLASS);
+      pane.addEventListener('transitionend', onEnd);
+      const timer = view.setTimeout(done, SHIFT_SLIDE_MAX_MS);
+      this.endShiftSlide = done;
+    }
+    this.overlay.configure({
+      positioning: this.positioning(this.placement()),
+    });
+  }
+
+  /** Puts a shifted panel back at the overlay's own place, once it has closed. */
+  private resetPanelShift(): void {
+    this.endShiftSlide?.();
+    if (this.panelShift) {
+      this.panelShift = 0;
+      this.overlay.configure({
+        positioning: this.positioning(this.placement()),
+      });
+    }
   }
 
   /**
@@ -3403,6 +3556,7 @@ export class AndesDatePicker implements ControlValueAccessor {
     }
     this.hoverText.set(null);
     this.stopPanelTracking();
+    this.resetPanelShift();
     this.cancelColumnScrolls();
     // Text kept by `preserveInvalidOnBlur` outlives a close caused by leaving.
     if (!(this.closingForBlur && this.preserveInvalidOnBlur())) {

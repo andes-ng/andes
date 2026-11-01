@@ -109,6 +109,12 @@ function visualCheck(
 
 let nextTreeId = 0;
 
+function leafIconAttribute(
+  value: boolean | string | TemplateRef<AndesTreeNodeContext>,
+): boolean | TemplateRef<AndesTreeNodeContext> {
+  return value instanceof TemplateRef ? value : booleanAttribute(value);
+}
+
 function draggableAttribute(
   value: boolean | string | ((node: AndesTreeNode) => boolean),
 ): boolean | ((node: AndesTreeNode) => boolean) {
@@ -235,6 +241,15 @@ export class AndesTree {
 
   /** Connector lines between parents and children, and a boxed +/- switcher. */
   readonly showLine = input(false, { transform: booleanAttribute });
+  /**
+   * With `showLine`, draws an icon in each leaf's switcher, where the line would otherwise run
+   * on to the label: `true` for a file glyph, or a template (it gets the node context) of your
+   * own. A leaf's tick then stops at the icon, as a parent's stops at its box.
+   */
+  readonly showLeafIcon = input<
+    boolean | TemplateRef<AndesTreeNodeContext>,
+    boolean | string | TemplateRef<AndesTreeNodeContext>
+  >(false, { transform: leafIconAttribute });
   /** Show node icons, with a folder or file when a node has none of its own. */
   readonly showIcon = input(false, { transform: booleanAttribute });
   /** File-browser look: icons, full-width rows, a solid selected row, a click opens folders. */
@@ -525,6 +540,14 @@ export class AndesTree {
   protected readonly effectiveExpandAction = computed(
     () => this.expandAction() ?? (this.directory() ? 'click' : false),
   );
+  /** Whether a leaf's switcher shows an icon (line mode only). */
+  protected readonly leafIconShown = computed(
+    () => this.showLine() && !!this.showLeafIcon(),
+  );
+  protected readonly leafIconTemplate = computed(() => {
+    const value = this.showLeafIcon();
+    return value instanceof TemplateRef ? value : null;
+  });
   /** Whether the rows open with a drag grip column. */
   protected readonly handlesShown = computed(
     () => !!this.draggable() && this.dragHandle(),

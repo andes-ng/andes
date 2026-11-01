@@ -164,6 +164,10 @@
   width: var(--_box);
 }
 
+.andes-tree__switcher > .andes-tree__leaf-icon {
+  width: var(--_box);
+}
+
 .andes-tree__switcher > .andes-tree__spinner {
   width: 0.875rem;
 }
@@ -231,9 +235,10 @@
   border-top: 1px solid var(--_line);
 }
 
-/* A leaf has no box: its tick crosses the empty switcher and stops where the content starts. */
+/* A leaf has no box: its tick crosses the empty switcher and stops where the content starts.
+   With `showLeafIcon` the leaf's icon stands where the box would, and the tick stops at it. */
 /* prettier-ignore */
-.andes-tree[data-line] .andes-tree__row[data-leaf] .andes-tree__indent[data-elbow]::after {
+.andes-tree[data-line] .andes-tree__row[data-leaf]:not([data-leaf-icon]) .andes-tree__indent[data-elbow]::after {
   width: calc(var(--_indent) / 2 + var(--_indent) + var(--_switcher-gap));
 }
 

@@ -53,6 +53,9 @@ function sample(): AndesTreeNode[] {
 @Component({
   imports: [AndesTree, AndesTreeNodeTemplate],
   template: `
+    <ng-template #leafTpl let-title="title"
+      ><i class="leaf-glyph">{{ title }}</i></ng-template
+    >
     <andes-tree
       [nodes]="nodes()"
       [(expandedKeys)]="expanded"
@@ -67,6 +70,7 @@ function sample(): AndesTreeNode[] {
       [defaultExpandAll]="defaultExpandAll()"
       [showLine]="showLine()"
       [showIcon]="showIcon()"
+      [showLeafIcon]="leafIconTemplate() ? leafTpl : showLeafIcon()"
       [directory]="directory()"
       [blockNode]="blockNode()"
       [density]="density()"
@@ -123,6 +127,8 @@ class HostComponent {
   readonly defaultExpandAll = signal(false);
   readonly showLine = signal(false);
   readonly showIcon = signal(false);
+  readonly showLeafIcon = signal(false);
+  readonly leafIconTemplate = signal(false);
   readonly directory = signal(false);
   readonly blockNode = signal(false);
   readonly density = signal<'default' | 'compact'>('default');
@@ -1246,6 +1252,73 @@ describe('AndesTree', () => {
     });
   });
 
+  describe('showLeafIcon', () => {
+    const leafIcon = (fixture: Fixture, title: string) =>
+      switcher(node(fixture, title)).querySelector('.andes-tree__leaf-icon');
+
+    it('draws a file in each leaf switcher with lines on, and marks the row', () => {
+      const fixture = setup((h) => {
+        h.showLine.set(true);
+        h.showLeafIcon.set(true);
+        h.expanded.set(['a', 'a1']);
+      });
+      expect(leafIcon(fixture, 'Estante X')?.tagName.toLowerCase()).toBe('svg');
+      expect(
+        row(node(fixture, 'Estante X')).hasAttribute('data-leaf-icon'),
+      ).toBe(true);
+      // Parents keep their box.
+      expect(leafIcon(fixture, 'Pasillo 1')).toBeNull();
+      expect(
+        row(node(fixture, 'Pasillo 1')).hasAttribute('data-leaf-icon'),
+      ).toBe(false);
+    });
+
+    it('does nothing without lines, or when off', () => {
+      const fixture = setup((h) => {
+        h.showLeafIcon.set(true);
+        h.expanded.set(['a', 'a1']);
+      });
+      expect(leafIcon(fixture, 'Estante X')).toBeNull();
+      fixture.componentInstance.showLine.set(true);
+      fixture.componentInstance.showLeafIcon.set(false);
+      fixture.detectChanges();
+      expect(leafIcon(fixture, 'Estante X')).toBeNull();
+      expect(
+        row(node(fixture, 'Estante X')).hasAttribute('data-leaf-icon'),
+      ).toBe(false);
+    });
+
+    it('renders a template of its own with the node context', () => {
+      const fixture = setup((h) => {
+        h.showLine.set(true);
+        h.leafIconTemplate.set(true);
+        h.expanded.set(['a', 'a1']);
+      });
+      expect(
+        leafIcon(fixture, 'Estante Y')?.querySelector('.leaf-glyph')
+          ?.textContent,
+      ).toBe('Estante Y');
+    });
+
+    it("stops a leaf's tick at its icon, as a parent's stops at its box", () => {
+      const css = cssText();
+      expect(
+        declaredValue(
+          css,
+          '.andes-tree__switcher > .andes-tree__leaf-icon',
+          'width',
+        ),
+      ).toBe('var(--_box)');
+      // The long tick is only for leaves without an icon; the others keep the box-length one.
+      expect(css).toContain(
+        '.andes-tree__row[data-leaf]:not([data-leaf-icon]) .andes-tree__indent[data-elbow]::after',
+      );
+      expect(css).not.toMatch(
+        /\.andes-tree__row\[data-leaf\] \.andes-tree__indent\[data-elbow\]::after/,
+      );
+    });
+  });
+
   describe('connector line geometry', () => {
     const css = cssText();
     const vertical =
@@ -1253,7 +1326,7 @@ describe('AndesTree', () => {
     const elbow =
       '.andes-tree[data-line] .andes-tree__indent[data-elbow]::after';
     const leafElbow =
-      '.andes-tree[data-line] .andes-tree__row[data-leaf] .andes-tree__indent[data-elbow]::after';
+      '.andes-tree[data-line] .andes-tree__row[data-leaf]:not([data-leaf-icon]) .andes-tree__indent[data-elbow]::after';
     const stem =
       ".andes-tree[data-line] .andes-tree__row[data-state='open'] .andes-tree__switcher::after";
 

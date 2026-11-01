@@ -276,6 +276,63 @@ describe('AndesDatePicker styles', () => {
     });
   });
 
+  describe('intrinsic width', () => {
+    it('lets the host shrink to its content and fill whatever stretches it', () => {
+      expect(declaredValue(source, ':host', 'display')).toBe('inline-block');
+      expect(declaredValue(source, ':host', 'width')).toBe(
+        'var(--andes-date-picker-width, auto)',
+      );
+      expect(declaredValue(source, ':host', 'max-width')).toBe('100%');
+      const field = '.andes-date-picker__field';
+      expect(declaredValue(source, field, 'flex')).toBe('1 1 auto');
+      expect(declaredValue(source, field, 'min-width')).toBe('0');
+      expect(declaredValue(source, field, 'width')).toBeUndefined();
+    });
+
+    it('starts each input at the width of a value, in em so the sizes scale it', () => {
+      const input = '.andes-date-picker__input';
+      expect(declaredValue(source, input, 'flex')).toBe(
+        '1 1 var(--_date-picker-input-width)',
+      );
+      expect(declaredValue(source, input, 'width')).toBe(
+        'var(--_date-picker-input-width)',
+      );
+      const range = ":host([data-mode='range']) .andes-date-picker__input";
+      expect(declaredValue(source, range, 'width')).toBe(
+        'calc(var(--_date-picker-input-width) + 0.25rem)',
+      );
+    });
+
+    it.each([
+      [':host', '6.5625em'],
+      [":host([data-picker='time'])", '5.5625em'],
+      [":host([data-picker='time'][data-time='12h'])", '6.5625em'],
+      [":host([data-picker='date'][data-time])", '11.1875em'],
+      [
+        ":host([data-mode='single'][data-picker='time'][data-time='24h'])",
+        '6.125em',
+      ],
+      [":host([data-mode='single'][data-picker='month'])", '7em'],
+      [":host([data-mode='single'][data-picker='quarter'])", '7.4375em'],
+    ])('gives %s inputs %s', (selector, width) => {
+      expect(
+        declaredValue(source, selector, '--_date-picker-input-width'),
+      ).toBe(width);
+    });
+
+    it('gives a multiple field, whose tags wrap, a range width that still grows', () => {
+      const multiple = '.andes-date-picker__field--multiple';
+      expect(declaredValue(source, multiple, 'width')).toBe('16.625rem');
+      expect(
+        declaredValue(
+          source,
+          '.andes-date-picker__selection .andes-date-picker__input',
+          'width',
+        ),
+      ).toBe('auto');
+    });
+  });
+
   describe('forced colors', () => {
     const forced = atRule(source, '@media (forced-colors: active)');
 

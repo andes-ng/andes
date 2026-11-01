@@ -4,8 +4,48 @@
    reach them; the panel root keeps its original `::ng-deep` rule for consumers who
    already override it. */
 
+/*
+  Width. The field is as wide as its content: each input holds a value in the default format
+  (`--_date-picker-input-width`, in em so it follows the size's font), plus the padding, the
+  separator and the icon - so a range is about twice a single field, and a size or a prefix
+  changes the width the way it changes the content. The host is `inline-block` with an
+  `auto` width, so it shrinks to that width in a row, and still fills whatever stretches it:
+  a block or column flex layout, a grid cell, `display: block` or `style="width: 100%"`.
+  `--andes-date-picker-width` sets the width outright. Never wider than its container.
+*/
 :host {
+  --_date-picker-input-width: 6.5625em;
   display: inline-block;
+  width: var(--andes-date-picker-width, auto);
+  max-width: 100%;
+}
+
+:host([data-picker='time']) {
+  --_date-picker-input-width: 5.5625em;
+}
+
+/* "9:30:00 AM" is a date's length. */
+:host([data-picker='time'][data-time='12h']) {
+  --_date-picker-input-width: 6.5625em;
+}
+
+/* A date with a time of day: "15 Feb 2024, 14:30:00". */
+:host([data-picker='date'][data-time]) {
+  --_date-picker-input-width: 11.1875em;
+}
+
+/* A single field's default placeholder can be longer than its value: room for "Select a
+   time", "Select a month" and "Select a quarter". */
+:host([data-mode='single'][data-picker='time'][data-time='24h']) {
+  --_date-picker-input-width: 6.125em;
+}
+
+:host([data-mode='single'][data-picker='month']) {
+  --_date-picker-input-width: 7em;
+}
+
+:host([data-mode='single'][data-picker='quarter']) {
+  --_date-picker-input-width: 7.4375em;
 }
 
 .andes-date-picker {
@@ -25,11 +65,11 @@
   --_date-picker-accent: var(--andes-color-primary);
   position: relative;
   display: inline-flex;
+  flex: 1 1 auto;
   align-items: center;
   gap: var(--andes-space-2);
   box-sizing: border-box;
-  width: 100%;
-  min-width: 12rem;
+  min-width: 0;
   height: var(--andes-control-height-md, 2rem);
   padding-inline: var(--andes-control-padding-x-md, 0.6875rem);
   border: 1px solid var(--andes-color-input);
@@ -156,10 +196,12 @@
   border-color: var(--_date-picker-accent);
 }
 
-/* Inputs: the field draws the box, so the inputs themselves are bare. */
+/* Inputs: the field draws the box, so the inputs themselves are bare. Each starts at the width
+   of a value and grows (or shrinks) with the field, the two of a range alike. */
 
 .andes-date-picker__input {
-  flex: 1;
+  flex: 1 1 var(--_date-picker-input-width);
+  width: var(--_date-picker-input-width);
   min-width: 0;
   height: 100%;
   padding: 0;
@@ -172,6 +214,13 @@
   text-overflow: ellipsis;
   outline: none;
   box-shadow: none;
+}
+
+/* A range's inputs are a quarter rem wider each, so the separator between them has room
+   around it. */
+:host([data-mode='range']) .andes-date-picker__input {
+  flex-basis: calc(var(--_date-picker-input-width) + 0.25rem);
+  width: calc(var(--_date-picker-input-width) + 0.25rem);
 }
 
 .andes-date-picker__input::placeholder {
@@ -238,7 +287,9 @@
   suffix. The tags sit 4px inside the border (3px at sm), so one row of tags keeps the
   field at its single-line height; more rows grow it.
 */
+/* Its content is a row of tags that wraps, so it takes a range's width rather than its own. */
 .andes-date-picker__field--multiple {
+  width: 16.625rem;
   height: auto;
   min-height: var(--andes-control-height-md, 2rem);
   padding-block: 0.25rem;
@@ -282,6 +333,7 @@
    full row of tags; room to type once focused (the field wraps then if it must). */
 .andes-date-picker__selection .andes-date-picker__input {
   flex: 1 1 1.5rem;
+  width: auto;
   min-width: 1.5rem;
   height: calc(var(--andes-control-height-md, 2rem) - 0.625rem);
 }

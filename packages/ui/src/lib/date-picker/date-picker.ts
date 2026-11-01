@@ -603,6 +603,7 @@ function coerceYear(value: unknown): number | undefined {
     '[attr.data-mode]': 'mode()',
     '[attr.data-picker]': 'picker()',
     '[attr.data-size]': 'size()',
+    '[attr.data-time]': 'fieldClock()',
     '[attr.data-variant]': 'variant()',
     '[attr.data-status]': 'status()',
     '[attr.data-disabled]': 'isDisabled() || null',
@@ -1475,6 +1476,18 @@ export class AndesDatePicker implements ControlValueAccessor {
       second: !!options.showSecond,
       twelve: !!options.use12Hours,
     };
+  });
+
+  /**
+   * The clock the field shows a time on (`12h` or `24h`), or `null` when it shows no time. The
+   * host carries it as `data-time`, so the stylesheet can size the inputs for the text they hold.
+   */
+  protected readonly fieldClock = computed(() => {
+    const units = this.timeUnits();
+    if (!units) {
+      return null;
+    }
+    return units.twelve ? '12h' : '24h';
   });
 
   protected readonly confirmRequired = computed(

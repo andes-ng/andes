@@ -85,7 +85,9 @@ const meta: Meta<AndesFormField> = {
           '`andesFormControl` is still what wires a **native** `<input>`, `<textarea>` or',
           '`<select>`, and a template reference to the field state (`#ctrl="andesFormControl"`)',
           'on any control. A third-party control that does not read the field can be wired from',
-          'those signals by hand; they return `undefined` when there is nothing to bind.',
+          'those signals by hand; they return `undefined` when there is nothing to bind. Your own',
+          'control reads the field’s status (`status`, `invalid`, `required`, the ids) with',
+          '`injectAndesFieldBinding()` - see the **Custom controls** stories.',
           '',
           'The texts the form writes by itself - the optional mark, the tooltip button’s name',
           'and the generated messages - follow `provideAndesFormLocale()`; `ANDES_FORM_LOCALE_ES`',
@@ -192,7 +194,7 @@ export const Hints: Story = {
   render: () => ({
     moduleMetadata: fieldModuleMetadata,
     props: {
-      form: new FormGroup({
+      group: new FormGroup({
         bio: new FormControl('', [
           Validators.required,
           Validators.maxLength(160),
@@ -202,7 +204,7 @@ export const Hints: Story = {
       }),
     },
     template: `
-      <form andesForm [formGroup]="form" style="width: min(420px, 100vw - 2rem);">
+      <form andesForm [formGroup]="group" style="width: min(420px, 100vw - 2rem);">
         <andes-form-field label="Bio" tooltip="Shown on your public profile." help="Keep it short: who you are and what you do.">
           <andes-textarea formControlName="bio" [rows]="3" showCount [maxLength]="160" />
         </andes-form-field>
@@ -274,13 +276,13 @@ export const HiddenAndTemplates: Story = {
     });
     return {
       moduleMetadata: fieldModuleMetadata,
-      props: { form },
+      props: { group: form },
       template: `
         <ng-template #icons let-status>
           <span style="font-size: 0.75rem; font-weight: 600;">{{ status === 'success' ? 'OK' : status === 'error' ? '!' : '…' }}</span>
         </ng-template>
         <ng-template #rich>Between <strong>4</strong> and <strong>60</strong> characters.</ng-template>
-        <form andesForm [formGroup]="form" [feedbackIcons]="icons" style="width: min(420px, 100vw - 2rem);">
+        <form andesForm [formGroup]="group" [feedbackIcons]="icons" style="width: min(420px, 100vw - 2rem);">
           <andes-form-field label="Record id" hidden>
             <andes-input formControlName="id" />
           </andes-form-field>
@@ -291,7 +293,7 @@ export const HiddenAndTemplates: Story = {
             <andes-checkbox formControlName="terms">I accept the terms of service</andes-checkbox>
           </andes-form-field>
           <p style="margin: 0; font-family: var(--andes-font-family), sans-serif; font-size: 0.75rem; color: var(--andes-color-muted-foreground);">
-            Value: {{ form.value | json }}
+            Value: {{ group.value | json }}
           </p>
         </form>
       `,

@@ -30,9 +30,11 @@ import { AndesValidators } from './form-validators';
 const LOG_STYLE =
   'margin: 0; padding: 0.5rem 0.75rem; border-radius: var(--andes-radius-md); background: var(--andes-color-muted); color: var(--andes-color-foreground); font-family: var(--andes-font-family), sans-serif; font-size: 0.75rem; line-height: 1.25rem; white-space: pre-wrap;';
 
+// No `component` here: Storybook would assign each story's `props` to the first `AndesFormField`
+// it renders, and a prop named like one of its members (`form`, `help`, `status`) would
+// overwrite it.
 const meta: Meta<AndesFormField> = {
   title: 'Data Entry/Form/Field/Validation',
-  component: AndesFormField,
 };
 
 export default meta;

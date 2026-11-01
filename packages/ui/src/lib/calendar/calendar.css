@@ -235,11 +235,23 @@
 }
 
 .andes-calendar__week-number {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   height: var(--andes-calendar-cell);
   color: var(--andes-color-muted-foreground);
+  isolation: isolate;
+}
+
+/* The header of the week-number column is named for assistive technology only. */
+.andes-calendar__visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* Month / quarter / year grids share the day grid's 288px width, so switching grids
@@ -423,16 +435,32 @@
   inset-inline-end: 50%;
 }
 
+/* How wide a cell's chip is, for the band that ends at its edge: a day's chip is the 24px chip,
+   a period's (month, quarter, year) is at least 3.75rem, and a cell the template fills whole has
+   no gap around its chip. */
+.andes-calendar__period {
+  --_andes-calendar-chip-width: 3.75rem;
+}
+
+/* prettier-ignore */
+:is(.andes-calendar__day, .andes-calendar__period):has(> .andes-calendar__cell-content--full) {
+  --_andes-calendar-chip-width: 100%;
+}
+
 /* prettier-ignore */
 .andes-calendar:not(.andes-calendar--week-picker) .andes-calendar__day--preview-end:not(.andes-calendar__day--selected)::before {
-  inset-inline-end: calc(50% - var(--andes-calendar-chip) / 2);
+  inset-inline-end: calc(
+    50% - var(--_andes-calendar-chip-width, var(--andes-calendar-chip)) / 2
+  );
   border-start-end-radius: var(--andes-radius-sm);
   border-end-end-radius: var(--andes-radius-sm);
 }
 
 /* prettier-ignore */
 .andes-calendar:not(.andes-calendar--week-picker) .andes-calendar__day--preview-start:not(.andes-calendar__day--selected)::before {
-  inset-inline-start: calc(50% - var(--andes-calendar-chip) / 2);
+  inset-inline-start: calc(
+    50% - var(--_andes-calendar-chip-width, var(--andes-calendar-chip)) / 2
+  );
   border-start-start-radius: var(--andes-radius-sm);
   border-end-start-radius: var(--andes-radius-sm);
 }
@@ -473,7 +501,45 @@
   background-color: var(--andes-color-primary);
 }
 
-.andes-calendar--week-picker .andes-calendar__day:first-of-type::before {
+/* The week number is the first cell of the bar: its own band, behind the number, carries the
+   hover and the selection of the row and is rounded at the row's start; the first day's band
+   then has a square start. */
+.andes-calendar--week-picker .andes-calendar__week-number::before {
+  position: absolute;
+  inset-inline: 0;
+  top: 50%;
+  z-index: -1;
+  height: var(--andes-calendar-chip);
+  transform: translateY(-50%);
+  border-start-start-radius: var(--andes-radius-sm);
+  border-end-start-radius: var(--andes-radius-sm);
+  content: '';
+  transition: background-color var(--andes-motion-duration-fast, 120ms)
+    var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1));
+}
+
+/* prettier-ignore */
+.andes-calendar--week-picker .andes-calendar__row:hover:has(.andes-calendar__day:not([aria-disabled='true'])) .andes-calendar__week-number::before {
+  background-color: var(--andes-color-accent-hover, var(--andes-color-accent));
+}
+
+/* prettier-ignore */
+.andes-calendar--week-picker .andes-calendar__row:has(.andes-calendar__day--selected) .andes-calendar__week-number::before {
+  background-color: var(--andes-color-primary);
+}
+
+/* prettier-ignore */
+.andes-calendar--week-picker .andes-calendar__row:has(.andes-calendar__day--selected) .andes-calendar__week-number {
+  color: var(--andes-color-primary-foreground);
+}
+
+.andes-calendar--week-picker.andes-calendar--with-week
+  .andes-calendar__day:first-of-type::before {
+  border-radius: 0;
+}
+
+.andes-calendar--week-picker:not(.andes-calendar--with-week)
+  .andes-calendar__day:first-of-type::before {
   border-start-start-radius: var(--andes-radius-sm);
   border-end-start-radius: var(--andes-radius-sm);
 }
@@ -707,6 +773,18 @@
     .andes-calendar__row:hover
     .andes-calendar__day::before {
     border-block: 1px solid Highlight;
+  }
+
+  /* prettier-ignore */
+  .andes-calendar--week-picker .andes-calendar__row:has(.andes-calendar__day--selected) .andes-calendar__week-number::before {
+    background-color: SelectedItem;
+    forced-color-adjust: none;
+  }
+
+  /* prettier-ignore */
+  .andes-calendar--week-picker .andes-calendar__row:has(.andes-calendar__day--selected) .andes-calendar__week-number {
+    color: SelectedItemText;
+    forced-color-adjust: none;
   }
 
   .andes-calendar--fullscreen .andes-calendar__day--selected {

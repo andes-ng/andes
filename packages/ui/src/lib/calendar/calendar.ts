@@ -1399,6 +1399,32 @@ export class AndesCalendar {
     this.cellHover.emit(null);
   }
 
+  /** In a week picker the number is part of the row, so it picks the week like its days do. */
+  protected selectWeekNumber(row: CellRow): void {
+    if (this.picker() !== 'week') {
+      return;
+    }
+    const cell = row.cells.find(
+      (candidate) => candidate && !candidate.disabled,
+    );
+    if (cell) {
+      this.selectCell(cell);
+    }
+  }
+
+  /** Hovering a week's number previews the week, as hovering one of its days does. */
+  protected hoverWeekNumber(row: CellRow): void {
+    if (this.picker() !== 'week') {
+      return;
+    }
+    const cell = row.cells.find(
+      (candidate) => candidate && !candidate.disabled,
+    );
+    if (cell) {
+      this.onCellHover(cell);
+    }
+  }
+
   protected selectCell(cell: AndesCalendarCell): void {
     if (cell.disabled) {
       return;

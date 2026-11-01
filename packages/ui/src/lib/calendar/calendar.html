@@ -110,7 +110,10 @@
             role="columnheader"
             [attr.aria-label]="weekNumberLabel()"
           >
-            #
+            <!-- Named for assistive tech without drawing a "#" over the column. -->
+            <span class="andes-calendar__visually-hidden"
+              >{{ weekNumberLabel() }}</span
+            >
           </div>
           } @for (weekday of weekdays(); track weekday.key) {
           <!-- The abbreviation stays visible to assistive tech rather than being
@@ -130,7 +133,12 @@
         @for (week of panel.rows; track week.key) {
         <div class="andes-calendar__row" role="row">
           @if (week.weekNumber !== null) {
-          <div class="andes-calendar__week-number" role="rowheader">
+          <div
+            class="andes-calendar__week-number"
+            role="rowheader"
+            (click)="selectWeekNumber(week)"
+            (mouseenter)="hoverWeekNumber(week)"
+          >
             {{ week.weekNumber }}
           </div>
           } @for (day of week.cells; track $index) { @if (day) {

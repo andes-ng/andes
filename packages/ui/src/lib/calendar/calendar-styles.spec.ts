@@ -86,12 +86,23 @@ describe('AndesCalendar styles', () => {
         '.andes-calendar:not(.andes-calendar--week-picker) .andes-calendar__day--preview-end:not(.andes-calendar__day--selected)::before';
       const start =
         '.andes-calendar:not(.andes-calendar--week-picker) .andes-calendar__day--preview-start:not(.andes-calendar__day--selected)::before';
-      expect(declaredValue(source, end, 'inset-inline-end')).toBe(
-        'calc(50% - var(--andes-calendar-chip) / 2)',
+      const edge =
+        'calc(50% - var(--_andes-calendar-chip-width, var(--andes-calendar-chip)) / 2)';
+      const squeeze = (value: string | undefined) => value?.replace(/\s+/g, '');
+      expect(squeeze(declaredValue(source, end, 'inset-inline-end'))).toBe(
+        squeeze(edge),
       );
-      expect(declaredValue(source, start, 'inset-inline-start')).toBe(
-        'calc(50% - var(--andes-calendar-chip) / 2)',
+      expect(squeeze(declaredValue(source, start, 'inset-inline-start'))).toBe(
+        squeeze(edge),
       );
+      // A period's chip is wider than a day's, so it names its own width.
+      expect(
+        declaredValue(
+          source,
+          '.andes-calendar__period',
+          '--_andes-calendar-chip-width',
+        ),
+      ).toBe('3.75rem');
       // The chip itself stays unfilled, so the translucent band is never layered twice.
       expect(source).not.toContain(
         ":not([aria-disabled='true']) > * {\n  background-color: var(--andes-calendar-band);",

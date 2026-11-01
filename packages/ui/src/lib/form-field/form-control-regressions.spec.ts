@@ -1,10 +1,12 @@
-import { Component, signal } from '@angular/core';
+import { Component, forwardRef, signal } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import {
   type AbstractControl,
+  type ControlValueAccessor,
   FormControl,
   FormGroup,
   FormGroupDirective,
+  NG_VALUE_ACCESSOR,
   ReactiveFormsModule,
   type ValidationErrors,
   Validators,
@@ -175,6 +177,52 @@ class ExplicitIdHost {
   readonly name = new FormControl('');
 }
 
+/** A control that puts its ARIA on its own host, as the group controls do. */
+@Component({
+  selector: 'andes-test-host-aria-control',
+  template: '',
+  host: {
+    role: 'radiogroup',
+    '[attr.id]': '"own-id"',
+    '[attr.aria-required]': '"true"',
+    '[attr.aria-describedby]': '"own-hint"',
+  },
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => HostAriaControl),
+      multi: true,
+    },
+  ],
+})
+class HostAriaControl implements ControlValueAccessor {
+  writeValue(): void {
+    return;
+  }
+  registerOnChange(): void {
+    return;
+  }
+  registerOnTouched(): void {
+    return;
+  }
+}
+
+@Component({
+  selector: 'andes-test-host-aria-host',
+  imports: [
+    ReactiveFormsModule,
+    AndesFormField,
+    AndesFormControl,
+    HostAriaControl,
+  ],
+  template: `<andes-form-field label="Choice">
+    <andes-test-host-aria-control andesFormControl [formControl]="choice" />
+  </andes-form-field>`,
+})
+class HostAriaHost {
+  readonly choice = new FormControl(null, Validators.required);
+}
+
 describe('AndesFormControl - regressions', () => {
   describe('signal forms', () => {
     it('binds [formField] on a native input inside a field without throwing', async () => {
@@ -326,5 +374,17 @@ describe('AndesFormControl - regressions', () => {
     expect(el.querySelector('andes-form-field')?.hasAttribute('id')).toBe(
       false,
     );
+  });
+
+  it('leaves the id and ARIA a control puts on its own host alone', async () => {
+    const fixture = TestBed.createComponent(HostAriaHost);
+    await settle(fixture);
+    const control = fixture.nativeElement.querySelector(
+      'andes-test-host-aria-control',
+    ) as HTMLElement;
+
+    expect(control.id).toBe('own-id');
+    expect(control.getAttribute('aria-required')).toBe('true');
+    expect(control.getAttribute('aria-describedby')).toBe('own-hint');
   });
 });

@@ -4,6 +4,7 @@ import {
   DestroyRef,
   Directive,
   type DoCheck,
+  effect,
   ElementRef,
   forwardRef,
   inject,
@@ -342,45 +343,45 @@ export class AndesFormControlState implements AndesFormControlApi {
       useExisting: forwardRef(() => AndesFormControl),
     },
   ],
-  host: {
-    '[attr.id]': 'hostId()',
-    '[attr.aria-describedby]': 'hostDescribedBy()',
-    '[attr.aria-invalid]': 'hostAriaInvalid()',
-    '[attr.aria-required]': 'hostAriaRequired()',
-    '[attr.aria-busy]': 'hostAriaBusy()',
-  },
 })
 export class AndesFormControl
   extends AndesFormControlState
   implements OnInit, DoCheck, AfterContentChecked
 {
   /** Whether this directive sits directly on a native, labelable form element - the single
-   *  gate on whether the host bindings below write anything. */
+   *  gate on whether it writes anything on its host. */
   readonly isNativeFormElement = LABELABLE_NATIVE_TAGS.has(
     this.element.tagName,
   );
 
-  protected readonly hostId = computed(() =>
-    this.isNativeFormElement ? (this.resolvedId() ?? null) : null,
-  );
+  constructor() {
+    super();
+    // Written from effects rather than host bindings: a host binding would also write - as an
+    // absent attribute - on a library control's host, erasing the `id` or ARIA that control
+    // puts on its own host (a radio group, a segmented control).
+    if (this.isNativeFormElement) {
+      this.reflect('id', () => this.resolvedId());
+      this.reflect('aria-describedby', () => this.describedBy());
+      this.reflect('aria-invalid', () =>
+        (this.field?.showError() ?? this.showError()) ? 'true' : undefined,
+      );
+      this.reflect('aria-required', () => this.ariaRequired());
+      this.reflect('aria-busy', () => (this.pending() ? 'true' : undefined));
+    }
+  }
 
-  protected readonly hostDescribedBy = computed(() =>
-    this.isNativeFormElement ? (this.describedBy() ?? null) : null,
-  );
-
-  protected readonly hostAriaInvalid = computed(() =>
-    this.isNativeFormElement && (this.field?.showError() ?? this.showError())
-      ? 'true'
-      : null,
-  );
-
-  protected readonly hostAriaBusy = computed(() =>
-    this.isNativeFormElement && this.pending() ? 'true' : null,
-  );
-
-  protected readonly hostAriaRequired = computed(() =>
-    this.isNativeFormElement ? (this.ariaRequired() ?? null) : null,
-  );
+  private reflect(name: string, value: () => string | undefined): void {
+    effect(() => {
+      const next = value();
+      untracked(() => {
+        if (next === undefined) {
+          this.element.removeAttribute(name);
+        } else {
+          this.element.setAttribute(name, next);
+        }
+      });
+    });
+  }
 
   ngOnInit(): void {
     this.sync();

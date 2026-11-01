@@ -381,6 +381,11 @@ export class AndesCascader
   readonly suffixIcon = input<TemplateRef<unknown> | null | undefined>(
     undefined,
   );
+  /**
+   * With `showSearch`, shown in place of the chevron while the panel is open - a magnifier
+   * that says the field is now a search.
+   */
+  readonly searchIcon = input<TemplateRef<unknown> | undefined>(undefined);
   /** Replaces the clear button's icon. */
   readonly clearIcon = input<TemplateRef<unknown> | undefined>(undefined);
   /** Replaces each tag's remove icon. */

@@ -559,6 +559,12 @@ button.andes-cascader__combobox {
   transform: rotate(180deg);
 }
 
+/* The search icon that stands in for the chevron while the search is open does not turn. */
+/* prettier-ignore */
+.andes-cascader__trigger[data-state='open'] .andes-cascader__chevron[data-search-icon] {
+  transform: none;
+}
+
 /*
   Clear button - the same design on every field: a small muted disc with the "x" knocked out
   of it in the background colour, 1em across. It shares one grid cell with the indicator

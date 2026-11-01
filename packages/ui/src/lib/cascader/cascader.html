@@ -317,12 +317,16 @@
         data-slot="cascader-loading"
         aria-hidden="true"
       ></span>
-      } } @else if (suffixIcon() !== null) {
+      } } @else if (suffixIcon() !== null) { @let searchGlyph = searchEnabled()
+      && isOpen() ? searchIcon() : undefined;
       <span
         class="andes-cascader__chevron andes-cascader__indicator"
         aria-hidden="true"
+        [attr.data-search-icon]="searchGlyph ? '' : null"
       >
-        @if (suffixIcon(); as suffixTemplate) {
+        @if (searchGlyph) {
+        <ng-container [ngTemplateOutlet]="searchGlyph" />
+        } @else if (suffixIcon(); as suffixTemplate) {
         <ng-container [ngTemplateOutlet]="suffixTemplate" />
         } @else {
         <svg

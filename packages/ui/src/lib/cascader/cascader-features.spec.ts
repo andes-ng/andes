@@ -66,6 +66,7 @@ const PLACES: AndesCascaderOption[] = [
     <ng-template #clearGlyph><i class="my-clear">C</i></ng-template>
     <ng-template #removeGlyph><i class="my-remove">R</i></ng-template>
     <ng-template #loadingGlyph><i class="my-loading">L</i></ng-template>
+    <ng-template #searchGlyph><i class="my-search">Q</i></ng-template>
     <ng-template #resultGlyph let-label="label" let-search="searchValue"
       ><b class="my-result">{{ search }}:{{ label }}</b></ng-template
     >
@@ -107,6 +108,7 @@ const PLACES: AndesCascaderOption[] = [
       [removeIcon]="withIcons() ? removeGlyph : undefined"
       [loadingIcon]="withIcons() ? loadingGlyph : undefined"
       [expandIcon]="withIcons() ? expandGlyph : undefined"
+      [searchIcon]="withIcons() ? searchGlyph : undefined"
       (focused)="events.push('focused')"
       (blurred)="events.push('blurred')"
       (panelScroll)="scrolls.push($event)"
@@ -844,6 +846,22 @@ describe('AndesCascader features', () => {
   });
 
   describe('templates', () => {
+    it('shows the searchIcon in place of the chevron while the search is open', () => {
+      const { root, openWithPointer, detect } = setup((h) => {
+        h.withIcons.set(true);
+        h.showSearch.set(true);
+      });
+      const chevron = () =>
+        root.querySelector('.andes-cascader__chevron') as HTMLElement;
+      expect(chevron().querySelector('.my-search')).toBeNull();
+      expect(chevron().querySelector('svg')).not.toBeNull();
+
+      openWithPointer();
+      detect();
+      expect(chevron().querySelector('.my-search')).not.toBeNull();
+      expect(chevron().hasAttribute('data-search-icon')).toBe(true);
+    });
+
     it('renders search results with showSearch.render, over optionTemplate', () => {
       const { host, type, detect } = setup((h) => {
         h.withTemplates.set(true);

@@ -21,6 +21,8 @@ import { AndesInput } from '../input/input';
 import { AndesForm } from './form';
 import { AndesFormError } from './form-error';
 import { AndesFormField } from './form-field';
+import { AndesFormIcon } from './form-icons';
+import { LIST_ROW_STYLE } from './form-list-demo';
 import type {
   AndesFormInvalidSubmit,
   AndesFormShowErrorsOn,
@@ -36,6 +38,7 @@ const moduleMetadata = {
     AndesFormField,
     AndesFormError,
     AndesButton,
+    AndesFormIcon,
     AndesInput,
   ],
 };
@@ -247,6 +250,7 @@ export const DynamicRows: Story = {
         onValid: (value: unknown) => log.set(JSON.stringify(value)),
       },
       template: `
+        ${LIST_ROW_STYLE}
         <form
           andesForm
           [formGroup]="form"
@@ -255,23 +259,23 @@ export const DynamicRows: Story = {
           (validSubmit)="onValid($event)"
           style="width: min(560px, 100vw - 2rem);"
         >
-          <div formArrayName="emails" cdkDropList (cdkDropListDropped)="move($event)" style="display: flex; flex-direction: column; gap: 1.5rem;">
+          <div formArrayName="emails" class="demo-list" cdkDropList (cdkDropListDropped)="move($event)">
             @for (control of emails.controls; track control; let i = $index) {
-              <andes-form-field [label]="i === 0 ? 'Notify' : undefined" cdkDrag>
-                <div style="display: flex; gap: 0.5rem; align-items: center;">
-                  <andes-button variant="ghost" size="icon" cdkDragHandle [aria-label]="'Move email ' + (i + 1)">⋮⋮</andes-button>
+              <andes-form-field [label]="i === 0 ? 'Notify' : undefined" class="demo-row" cdkDrag>
+                <div class="demo-inline">
                   <andes-input [formControlName]="i" type="email" placeholder="name@company.com" />
-                  <andes-button variant="ghost" size="icon" [aria-label]="'Remove email ' + (i + 1)" (click)="remove(i)">✕</andes-button>
+                  <span class="demo-quiet demo-grip" cdkDragHandle role="img" [attr.aria-label]="'Move email ' + (i + 1)" style="display: inline-flex; padding: 0.25rem;"><andes-form-icon name="grip" /></span>
+                  <andes-button class="demo-remove" variant="ghost" size="icon-sm" [aria-label]="'Remove email ' + (i + 1)" (click)="remove(i)"><andes-form-icon name="minus-circle" /></andes-button>
                 </div>
               </andes-form-field>
             }
           </div>
           <andes-form-field [label]="emails.length === 0 ? 'Notify' : undefined">
-            <div style="display: flex; gap: 0.5rem;">
-              <andes-button variant="dashed" (click)="add()">Add email</andes-button>
-              <andes-button type="submit">Save</andes-button>
-            </div>
+            <andes-button variant="dashed" fullWidth (click)="add()"><andes-form-icon name="plus" /> Add email</andes-button>
             <andes-form-error [control]="emails" [errorMessages]="{ required: 'Add at least one email.' }" />
+          </andes-form-field>
+          <andes-form-field>
+            <andes-button type="submit">Save</andes-button>
           </andes-form-field>
           @if (log()) {
             <pre style="${LOG_STYLE}">validSubmit {{ log() }}</pre>

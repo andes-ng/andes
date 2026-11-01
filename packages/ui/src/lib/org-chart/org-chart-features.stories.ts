@@ -4,6 +4,7 @@ import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 import {
   generateOrg,
   SAMPLE_ORG,
+  sampleAvatar,
   type SamplePerson,
 } from '../../testing/org-chart-sample';
 import { AndesButton } from '../button/button';
@@ -27,6 +28,10 @@ const meta: Meta<AndesOrgChart> = {
 export default meta;
 
 type Story = StoryObj<AndesOrgChart>;
+
+/** A small line of muted text under a story's controls. */
+const READOUT =
+  'font-size: 0.75rem; line-height: 1rem; color: var(--andes-color-muted-foreground);';
 
 function find(node: SamplePerson, key: AndesOrgChartKey): SamplePerson | null {
   if (node.id === key) {
@@ -61,14 +66,112 @@ function updateNode(
   };
 }
 
+/** Names of the given keys, for the readouts. */
+function namesOf(keys: readonly AndesOrgChartKey[]): string {
+  return keys
+    .map((key) => find(SAMPLE_ORG, key)?.name ?? String(key))
+    .join(', ');
+}
+
 /**
- * `search` highlights every match, dims everyone else, lights the path up to the root and
- * expands the managers of hidden matches. `matchedKeys` and `scrollToNode()` step through the
+ * Collapsible: every person with reports has the toggle on the bottom edge of the card. Here the
+ * chart starts with only the leadership open; open a team with its toggle (or Right arrow /
+ * Alt+Down on the focused card).
+ */
+export const Collapsible: Story = {
+  render: () => ({
+    props: { data: SAMPLE_ORG },
+    template: `
+      <andes-org-chart
+        aria-label="Company organization"
+        style="--andes-org-chart-height: 30rem"
+        [data]="data"
+        [defaultExpandDepth]="1"
+        [fitOnInit]="false"
+      />
+    `,
+  }),
+};
+
+/**
+ * `collapsible` set to `false`: no toggle, and every team stays open. Use it for small, static
+ * charts that should always show everyone.
+ */
+export const NotCollapsible: Story = {
+  render: () => ({
+    props: {
+      data: {
+        ...SAMPLE_ORG,
+        children: SAMPLE_ORG.children?.filter((child) =>
+          ['cos', 'design', 'product'].includes(child.id),
+        ),
+      },
+    },
+    template: `
+      <andes-org-chart
+        aria-label="Leadership and their teams"
+        style="--andes-org-chart-height: 26rem"
+        [data]="data"
+        [collapsible]="false"
+      />
+    `,
+  }),
+};
+
+/**
+ * Controlled expansion: `[(expanded)]` holds the open teams, so the page can expand or collapse
+ * everything, and it follows what the user opens and closes.
+ */
+export const Controlled: Story = {
+  render: () => {
+    const managers: string[] = [];
+    const walk = (node: SamplePerson) => {
+      if (node.children?.length) {
+        managers.push(node.id);
+        node.children.forEach(walk);
+      }
+    };
+    walk(SAMPLE_ORG);
+    const open = signal<readonly AndesOrgChartKey[]>(['ceo']);
+    return {
+      props: {
+        data: SAMPLE_ORG,
+        open,
+        managers,
+        expandEveryone() {
+          open.set([...managers]);
+        },
+        collapseEveryone() {
+          open.set([]);
+        },
+      },
+      template: `
+        <div style="display: grid; gap: 0.75rem;">
+          <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <andes-button size="sm" variant="outline" (click)="expandEveryone()">Expand all</andes-button>
+            <andes-button size="sm" variant="outline" (click)="collapseEveryone()">Collapse all</andes-button>
+            <span style="${READOUT}">{{ open().length }} of {{ managers.length }} teams open</span>
+          </div>
+          <andes-org-chart
+            aria-label="Company organization"
+            style="--andes-org-chart-height: 32rem"
+            [data]="data"
+            [(expanded)]="open"
+          />
+        </div>
+      `,
+    };
+  },
+};
+
+/**
+ * `search` highlights every match, mutes everyone else, lights the path up to the root and
+ * opens the managers of hidden matches. `matchedKeys` and `scrollToNode()` step through the
  * results.
  */
 export const Search: Story = {
   render: () => {
-    const query = signal('an');
+    const query = signal('engineer');
     const index = signal(0);
     return {
       props: {
@@ -86,7 +189,7 @@ export const Search: Story = {
         },
       },
       template: `
-        <div style="display: grid; gap: 1rem;">
+        <div style="display: grid; gap: 0.75rem;">
           <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
             <andes-input
               style="width: 16rem"
@@ -97,9 +200,7 @@ export const Search: Story = {
             />
             <andes-button variant="outline" size="sm" (click)="step(chart, -1)">Previous</andes-button>
             <andes-button variant="outline" size="sm" (click)="step(chart, 1)">Next</andes-button>
-            <span aria-live="polite" style="font-size: 0.875rem">
-              {{ chart.matchedKeys().length }} matches
-            </span>
+            <span aria-live="polite" style="${READOUT}">{{ chart.matchedKeys().length }} matches</span>
           </div>
           <andes-org-chart
             #chart="andesOrgChart"
@@ -115,27 +216,50 @@ export const Search: Story = {
   },
 };
 
-/**
- * `selectionMode="multiple"` with `[(selected)]`: click cards (or press Enter / Space) to toggle
- * them. Disabled people (`disabled: true`) cannot be selected; read-only people
- * (`readonly: true`) can be focused and expanded but not selected.
- */
-export const Selection: Story = {
+/** `selectionMode="single"` (the default): a click or Enter / Space selects one person. */
+export const SelectionSingle: Story = {
   render: () => {
-    const picked = signal<readonly AndesOrgChartKey[]>(['cto', 'cfo']);
+    const picked = signal<readonly AndesOrgChartKey[]>(['design']);
+    return {
+      props: { data: SAMPLE_ORG, picked, namesOf },
+      template: `
+        <div style="display: grid; gap: 0.75rem;">
+          <span style="${READOUT}">Selected: {{ namesOf(picked()) || 'nobody' }}</span>
+          <andes-org-chart
+            aria-label="Company organization"
+            style="--andes-org-chart-height: 30rem"
+            selectionMode="single"
+            [data]="data"
+            [(selected)]="picked"
+            [defaultExpandDepth]="1"
+          />
+        </div>
+      `,
+    };
+  },
+};
+
+/**
+ * `selectionMode="multiple"`: each click adds or removes a person. Disabled people
+ * (`disabled: true`, here the finance team) cannot be selected; read-only people
+ * (`readonly: true`, the chief of staff) can be focused but not selected.
+ */
+export const SelectionMultiple: Story = {
+  render: () => {
+    const picked = signal<readonly AndesOrgChartKey[]>(['cto', 'product']);
     const data = updateNode(
-      updateNode(SAMPLE_ORG, 'coo', (node) => ({
+      updateNode(SAMPLE_ORG, 'cfo', (node) => ({
         ...node,
         disabled: true,
       })) as SamplePerson,
-      'cmo',
+      'cos',
       (node) => ({ ...node, readonly: true }),
     );
     return {
-      props: { org: data, picked },
+      props: { org: data, picked, namesOf },
       template: `
-        <div style="display: grid; gap: 1rem;">
-          <span style="font-size: 0.875rem">Selected: {{ picked().join(', ') || 'nobody' }}</span>
+        <div style="display: grid; gap: 0.75rem;">
+          <span style="${READOUT}">Selected ({{ picked().length }}): {{ namesOf(picked()) || 'nobody' }}</span>
           <andes-org-chart
             aria-label="Company organization"
             style="--andes-org-chart-height: 30rem"
@@ -151,45 +275,111 @@ export const Selection: Story = {
 };
 
 /**
- * `loadChildren` fetches a team the first time it is expanded; the badge spins meanwhile.
- * People with `isLeaf: true` never load. Here every team takes about a second to arrive and
- * the "Finance" request fails, which collapses it again and emits `loadError`.
+ * `selectionMode="checkbox"`: checking a manager checks the whole team; a manager whose team is
+ * partly checked shows a mixed box (and is announced as `aria-checked="mixed"`), and one whose
+ * reports are all checked becomes checked. `partiallySelected` lists the mixed managers.
+ */
+export const SelectionCheckbox: Story = {
+  render: () => {
+    const picked = signal<readonly AndesOrgChartKey[]>([
+      'platform',
+      'designer1',
+    ]);
+    return {
+      props: { data: SAMPLE_ORG, picked },
+      template: `
+        <div style="display: grid; gap: 0.75rem;">
+          <span style="${READOUT}">Checked ({{ picked().length }}): {{ picked().join(', ') || 'none' }}</span>
+          <span style="${READOUT}">Partly checked: {{ chart.partiallySelected().join(', ') || 'none' }}</span>
+          <andes-org-chart
+            #chart="andesOrgChart"
+            aria-label="Company organization"
+            style="--andes-org-chart-height: 34rem"
+            selectionMode="checkbox"
+            leafLayout="compact"
+            [data]="data"
+            [(selected)]="picked"
+            [defaultExpandDepth]="3"
+          />
+        </div>
+      `,
+    };
+  },
+};
+
+/**
+ * `loadChildren` fetches a team the first time it is opened; the toggle spins meanwhile. People
+ * with `isLeaf: true` never load. Every team takes about a second to arrive, and the finance
+ * request fails, which closes it again and emits `loadError`.
  */
 export const AsyncLoading: Story = {
   render: () => {
     const errors = signal<string[]>([]);
-    let next = 1;
+    const teams: Record<string, [string, string][]> = {
+      cto: [
+        ['Tomás Herrera', 'Engineering Manager, Platform'],
+        ['Grace Liu', 'Engineering Manager, Product'],
+        ['Hana Kim', 'Data Lead'],
+      ],
+      design: [
+        ['Mateo Álvarez', 'Product Designer'],
+        ['Leila Haddad', 'Product Designer'],
+      ],
+    };
     const loadChildren = (person: SamplePerson): Promise<SamplePerson[]> =>
       new Promise((resolve, reject) => {
         setTimeout(() => {
-          if (person.id === 'finance') {
-            reject(new Error('Finance is unavailable'));
+          if (person.id === 'cfo') {
+            reject(new Error('Finance is not available right now.'));
             return;
           }
-          const count = 2 + (next % 3);
+          const members = teams[person.id] ?? [
+            ['Kwame Mensah', 'Technical Recruiter'],
+            ['Ana Ferreira', 'People Operations'],
+          ];
           resolve(
-            Array.from({ length: count }, (_, index) => {
-              const id = `${person.id}-${next++}`;
-              return {
-                id,
-                name: `Person ${id}`,
-                title: index === 0 ? 'Team Lead' : 'Specialist',
-                isLeaf: index !== 0,
-              };
-            }),
+            members.map(([name, title], index) => ({
+              id: `${person.id}-${index}`,
+              name,
+              title,
+              avatar: sampleAvatar(name),
+              isLeaf: true,
+            })),
           );
         }, 1000);
       });
     return {
       props: {
         data: {
-          id: 'root',
-          name: 'Valeria Quispe',
-          title: 'Chief Executive Officer',
+          id: 'ceo',
+          name: 'Elena Vargas',
+          title: 'Founder & CEO',
+          avatar: sampleAvatar('Elena Vargas'),
           children: [
-            { id: 'tech', name: 'Martín Salazar', title: 'Technology' },
-            { id: 'finance', name: 'Ricardo Chávez', title: 'Finance' },
-            { id: 'ops', name: 'Daniela Herrera', title: 'Operations' },
+            {
+              id: 'cto',
+              name: 'Priya Raman',
+              title: 'Chief Technology Officer',
+              avatar: sampleAvatar('Priya Raman'),
+            },
+            {
+              id: 'design',
+              name: 'Sofia Lindqvist',
+              title: 'Head of Design',
+              avatar: sampleAvatar('Sofia Lindqvist'),
+            },
+            {
+              id: 'people',
+              name: 'Camila Restrepo',
+              title: 'Head of People',
+              avatar: sampleAvatar('Camila Restrepo'),
+            },
+            {
+              id: 'cfo',
+              name: 'David Cohen',
+              title: 'Chief Financial Officer',
+              avatar: sampleAvatar('David Cohen'),
+            },
           ],
         },
         loadChildren,
@@ -199,7 +389,7 @@ export const AsyncLoading: Story = {
         },
       },
       template: `
-        <div style="display: grid; gap: 1rem;">
+        <div style="display: grid; gap: 0.75rem;">
           <andes-org-chart
             aria-label="Company organization"
             style="--andes-org-chart-height: 30rem"
@@ -209,7 +399,7 @@ export const AsyncLoading: Story = {
             (loadError)="onError($event.error)"
           />
           @for (error of errors(); track $index) {
-            <span style="font-size: 0.875rem">{{ error }}</span>
+            <span style="${READOUT}">{{ error }}</span>
           }
         </div>
       `,
@@ -219,14 +409,21 @@ export const AsyncLoading: Story = {
 
 /**
  * Data that changes at runtime: select someone, then add a report (the card grows out of its
- * manager), rename them, or remove them (their team shrinks back into the manager). The chart
- * keeps the view, the expansion and the selection.
+ * manager), mark them as acting, or remove them (their team shrinks back into the manager). The
+ * chart keeps the view, the expansion and the selection.
  */
 export const DynamicData: Story = {
   render: () => {
     const org = signal<SamplePerson>(SAMPLE_ORG);
-    const picked = signal<readonly AndesOrgChartKey[]>(['eng2']);
-    let counter = 1;
+    const picked = signal<readonly AndesOrgChartKey[]>(['product']);
+    const hires = [
+      'Clara Novak',
+      'Tobias Lund',
+      'Yuki Mori',
+      'Diego Paredes',
+      'Selin Aydın',
+    ];
+    let counter = 0;
     const current = () => picked()[0];
     return {
       props: {
@@ -237,13 +434,19 @@ export const DynamicData: Story = {
           if (!key) {
             return;
           }
-          const id = `new-${counter++}`;
+          const name = hires[counter % hires.length];
+          const id = `hire-${counter++}`;
           org.set(
             updateNode(org(), key, (node) => ({
               ...node,
               children: [
                 ...(node.children ?? []),
-                { id, name: `New Hire ${counter - 1}`, title: 'Associate' },
+                {
+                  id,
+                  name,
+                  title: 'Product Manager',
+                  avatar: sampleAvatar(name),
+                },
               ],
             })) as SamplePerson,
           );
@@ -254,7 +457,9 @@ export const DynamicData: Story = {
             org.set(
               updateNode(org(), key, (node) => ({
                 ...node,
-                title: `${node.title.replace(/ \(acting\)$/, '')} (acting)`,
+                title: node.title.endsWith(' (acting)')
+                  ? node.title
+                  : `${node.title} (acting)`,
               })) as SamplePerson,
             );
           }
@@ -273,21 +478,20 @@ export const DynamicData: Story = {
         selectedName: () => (current() ? find(org(), current())?.name : null),
       },
       template: `
-        <div style="display: grid; gap: 1rem;">
+        <div style="display: grid; gap: 0.75rem;">
           <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
             <andes-button size="sm" [disabled]="!picked().length" (click)="add()">Add report</andes-button>
             <andes-button size="sm" variant="outline" [disabled]="!picked().length" (click)="rename()">Mark acting</andes-button>
             <andes-button size="sm" variant="outline" danger [disabled]="!picked().length" (click)="remove()">Remove</andes-button>
             <andes-button size="sm" variant="ghost" (click)="reset()">Reset</andes-button>
-            <span style="font-size: 0.875rem">{{ selectedName() ?? 'Select a person' }}</span>
+            <span style="${READOUT}">{{ selectedName() ?? 'Select a person' }}</span>
           </div>
           <andes-org-chart
             aria-label="Company organization"
             style="--andes-org-chart-height: 34rem"
             [data]="org()"
             [(selected)]="picked"
-            [defaultExpandDepth]="3"
-            leafLayout="compact"
+            [defaultExpandDepth]="2"
           />
         </div>
       `,
@@ -297,8 +501,7 @@ export const DynamicData: Story = {
 
 /**
  * The imperative API through the `andesOrgChart` reference: `fitView()`, `zoomTo()`,
- * `resetView()`, `expandAllNodes()`, `collapseAll()`, `scrollToNode()`, `expandPath()` and
- * `exportSvg()`.
+ * `resetView()`, `expandAllNodes()`, `collapseAll()`, `scrollToNode()` and `exportSvg()`.
  */
 export const ImperativeApi: Story = {
   render: () => {
@@ -309,21 +512,21 @@ export const ImperativeApi: Story = {
         exported,
         exportChart(chart: AndesOrgChart) {
           exported.set(
-            `${Math.round(chart.exportSvg().length / 1024)} kB of SVG`,
+            `Exported ${Math.round(chart.exportSvg().length / 1024)} kB of SVG`,
           );
         },
       },
       template: `
-        <div style="display: grid; gap: 1rem;">
+        <div style="display: grid; gap: 0.75rem;">
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
             <andes-button size="sm" variant="outline" (click)="chart.fitView()">Fit</andes-button>
-            <andes-button size="sm" variant="outline" (click)="chart.zoomTo(1.5)">Zoom 150%</andes-button>
+            <andes-button size="sm" variant="outline" (click)="chart.zoomTo(1.5)">Zoom to 150%</andes-button>
             <andes-button size="sm" variant="outline" (click)="chart.resetView()">Reset</andes-button>
             <andes-button size="sm" variant="outline" (click)="chart.expandAllNodes()">Expand all</andes-button>
             <andes-button size="sm" variant="outline" (click)="chart.collapseAll()">Collapse all</andes-button>
-            <andes-button size="sm" (click)="chart.scrollToNode('acc1', { select: true })">Find Gabriel</andes-button>
+            <andes-button size="sm" (click)="chart.scrollToNode('ml', { select: true })">Find Amara Nwosu</andes-button>
             <andes-button size="sm" variant="outline" (click)="exportChart(chart)">Export SVG</andes-button>
-            <span style="font-size: 0.875rem">{{ exported() }}</span>
+            <span style="${READOUT}">{{ exported() }}</span>
           </div>
           <andes-org-chart
             #chart="andesOrgChart"
@@ -341,8 +544,8 @@ export const ImperativeApi: Story = {
 /**
  * Thousands of people. The layout itself takes a few milliseconds; what costs is the number of
  * cards in the page, so large charts start collapsed (`defaultExpandDepth`) and stack leaf teams
- * (`leafLayout="compact"`). Turn on "Expand everything" to render every card at once; the time
- * shown is from the data change to the next painted frame.
+ * (`leafLayout="compact"`). "Expand everything" renders every card at once; the time shown runs
+ * from the change to the next painted frame.
  */
 export const LargeData: Story = {
   render: () => {
@@ -391,11 +594,11 @@ export const LargeData: Story = {
         },
       },
       template: `
-        <div style="display: grid; gap: 1rem;">
+        <div style="display: grid; gap: 0.75rem;">
           <div style="display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap;">
             <andes-segmented aria-label="People" [options]="sizes" [value]="people()" (valueChange)="setSize($event)" />
             <andes-switch [checked]="everything()" (checkedChange)="setEverything(chart, $event)">Expand everything</andes-switch>
-            <span style="font-size: 0.875rem">{{ elapsed() }}</span>
+            <span style="${READOUT}">{{ elapsed() }}</span>
           </div>
           <andes-org-chart
             #chart="andesOrgChart"

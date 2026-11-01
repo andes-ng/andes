@@ -188,6 +188,8 @@ export interface AndesFormControlApi {
   /** The control's path from its form root, joined with `.` (`'address.city'`), or `null`
    *  for a standalone control. */
   readonly path: () => string | null;
+  /** Whether a signal forms schema hides the control (`hidden()`). */
+  readonly hidden: () => boolean;
   /** `Validators.required`/`requiredTrue`, or a native `required` attribute on the element -
    *  i.e. anything that should earn a required mark on the label. */
   readonly markedRequired: () => boolean;
@@ -229,6 +231,11 @@ export interface AndesFormApi {
     TemplateRef<AndesFormFeedbackIconContext> | undefined
   >;
   readonly errorMessages: Signal<AndesFormErrorMessages | undefined>;
+  /** Whether the form was submitted and not reset since. */
+  readonly submitted: Signal<boolean>;
+  /** Name of the signal forms root field bound with `[formRoot]`, which field paths are
+   *  relative to; `null` without one. */
+  readonly signalRootName: Signal<string | null>;
 }
 
 export const ANDES_FORM = new InjectionToken<AndesFormApi>('AndesForm');

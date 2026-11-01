@@ -11,6 +11,7 @@ import {
   Injector,
   input,
   output,
+  signal,
   type Signal,
   type TemplateRef,
 } from '@angular/core';
@@ -20,6 +21,7 @@ import {
   FormArray,
   FormGroup,
   FormGroupDirective,
+  FormResetEvent,
   NgForm,
 } from '@angular/forms';
 import { filter, first, map, of } from 'rxjs';
@@ -127,6 +129,7 @@ export function collectAndesFormErrors(
     '[attr.data-variant]': 'variant() ?? null',
     '[attr.data-disabled]': 'disabled() ? "" : null',
     '(submit)': 'onSubmit()',
+    '(reset)': 'onNativeReset()',
   },
 })
 export class AndesForm implements AndesFormApi {
@@ -139,6 +142,10 @@ export class AndesForm implements AndesFormApi {
     inject(NgForm, { self: true, optional: true });
   /** Whether `disabled` is what disabled the form, so only then does it re-enable it. */
   private disabledByInput = false;
+  /** Submit state of a form with no Angular form directive (signal forms, plain forms). */
+  private readonly ownSubmitted = signal(false);
+  /** Bumped when the Angular form directive is submitted or reset. */
+  private readonly submitTick = signal(0);
 
   /** Defaults to `vertical` - the stacked layout every `AndesFormField` already had before
    *  this directive existed - so wrapping an existing form in `andesForm` never changes how
@@ -211,6 +218,18 @@ export class AndesForm implements AndesFormApi {
    *  after any pending async validators settle. */
   readonly invalidSubmit = output<AndesFormInvalidSubmit>();
 
+  /** Whether the form was submitted and not reset since - the Angular form directive's
+   *  `submitted` when there is one, as a signal. */
+  readonly submitted = computed(() => {
+    this.submitTick();
+    return this.formDirective
+      ? this.formDirective.submitted
+      : this.ownSubmitted();
+  });
+
+  /** Name of the signal forms root field bound with `[formRoot]`; `null` without one. */
+  readonly signalRootName = computed<string | null>(() => null);
+
   constructor() {
     const destroyRef = inject(DestroyRef);
     const formDirective = this.formDirective;
@@ -219,7 +238,10 @@ export class AndesForm implements AndesFormApi {
     }
     formDirective.ngSubmit
       .pipe(takeUntilDestroyed(destroyRef))
-      .subscribe(() => this.afterSubmit(formDirective.form));
+      .subscribe(() => {
+        this.submitTick.update((n) => n + 1);
+        this.afterSubmit(formDirective.form);
+      });
 
     effect(() => this.syncDisabled(this.disabled()));
     // `[formGroup]` may not be bound yet when the effect first runs, so sync once more after
@@ -232,7 +254,13 @@ export class AndesForm implements AndesFormApi {
         queueMicrotask(() => this.syncDisabled(this.disabled()));
         formDirective.form.events
           .pipe(takeUntilDestroyed(destroyRef))
-          .subscribe(() => this.syncDisabled(this.disabled()));
+          .subscribe((event) => {
+            this.syncDisabled(this.disabled());
+            if (event instanceof FormResetEvent) {
+              // `resetForm()` clears `submitted` only after the reset event.
+              queueMicrotask(() => this.submitTick.update((n) => n + 1));
+            }
+          });
       },
       { injector: this.injector },
     );
@@ -278,7 +306,14 @@ export class AndesForm implements AndesFormApi {
   protected onSubmit(): void {
     // With an Angular form on the element, scrolling waits for its verdict (`afterSubmit`).
     if (!this.formDirective) {
+      this.ownSubmitted.set(true);
       this.scheduleScroll();
+    }
+  }
+
+  protected onNativeReset(): void {
+    if (!this.formDirective) {
+      this.ownSubmitted.set(false);
     }
   }
 

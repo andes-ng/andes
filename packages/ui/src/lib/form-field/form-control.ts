@@ -1,22 +1,29 @@
 import {
+  type AfterContentChecked,
   computed,
   DestroyRef,
   Directive,
+  type DoCheck,
   ElementRef,
   forwardRef,
   inject,
-  OnInit,
+  Injector,
+  type OnInit,
   signal,
+  type Signal,
+  untracked,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
-  AbstractControl,
+  type AbstractControl,
   FormGroupDirective,
+  FormResetEvent,
   NgControl,
   NgForm,
   type ValidationErrors,
   Validators,
 } from '@angular/forms';
+import { FORM_FIELD, type FormField } from '@angular/forms/signals';
+import type { Observable, Subscription } from 'rxjs';
 
 import {
   ANDES_FORM,
@@ -28,183 +35,78 @@ import {
 /**
  * The HTML elements that are both *labelable* (a `<label for>` can point at them) and able to
  * carry `aria-describedby`/`aria-invalid`/`aria-required` meaningfully on the very element this
- * directive sits on. `<select>` is included even though `AndesFormControl` is most often used
- * with `<input>`: all three are real form controls in the accessibility tree.
+ * directive sits on.
  *
- * Deliberately NOT a check for "has a value property" or "is a form-associated custom element":
- * a custom element is only labelable if it was registered with `formAssociated = true` through
- * the ElementInternals API, which no Angular component in this library is (Angular components
- * are plain, non-upgraded elements as far as the platform is concerned). See the class comment
- * on `AndesFormControl` for what that means in practice.
+ * A custom element is only labelable when it is registered with `formAssociated = true`, which
+ * no Angular component is, so a library control (`<andes-input>`) never qualifies: it puts the
+ * field's id and ARIA on its own inner element instead (see `injectAndesFieldBinding()`).
  */
 const LABELABLE_NATIVE_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT']);
 
 /**
- * Applied on the actual form control element - a native `<input>`/`<select>`/`<textarea>`,
- * or one of this library's own `ControlValueAccessor` components (e.g. `AndesInput`) -
- * alongside `formControlName`, `[formControl]` or `[(ngModel)]` on that same element.
- *
- * Reads the bound control's status through Angular's own `NgControl` (whichever host
- * directive registered it - `FormControlName`, `FormControlDirective` or `NgModel`), so it
- * works identically regardless of which of the three the consumer used. Exposes the
- * idiomatic "show error only after interaction" predicate (`invalid && (touched || dirty)`)
- * as `showError`, and - when nested inside an `AndesFormField` - automatically reflects
- * `id`/`aria-describedby`/`aria-invalid`/`aria-required` onto the element it's applied to.
- *
- * ## Native elements vs. wrapper components
- *
- * That automatic attribute wiring is exact and complete for a native `<input>`/`<textarea>`/
- * `<select>`, because the directive's host bindings write onto the very DOM node that IS the
- * form control: `<label for>` resolves to it, and every `aria-*` attribute lands on the
- * element assistive technology actually reports.
- *
- * It is NOT complete for this library's own wrapper components (`AndesCheckbox`, `AndesSwitch`,
- * `AndesSelect`, `AndesRadioGroup`, `AndesSlider`, `AndesInput`, ...). Each of those renders its
- * real native control inside its own template, so the element this directive sits on is the
- * outer custom element - `<andes-checkbox>` - which:
- *
- * 1. is not a labelable element (see `LABELABLE_NATIVE_TAGS` above), so writing the field's
- *    generated id onto it would make `<label for="...">` resolve to a node the platform refuses
- *    to associate with anything. `element.labels` on the buried native control stays empty and
- *    clicking the label does nothing. The id is therefore deliberately NOT written to a
- *    non-native host: a dangling `for` is at least detectable by axe/linting, whereas an id on a
- *    non-labelable element silently *looks* associated while doing nothing; and
- * 2. cannot receive `aria-*` from here either. Those wrappers forward ARIA inward through their
- *    own `@Input()`s (`input(..., { alias: 'aria-describedby' })`) and explicitly null the
- *    matching host attributes so the outer element stays out of the a11y tree. A *host binding*
- *    from a co-located directive only calls `setAttribute` on that element - Angular has no
- *    mechanism for one directive's host bindings to feed another directive/component's inputs;
- *    only bindings authored in a template can do that.
- *
- * Both points were verified empirically against the real `AndesCheckbox` (read from
- * `origin/feature/checkbox-component`) while fixing this. With only `andesFormControl` applied
- * and this directive writing to the host unconditionally, `<andes-checkbox>` ended up with
- * `id`, `aria-describedby` and `aria-invalid="true"`, while the real `<input type="checkbox">`
- * inside it had all three still `null`, and `<label for>` resolved to the `ANDES-CHECKBOX`
- * element - i.e. NONE of it reached the control. Worse, the host write silently overrode the
- * `'[attr.aria-describedby]': 'null'` that `AndesCheckbox` declares precisely to keep its outer
- * element out of the accessibility tree, re-creating the duplicate-node problem that metadata
- * exists to prevent. So ARIA forwarding does NOT come for free here - it is exactly as broken as
- * `id`/`for`, and the only correct move from inside this PR is to write nothing.
- *
- * So for the wrapper-component case this directive writes NO attributes at all (writing them
- * would be inert at best and misleading at worst) and instead exposes `resolvedId()`,
- * `labelledBy()`, `describedBy()`, `showError()` and `isRequired()`/`ariaRequired()` as public
- * signals, for the consumer to bind into the wrapper's own inputs from the template:
- *
- * ```html
- * <andes-form-field #field="andesFormField">
- *   <andes-form-label>Accept</andes-form-label>
- *   <andes-some-wrapper
- *     andesFormControl
- *     #ctrl="andesFormControl"
- *     [formControl]="accept"
- *     [id]="field.controlId()"
- *     [aria-describedby]="ctrl.describedBy()"
- *     [aria-invalid]="field.showError()"
- *     [aria-required]="ctrl.isRequired()"
- *   />
- *   <andes-form-error>Required.</andes-form-error>
- * </andes-form-field>
- * ```
- *
- * ## Which wrappers that pattern is currently complete for
- *
- * It only works to the extent the wrapper actually exposes the matching inputs, and that is not
- * uniform across the library. Re-checked against each component's own branch:
- *
- * - `AndesInput` exposes `id`, `name`, `aria-label`, `aria-labelledby`, `aria-describedby` and
- *   `aria-invalid` inputs, nulls all of them on its host, and forwards them onto the real
- *   `<input>` in its template. The snippet above therefore works end to end for it, including a
- *   genuinely clickable `<label for>` - nothing is missing. (It still needs the manual bindings:
- *   its host element is `<andes-input>`, not an `<input>`, so this directive's automatic host
- *   writes stay switched off, exactly as described above.) It has no `aria-required` input, but
- *   needs none: its `required` input puts the native `required` attribute on that inner
- *   `<input>`, which already implies `aria-required` to assistive technology.
- * - `AndesCheckbox`, `AndesSwitch`, `AndesSelect`, `AndesRadioGroup` and `AndesSlider` expose no
- *   `id` input at all, so `[id]="field.controlId()"` has nowhere to land and the label's `for`
- *   stays dangling - deliberately detectable, rather than silently pointing at an element the
- *   platform will not associate. Giving each of them an `id` input forwarded onto its internal
- *   control remains the proper fix, and has to happen on those components' own branches.
- *
- * ### Workaround for the five without an `id` input
- *
- * All five DO accept an `aria-labelledby` input and forward it onto their real internal control.
- * `AndesFormLabel` therefore stamps an id onto the `<label>` it renders, and the field exposes it
- * as `labelledBy()` (mirrored here as {@link labelledBy}), so the accessible name can be wired up
- * without touching those components at all:
- *
- * ```html
- * <andes-select
- *   andesFormControl
- *   #ctrl="andesFormControl"
- *   [formControl]="country"
- *   [aria-labelledby]="ctrl.labelledBy()"
- *   [aria-describedby]="ctrl.describedBy()"
- *   [aria-invalid]="ctrl.showError()"
- * />
- * ```
- *
- * That is a real improvement, not a full substitute: `aria-labelledby` gives the control its
- * accessible name, but only a native `for`/`id` pair makes the label CLICKABLE (and populates
- * `element.labels`). So the remaining, honestly-still-open gap for those five is label-click
- * focus, not announcement.
+ * The `events` stream reactive forms put on every `AbstractControl`. The stand-in control
+ * signal forms hand out through `NgControl` has no such stream: its getters read signals, so a
+ * `computed()` over them is already reactive.
  */
-@Directive({
-  selector: '[andesFormControl]',
-  exportAs: 'andesFormControl',
-  providers: [
-    {
-      provide: ANDES_FORM_CONTROL,
-      useExisting: forwardRef(() => AndesFormControl),
-    },
-  ],
-  host: {
-    '[attr.id]': 'hostId()',
-    '[attr.aria-describedby]': 'hostDescribedBy()',
-    '[attr.aria-invalid]': 'hostAriaInvalid()',
-    '[attr.aria-required]': 'hostAriaRequired()',
-    '[attr.aria-busy]': 'hostAriaBusy()',
-  },
-})
-export class AndesFormControl implements OnInit, AndesFormControlApi {
-  private readonly ngControl = inject(NgControl, {
-    optional: true,
-    self: true,
-  });
-  private readonly field = inject(ANDES_FORM_FIELD, { optional: true });
+interface ControlWithEvents {
+  readonly events?: Observable<unknown>;
+}
+
+/**
+ * The state of the Angular forms control bound to one element, read through that element's
+ * `NgControl` - whichever directive registered it (`formControlName`, `[formControl]`,
+ * `ngModel` or signal forms' `[formField]`) - and registered with the enclosing
+ * `AndesFormField`.
+ *
+ * It is the body of the `andesFormControl` directive, and also what a library control creates
+ * for itself when it sits in a field without that directive (see `injectAndesFieldBinding()`).
+ * Must be constructed in an injection context. The `NgControl` is looked up lazily, from
+ * {@link sync}, never while constructing: a control component that injects this state from its
+ * own constructor is the `NgControl`'s value accessor, so an eager lookup would be circular.
+ */
+export class AndesFormControlState implements AndesFormControlApi {
+  private readonly injector = inject(Injector);
+  protected readonly field = inject(ANDES_FORM_FIELD, { optional: true });
   private readonly form = inject(ANDES_FORM, { optional: true });
   /** The enclosing reactive (`[formGroup]`) or template-driven (`<form>`/`ngForm`) form, if
-   *  any - only read for its `submitted` flag, so errors surface after a submit attempt even
-   *  on fields the user never reached - a failed submit shows every error at once. */
+   *  any - read for its `submitted` flag, so a failed submit reveals every error at once. */
   private readonly formDirective =
     inject(FormGroupDirective, { optional: true }) ??
     inject(NgForm, { optional: true });
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly element =
+  protected readonly element =
     inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
 
-  protected readonly invalid = signal(false);
-  protected readonly touched = signal(false);
-  protected readonly dirty = signal(false);
-  private readonly submitted = signal(false);
-  private readonly pendingState = signal(false);
-  private readonly errorsState = signal<ValidationErrors | null>(null);
-  private readonly requiredState = signal(false);
-  private readonly requiredAttribute = signal(false);
-  private readonly valueState = signal<unknown>(undefined);
-  private readonly controlState = signal<AbstractControl | null>(null);
-  private readonly pathState = signal<string | null>(null);
+  private ngControl: NgControl | null | undefined;
+  private subscriptions: Subscription[] = [];
+  private readonly bound = signal<AbstractControl | null>(null);
+  /** Bumped on every event of the bound control so the plain-property
+   *  reads below are re-evaluated. Signal forms' getters are tracked on their own. */
+  private readonly tick = signal(0);
+  /** Bumped on submit and reset of the enclosing Angular form. */
+  private readonly submitTick = signal(0);
 
-  /**
-   * Whether this directive sits directly on a native, labelable form element rather than on a
-   * wrapper component that renders its real control inside its own template. Read once from the
-   * host element's tag name (an element never changes tag), and the single gate on whether the
-   * host bindings below write anything - see the class comment for why.
-   */
-  readonly isNativeFormElement = LABELABLE_NATIVE_TAGS.has(
-    this.element.tagName,
-  );
+  private read<T>(pick: (control: AbstractControl) => T, fallback: T) {
+    return computed(() => {
+      this.tick();
+      const control = this.bound();
+      return control ? pick(control) : fallback;
+    });
+  }
+
+  protected readonly invalid = this.read((c) => c.invalid === true, false);
+  protected readonly touched = this.read((c) => c.touched === true, false);
+  protected readonly dirty = this.read((c) => c.dirty === true, false);
+
+  /** Whether the enclosing form was submitted (and not reset since). Reads the Angular form
+   *  directive when there is one, else the `AndesForm` on the `<form>` (signal forms). */
+  readonly submitted = computed(() => {
+    this.submitTick();
+    this.tick();
+    if (this.formDirective) {
+      return this.formDirective.submitted;
+    }
+    return this.form?.submitted() ?? false;
+  });
 
   /**
    * Whether the status (error, warning, validating, success) is worth showing yet - by default
@@ -230,76 +132,220 @@ export class AndesFormControl implements OnInit, AndesFormControlApi {
     }
   });
 
-  /** `control.invalid && (control.touched || control.dirty)` - Angular's idiomatic
-   *  "don't yell at the user before they've interacted with the field" rule - widened to also
-   *  fire once the enclosing form has been submitted, so a failed submit reveals every error
-   *  even without `markAllAsTouched()`. Drives both this control's own `aria-invalid` and the
-   *  enclosing field's error visibility. */
+  /** `invalid` once the {@link interacted} gate is open - Angular's idiomatic "don't yell at
+   *  the user before they've interacted with the field" rule, widened to a submitted form. */
   readonly showError = computed(() => this.invalid() && this.interacted());
 
   /** An async validator is still running (`control.pending`). */
-  readonly pending = this.pendingState.asReadonly();
+  readonly pending = this.read((c) => c.pending === true, false);
 
-  readonly valid = computed(
-    () => !this.invalid() && !this.pending() && !!this.ngControl?.control,
-  );
+  readonly valid = this.read((c) => c.valid === true, false);
 
   /** The bound control's current `ValidationErrors`, as a signal. */
-  readonly errors = this.errorsState.asReadonly();
+  readonly errors = this.read<ValidationErrors | null>(
+    (c) => c.errors ?? null,
+    null,
+  );
 
-  readonly value = this.valueState.asReadonly();
+  readonly value = this.read<unknown>((c) => c.value, undefined);
 
-  readonly control = this.controlState.asReadonly();
+  /** The bound control, once a forms directive has created it. With signal forms this is the
+   *  stand-in control `[formField]` exposes through `NgControl`. */
+  readonly control: Signal<AbstractControl | null> = this.bound.asReadonly();
 
-  readonly path = this.pathState.asReadonly();
+  private readonly pathState = signal<string | null>(null);
+
+  /** The control's path from its form root, joined with `.`, or `null` when standalone. */
+  readonly path = computed(() => {
+    const signalField = this.signalFieldState();
+    if (signalField) {
+      const root = this.form?.signalRootName();
+      const name = signalField.name();
+      return root && name.startsWith(`${root}.`)
+        ? name.slice(root.length + 1)
+        : null;
+    }
+    return this.pathState();
+  });
+
+  private readonly signalFieldRef = signal<FormField<unknown> | null>(null);
+  private readonly signalFieldState = computed(
+    () => this.signalFieldRef()?.state() ?? null,
+  );
+
+  /** Whether a signal forms schema hides this field (`hidden()`); the field hides itself. */
+  readonly hidden = computed(() => this.signalFieldState()?.hidden() ?? false);
+
+  private readonly requiredAttribute = signal(false);
 
   /**
-   * Whether the label should carry a required mark: {@link isRequired}, or - for the
-   * template-driven case `isRequired` deliberately ignores - a native `required` attribute on
-   * the element. (`[required]="false"` removes that attribute, so it tracks the binding.)
+   * Whether the bound control carries `Validators.required` or `Validators.requiredTrue`, or -
+   * with signal forms - a `required()` rule. Read through `AbstractControl.hasValidator()`, so
+   * validators swapped at runtime are followed. The template-driven `required` attribute is
+   * covered by {@link markedRequired} instead.
    */
+  readonly isRequired = this.read(
+    (c) =>
+      c.hasValidator(Validators.required) ||
+      c.hasValidator(Validators.requiredTrue),
+    false,
+  );
+
+  /** `'true'` when {@link isRequired} is set, `null` otherwise - shaped as an attribute
+   *  value. */
+  readonly ariaRequired = computed(() => (this.isRequired() ? 'true' : null));
+
+  /** Whether the label should carry a required mark: {@link isRequired}, or a native
+   *  `required` attribute on the element (template-driven forms). */
   readonly markedRequired = computed(
     () => this.isRequired() || this.requiredAttribute(),
   );
 
+  /** The id of the enclosing field's control, or `null` outside a field. */
   readonly resolvedId = computed(() => this.field?.controlId() ?? null);
 
+  /** The ids of the enclosing field's description and messages, space separated, or `null`
+   *  when there are none. */
   readonly describedBy = computed(() => this.field?.describedBy() ?? null);
 
-  /** The enclosing field's `<andes-form-label>` id, or `null` when there is no label - for
-   *  binding into a wrapper component's own `aria-labelledby` input when it has no `id` input
-   *  to complete the native `for`/`id` association with. See the class comment. */
+  /** The enclosing field's `<andes-form-label>` id, or `null` when there is no label. */
   readonly labelledBy = computed(() => this.field?.labelledBy() ?? null);
 
-  /**
-   * Whether the bound control carries `Validators.required` (or `Validators.requiredTrue`).
-   * Exposed for binding into a wrapper component's own `aria-required`-style input (see the
-   * class comment); `ariaRequired()` below is the same fact shaped as an attribute value.
-   *
-   * Derived from `AbstractControl.hasValidator(...)` (Angular's own validator introspection API,
-   * `@angular/forms` 22.x). That compares by function reference, which is
-   * exactly right for the reactive case (`Validators.required` is a singleton function, so
-   * `new FormControl('', Validators.required)`, the `{ validators: [...] }` options form and a
-   * later `addValidators(Validators.required)` all match). It deliberately does not match the
-   * template-driven `required` ATTRIBUTE, which Angular implements through its own
-   * `RequiredValidator` directive rather than by installing `Validators.required` itself - and
-   * that case needs nothing from us, because the native `required` attribute the author wrote is
-   * already on the element and already implies `aria-required` to assistive technology. The gap
-   * this closes is the reactive-only one, where a control is required in the model with nothing
-   * in the DOM saying so.
-   */
-  readonly isRequired = this.requiredState.asReadonly();
-
-  /** `'true'` when {@link isRequired} is set, `null` otherwise - shaped as the attribute value
-   *  itself so it can be bound straight through `[attr.aria-required]`. */
-  readonly ariaRequired = computed(() => (this.isRequired() ? 'true' : null));
+  constructor() {
+    // Registered while constructing, before the field's own view is first checked, so the field
+    // never renders a frame without knowing its control.
+    const unregister = this.field?.registerControl(this);
+    const destroyRef = inject(DestroyRef);
+    destroyRef.onDestroy(() => {
+      unregister?.();
+      this.unsubscribe();
+    });
+    if (this.formDirective) {
+      // `ngSubmit` fires once `submitted` is true; a reset of the form flips it back after the
+      // reset event, hence the microtask in `bind()`.
+      const submit = this.formDirective.ngSubmit.subscribe(() =>
+        this.submitTick.update((n) => n + 1),
+      );
+      destroyRef.onDestroy(() => submit.unsubscribe());
+    }
+  }
 
   /**
-   * Host-binding variants of the public signals above. They collapse to `null` (i.e. the
-   * attribute is not written at all) on a non-native host, where these attributes would be
-   * inert or actively misleading - see the class comment. The public signals keep returning
-   * real values in that case, so the documented manual template-binding pattern still works.
+   * Looks the `NgControl` up (once) and follows the control it currently points at. Cheap when
+   * nothing changed, so it can run on every change detection: a `[formControl]` re-bound to
+   * another `FormControl` keeps the same directive and only swaps its control.
    */
+  sync(): void {
+    if (this.ngControl === undefined) {
+      this.ngControl = this.injector.get(NgControl, null, {
+        self: true,
+        optional: true,
+      });
+      this.signalFieldRef.set(
+        this.injector.get(FORM_FIELD, null, {
+          self: true,
+          optional: true,
+        }) as FormField<unknown> | null,
+      );
+    }
+    this.requiredAttribute.set(
+      LABELABLE_NATIVE_TAGS.has(this.element.tagName) &&
+        this.element.hasAttribute('required'),
+    );
+    const control = (this.ngControl?.control ?? null) as AbstractControl | null;
+    if (control === untracked(this.bound)) {
+      return;
+    }
+    this.bind(control);
+  }
+
+  private bind(control: AbstractControl | null): void {
+    this.unsubscribe();
+    const path = this.ngControl?.path ?? [];
+    this.pathState.set(path.length > 0 ? path.join('.') : null);
+    this.bound.set(control);
+    const bump = () => this.tick.update((n) => n + 1);
+    const events = (control as ControlWithEvents | null)?.events;
+    if (control && events) {
+      this.subscriptions.push(events.subscribe(bump));
+      const rootEvents = (control.root as ControlWithEvents | null)?.events;
+      if (rootEvents) {
+        this.subscriptions.push(
+          rootEvents.subscribe((event) => {
+            // `resetForm()` resets the controls - emitting this event - and only then clears
+            // `submitted`, so read it again once that has happened.
+            if (event instanceof FormResetEvent) {
+              queueMicrotask(() => this.submitTick.update((n) => n + 1));
+            }
+          }),
+        );
+      }
+    }
+    bump();
+  }
+
+  private unsubscribe(): void {
+    for (const subscription of this.subscriptions) {
+      subscription.unsubscribe();
+    }
+    this.subscriptions = [];
+  }
+}
+
+/**
+ * Registers the form control on its element with the enclosing `AndesFormField`, which derives
+ * its status, messages and required mark from it. Applied on the actual control - a native
+ * `<input>`/`<select>`/`<textarea>`, or a `ControlValueAccessor` component - alongside
+ * `formControlName`, `[formControl]`, `[(ngModel)]` or signal forms' `[formField]`.
+ *
+ * On a native element it also writes `id`, `aria-describedby`, `aria-invalid`, `aria-required`
+ * and `aria-busy` onto that element, so `<label for>` resolves to it and assistive technology
+ * reads the field's state.
+ *
+ * On one of this library's controls (`<andes-input>`, `<andes-select>`, ...) it writes nothing
+ * on the host, which is not a labelable element. Those controls read the field themselves
+ * through `injectAndesFieldBinding()` and put the id and ARIA on their own inner element, and
+ * they register with the field even without this directive. Applying it to them is harmless, and
+ * still useful as a template reference (`#ctrl="andesFormControl"`) to the state signals below.
+ *
+ * A third-party `ControlValueAccessor` component that does neither can be wired by hand from
+ * those signals:
+ *
+ * ```html
+ * <andes-form-field label="Accept" #field="andesFormField">
+ *   <other-checkbox andesFormControl #ctrl="andesFormControl" [formControl]="accept"
+ *     [inputId]="field.controlId()" [describedBy]="ctrl.describedBy()"
+ *     [invalid]="field.showError()" [ariaRequired]="ctrl.isRequired()" />
+ * </andes-form-field>
+ * ```
+ */
+@Directive({
+  selector: '[andesFormControl]',
+  exportAs: 'andesFormControl',
+  providers: [
+    {
+      provide: ANDES_FORM_CONTROL,
+      useExisting: forwardRef(() => AndesFormControl),
+    },
+  ],
+  host: {
+    '[attr.id]': 'hostId()',
+    '[attr.aria-describedby]': 'hostDescribedBy()',
+    '[attr.aria-invalid]': 'hostAriaInvalid()',
+    '[attr.aria-required]': 'hostAriaRequired()',
+    '[attr.aria-busy]': 'hostAriaBusy()',
+  },
+})
+export class AndesFormControl
+  extends AndesFormControlState
+  implements OnInit, DoCheck, AfterContentChecked
+{
+  /** Whether this directive sits directly on a native, labelable form element - the single
+   *  gate on whether the host bindings below write anything. */
+  readonly isNativeFormElement = LABELABLE_NATIVE_TAGS.has(
+    this.element.tagName,
+  );
+
   protected readonly hostId = computed(() =>
     this.isNativeFormElement ? this.resolvedId() : null,
   );
@@ -322,62 +368,17 @@ export class AndesFormControl implements OnInit, AndesFormControlApi {
     this.isNativeFormElement ? this.ariaRequired() : null,
   );
 
-  constructor() {
-    // Registered from the constructor, before the field's own view is first checked, so the
-    // field never renders a frame without knowing its control.
-    const unregister = this.field?.registerControl(this);
-    if (unregister) {
-      this.destroyRef.onDestroy(unregister);
-    }
-  }
-
   ngOnInit(): void {
-    // NgControl.control is only populated once the host directive (FormControlName/
-    // FormControlDirective/NgModel) has processed its own inputs, which for a directive
-    // co-located on the same element happens after every constructor on that element has
-    // already run - so this has to live in ngOnInit, not the constructor.
-    const control = this.ngControl?.control;
-    if (!control) {
-      // No NgControl on this element (e.g. the directive was applied without
-      // formControlName/[formControl]/ngModel) - there's no validity state to read, so the
-      // control is simply never reported as invalid.
-      return;
-    }
-
-    this.controlState.set(control);
-    const path = this.ngControl?.path ?? [];
-    this.pathState.set(path.length > 0 ? path.join('.') : null);
-    this.syncFromControl(control);
-    control.events
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.syncFromControl(control));
-    // `ngSubmit` fires after the directive has already flipped `submitted` to true. A later
-    // `resetForm()` flips it back and resets the control, whose events re-sync it below.
-    this.formDirective?.ngSubmit
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.submitted.set(true));
+    this.sync();
   }
 
-  private syncFromControl(control: AbstractControl): void {
-    this.invalid.set(control.invalid);
-    this.touched.set(control.touched);
-    this.dirty.set(control.dirty);
-    this.pendingState.set(control.pending);
-    this.errorsState.set(control.errors);
-    this.valueState.set(control.value);
-    this.submitted.set(this.formDirective?.submitted ?? false);
-    this.requiredAttribute.set(
-      this.isNativeFormElement && this.element.hasAttribute('required'),
-    );
-    // Re-read on every control event rather than once in ngOnInit: validators can be swapped at
-    // runtime (`addValidators`/`setValidators` + `updateValueAndValidity()`), and that call is
-    // itself what emits the status-change event this subscription is already listening to.
-    this.requiredState.set(
-      control.hasValidator(Validators.required) ||
-        // `requiredTrue` is a separate function reference, so `hasValidator(Validators.required)`
-        // alone misses it - and it is precisely the validator used for the "must be checked"
-        // consent-checkbox case, which is exactly where `aria-required` matters most.
-        control.hasValidator(Validators.requiredTrue),
-    );
+  ngDoCheck(): void {
+    this.sync();
+  }
+
+  // The forms directive on the same element may apply a re-bound `[formControl]` after this
+  // directive's `ngDoCheck`; content hooks run once every directive of the view has.
+  ngAfterContentChecked(): void {
+    this.sync();
   }
 }

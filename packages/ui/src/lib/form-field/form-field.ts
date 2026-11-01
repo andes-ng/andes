@@ -104,7 +104,7 @@ function toTrack(column: AndesFormColumn): string {
   // attribute - see the header comment in form-field.css for the full rationale.
   encapsulation: ViewEncapsulation.None,
   host: {
-    '[attr.hidden]': 'hidden() ? "" : null',
+    '[attr.hidden]': 'isHidden() ? "" : null',
   },
   providers: [
     {
@@ -222,6 +222,12 @@ export class AndesFormField implements AndesFormFieldApi {
   private readonly children = signal<readonly AndesFormFieldChildApi[]>([]);
 
   protected readonly controlApi = computed(() => this.controls()[0]);
+
+  /** `hidden`, or a signal forms schema hiding the control. */
+  protected readonly isHidden = computed(
+    () => this.hidden() || (this.controlApi()?.hidden() ?? false),
+  );
+
   protected readonly projectedLabel = contentChild(ANDES_FORM_LABEL, {
     descendants: true,
   });

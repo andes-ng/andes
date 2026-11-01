@@ -991,8 +991,14 @@ export class AndesDatePicker implements ControlValueAccessor {
       value == null ? undefined : booleanAttribute(value),
   });
 
-  /** A "Today" (or, with `showTime`, "Now") shortcut in the footer. Single mode only. */
-  readonly showNow = input(false, { transform: booleanAttribute });
+  /**
+   * A "Today" (or, with `showTime`, "Now") shortcut in the footer. Single mode only. Unset, it
+   * is on for the date and time pickers and off for the others; `false` hides it.
+   */
+  readonly showNow = input<boolean | undefined, unknown>(undefined, {
+    transform: (value: unknown) =>
+      value == null ? undefined : booleanAttribute(value),
+  });
 
   /** One-click values listed beside the calendar. */
   readonly presets = input<readonly AndesDatePickerPreset[]>([]);
@@ -1740,6 +1746,13 @@ export class AndesDatePicker implements ControlValueAccessor {
       this.confirmMovesToEnd(),
   );
 
+  /** Whether the footer carries the Today / Now shortcut. */
+  protected readonly nowShown = computed(
+    () =>
+      this.isSingle() &&
+      (this.showNow() ?? (this.picker() === 'date' || this.isTimeOnly())),
+  );
+
   protected readonly nowText = computed(
     () => this.nowLabel() ?? (this.timeOptions() ? 'Now' : 'Today'),
   );
@@ -1753,10 +1766,7 @@ export class AndesDatePicker implements ControlValueAccessor {
   );
 
   protected readonly showFooter = computed(
-    () =>
-      !!this.extraFooter() ||
-      this.confirmRequired() ||
-      (this.showNow() && this.isSingle()),
+    () => !!this.extraFooter() || this.confirmRequired() || this.nowShown(),
   );
 
   protected readonly fieldClasses = computed(() =>

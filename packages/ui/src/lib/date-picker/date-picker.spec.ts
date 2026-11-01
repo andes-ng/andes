@@ -245,7 +245,7 @@ class FeatureHost {
   readonly placement = signal<AndesDatePickerPlacement>('bottomLeft');
   readonly showTime = signal<AndesTimeOptions | boolean | null>(null);
   readonly needConfirm = signal<boolean | undefined>(undefined);
-  readonly showNow = signal(false);
+  readonly showNow = signal<boolean | undefined>(undefined);
   readonly presets = signal<readonly AndesDatePickerPreset[]>([]);
   readonly numberOfMonths = signal<number | undefined>(undefined);
   readonly inputReadOnly = signal(false);
@@ -1601,6 +1601,31 @@ describe('AndesDatePicker', () => {
     });
 
     describe('showNow', () => {
+      const nowButton = (view: ReturnType<typeof createFeature>) =>
+        view.panel()?.querySelector('[data-slot="date-picker-now"]') ?? null;
+
+      it('is on by default for a single date picker', () => {
+        const view = createFeature(() => undefined);
+        view.openPanel();
+        expect(nowButton(view)?.textContent?.trim()).toBe('Today');
+      });
+
+      it('is off by default for a range and for the month picker', () => {
+        const range = createFeature((host) => host.mode.set('range'));
+        range.openPanel();
+        expect(nowButton(range)).toBeNull();
+
+        const month = createFeature((host) => host.pickerType.set('month'));
+        month.openPanel();
+        expect(nowButton(month)).toBeNull();
+      });
+
+      it('goes away with showNow set to false', () => {
+        const view = createFeature((host) => host.showNow.set(false));
+        view.openPanel();
+        expect(nowButton(view)).toBeNull();
+      });
+
       it('commits today and closes', () => {
         const view = createFeature((host) => host.showNow.set(true));
         view.openPanel();

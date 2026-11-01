@@ -1,7 +1,9 @@
-import { NgTemplateOutlet } from '@angular/common';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import type { Meta, StoryObj } from '@storybook/angular';
 
+import { AndesButton } from '../button/button';
+import { AndesCalendar } from '../calendar/calendar';
 import { AndesDatePicker } from './date-picker';
 
 const meta: Meta<AndesDatePicker> = {
@@ -140,5 +142,136 @@ export const ControlledOpen: Story = {
       <andes-date-picker locale="en-US" [(open)]="panelOpen" aria-label="Controlled" />
       <span style="font: 0.75rem ui-monospace, monospace;">open: {{ panelOpen }}</span>
     </div>`,
+  }),
+};
+
+/**
+ * `pickerValue` controls the month on show apart from the value: `[(pickerValue)]` follows
+ * the arrows and the buttons below move it. A range takes a `[start, end]` pair and shows
+ * its first month on the left.
+ */
+export const ControlledPanelMonth: Story = {
+  render: () => ({
+    moduleMetadata: { imports: [FormsModule, DatePipe] },
+    props: {
+      month: new Date(2024, 5, 1),
+      picked: FEB_15,
+      jan: new Date(2025, 0, 1),
+      dec: new Date(2023, 11, 1),
+    },
+    template: `<div style="min-height: 26rem; display: flex; flex-direction: column; gap: 0.75rem; align-items: flex-start;">
+      <div style="display: flex; gap: 0.5rem;">
+        <button type="button" (click)="month = dec">December 2023</button>
+        <button type="button" (click)="month = jan">January 2025</button>
+      </div>
+      <andes-date-picker locale="en-US" [(pickerValue)]="month" [(ngModel)]="picked" aria-label="Controlled month" />
+      <span style="font: 0.75rem ui-monospace, monospace;">pickerValue: {{ month | date: 'MMMM y' }}</span>
+    </div>`,
+  }),
+};
+
+/**
+ * A calendar used without the field, as an always-visible panel: here it opens under a
+ * button, and the button shows what was picked. `AndesCalendar` is the date picker's own
+ * panel, so it takes the same `mode`, `picker`, `min`/`max`, `dateDisabled` and
+ * templates.
+ */
+export const ExternalPanel: Story = {
+  render: () => ({
+    moduleMetadata: { imports: [AndesCalendar, AndesButton, DatePipe] },
+    props: { shown: false, picked: null as Date | null },
+    template: `<div style="min-height: 26rem; display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start;">
+      <andes-button variant="outline" (click)="shown = !shown" [attr.aria-expanded]="shown">
+        {{ picked ? (picked | date: 'mediumDate') : 'Choose a date' }}
+      </andes-button>
+      @if (shown) {
+        <andes-calendar
+          locale="en-US"
+          [(value)]="picked"
+          (daySelected)="shown = false"
+          style="border: 1px solid var(--andes-color-border); border-radius: var(--andes-radius-lg); box-shadow: var(--andes-shadow-popover);"
+        />
+      }
+    </div>`,
+  }),
+};
+
+/**
+ * Cell and header hooks. `cellTemplate` marks paydays under the day number and
+ * `timeCellTemplate` tags the hours of the working day; `headerTemplate` replaces the
+ * navigation with a custom one, and `extraFooter` receives the grid on show, so its text
+ * follows the panel from days to years.
+ */
+export const CustomCells: Story = {
+  render: () => ({
+    moduleMetadata: { imports: [FormsModule, DatePipe] },
+    props: {
+      picked: new Date(2024, 1, 15, 10, 0),
+      month: FEB_15,
+      previous: (month: Date) =>
+        new Date(month.getFullYear(), month.getMonth() - 1, 1),
+      next: (month: Date) =>
+        new Date(month.getFullYear(), month.getMonth() + 1, 1),
+    },
+    template: `
+      <ng-template #cell let-date let-cell="cell">
+        <span style="display: inline-flex; flex-direction: column; align-items: center; line-height: 1;">
+          {{ cell.text }}
+          @if (cell.view === 'date' && (date.getDate() === 15 || date.getDate() === 30)) {
+            <span style="width: 4px; height: 4px; border-radius: 50%; background: var(--andes-color-success);"></span>
+          }
+        </span>
+      </ng-template>
+      <ng-template #timeCell let-shown let-unit="unit" let-text="text">
+        <span [style.font-weight]="unit === 'hour' && shown >= 9 && shown <= 17 ? 600 : 400">{{ text }}</span>
+      </ng-template>
+      <ng-template #header let-month let-goTo="goTo" let-setView="setView">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+          <button type="button" (click)="goTo(previous(month))" aria-label="Previous month">&#8592;</button>
+          <button type="button" (click)="setView('year')">{{ month | date: 'MMMM y' }}</button>
+          <button type="button" (click)="goTo(next(month))" aria-label="Next month">&#8594;</button>
+        </div>
+      </ng-template>
+      <ng-template #footer let-mode>
+        <span>Picking a {{ mode === 'date' ? 'day' : mode }}</span>
+      </ng-template>
+      <div style="min-height: 28rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-start;">
+        <andes-date-picker locale="en-US" showTime [defaultMonth]="month" [cellTemplate]="cell" [timeCellTemplate]="timeCell" [(ngModel)]="picked" aria-label="Paydays" />
+        <andes-date-picker locale="en-US" [defaultMonth]="month" [headerTemplate]="header" [extraFooter]="footer" aria-label="Custom header" />
+      </div>
+    `,
+  }),
+};
+
+/**
+ * Styling one picker's parts from page CSS. Each part carries a `data-slot`
+ * (`date-picker-trigger`, `-input`, `-prefix`, `-panel`, `-presets`, `-footer`, the
+ * calendar's `calendar-grid`...), and `panelClass` reaches the panel, which renders
+ * outside the picker. Colours come from the theme's custom properties, set on the parts,
+ * so the light and dark themes still apply.
+ */
+export const SemanticStyling: Story = {
+  render: () => ({
+    moduleMetadata: { imports: [FormsModule] },
+    props: { picked: FEB_15, extra: ['story-tinted-panel'] },
+    styles: [
+      `.story-tinted ::ng-deep [data-slot='date-picker-trigger'] {
+        --andes-color-primary: var(--andes-color-success);
+        border-radius: var(--andes-radius-full, 999px);
+      }`,
+      `::ng-deep .story-tinted-panel {
+        --andes-color-primary: var(--andes-color-success);
+        --andes-color-primary-text: var(--andes-color-success);
+      }`,
+      `::ng-deep .story-tinted-panel [data-slot='date-picker-footer'] {
+        background-color: var(--andes-color-muted);
+      }`,
+    ],
+    template: `
+      <ng-template #prefix><span>Due</span></ng-template>
+      <div style="min-height: 26rem;" class="story-tinted">
+        <andes-date-picker locale="en-US" showNow [prefix]="prefix" [panelClass]="extra" [(ngModel)]="picked" aria-label="Tinted" />
+      </div>
+    `,
   }),
 };

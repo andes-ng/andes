@@ -38,11 +38,11 @@ export const WithTime: Story = {
 export const RangeWithTime: Story = {
   render: () => ({
     props: {
-      timeOptions: { minuteStep: 15, showSecond: true },
+      rangeTime: { minuteStep: 15, showSecond: true },
       febMonth: new Date(2024, 1, 1),
     },
     template: `<div style="min-height: 28rem;">
-      <andes-date-picker mode="range" locale="en-GB" [showTime]="timeOptions" [defaultMonth]="febMonth" />
+      <andes-date-picker mode="range" locale="en-GB" [showTime]="rangeTime" [defaultMonth]="febMonth" />
     </div>`,
   }),
 };
@@ -81,6 +81,44 @@ export const TimeRange: Story = {
     template: `<div style="min-height: 22rem; display: flex; flex-direction: column; gap: 0.75rem; width: 18rem;">
       <andes-date-picker picker="time" mode="range" locale="en-GB" [showTime]="steps" aria-label="Opening hours" />
       <andes-date-picker picker="time" mode="range" locale="en-GB" [order]="false" [ngModel]="shift" aria-label="Night shift" />
+    </div>`,
+  }),
+};
+
+/**
+ * A token `format` decides the columns, as it decides the text: `HH:mm` shows hours and
+ * minutes, `HH` the hours alone, `HH:mm:ss` adds seconds and `h:mm a` runs a 12-hour
+ * clock with an AM/PM column. Without a format, `showTime` takes `showHour`,
+ * `showMinute` and `showSecond`.
+ */
+export const ColumnsFromFormat: Story = {
+  render: () => ({
+    props: { minutesOnly: { showHour: false, showSecond: true } },
+    template: `<div style="min-height: 22rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-start;">
+      <andes-date-picker picker="time" locale="en-GB" format="HH:mm" aria-label="HH:mm" placeholder="HH:mm" />
+      <andes-date-picker picker="time" locale="en-GB" format="HH" aria-label="HH" placeholder="HH" />
+      <andes-date-picker picker="time" locale="en-GB" format="HH:mm:ss" aria-label="HH:mm:ss" placeholder="HH:mm:ss" />
+      <andes-date-picker picker="time" locale="en-US" format="h:mm a" aria-label="h:mm a" placeholder="h:mm a" />
+      <andes-date-picker picker="time" locale="en-GB" [showTime]="minutesOnly" aria-label="Minutes and seconds" placeholder="mm:ss" />
+    </div>`,
+  }),
+};
+
+/**
+ * `showTime.changeOnScroll`: scrolling a column picks the option it comes to rest on, and
+ * the input follows. With the OK button (on by default with a time) nothing is committed
+ * until OK. Hovering an option previews it in the input either way.
+ */
+export const ChangeOnScroll: Story = {
+  render: () => ({
+    moduleMetadata: { imports: [ReactiveFormsModule, JsonPipe] },
+    props: {
+      options: { changeOnScroll: true, showSecond: true },
+      control: new FormControl<Date | null>(new Date(2024, 1, 15, 9, 30, 0)),
+    },
+    template: `<div style="min-height: 22rem; display: flex; flex-direction: column; gap: 1rem;">
+      <andes-date-picker picker="time" locale="en-GB" [showTime]="options" [formControl]="control" [open]="true" aria-label="Alarm" />
+      <pre style="font: 0.75rem/1.5 ui-monospace, monospace;">value: {{ control.value | json }}</pre>
     </div>`,
   }),
 };

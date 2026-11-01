@@ -124,3 +124,44 @@ value: {{ trip | json }}</pre>
     </div>`,
   }),
 };
+
+/**
+ * The range's field and events. `rangeSeparator` takes a template (a word here), `id`
+ * takes `{ start, end }` so each input has its own `<label for>`, `calendarChange` reports
+ * each boundary pick with its text and side before the range is committed, and `focused`
+ * and `blurred` report focus entering, moving between the inputs and leaving, with the
+ * side.
+ */
+export const FieldAndEvents: Story = {
+  render: () => ({
+    props: {
+      ids: { start: 'stay-from', end: 'stay-to' },
+      febMonth: new Date(2024, 1, 1),
+      events: [] as string[],
+      log: LOG,
+      json: (value: unknown) => JSON.stringify(value),
+      record(events: string[], line: string) {
+        events.unshift(line);
+        events.splice(6);
+      },
+    },
+    template: `
+      <ng-template #until><span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em;">until</span></ng-template>
+      <div style="min-height: 26rem; display: flex; flex-direction: column; gap: 0.5rem; width: 22rem;">
+        <div style="display: flex; gap: 1rem; font: 0.75rem var(--andes-font-family), sans-serif;">
+          <label for="stay-from">Check-in</label><label for="stay-to">Check-out</label>
+        </div>
+        <andes-date-picker mode="range" locale="en-US" aria-label="Stay" [id]="ids" [rangeSeparator]="until" [defaultMonth]="febMonth"
+          (calendarChange)="record(events, 'calendarChange ' + $event.range + ': ' + json($event.text))"
+          (focused)="record(events, 'focused ' + $event.range)"
+          (blurred)="record(events, 'blurred ' + $event.range)"
+          (valueTextChange)="record(events, 'valueTextChange ' + json($event))" />
+        <div [style]="log">
+          @for (line of events; track $index) {
+            <div>{{ line }}</div>
+          }
+        </div>
+      </div>
+    `,
+  }),
+};

@@ -2,13 +2,16 @@ import { JsonPipe } from '@angular/common';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import type { Meta, StoryObj } from '@storybook/angular';
 
-import { AndesDatePicker } from './date-picker';
+import { AndesSelect } from '../select/select';
+import { AndesDatePicker, type AndesDatePickerType } from './date-picker';
 
 const meta: Meta<AndesDatePicker> = {
   title: 'Data Entry/Date Picker/Basics/Features',
   component: AndesDatePicker,
   parameters: { layout: 'padded' },
 };
+
+const MONO = 'margin: 0; font: 0.75rem/1.5 ui-monospace, monospace;';
 
 export default meta;
 
@@ -155,6 +158,98 @@ export const CaptionDropdowns: Story = {
       <andes-date-picker locale="en-US" aria-label="Date of birth" placeholder="Date of birth" captionLayout="dropdown" [min]="earliest" [max]="latest" />
       <andes-date-picker locale="en-US" aria-label="Year select only" placeholder="Year select only" captionLayout="dropdown-years" [startYear]="2000" [endYear]="2030" />
       <andes-date-picker mode="range" locale="en-US" aria-label="Booking window" captionLayout="dropdown" [min]="bookingStart" [max]="bookingEnd" />
+    </div>`,
+  }),
+};
+
+/**
+ * One picker whose `picker` a select switches between `time`, `date`, `week`, `month`,
+ * `quarter` and `year`. The component is not rebuilt: the value stays what it was and is
+ * shown in the new picker's format (a week, a month...), the calendar opens on its grid,
+ * and the next pick is a period of the new kind.
+ */
+export const SwitchablePicker: Story = {
+  render: () => ({
+    moduleMetadata: { imports: [AndesSelect, FormsModule, JsonPipe] },
+    props: {
+      type: 'date' as AndesDatePickerType,
+      types: ['time', 'date', 'week', 'month', 'quarter', 'year'].map(
+        (value) => ({ value, label: value }),
+      ),
+      picked: FEB_15,
+      mono: MONO,
+    },
+    template: `<div style="min-height: 26rem; display: flex; flex-direction: column; gap: 0.75rem;">
+      <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
+        <andes-select [options]="types" [(value)]="type" aria-label="Picker" style="width: 7.5rem;" />
+        <andes-date-picker [picker]="type" locale="en-US" [(ngModel)]="picked" aria-label="Switchable" />
+      </div>
+      <pre [style]="mono">picker: {{ type }}
+value: {{ picked | json }}</pre>
+    </div>`,
+  }),
+};
+
+/**
+ * `format` as `{ format, type: 'mask' }`: the input keeps the pattern's shape. Digits
+ * fill the number under the caret and move on, Left and Right switch numbers, Up and Down
+ * step one, Backspace empties it and `/` moves on; leave a half-typed mask and it goes
+ * back to the value. The second field masks a date and time, the third a time picker
+ * (whose columns follow the mask: hours and minutes).
+ */
+export const MaskFormat: Story = {
+  render: () => ({
+    moduleMetadata: { imports: [FormsModule, JsonPipe] },
+    props: {
+      dateMask: { format: 'DD/MM/YYYY', type: 'mask' },
+      dateTimeMask: { format: 'YYYY-MM-DD HH:mm', type: 'mask' },
+      timeMask: { format: 'HH:mm', type: 'mask' },
+      picked: FEB_15,
+      meeting: new Date(2024, 1, 15, 9, 30),
+      mono: MONO,
+    },
+    template: `<div style="min-height: 26rem; display: flex; flex-direction: column; gap: 0.75rem; width: 18rem;">
+      <andes-date-picker locale="en-GB" [format]="dateMask" [(ngModel)]="picked" aria-label="Masked date" />
+      <andes-date-picker locale="en-GB" showTime [format]="dateTimeMask" [(ngModel)]="meeting" aria-label="Masked date and time" />
+      <andes-date-picker picker="time" locale="en-GB" [format]="timeMask" aria-label="Masked time" />
+      <pre [style]="mono">{{ picked | json }}
+{{ meeting | json }}</pre>
+    </div>`,
+  }),
+};
+
+/**
+ * Alternative calendars through `locale`. `th-TH` (first field) runs on the Buddhist
+ * calendar: the field and the calendar's captions show 2567 for 2024, and a year typed in
+ * that era is read back. `-u-ca-buddhist` does the same in any locale (second), and the
+ * `BBBB` token puts the Buddhist year in a token format (third).
+ */
+export const BuddhistEra: Story = {
+  render: () => ({
+    moduleMetadata: { imports: [FormsModule] },
+    props: { picked: FEB_15 },
+    template: `<div style="min-height: 26rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-start;">
+      <andes-date-picker locale="th-TH" [(ngModel)]="picked" aria-label="Thai" />
+      <andes-date-picker locale="en-US-u-ca-buddhist" [(ngModel)]="picked" aria-label="Buddhist era" />
+      <andes-date-picker locale="en-GB" format="DD/MM/BBBB" [(ngModel)]="picked" aria-label="BBBB token" />
+    </div>`,
+  }),
+};
+
+/**
+ * `needConfirm` keeps every pick pending until OK (or Enter): closing the panel any other
+ * way drops it. It is on by default with a time and off otherwise; here it is forced on a
+ * plain date and a range, so the field only changes on OK.
+ */
+export const NeedConfirm: Story = {
+  render: () => ({
+    moduleMetadata: { imports: [FormsModule, JsonPipe] },
+    props: { picked: FEB_15, range: null, mono: MONO },
+    template: `<div style="min-height: 26rem; display: flex; flex-direction: column; gap: 0.75rem; width: 20rem;">
+      <andes-date-picker locale="en-US" needConfirm [(ngModel)]="picked" aria-label="Confirmed date" />
+      <andes-date-picker mode="range" locale="en-US" needConfirm [(ngModel)]="range" aria-label="Confirmed range" />
+      <pre [style]="mono">{{ picked | json }}
+{{ range | json }}</pre>
     </div>`,
   }),
 };

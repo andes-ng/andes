@@ -1,5 +1,5 @@
-import { JsonPipe } from '@angular/common';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { DatePipe, JsonPipe } from '@angular/common';
+import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesDatePicker, type AndesDatePickerValue } from './date-picker';
@@ -125,5 +125,35 @@ export const PickersAndConfirm: Story = {
         <andes-date-picker style="width: 100%" mode="multiple" locale="en-GB" aria-label="Confirmed dates" needConfirm format="DD/MM" size="sm" [formControl]="confirmed" [defaultMonth]="febMonth" />
       </div>
     </div>`,
+  }),
+};
+
+/**
+ * `tagTemplate` draws each tag, in the field and in the `+ N ...` popover: here a weekday
+ * chip whose own button calls the context's `remove($event)`.
+ */
+export const CustomTags: Story = {
+  render: () => ({
+    moduleMetadata: { imports: [FormsModule, DatePipe] },
+    props: {
+      dates: [
+        new Date(2024, 1, 5),
+        new Date(2024, 1, 12),
+        new Date(2024, 1, 19),
+      ],
+    },
+    template: `
+      <ng-template #tag let-tag let-remove="remove" let-disabled="disabled">
+        <span style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0 0.5rem; border-radius: 999px; background: var(--andes-color-primary); color: var(--andes-color-primary-foreground); font-size: 0.75rem; line-height: 1.25rem;">
+          {{ tag.date | date: 'EEE d' }}
+          @if (!disabled) {
+            <button type="button" tabindex="-1" (mousedown)="$event.preventDefault()" (click)="remove($event)" [attr.aria-label]="'Remove ' + tag.label" style="border: 0; padding: 0; background: none; color: inherit; cursor: pointer;">&#215;</button>
+          }
+        </span>
+      </ng-template>
+      <div style="min-height: 26rem; width: 20rem;">
+        <andes-date-picker mode="multiple" locale="en-US" [tagTemplate]="tag" [maxTagCount]="2" [(ngModel)]="dates" aria-label="Classes" />
+      </div>
+    `,
   }),
 };

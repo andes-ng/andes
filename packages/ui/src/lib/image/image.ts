@@ -5,6 +5,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   ElementRef,
   inject,
   input,
@@ -43,6 +44,20 @@ export type AndesImageFit =
  */
 export type AndesImagePlaceholder =
   boolean | 'skeleton' | 'blur' | TemplateRef<unknown>;
+
+function setOrRemove(
+  element: HTMLElement,
+  name: string,
+  value: string | null | undefined,
+): void {
+  if (value) {
+    if (element.getAttribute(name) !== value) {
+      element.setAttribute(name, value);
+    }
+  } else {
+    element.removeAttribute(name);
+  }
+}
 
 function toCssLength(value: number | string | null | undefined): string | null {
   if (value === null || value === undefined || value === '') {
@@ -274,6 +289,18 @@ export class AndesImage implements AndesImageGroupMember {
   });
 
   constructor() {
+    // `src` and `srcset` are set by hand: a URL attribute binding turns `null` into an empty
+    // string, and `src=""` makes the browser fire `error` at once, which would end the
+    // loading state (and its placeholder) before the real URL has even arrived.
+    effect(() => {
+      const image = this.imageRef()?.nativeElement;
+      if (!image) {
+        return;
+      }
+      setOrRemove(image, 'src', this.currentSrc());
+      setOrRemove(image, 'srcset', this.srcset());
+    });
+
     this.group?.register(this);
     inject(DestroyRef).onDestroy(() => this.group?.unregister(this));
 

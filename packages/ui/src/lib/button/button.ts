@@ -16,6 +16,7 @@ import {
 } from '@angular/core';
 import clsx from 'clsx';
 
+import { injectAndesFieldBinding } from '../form-field/field-binding';
 import { ANDES_BUTTON_GROUP } from './button-group';
 
 export type AndesButtonVariant =
@@ -66,7 +67,7 @@ export class AndesButton {
   readonly variant = input<AndesButtonVariant>('primary');
   /**
    * Control size. Left unset, the button takes the size of an enclosing `andes-button-group`,
-   * or `md` outside one.
+   * else of an enclosing `andesForm`, else `md`.
    */
   readonly size = input<AndesButtonSize | undefined>(undefined);
   readonly shape = input<AndesButtonShape>('default');
@@ -101,12 +102,19 @@ export class AndesButton {
   protected readonly visibleLoading = signal(false);
   private loadingTimeoutId: ReturnType<typeof setTimeout> | undefined;
 
+  /** The enclosing form's size and disabled state. A button never takes a field's id: it is
+   *  not the control a field labels. */
+  private readonly field = injectAndesFieldBinding({ field: false });
+
+  /** `disabled`, a loading state shown, or a disabled enclosing `andesForm` - so a submit
+   *  button follows the form it submits. */
   protected readonly isDisabled = computed(
-    () => this.disabled() || this.visibleLoading(),
+    () => this.disabled() || this.visibleLoading() || this.field.disabled(),
   );
 
-  protected readonly resolvedSize = computed<AndesButtonSize>(
-    () => this.size() ?? this.group?.size() ?? 'md',
+  /** The size in effect: `size`, the button group's, the form's, else `md`. */
+  readonly resolvedSize = computed<AndesButtonSize>(
+    () => this.size() ?? this.group?.size() ?? this.field.size() ?? 'md',
   );
 
   /** An icon-only button has no label, so its spinner replaces the projected icon outright. */

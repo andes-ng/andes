@@ -228,6 +228,8 @@
           [attr.data-expanded]="node.context.expanded ? '' : null"
           [attr.data-loading]="node.context.loading ? '' : null"
           [attr.data-count]="node.count ? '' : null"
+          [style.left.px]="node.toggleAt?.x ?? null"
+          [style.top.px]="node.toggleAt?.y ?? null"
           [attr.title]="node.context.loading ? text().loading : null"
           (click)="onToggleClick(node, $event)"
         >

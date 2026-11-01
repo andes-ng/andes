@@ -311,6 +311,12 @@ interface NodeView<T> {
   readonly setSize: number;
   /** The optional count next to the toggle icon, `''` for none. */
   readonly count: string;
+  /**
+   * Where the reports' connectors leave the card, relative to the card (a hanging team's stem
+   * is near the start edge, not in the middle), so the toggle sits on the line. `null` while
+   * the team is closed: the stylesheet centers the toggle on the edge then.
+   */
+  readonly toggleAt: { readonly x: number; readonly y: number } | null;
 }
 
 /** A connector as the template renders it. */
@@ -877,6 +883,12 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
     const half = this.checkedTree.halfChecked();
     const roots = this.tree().roots;
     const position = this.siblingIndex();
+    const exits = new Map<AndesOrgChartKey, { x: number; y: number }>();
+    for (const link of layout.links) {
+      if (!exits.has(link.from)) {
+        exits.set(link.from, link.points[0]);
+      }
+    }
     const views: NodeView<T>[] = [];
     for (const record of this.visible().records) {
       const box = layout.boxes.get(record.key) as AndesOrgChartBox;
@@ -905,6 +917,10 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
         posInSet: (position.get(record.key) ?? 0) + 1,
         setSize: siblings.length,
         toggleable: collapsible && context.expandable,
+        toggleAt: (() => {
+          const exit = exits.get(record.key);
+          return exit ? { x: exit.x - box.x, y: exit.y - box.y } : null;
+        })(),
         checkState: !checkable
           ? 'false'
           : context.selected

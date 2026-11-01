@@ -109,6 +109,8 @@ function columnsAttribute(value: unknown): number | undefined {
     '[attr.data-disabled]': 'isDisabled() ? "" : null',
     '[attr.data-orientation]': 'resolvedOrientation()',
     '[attr.data-required]': 'required() ? "" : null',
+    // Leaving the group - not moving between its checkboxes - marks it touched.
+    '(focusout)': 'onFocusOut($event)',
     '[attr.data-readonly]': 'readOnly() ? "" : null',
     '[style.--andes-checkbox-group-columns]': 'columns() ?? null',
   },
@@ -371,6 +373,13 @@ export class AndesCheckboxGroup<T extends AndesCheckboxValue = string>
     }
 
     return Object.keys(errors).length > 0 ? errors : null;
+  }
+
+  protected onFocusOut(event: FocusEvent): void {
+    const next = event.relatedTarget as Node | null;
+    if (!next || !(event.currentTarget as Node).contains(next)) {
+      this.onTouched();
+    }
   }
 
   registerOnValidatorChange(fn: () => void): void {

@@ -550,6 +550,12 @@ describe('AndesDatePicker styles', () => {
       );
     });
 
+    it('keeps a lone OK at the end of its row', () => {
+      expect(css).toMatch(
+        /\.andes-date-picker__footer-actions > \[data-slot='date-picker-ok'\]:only-child \{[^}]*margin-inline: auto 0;/,
+      );
+    });
+
     it('puts Now at the start and OK at the end of its row, and drops the row when it is empty', () => {
       expect(
         declaredValue(

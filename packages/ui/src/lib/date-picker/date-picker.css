@@ -1216,8 +1216,14 @@
   display: none;
 }
 
+/* A lone Now centers; a lone OK keeps to the end of the row, where it sits beside Now. */
 .andes-date-picker__footer-actions > :only-child {
   margin-inline: auto;
+}
+
+/* prettier-ignore */
+.andes-date-picker__footer-actions > [data-slot='date-picker-ok']:only-child {
+  margin-inline: auto 0;
 }
 
 .andes-date-picker__now {

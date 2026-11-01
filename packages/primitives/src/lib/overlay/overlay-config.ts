@@ -67,7 +67,13 @@ export interface AndesOverlayAnchoredPositioning {
    * above or below and is shifted into view instead.
    */
   readonly crossSideFallback?: boolean;
-  /** Shift along the cross axis to stay on screen. Default `true`. */
+  /**
+   * Shift the overlay to stay on screen. Default `true`. Only while its anchor is at
+   * least partly visible: once the anchor has scrolled out of view (off the viewport, or
+   * out of a clipping ancestor) the overlay stays on its side of the anchor and scrolls
+   * away with it, keeping only its horizontal containment, instead of being pinned to
+   * the viewport edge. It does not close.
+   */
   readonly shift?: boolean;
   /**
    * Let the overlay shrink to the room on its side (down to `size.minHeight`/`minWidth`)

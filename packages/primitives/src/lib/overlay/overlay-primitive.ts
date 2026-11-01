@@ -20,7 +20,7 @@ import {
   createNoopScrollStrategy,
   createOverlayRef,
   createRepositionScrollStrategy,
-  FlexibleConnectedPositionStrategy,
+  type ConnectedPosition,
   type OverlayConfig,
   type OverlayRef,
   type ScrollStrategy,
@@ -639,11 +639,18 @@ export class AndesOverlayPrimitive {
     this.placement.unsubscribe();
     this.placement = new Subscription();
     this._placedSide.set(null);
-    if (!(strategy instanceof FlexibleConnectedPositionStrategy)) {
+    // A strategy that wraps a connected one (the anchored strategy) forwards its changes,
+    // so it is recognised by what it exposes rather than by its class.
+    const changes = (
+      strategy as {
+        positionChanges?: Observable<{ connectionPair: ConnectedPosition }>;
+      }
+    ).positionChanges;
+    if (!changes) {
       return;
     }
     this.placement.add(
-      strategy.positionChanges.subscribe(({ connectionPair }) => {
+      changes.subscribe(({ connectionPair }) => {
         const side = andesPlacedSide(connectionPair);
         this._placedSide.set(side);
         const pane = ref.overlayElement;

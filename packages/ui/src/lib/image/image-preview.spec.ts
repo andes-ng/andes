@@ -1,4 +1,5 @@
 import { Directionality } from '@angular/cdk/bidi';
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, signal } from '@angular/core';
 import { of } from 'rxjs';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
@@ -995,5 +996,408 @@ describe('AndesImageGroup', () => {
     f.componentInstance.open.set(true);
     f.detectChanges();
     expect(counter()).toBe('2 / 3');
+  });
+});
+
+describe('AndesImagePreview, reference parity', () => {
+  withElementGeometry();
+
+  describe('zoom ratio', () => {
+    const ratio = () =>
+      q('[data-slot="image-preview-ratio"]')
+        ?.textContent?.replace(/\s+/g, ' ')
+        .trim();
+
+    it('shows the zoom between the zoom buttons, named for screen readers', () => {
+      openPreview();
+      const slot = q('[data-slot="image-preview-ratio"]') as HTMLElement;
+      expect(ratio()).toBe('Zoom 100%');
+      expect(slot.previousElementSibling?.getAttribute('data-action')).toBe(
+        'zoomOut',
+      );
+      expect(slot.nextElementSibling?.getAttribute('data-action')).toBe(
+        'zoomIn',
+      );
+    });
+
+    it('follows every zoom change', () => {
+      const f = openPreview();
+      action('zoomIn')?.click();
+      f.detectChanges();
+      expect(ratio()).toBe('Zoom 150%');
+      wheel(-100);
+      f.detectChanges();
+      expect(ratio()).toMatch(/^Zoom \d+%$/);
+      expect(ratio()).not.toBe('Zoom 150%');
+    });
+
+    it('sits before zoom in when there is no zoom out, and can be hidden', () => {
+      const f = openPreview((h) => h.config.set({ actions: ['zoomIn'] }));
+      expect(
+        q(
+          '[data-slot="image-preview-ratio"]',
+        )?.nextElementSibling?.getAttribute('data-action'),
+      ).toBe('zoomIn');
+      f.componentInstance.config.set({ zoomRatio: false });
+      f.detectChanges();
+      expect(q('[data-slot="image-preview-ratio"]')).toBeNull();
+    });
+
+    it('is absent without zoom buttons', () => {
+      openPreview((h) => h.config.set({ actions: ['rotateLeft'] }));
+      expect(q('[data-slot="image-preview-ratio"]')).toBeNull();
+    });
+  });
+
+  describe('layout', () => {
+    it('puts the counter above the toolbar in the footer, and the close button apart', () => {
+      openPreview();
+      const footer = q('[data-slot="image-preview-footer"]') as HTMLElement;
+      expect(footer.children[0].getAttribute('data-slot')).toBe(
+        'image-preview-counter',
+      );
+      expect(footer.children[1].getAttribute('data-slot')).toBe(
+        'image-preview-toolbar',
+      );
+      expect(footer.contains(q('.andes-image-preview__close'))).toBe(false);
+    });
+  });
+
+  describe('custom toolbar', () => {
+    @Component({
+      imports: [AndesImagePreview, NgTemplateOutlet],
+      template: `
+        <ng-template
+          #toolbar
+          let-actions
+          let-index="index"
+          let-total="total"
+          let-item="item"
+          let-transform="transform"
+          let-image="image"
+          let-disabled="disabled"
+          let-defaultToolbar="defaultToolbar"
+        >
+          @if (withDefaults) {
+            <ng-container [ngTemplateOutlet]="defaultToolbar" />
+          }
+          <span id="where">{{ index }} of {{ total }}: {{ item.alt }}</span>
+          <span id="angle">{{ transform.rotate }}</span>
+          <span id="has-image">{{ !!image }}</span>
+          <span id="zoom-out-disabled">{{ disabled('zoomOut') }}</span>
+          <button type="button" id="turn" (click)="actions.rotateRight()">
+            Turn
+          </button>
+          <button type="button" id="ahead" (click)="actions.next()">
+            Next
+          </button>
+          <button type="button" id="leave" (click)="actions.close()">
+            Leave
+          </button>
+        </ng-template>
+        <andes-image-preview
+          [items]="items"
+          [config]="{ toolbarTemplate: toolbar }"
+          [(open)]="open"
+          (transformChange)="events.push($event)"
+        />
+      `,
+    })
+    class ToolbarHost {
+      items = PHOTOS;
+      open = true;
+      withDefaults = false;
+      events: AndesImageTransformEvent[] = [];
+    }
+
+    function setup(withDefaults = false) {
+      const f = TestBed.createComponent(ToolbarHost);
+      f.componentInstance.withDefaults = withDefaults;
+      f.detectChanges();
+      return f;
+    }
+
+    it('replaces the built-in buttons and receives the index, item and transform', () => {
+      setup();
+      const toolbar = q('[data-slot="image-preview-toolbar"]') as HTMLElement;
+      expect(toolbar.getAttribute('role')).toBe('group');
+      expect(all('.andes-image-preview__button')).toHaveLength(0);
+      expect(q('#where')?.textContent).toBe('0 of 3: One');
+      expect(q('#angle')?.textContent).toBe('0');
+      expect(q('#has-image')?.textContent).toBe('true');
+      expect(q('#zoom-out-disabled')?.textContent).toBe('true');
+    });
+
+    it('drives the viewer through the actions', () => {
+      const f = setup();
+      q<HTMLButtonElement>('#turn')?.click();
+      f.detectChanges();
+      expect(q('#angle')?.textContent).toBe('90');
+      expect(f.componentInstance.events.at(-1)?.action).toBe('rotateRight');
+      q<HTMLButtonElement>('#ahead')?.click();
+      f.detectChanges();
+      expect(q('#where')?.textContent).toBe('1 of 3: Two');
+      q<HTMLButtonElement>('#leave')?.click();
+      f.detectChanges();
+      expect(q('.andes-image-preview')).toBeNull();
+    });
+
+    it('can keep the built-in buttons around the custom content', () => {
+      setup(true);
+      expect(all('.andes-image-preview__button').length).toBeGreaterThan(0);
+      expect(q('#turn')).not.toBeNull();
+    });
+  });
+
+  describe('custom preview content', () => {
+    @Component({
+      imports: [AndesImagePreview],
+      template: `
+        <ng-template #content let-item let-index="index" let-total="total">
+          <figure id="figure">
+            {{ item.alt }} {{ index + 1 }}/{{ total }}
+          </figure>
+        </ng-template>
+        <andes-image-preview
+          [items]="items"
+          [config]="{ imageTemplate: content }"
+          [(open)]="open"
+        />
+      `,
+    })
+    class ContentHost {
+      items = PHOTOS;
+      open = true;
+    }
+
+    it('renders the template in place of the picture and transforms it', () => {
+      const f = TestBed.createComponent(ContentHost);
+      f.detectChanges();
+      expect(q('img.andes-image-preview__image')).toBeNull();
+      expect(q('#figure')?.textContent?.trim()).toBe('One 1/3');
+      expect(q('[data-slot="image-preview-loading"]')).toBeNull();
+      action('rotateRight')?.click();
+      f.detectChanges();
+      const box = q('[data-slot="image-preview-image"]') as HTMLElement;
+      expect(box.contains(q('#figure'))).toBe(true);
+      expect(box.style.transform).toContain('rotate(90deg)');
+    });
+  });
+
+  describe('semantic parts', () => {
+    it('adds classes and inline styles to the viewer, toolbar, picture and counter', () => {
+      @Component({
+        imports: [AndesImagePreview],
+        template: `
+          <andes-image-preview
+            [items]="items"
+            [(open)]="open"
+            [classNames]="{
+              viewer: 'my-viewer',
+              toolbar: 'my-toolbar',
+              viewerImage: 'my-picture',
+              counter: 'my-counter',
+            }"
+            [styles]="{
+              viewer: { '--my-flag': '1' },
+              toolbar: { gap: '9px' },
+              viewerImage: { 'border-radius': '7px' },
+              counter: { 'letter-spacing': '2px' },
+            }"
+          />
+        `,
+      })
+      class PartsHost {
+        items = PHOTOS;
+        open = true;
+      }
+      const f = TestBed.createComponent(PartsHost);
+      f.detectChanges();
+      const viewerEl = q('.andes-image-preview') as HTMLElement;
+      const toolbar = q('.andes-image-preview__toolbar') as HTMLElement;
+      const picture = shownImage() as HTMLElement;
+      const count = q('.andes-image-preview__counter') as HTMLElement;
+      expect(viewerEl.classList).toContain('my-viewer');
+      expect(viewerEl.style.getPropertyValue('--my-flag')).toBe('1');
+      expect(toolbar.classList).toContain('my-toolbar');
+      expect(toolbar.classList).toContain('andes-image-preview__toolbar');
+      expect(toolbar.style.gap).toBe('9px');
+      expect(picture.classList).toContain('my-picture');
+      expect(picture.style.borderRadius).toBe('7px');
+      expect(picture.style.transform).toContain('scale3d');
+      expect(count.classList).toContain('my-counter');
+      expect(count.style.letterSpacing).toBe('2px');
+    });
+  });
+
+  describe('motion', () => {
+    function withReducedMotion(reduce: boolean) {
+      const original = window.matchMedia;
+      beforeEach(() => {
+        window.matchMedia = ((query: string) => ({
+          matches: reduce && query.includes('reduce'),
+          media: query,
+          addEventListener: () => undefined,
+          removeEventListener: () => undefined,
+        })) as unknown as typeof window.matchMedia;
+      });
+      afterEach(() => {
+        window.matchMedia = original;
+      });
+    }
+
+    describe('with motion', () => {
+      withReducedMotion(false);
+
+      it('cross-fades: the previous picture stays, hidden from assistive tech, until it has faded', () => {
+        const f = openPreview();
+        action('rotateRight')?.click();
+        f.detectChanges();
+        key('PageDown');
+        f.detectChanges();
+        const leaving = q<HTMLImageElement>('.andes-image-preview__leaving');
+        expect(leaving?.getAttribute('src')).toBe('/one.jpg');
+        expect(leaving?.getAttribute('aria-hidden')).toBe('true');
+        expect(leaving?.getAttribute('alt')).toBe('');
+        // It fades out where it was, still turned, not snapped back to fit.
+        expect(leaving?.style.transform).toContain('rotate(90deg)');
+        expect(shownImage()?.getAttribute('src')).toBe('/two.jpg');
+        expect(shownImage()?.classList).toContain(
+          'andes-image-preview__image--entering',
+        );
+        leaving?.dispatchEvent(new Event('animationend'));
+        f.detectChanges();
+        expect(q('.andes-image-preview__leaving')).toBeNull();
+        expect(shownImage()?.classList).not.toContain(
+          'andes-image-preview__image--entering',
+        );
+      });
+
+      it('drops the fading picture on its own if the animation never ends', async () => {
+        const f = openPreview();
+        key('PageDown');
+        f.detectChanges();
+        expect(q('.andes-image-preview__leaving')).not.toBeNull();
+        await new Promise((resolve) => setTimeout(resolve, 450));
+        f.detectChanges();
+        expect(q('.andes-image-preview__leaving')).toBeNull();
+      });
+
+      it('grows out of the origin element and shrinks into the one now shown', () => {
+        @Component({
+          imports: [AndesImagePreview],
+          template: `
+            <span id="origin-a"></span><span id="origin-b"></span>
+            <andes-image-preview
+              [items]="items"
+              [origin]="origin()"
+              [(open)]="open"
+            />
+          `,
+        })
+        class OriginHost {
+          items = PHOTOS;
+          readonly open = signal(false);
+          readonly origin = signal<HTMLElement | null>(null);
+        }
+        const f = TestBed.createComponent(OriginHost);
+        f.detectChanges();
+        const a = document.getElementById('origin-a') as HTMLElement;
+        const b = document.getElementById('origin-b') as HTMLElement;
+        a.getBoundingClientRect = () => new DOMRect(100, 50, 40, 20);
+        b.getBoundingClientRect = () => new DOMRect(300, 200, 60, 40);
+        f.componentInstance.origin.set(a);
+        f.componentInstance.open.set(true);
+        f.detectChanges();
+        const root = () => q('.andes-image-preview') as HTMLElement;
+        expect(
+          root().style.getPropertyValue('--andes-image-preview-origin'),
+        ).toBe('120px 60px');
+        f.componentInstance.origin.set(b);
+        f.detectChanges();
+        expect(
+          root().style.getPropertyValue('--andes-image-preview-origin'),
+        ).toBe('330px 220px');
+      });
+
+      it('zooms from the centre without an origin', () => {
+        openPreview();
+        expect(
+          (q('.andes-image-preview') as HTMLElement).style.getPropertyValue(
+            '--andes-image-preview-origin',
+          ),
+        ).toBe('');
+      });
+    });
+
+    describe('with reduced motion', () => {
+      withReducedMotion(true);
+
+      it('swaps pictures without a cross-fade', () => {
+        const f = openPreview();
+        key('PageDown');
+        f.detectChanges();
+        expect(q('.andes-image-preview__leaving')).toBeNull();
+        expect(shownImage()?.getAttribute('src')).toBe('/two.jpg');
+      });
+    });
+  });
+});
+
+@Component({
+  imports: [AndesImage, AndesImageGroup],
+  template: `
+    <andes-image-group [items]="items()" [(open)]="open" [(current)]="current">
+      <andes-image id="cover" src="/cover.jpg" alt="Cover" />
+      <andes-image id="t2" src="/thumb-2.jpg" previewSrc="/two.jpg" alt="Two" />
+    </andes-image-group>
+  `,
+})
+class ItemsHost {
+  readonly items = signal<readonly (string | AndesImagePreviewItem)[] | null>([
+    '/one.jpg',
+    { src: '/two.jpg', alt: 'Two' },
+    '/three.jpg',
+  ]);
+  readonly open = signal(false);
+  readonly current = signal(0);
+}
+
+describe('AndesImageGroup with items', () => {
+  withElementGeometry();
+
+  const thumb = (f: ComponentFixture<ItemsHost>, id: string) =>
+    f.nativeElement.querySelector(
+      `#${id} .andes-image__mask`,
+    ) as HTMLButtonElement;
+
+  it('browses the items rather than the thumbnails, bare URLs included', () => {
+    const f = TestBed.createComponent(ItemsHost);
+    f.detectChanges();
+    thumb(f, 'cover').click();
+    f.detectChanges();
+    expect(counter()).toBe('1 / 3');
+    expect(shownImage()?.getAttribute('src')).toBe('/one.jpg');
+    key('End');
+    f.detectChanges();
+    expect(shownImage()?.getAttribute('src')).toBe('/three.jpg');
+  });
+
+  it('opens a thumbnail on the item with its preview URL', () => {
+    const f = TestBed.createComponent(ItemsHost);
+    f.detectChanges();
+    thumb(f, 't2').click();
+    f.detectChanges();
+    expect(f.componentInstance.current()).toBe(1);
+    expect(shownImage()?.getAttribute('alt')).toBe('Two');
+  });
+
+  it('goes back to the thumbnails without items', () => {
+    const f = TestBed.createComponent(ItemsHost);
+    f.componentInstance.items.set(null);
+    f.detectChanges();
+    thumb(f, 't2').click();
+    f.detectChanges();
+    expect(counter()).toBe('2 / 2');
   });
 });

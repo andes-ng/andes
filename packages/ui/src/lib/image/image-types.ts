@@ -76,6 +76,73 @@ export interface AndesImageCountContext {
   readonly total: number;
 }
 
+/** Every action a custom toolbar can call on the viewer. */
+export interface AndesImagePreviewActions {
+  zoomIn(): void;
+  zoomOut(): void;
+  rotateLeft(): void;
+  rotateRight(): void;
+  flipX(): void;
+  flipY(): void;
+  reset(): void;
+  /** Saves the shown image as it is stored (not as it is rotated or flipped). */
+  download(): Promise<void>;
+  previous(): void;
+  next(): void;
+  /** Shows the item at a 0-based index. */
+  goTo(index: number): void;
+  close(): void;
+}
+
+/**
+ * Context handed to a `toolbarTemplate`, which replaces the toolbar's content. Render
+ * `defaultToolbar` inside it to keep the built-in buttons around your own.
+ */
+export interface AndesImageToolbarContext {
+  readonly $implicit: AndesImagePreviewActions;
+  readonly actions: AndesImagePreviewActions;
+  readonly item: AndesImagePreviewItem;
+  /** 0-based index of the shown image. */
+  readonly index: number;
+  readonly total: number;
+  readonly transform: AndesImageTransform;
+  /** The shown `<img>` (null with an `imageTemplate`), to draw it onto a canvas. */
+  readonly image: HTMLImageElement | null;
+  /** Whether a built-in action is disabled right now (zoom at a limit, reset at rest). */
+  readonly disabled: (action: AndesImagePreviewAction) => boolean;
+  /** The built-in buttons, as a template to place inside the custom toolbar. */
+  readonly defaultToolbar: TemplateRef<unknown>;
+}
+
+/** Context handed to an `imageTemplate`, which replaces the previewed `<img>`. */
+export interface AndesImageRenderContext {
+  readonly $implicit: AndesImagePreviewItem;
+  readonly item: AndesImagePreviewItem;
+  readonly index: number;
+  readonly total: number;
+  readonly transform: AndesImageTransform;
+}
+
+/**
+ * The parts of an image and its viewer that take a consumer's classes and inline styles:
+ * `root` the `andes-image` host, `image` its `<img>`, `mask` the hover cover, `viewer` the
+ * preview dialog, `toolbar` its toolbar, `viewerImage` the previewed picture and `counter` the
+ * "2 / 5" counter.
+ */
+export type AndesImagePart =
+  'root' | 'image' | 'mask' | 'viewer' | 'toolbar' | 'viewerImage' | 'counter';
+
+/**
+ * Classes added beside each part's own. The viewer renders in the overlay container, so style
+ * its classes from a global stylesheet; `styles` reaches every part from anywhere.
+ */
+export type AndesImageClassNames = Partial<Record<AndesImagePart, string>>;
+
+/** Inline styles set on each part, keyed like {@link AndesImageClassNames}. */
+export type AndesImageStyles = Partial<
+  Record<AndesImagePart, Record<string, string | number>>
+>;
+
 /** Context handed to an `extraActions` template, rendered after the built-in buttons. */
 export interface AndesImageExtraActionsContext {
   readonly $implicit: AndesImagePreviewItem;
@@ -109,6 +176,10 @@ export interface AndesImageLabels {
   readonly toolbar?: string;
   /** Shown in the preview when the image cannot be loaded. */
   readonly loadError?: string;
+  /** Accessible name of the loading progress bar of a `placeholder` with a percent. */
+  readonly loading?: string;
+  /** Accessible name of the zoom ratio shown in the toolbar. */
+  readonly zoomRatio?: string;
   /** Screen-reader announcement on stepping: receives the 1-based position and total. */
   readonly position?: (current: number, total: number) => string;
 }
@@ -130,6 +201,8 @@ export const ANDES_IMAGE_LABELS: Required<AndesImageLabels> = {
   next: 'Next image',
   toolbar: 'Image tools',
   loadError: 'The image could not be loaded',
+  loading: 'Loading image',
+  zoomRatio: 'Zoom',
   position: (current, total) => `Image ${current} of ${total}`,
 };
 
@@ -188,6 +261,15 @@ export interface AndesImagePreviewConfig {
   readonly extraActions?: TemplateRef<AndesImageExtraActionsContext> | null;
   /** Replaces the "2 / 5" counter. */
   readonly countTemplate?: TemplateRef<AndesImageCountContext> | null;
+  /**
+   * Replaces the toolbar's content; it receives the actions, the shown item, its index and
+   * transform, and the built-in buttons as `defaultToolbar`.
+   */
+  readonly toolbarTemplate?: TemplateRef<AndesImageToolbarContext> | null;
+  /** Replaces the previewed `<img>` (a video, a canvas, ...); the transform still applies. */
+  readonly imageTemplate?: TemplateRef<AndesImageRenderContext> | null;
+  /** Show the zoom ratio ("150%") between the zoom buttons. Default `true`. */
+  readonly zoomRatio?: boolean;
 }
 
 /** The preview configuration with every default filled in. */
@@ -206,6 +288,9 @@ export interface AndesImageResolvedPreviewConfig {
   readonly actions: readonly AndesImagePreviewAction[];
   readonly extraActions: TemplateRef<AndesImageExtraActionsContext> | null;
   readonly countTemplate: TemplateRef<AndesImageCountContext> | null;
+  readonly toolbarTemplate: TemplateRef<AndesImageToolbarContext> | null;
+  readonly imageTemplate: TemplateRef<AndesImageRenderContext> | null;
+  readonly zoomRatio: boolean;
 }
 
 /** Fills the defaults into a (possibly absent) {@link AndesImagePreviewConfig}. */
@@ -236,6 +321,9 @@ export function resolvePreviewConfig(
     actions: config?.actions ?? ANDES_IMAGE_PREVIEW_ACTIONS,
     extraActions: config?.extraActions ?? null,
     countTemplate: config?.countTemplate ?? null,
+    toolbarTemplate: config?.toolbarTemplate ?? null,
+    imageTemplate: config?.imageTemplate ?? null,
+    zoomRatio: config?.zoomRatio ?? true,
   };
 }
 
@@ -250,4 +338,16 @@ export function normalizePreviewInput(
     return null;
   }
   return typeof value === 'object' ? value : {};
+}
+
+/** A group or viewer item: a bare URL, or an item with its own alt, fallback and name. */
+export type AndesImagePreviewSource = string | AndesImagePreviewItem;
+
+/** Turns bare URLs into items. */
+export function normalizePreviewItems(
+  sources: readonly AndesImagePreviewSource[] | null | undefined,
+): readonly AndesImagePreviewItem[] {
+  return (sources ?? []).map((source) =>
+    typeof source === 'string' ? { src: source } : source,
+  );
 }

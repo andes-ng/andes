@@ -1,4 +1,5 @@
 import {
+  andesDrawTransformedImage,
   ANDES_IMAGE_IDENTITY_TRANSFORM,
   clamp,
   imageTransformCss,
@@ -93,5 +94,80 @@ describe('image transform math', () => {
     expect(isIdentityTransform(identity)).toBe(true);
     expect(isIdentityTransform({ ...identity, rotate: 360 })).toBe(true);
     expect(isIdentityTransform({ ...identity, flipY: true })).toBe(false);
+  });
+});
+
+describe('andesDrawTransformedImage', () => {
+  function fakeImage(width: number, height: number) {
+    const image = document.createElement('img');
+    Object.defineProperty(image, 'naturalWidth', { value: width });
+    Object.defineProperty(image, 'naturalHeight', { value: height });
+    return image;
+  }
+
+  function recordCanvas() {
+    const calls: string[] = [];
+    const context = {
+      translate: (x: number, y: number) => calls.push(`translate ${x} ${y}`),
+      scale: (x: number, y: number) => calls.push(`scale ${x} ${y}`),
+      rotate: (angle: number) =>
+        calls.push(`rotate ${Math.round((angle * 180) / Math.PI)}`),
+      drawImage: (_: unknown, x: number, y: number) =>
+        calls.push(`draw ${x} ${y}`),
+    };
+    const spy = vi
+      .spyOn(HTMLCanvasElement.prototype, 'getContext')
+      .mockReturnValue(context as unknown as CanvasRenderingContext2D);
+    return { calls, restore: () => spy.mockRestore() };
+  }
+
+  it('rotates then mirrors about the centre, at the natural size', () => {
+    const { calls, restore } = recordCanvas();
+    const canvas = andesDrawTransformedImage(fakeImage(200, 100), {
+      ...ANDES_IMAGE_IDENTITY_TRANSFORM,
+      rotate: 90,
+      flipX: true,
+      scale: 3,
+      x: 40,
+    });
+    restore();
+    // A quarter turn swaps the sides; zoom and pan are not drawn.
+    expect([canvas?.width, canvas?.height]).toEqual([100, 200]);
+    expect(calls).toEqual([
+      'translate 50 100',
+      'scale -1 1',
+      'rotate 90',
+      'draw -100 -50',
+    ]);
+  });
+
+  it('keeps the size for half turns', () => {
+    const { restore } = recordCanvas();
+    const canvas = andesDrawTransformedImage(fakeImage(200, 100), {
+      ...ANDES_IMAGE_IDENTITY_TRANSFORM,
+      rotate: -180,
+      flipY: true,
+    });
+    restore();
+    expect([canvas?.width, canvas?.height]).toEqual([200, 100]);
+  });
+
+  it('gives nothing before the image has loaded, or without a 2D canvas', () => {
+    expect(
+      andesDrawTransformedImage(
+        fakeImage(0, 0),
+        ANDES_IMAGE_IDENTITY_TRANSFORM,
+      ),
+    ).toBeNull();
+    const spy = vi
+      .spyOn(HTMLCanvasElement.prototype, 'getContext')
+      .mockReturnValue(null);
+    expect(
+      andesDrawTransformedImage(
+        fakeImage(10, 10),
+        ANDES_IMAGE_IDENTITY_TRANSFORM,
+      ),
+    ).toBeNull();
+    spy.mockRestore();
   });
 });

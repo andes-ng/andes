@@ -17,9 +17,13 @@ import {
 import { AndesImagePreview } from './image-preview';
 import {
   normalizePreviewInput,
+  normalizePreviewItems,
+  type AndesImageClassNames,
   type AndesImageLabels,
   type AndesImagePreviewConfig,
   type AndesImagePreviewItem,
+  type AndesImagePreviewSource,
+  type AndesImageStyles,
   type AndesImageTransformEvent,
 } from './image-types';
 
@@ -39,6 +43,10 @@ import {
  * ```
  *
  * The group has no box of its own (`display: contents`): lay the thumbnails out around it.
+ *
+ * With `items` the viewer browses that list instead of the thumbnails: one cover image can
+ * open a whole album, and pictures that have no thumbnail on the page still appear in the
+ * viewer. A thumbnail then opens the item with its own preview URL, or the first one.
  */
 @Component({
   selector: 'andes-image-group',
@@ -47,9 +55,12 @@ import {
     <ng-content />
     @if (config(); as previewConfig) {
       <andes-image-preview
-        [items]="items()"
+        [items]="viewerItems()"
         [config]="previewConfig"
         [labels]="labels()"
+        [classNames]="classNames()"
+        [styles]="styles()"
+        [origin]="origin()"
         [(open)]="open"
         [(current)]="current"
         (transformChange)="transformChange.emit($event)"
@@ -74,6 +85,15 @@ export class AndesImageGroup implements AndesImageGroupContext {
   readonly preview = input<boolean | AndesImagePreviewConfig | ''>(true);
   /** Localised strings for the thumbnails' labels and the viewer. */
   readonly labels = input<AndesImageLabels | null>(null);
+  /**
+   * The images the viewer browses, when they are not (all) on the page as thumbnails: bare
+   * URLs or items with their own `alt`, `fallback` and download `name`.
+   */
+  readonly items = input<readonly AndesImagePreviewSource[] | null>(null);
+  /** Classes for the shared viewer's parts (`viewer`, `toolbar`, `viewerImage`, `counter`). */
+  readonly classNames = input<AndesImageClassNames | null>(null);
+  /** Inline styles for the same parts. */
+  readonly styles = input<AndesImageStyles | null>(null);
 
   /** Whether the viewer is open (`[(open)]`). */
   readonly open = model(false);
@@ -104,12 +124,32 @@ export class AndesImageGroup implements AndesImageGroupContext {
       );
   });
 
-  /** The items the viewer browses, in document order. */
-  protected readonly items = computed<readonly AndesImagePreviewItem[]>(() =>
-    this.previewable().map(
-      (member) => member.previewItem() as AndesImagePreviewItem,
-    ),
+  private readonly customItems = computed(() => {
+    const items = this.items();
+    return items ? normalizePreviewItems(items) : null;
+  });
+
+  /** What the viewer browses: `items`, or the thumbnails in document order. */
+  protected readonly viewerItems = computed<readonly AndesImagePreviewItem[]>(
+    () =>
+      this.customItems() ??
+      this.previewable().map(
+        (member) => member.previewItem() as AndesImagePreviewItem,
+      ),
   );
+
+  /**
+   * The thumbnail the viewer grows out of and shrinks back into: the one of the shown image,
+   * or with custom `items` the one that opened it.
+   */
+  protected readonly origin = computed<HTMLElement | null>(() => {
+    if (this.customItems()) {
+      return this.openedElement();
+    }
+    return this.previewable()[this.current()]?.element ?? null;
+  });
+
+  private readonly openedElement = signal<HTMLElement | null>(null);
 
   register(member: AndesImageGroupMember): void {
     this.members.update((members) => [...members, member]);
@@ -124,15 +164,30 @@ export class AndesImageGroup implements AndesImageGroupContext {
   /** Opens the viewer on `member` (an image of this group). */
   openMember(member: AndesImageGroupMember): void {
     this.orderVersion.update((version) => version + 1);
+    const custom = this.customItems();
+    if (custom) {
+      const src = member.previewItem()?.src;
+      const index = custom.findIndex((item) => item.src === src);
+      this.openAt(Math.max(0, index), member);
+      return;
+    }
     const index = this.previewable().indexOf(member);
     if (index >= 0) {
-      this.show(index);
+      this.openAt(index, member);
     }
   }
 
   /** Opens the viewer on the image at `index`. */
   show(index = 0): void {
-    this.openedMember = this.previewable()[index] ?? null;
+    this.openAt(
+      index,
+      this.customItems() ? null : (this.previewable()[index] ?? null),
+    );
+  }
+
+  private openAt(index: number, member: AndesImageGroupMember | null): void {
+    this.openedMember = member;
+    this.openedElement.set(member?.element ?? null);
     this.current.set(index);
     this.open.set(true);
   }
@@ -145,7 +200,9 @@ export class AndesImageGroup implements AndesImageGroupContext {
   protected onClosed(reason: AndesOverlayCloseReason): void {
     // Focus returns to the thumbnail that opened the viewer; if the user paged to another
     // image since, the one they were last looking at is the better place to land.
-    const shown = this.previewable()[this.current()];
+    const shown = this.customItems()
+      ? null
+      : this.previewable()[this.current()];
     if (shown && shown !== this.openedMember) {
       shown.focusTrigger();
     }

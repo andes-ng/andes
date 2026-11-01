@@ -16,8 +16,17 @@ import {
   provideAndesOverlay,
 } from '@andes-ng/primitives';
 
-import { AndesImage, type AndesImagePlaceholder } from './image';
-import type { AndesImageLabels, AndesImagePreviewConfig } from './image-types';
+import {
+  AndesImage,
+  type AndesImageMaskVariant,
+  type AndesImagePlaceholder,
+} from './image';
+import type {
+  AndesImageClassNames,
+  AndesImageLabels,
+  AndesImagePreviewConfig,
+  AndesImageStyles,
+} from './image-types';
 
 /**
  * jsdom reports zero geometry for every element, which makes CDK treat everything as
@@ -59,6 +68,9 @@ function withElementGeometry() {
     <ng-template #placeholderTemplate
       ><i id="custom-placeholder">…</i></ng-template
     >
+    <ng-template #fallbackTemplate
+      ><span id="custom-fallback">Not found</span></ng-template
+    >
     <button type="button" id="outside">Outside</button>
     <andes-image
       [src]="src()"
@@ -71,6 +83,9 @@ function withElementGeometry() {
       [preview]="preview()"
       [previewSrc]="previewSrc()"
       [mask]="mask()"
+      [maskVariant]="maskVariant()"
+      [classNames]="classNames()"
+      [styles]="styles()"
       [labels]="labels()"
       [loading]="loading()"
       [(previewOpen)]="open"
@@ -85,16 +100,21 @@ class Host {
   readonly placeholderTemplate = viewChild.required<TemplateRef<unknown>>(
     'placeholderTemplate',
   );
+  readonly fallbackTemplate =
+    viewChild.required<TemplateRef<unknown>>('fallbackTemplate');
   readonly src = signal<string | null>('/a.jpg');
   readonly alt = signal('Harbour at dusk');
   readonly width = signal<number | string | null>(240);
   readonly height = signal<number | string | null>(160);
-  readonly fallback = signal<string | null>(null);
+  readonly fallback = signal<string | TemplateRef<unknown> | null>(null);
   readonly placeholder = signal<AndesImagePlaceholder>(false);
   readonly placeholderSrc = signal<string | null>(null);
   readonly preview = signal<boolean | AndesImagePreviewConfig | ''>(true);
   readonly previewSrc = signal<string | null>(null);
   readonly mask = signal<boolean | string | TemplateRef<unknown>>(true);
+  readonly maskVariant = signal<AndesImageMaskVariant>('dimmed');
+  readonly classNames = signal<AndesImageClassNames | null>(null);
+  readonly styles = signal<AndesImageStyles | null>(null);
   readonly labels = signal<AndesImageLabels | null>(null);
   readonly loading = signal<'lazy' | 'eager'>('lazy');
   readonly open = signal(false);
@@ -459,6 +479,147 @@ describe('AndesImage', () => {
     });
   });
 
+  describe('progress placeholder', () => {
+    it('draws a soft wash for `{ progress: true }`', () => {
+      const f = setup((h) => {
+        h.src.set(null);
+        h.placeholder.set({ progress: true });
+      });
+      const placeholder = q('[data-slot="image-placeholder"]', f.nativeElement);
+      expect(placeholder?.classList).toContain(
+        'andes-image__placeholder--progress',
+      );
+      expect(q('.andes-image__wash', f.nativeElement)).not.toBeNull();
+      expect(q('[role="progressbar"]', f.nativeElement)).toBeNull();
+    });
+
+    it('draws a named progress bar with the percent, clamped', () => {
+      const f = setup((h) => {
+        h.src.set(null);
+        h.placeholder.set({ progress: { percent: 42.4 } });
+      });
+      const bar = q('[role="progressbar"]', f.nativeElement) as HTMLElement;
+      expect(bar.getAttribute('aria-valuenow')).toBe('42');
+      expect(bar.getAttribute('aria-valuemin')).toBe('0');
+      expect(bar.getAttribute('aria-valuemax')).toBe('100');
+      expect(bar.getAttribute('aria-label')).toBe('Loading image');
+      expect(
+        (q('.andes-image__progress-bar', f.nativeElement) as HTMLElement).style
+          .width,
+      ).toBe('42%');
+      expect(
+        q('.andes-image__progress-text', f.nativeElement)?.textContent?.trim(),
+      ).toBe('42%');
+
+      f.componentInstance.placeholder.set({ progress: { percent: 140 } });
+      f.detectChanges();
+      expect(bar.getAttribute('aria-valuenow')).toBe('100');
+      f.componentInstance.labels.set({ loading: 'Cargando imagen' });
+      f.detectChanges();
+      expect(bar.getAttribute('aria-label')).toBe('Cargando imagen');
+    });
+
+    it('goes away once the picture has loaded', () => {
+      const f = setup((h) => h.placeholder.set({ progress: { percent: 90 } }));
+      expect(q('[role="progressbar"]', f.nativeElement)).not.toBeNull();
+      fire(img(f), 'load');
+      f.detectChanges();
+      expect(q('[data-slot="image-placeholder"]', f.nativeElement)).toBeNull();
+    });
+  });
+
+  describe('fallback template', () => {
+    it('draws the template in the box when the source fails', () => {
+      const f = setup((h) => h.fallback.set(h.fallbackTemplate()));
+      expect(q('#custom-fallback', f.nativeElement)).toBeNull();
+      fire(img(f), 'error');
+      f.detectChanges();
+      expect(image(f).dataset['state']).toBe('error');
+      expect(
+        q('[data-slot="image-fallback"] #custom-fallback', f.nativeElement),
+      ).not.toBeNull();
+      expect(q('[data-slot="image-error"]', f.nativeElement)).toBeNull();
+      expect(f.componentInstance.erroredCount).toBe(1);
+    });
+
+    it('is not mistaken for a URL to retry', () => {
+      const f = setup((h) => h.fallback.set(h.fallbackTemplate()));
+      fire(img(f), 'error');
+      f.detectChanges();
+      expect(img(f).getAttribute('src')).toBe('/a.jpg');
+    });
+  });
+
+  describe('mask variants', () => {
+    it('dims by default, and blurs or stays clear on request', () => {
+      const f = setup();
+      const mask = trigger(f) as HTMLElement;
+      expect(mask.classList).not.toContain('andes-image__mask--blur');
+      expect(mask.classList).not.toContain('andes-image__mask--clear');
+      f.componentInstance.maskVariant.set('blur');
+      f.detectChanges();
+      expect(mask.classList).toContain('andes-image__mask--blur');
+      f.componentInstance.maskVariant.set('none');
+      f.detectChanges();
+      expect(mask.classList).toContain('andes-image__mask--clear');
+      expect(mask.classList).not.toContain('andes-image__mask--blur');
+      // The label is still there to read: only the tint changes.
+      expect(mask.textContent).toContain('Preview');
+    });
+  });
+
+  describe('semantic parts', () => {
+    it('adds classes and styles to the root, the picture and the mask', () => {
+      const f = setup((h) => {
+        h.classNames.set({ root: 'my-root', image: 'my-img', mask: 'my-mask' });
+        h.styles.set({
+          root: { outline: '3px solid red' },
+          image: { filter: 'grayscale(1)' },
+          mask: { 'letter-spacing': '1px' },
+        });
+      });
+      expect(image(f).classList).toContain('my-root');
+      expect(image(f).style.outline).toBe('3px solid red');
+      // The host keeps its own sizing next to the consumer's styles.
+      expect(image(f).style.width).toBe('240px');
+      expect(img(f).classList).toContain('my-img');
+      expect(img(f).classList).toContain('andes-image__img');
+      expect(img(f).style.filter).toBe('grayscale(1)');
+      expect(img(f).style.objectFit).toBe('cover');
+      expect(trigger(f)?.classList).toContain('my-mask');
+      expect(trigger(f)?.classList).toContain('andes-image__mask');
+      expect(trigger(f)?.style.letterSpacing).toBe('1px');
+    });
+
+    it('passes the viewer parts on to the viewer', () => {
+      const f = setup((h) => {
+        h.classNames.set({ viewer: 'my-viewer', toolbar: 'my-toolbar' });
+        h.styles.set({ viewerImage: { opacity: '0.5' } });
+      });
+      trigger(f)?.click();
+      f.detectChanges();
+      expect(viewer()?.classList).toContain('my-viewer');
+      expect(q('.andes-image-preview__toolbar')?.classList).toContain(
+        'my-toolbar',
+      );
+      expect(q<HTMLElement>('.andes-image-preview__image')?.style.opacity).toBe(
+        '0.5',
+      );
+    });
+  });
+
+  describe('motion origin', () => {
+    it('grows the viewer out of the thumbnail', () => {
+      const f = setup();
+      image(f).getBoundingClientRect = () => new DOMRect(10, 20, 240, 160);
+      trigger(f)?.click();
+      f.detectChanges();
+      expect(
+        viewer()?.style.getPropertyValue('--andes-image-preview-origin'),
+      ).toBe('130px 100px');
+    });
+  });
+
   describe('stylesheets', () => {
     const css = readFileSync('packages/ui/src/lib/image/image.css', 'utf8');
     const previewCss = readFileSync(
@@ -478,16 +639,19 @@ describe('AndesImage', () => {
     it('runs the placeholder shimmer slowly and stops it for reduced motion', () => {
       expect(css).toMatch(/animation: andes-image-shimmer 1\.8s/);
       expect(css).toMatch(
-        /@media \(prefers-reduced-motion: reduce\)[\s\S]*andes-image__placeholder--skeleton::after\s*\{\s*animation: none/,
+        /@media \(prefers-reduced-motion: reduce\)[\s\S]*andes-image__placeholder--skeleton::after,\s*\.andes-image__wash\s*\{\s*animation: none/,
       );
     });
 
-    it('fades the scrim in over 150ms and plays the exit window of 120ms ease-in', () => {
+    it('fades the scrim in over 0.3s and leaves within the exit window, on one curve', () => {
       expect(previewCss).toMatch(
-        /\.andes-image-preview-backdrop\s*\{[^}]*transition-duration: var\(--andes-motion-duration-mid, 150ms\)/,
+        /--andes-image-preview-duration: 0\.3s;\s*--andes-image-preview-exit-duration: 0\.25s;\s*--andes-image-preview-ease: cubic-bezier\(0\.78, 0\.14, 0\.15, 0\.86\)/,
       );
       expect(previewCss).toMatch(
-        /\.andes-image-preview\[data-andes-closing\]\s*\{[^}]*animation: andes-image-preview-fade-out\s+var\(--andes-motion-duration-fast, 120ms\)\s+var\(--andes-motion-ease-in[^;]*forwards/,
+        /\.andes-image-preview-backdrop\s*\{[^}]*transition-duration: var\(--andes-image-preview-duration, 0\.3s\)/,
+      );
+      expect(previewCss).toMatch(
+        /\.andes-image-preview\[data-andes-closing\]\s*\{[^}]*animation: andes-image-preview-fade-out\s+var\(--andes-image-preview-exit-duration\)\s+var\(--andes-image-preview-ease\)\s+forwards/,
       );
       expect(previewCss).toMatch(
         /\.andes-image-preview-backdrop\[data-andes-closing\]\s*\{[^}]*animation: andes-image-preview-fade-out[^;]*forwards/,
@@ -504,6 +668,69 @@ describe('AndesImage', () => {
       expect(reduced).toMatch(
         /\.andes-image-preview__image[\s\S]*transition: none/,
       );
+    });
+
+    it('reveals the mask over 0.3s and blurs it for the blur variant', () => {
+      expect(css).toMatch(
+        /\.andes-image__mask\s*\{[^}]*transition: opacity 0\.3s ease/,
+      );
+      expect(css).toMatch(
+        /\.andes-image__mask--blur:hover,\s*\.andes-image__mask--blur:focus-visible\s*\{[^}]*backdrop-filter: blur\(4px\)/,
+      );
+    });
+
+    it('stops the progress wash and bar for reduced motion', () => {
+      const reduced = css.slice(
+        css.indexOf('@media (prefers-reduced-motion: reduce)'),
+      );
+      expect(reduced).toMatch(/\.andes-image__wash\s*\{\s*animation: none/);
+      expect(reduced).toMatch(
+        /\.andes-image__progress-bar\s*\{\s*transition: none/,
+      );
+    });
+
+    it('draws the viewer with light icons on dark discs, whatever the theme', () => {
+      expect(previewCss).toMatch(
+        /--andes-image-preview-control-color-hover: var\(--andes-color-ghost, #fff\)/,
+      );
+      expect(previewCss).toMatch(
+        /--andes-image-preview-control-background: var\(\s*--andes-color-overlay/,
+      );
+      expect(previewCss).toMatch(
+        /\.andes-image-preview__nav\s*\{[^}]*inset-block-start: 50%/,
+      );
+      expect(previewCss).toMatch(
+        /\.andes-image-preview__close,\s*\.andes-image-preview__nav\s*\{[^}]*border-radius: var\(--andes-radius-full/,
+      );
+    });
+
+    it('zooms the stage out of the origin point and back', () => {
+      expect(previewCss).toMatch(
+        /\.andes-image-preview__stage\s*\{[^}]*transform-origin: var\(--andes-image-preview-origin, 50% 50%\)[^}]*animation: andes-image-preview-zoom-in/,
+      );
+      expect(previewCss).toMatch(
+        /\[data-andes-closing\] \.andes-image-preview__stage\s*\{[^}]*animation: andes-image-preview-zoom-out/,
+      );
+      expect(previewCss).toMatch(
+        /\.andes-image-preview__leaving\s*\{[^}]*animation: andes-image-preview-fade-out/,
+      );
+    });
+
+    it('keeps the counter in reading order in right-to-left', () => {
+      expect(previewCss).toMatch(
+        /\.andes-image-preview__counter\s*\{[^}]*direction: ltr;\s*unicode-bidi: isolate/,
+      );
+    });
+
+    it('gives every control a system outline in forced colours', () => {
+      for (const source of [css, previewCss]) {
+        expect(source).toContain('@media (forced-colors: active)');
+      }
+      const forced = previewCss.slice(
+        previewCss.indexOf('@media (forced-colors: active)'),
+      );
+      expect(forced).toMatch(/border: 1px solid ButtonText/);
+      expect(forced).toMatch(/GrayText/);
     });
 
     it('keeps no hard-coded colour outside a token fallback', () => {

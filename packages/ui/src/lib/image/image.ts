@@ -12,7 +12,7 @@ import {
   linkedSignal,
   model,
   output,
-  type TemplateRef,
+  TemplateRef,
   viewChild,
 } from '@angular/core';
 
@@ -25,9 +25,11 @@ import { AndesImagePreview } from './image-preview';
 import {
   normalizePreviewInput,
   resolveImageLabels,
+  type AndesImageClassNames,
   type AndesImageLabels,
   type AndesImagePreviewConfig,
   type AndesImagePreviewItem,
+  type AndesImageStyles,
   type AndesImageTransformEvent,
 } from './image-types';
 
@@ -39,11 +41,29 @@ export type AndesImageFit =
   'fill' | 'contain' | 'cover' | 'none' | 'scale-down';
 
 /**
+ * A loading indicator drawn over the box: `{ progress: true }` a soft wash that drifts across
+ * it, `{ progress: { percent } }` a thin bar along the bottom with the percent loaded.
+ */
+export interface AndesImageProgressPlaceholder {
+  readonly progress: true | { readonly percent: number };
+}
+
+/**
  * What shows while the image loads: `true` / `'skeleton'` a slow shimmer, `'blur'` the
- * `placeholderSrc` thumbnail blurred, or a template for anything else.
+ * `placeholderSrc` thumbnail blurred, a progress indicator, or a template for anything else.
  */
 export type AndesImagePlaceholder =
-  boolean | 'skeleton' | 'blur' | TemplateRef<unknown>;
+  | boolean
+  | 'skeleton'
+  | 'blur'
+  | AndesImageProgressPlaceholder
+  | TemplateRef<unknown>;
+
+/**
+ * How the hover cover looks: `dimmed` darkens the picture, `blur` blurs and lightly darkens it,
+ * `none` lays the label over the picture without tinting it.
+ */
+export type AndesImageMaskVariant = 'dimmed' | 'blur' | 'none';
 
 function setOrRemove(
   element: HTMLElement,
@@ -93,6 +113,8 @@ function toCssLength(value: number | string | null | undefined): string | null {
     '[attr.data-slot]': '"image"',
     '[attr.data-state]': 'status()',
     '[attr.data-preview]': 'previewConfig() ? "" : null',
+    '[class]': 'classNames()?.root ?? ""',
+    '[style]': 'styles()?.root ?? null',
     '[style.width]': 'cssWidth()',
     '[style.height]': 'cssHeight()',
   },
@@ -112,8 +134,13 @@ export class AndesImage implements AndesImageGroupMember {
   readonly width = input<number | string | null>(null);
   /** Box height: a number is px, a string any CSS length. */
   readonly height = input<number | string | null>(null);
-  /** Shown instead when `src` fails to load. */
-  readonly fallback = input<string | null | undefined>(null);
+  /**
+   * Shown instead when `src` fails to load: another URL, or a template drawn in the box (an
+   * illustration, a retry button, ...).
+   */
+  readonly fallback = input<string | TemplateRef<unknown> | null | undefined>(
+    null,
+  );
   /** What to show while loading; see {@link AndesImagePlaceholder}. */
   readonly placeholder = input<AndesImagePlaceholder>(false);
   /** Small image shown blurred by `placeholder="blur"` until `src` arrives. */
@@ -147,6 +174,15 @@ export class AndesImage implements AndesImageGroupMember {
    * string, a template, or `false` for no visible label (the thumbnail still opens).
    */
   readonly mask = input<boolean | string | TemplateRef<unknown>>(true);
+  /** How the hover cover looks; see {@link AndesImageMaskVariant}. */
+  readonly maskVariant = input<AndesImageMaskVariant>('dimmed');
+  /**
+   * Classes for the parts: `root` (this element), `image`, `mask`, and the viewer's `viewer`,
+   * `toolbar`, `viewerImage` and `counter`. Inside a group the group's viewer parts apply.
+   */
+  readonly classNames = input<AndesImageClassNames | null>(null);
+  /** Inline styles for the same parts, as `{ image: { filter: 'grayscale(1)' } }`. */
+  readonly styles = input<AndesImageStyles | null>(null);
   /** Localised strings; unset fields keep their English default. */
   readonly labels = input<AndesImageLabels | null>(null);
 
@@ -169,11 +205,22 @@ export class AndesImage implements AndesImageGroupMember {
     computation: () => false,
   });
 
+  /** The fallback URL; a template fallback has none. */
+  private readonly fallbackSrc = computed(() => {
+    const fallback = this.fallback();
+    return typeof fallback === 'string' ? fallback : '';
+  });
+
+  /** The template drawn in the box once the image failed. */
+  protected readonly fallbackTemplate = computed(() => {
+    const fallback = this.fallback();
+    return fallback instanceof TemplateRef ? fallback : null;
+  });
+
   /** The URL the `<img>` currently loads. */
   protected readonly currentSrc = computed(() => {
     const src = this.src();
-    const fallback = this.fallback();
-    return !src || this.useFallback() ? (fallback ?? '') : src;
+    return !src || this.useFallback() ? this.fallbackSrc() : src;
   });
 
   /**
@@ -181,7 +228,7 @@ export class AndesImage implements AndesImageGroupMember {
    * loading, so its placeholder stays up; an empty string with no fallback is a failure.
    */
   private readonly pending = computed(
-    () => this.src() == null && !this.fallback(),
+    () => this.src() == null && !this.fallbackSrc(),
   );
 
   /** `loading` until the load event, `error` once the source (and fallback) failed. */
@@ -213,14 +260,17 @@ export class AndesImage implements AndesImageGroupMember {
 
   /** The placeholder to draw while loading, resolved to one concrete kind. */
   protected readonly placeholderKind = computed<
-    'none' | 'skeleton' | 'blur' | 'template'
+    'none' | 'skeleton' | 'blur' | 'progress' | 'template'
   >(() => {
     const placeholder = this.placeholder();
     if (!placeholder) {
       return 'none';
     }
-    if (typeof placeholder === 'object') {
+    if (placeholder instanceof TemplateRef) {
       return 'template';
+    }
+    if (typeof placeholder === 'object') {
+      return 'progress';
     }
     if (placeholder === 'blur') {
       return 'blur';
@@ -233,7 +283,23 @@ export class AndesImage implements AndesImageGroupMember {
 
   protected readonly placeholderTemplate = computed(() => {
     const placeholder = this.placeholder();
-    return typeof placeholder === 'object' ? placeholder : null;
+    return placeholder instanceof TemplateRef ? placeholder : null;
+  });
+
+  /** 0-100 for a progress placeholder with a percent, `null` for the plain wash. */
+  protected readonly progressPercent = computed(() => {
+    const placeholder = this.placeholder();
+    if (
+      typeof placeholder !== 'object' ||
+      placeholder instanceof TemplateRef ||
+      placeholder.progress === true
+    ) {
+      return null;
+    }
+    const percent = Number(placeholder.progress.percent);
+    return Number.isFinite(percent)
+      ? Math.round(Math.min(100, Math.max(0, percent)))
+      : 0;
   });
 
   /** The item the viewer shows for this image, or `null` when it cannot be previewed. */
@@ -255,7 +321,7 @@ export class AndesImage implements AndesImageGroupMember {
       alt: this.alt(),
       fallback: previewSrc
         ? thumbnail || undefined
-        : (this.fallback() ?? undefined),
+        : this.fallbackSrc() || undefined,
       crossOrigin: this.crossOrigin(),
     };
   });
@@ -344,7 +410,7 @@ export class AndesImage implements AndesImageGroupMember {
   }
 
   protected onError(event: Event): void {
-    if (!this.useFallback() && this.src() && this.fallback()) {
+    if (!this.useFallback() && this.src() && this.fallbackSrc()) {
       this.useFallback.set(true);
     } else {
       this.status.set('error');

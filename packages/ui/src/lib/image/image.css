@@ -61,12 +61,71 @@
   animation: andes-image-shimmer 1.8s ease-in-out infinite;
 }
 
+.andes-image__placeholder--progress {
+  background: var(--andes-color-muted, #f1f5f9);
+}
+
+/* `{ progress: true }`: a soft wash of the theme's accent drifting across the box. */
+.andes-image__wash {
+  position: absolute;
+  inset: -50%;
+  background: radial-gradient(
+    circle at center,
+    color-mix(in srgb, var(--andes-color-primary, #2563eb) 16%, transparent),
+    transparent 55%
+  );
+  animation: andes-image-wash 2.4s ease-in-out infinite alternate;
+}
+
+/* `{ progress: { percent } }`: a thin bar along the bottom edge and the percent above it. */
+.andes-image__progress {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  height: 3px;
+  background: color-mix(
+    in srgb,
+    var(--andes-color-foreground, #0f172a) 8%,
+    transparent
+  );
+}
+
+.andes-image__progress-bar {
+  display: block;
+  height: 100%;
+  background: var(--andes-color-primary, #2563eb);
+  transition: width var(--andes-motion-duration-slow, 200ms)
+    var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1));
+}
+
+.andes-image__progress-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--andes-color-muted-foreground, #5f6f86);
+  font-size: var(--andes-font-size-xs, 0.75rem);
+  line-height: var(--andes-line-height-xs, 1rem);
+  font-variant-numeric: tabular-nums;
+}
+
 .andes-image__blur {
   display: block;
   width: 100%;
   height: 100%;
   filter: blur(14px);
   transform: scale(1.12);
+}
+
+.andes-image__fallback {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--andes-color-muted, #f1f5f9);
+  color: var(--andes-color-muted-foreground, #5f6f86);
+  font-size: var(--andes-text-font-size, 0.875rem);
+  line-height: var(--andes-text-line-height, 1.375rem);
 }
 
 .andes-image__error {
@@ -99,11 +158,9 @@
   font-family: inherit;
   font-size: var(--andes-text-font-size, 0.875rem);
   line-height: var(--andes-text-line-height, 1.375rem);
-  cursor: zoom-in;
+  cursor: pointer;
   opacity: 0;
-  transition:
-    opacity var(--andes-motion-duration-mid, 150ms) ease,
-    background-color var(--andes-motion-duration-mid, 150ms) ease;
+  transition: opacity 0.3s ease;
 }
 
 .andes-image__mask:hover,
@@ -112,9 +169,28 @@
   background: var(--andes-color-overlay, rgb(15 23 42 / 45%));
 }
 
+/* `maskVariant="blur"`: the picture softens behind a lighter tint. */
+.andes-image__mask--blur:hover,
+.andes-image__mask--blur:focus-visible {
+  background: color-mix(
+    in srgb,
+    var(--andes-color-overlay, rgb(15 23 42 / 45%)) 55%,
+    transparent
+  );
+  backdrop-filter: blur(4px);
+}
+
+/* `maskVariant="none"`: only the label, kept legible by a soft shadow. */
+.andes-image__mask--clear:hover,
+.andes-image__mask--clear:focus-visible,
 .andes-image__mask--bare:hover,
 .andes-image__mask--bare:focus-visible {
   background: transparent;
+  backdrop-filter: none;
+}
+
+.andes-image__mask--clear {
+  text-shadow: 0 1px 3px var(--andes-color-overlay, rgb(15 23 42 / 45%));
 }
 
 .andes-image__mask:focus-visible {
@@ -124,6 +200,16 @@
 
 .andes-image__mask-icon {
   font-size: 1rem;
+}
+
+@keyframes andes-image-wash {
+  from {
+    transform: translate(-30%, -10%);
+  }
+
+  to {
+    transform: translate(30%, 10%);
+  }
 }
 
 @keyframes andes-image-shimmer {
@@ -138,7 +224,31 @@
     transition: none;
   }
 
-  .andes-image__placeholder--skeleton::after {
+  .andes-image__placeholder--skeleton::after,
+  .andes-image__wash {
     animation: none;
+  }
+
+  .andes-image__progress-bar {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  /* A system-coloured chip carries the label; the picture itself stays visible. */
+  .andes-image__mask:hover,
+  .andes-image__mask:focus-visible {
+    background: transparent;
+    backdrop-filter: none;
+  }
+
+  .andes-image__mask-text {
+    padding: 0 var(--andes-space-1, 0.25rem);
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .andes-image__progress-bar {
+    background: Highlight;
   }
 }

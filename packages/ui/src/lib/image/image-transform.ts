@@ -102,3 +102,34 @@ export function isIdentityTransform(transform: AndesImageTransform): boolean {
     transform.flipY === identity.flipY
   );
 }
+
+/**
+ * Draws `image` rotated and mirrored the way `transform` shows it onto a new canvas, at the
+ * image's natural size; pan and zoom only change the view and are left out. Use it to save
+ * what the viewer shows (`canvas.toBlob(...)`). Returns `null` before the image has loaded or
+ * where there is no 2D canvas.
+ */
+export function andesDrawTransformedImage(
+  image: HTMLImageElement,
+  transform: AndesImageTransform,
+): HTMLCanvasElement | null {
+  const width = image.naturalWidth;
+  const height = image.naturalHeight;
+  if (!width || !height) {
+    return null;
+  }
+  const quarter = Math.abs(Math.round(transform.rotate / 90)) % 2 === 1;
+  const canvas = image.ownerDocument.createElement('canvas');
+  canvas.width = quarter ? height : width;
+  canvas.height = quarter ? width : height;
+  const context = canvas.getContext('2d');
+  if (!context) {
+    return null;
+  }
+  // Same order as the CSS transform: rotate the picture, then mirror on the screen axes.
+  context.translate(canvas.width / 2, canvas.height / 2);
+  context.scale(transform.flipX ? -1 : 1, transform.flipY ? -1 : 1);
+  context.rotate((transform.rotate * Math.PI) / 180);
+  context.drawImage(image, -width / 2, -height / 2);
+  return canvas;
+}

@@ -7,6 +7,9 @@
     class="andes-image-preview"
     andesOverlayContent
     data-slot="image-preview"
+    [class]="parts().classNames.viewer ?? ''"
+    [style]="parts().styles.viewer ?? null"
+    [style.--andes-image-preview-origin]="originPoint()"
     [attr.aria-label]="dialogLabel()"
     [attr.data-zoomed]="zoomed() ? '' : null"
   >
@@ -29,20 +32,57 @@
       (click)="onStageClick($event)"
       (keydown.escape)="onStageEscape($event)"
     >
-      <img
-        #image
-        class="andes-image-preview__image"
-        data-slot="image-preview-image"
-        draggable="false"
-        [class.andes-image-preview__image--hidden]="loadState() === 'error'"
-        [attr.src]="src()"
-        [attr.alt]="current.alt ?? ''"
-        [attr.crossorigin]="current.crossOrigin ?? null"
-        [style.transform]="css()"
-        (load)="onLoad()"
-        (error)="onError()"
-        (dblclick)="onImageDoubleClick($event)"
-      />
+      <!-- One grid cell holds the leaving and the arriving picture on top of each other, so
+           a change of image cross-fades instead of cutting. -->
+      <div class="andes-image-preview__canvas">
+        @if (leaving(); as frame) {
+        <img
+          class="andes-image-preview__leaving"
+          data-slot="image-preview-leaving"
+          alt=""
+          aria-hidden="true"
+          draggable="false"
+          [attr.src]="frame.src"
+          [style.transform]="frame.css"
+          (animationend)="onLeft()"
+        />
+        } @if (cfg().imageTemplate; as custom) { @for (key of [index()]; track
+        key) {
+        <div
+          #image
+          class="andes-image-preview__image andes-image-preview__custom"
+          data-slot="image-preview-image"
+          [class]="parts().classNames.viewerImage ?? ''"
+          [style]="parts().styles.viewerImage ?? null"
+          [class.andes-image-preview__image--entering]="leaving() !== null"
+          [style.transform]="css()"
+          (dblclick)="onImageDoubleClick($event)"
+        >
+          <ng-container
+            [ngTemplateOutlet]="custom"
+            [ngTemplateOutletContext]="renderContext()"
+          />
+        </div>
+        } } @else { @for (key of [index()]; track key) {
+        <img
+          #image
+          class="andes-image-preview__image"
+          data-slot="image-preview-image"
+          draggable="false"
+          [class]="parts().classNames.viewerImage ?? ''"
+          [style]="parts().styles.viewerImage ?? null"
+          [class.andes-image-preview__image--hidden]="loadState() === 'error'"
+          [class.andes-image-preview__image--entering]="leaving() !== null"
+          [attr.src]="src()"
+          [attr.alt]="current.alt ?? ''"
+          [attr.crossorigin]="current.crossOrigin ?? null"
+          [style.transform]="css()"
+          (load)="onLoad()"
+          (error)="onError()"
+          (dblclick)="onImageDoubleClick($event)"
+        />
+        } }
+      </div>
       @if (loadState() === 'loading') {
       <span
         class="andes-image-preview__loading"
@@ -76,19 +116,6 @@
     </button>
 
     @if (total() > 1) {
-    <div
-      class="andes-image-preview__counter"
-      data-slot="image-preview-counter"
-      aria-hidden="true"
-    >
-      @if (cfg().countTemplate; as countTemplate) {
-      <ng-container
-        [ngTemplateOutlet]="countTemplate"
-        [ngTemplateOutletContext]="countContext()"
-      />
-      } @else { {{ index() + 1 }} / {{ total() }} }
-    </div>
-
     <button
       type="button"
       class="andes-image-preview__nav andes-image-preview__nav--previous"
@@ -118,31 +145,41 @@
     </button>
     }
 
-    <div
-      class="andes-image-preview__toolbar"
-      data-slot="image-preview-toolbar"
-      role="group"
-      [attr.aria-label]="text().toolbar"
-    >
-      @for (action of toolbarActions(); track action) {
-      <button
-        type="button"
-        class="andes-image-preview__button"
-        [attr.data-action]="action"
-        [attr.aria-label]="text()[action]"
-        [attr.title]="text()[action]"
-        [attr.aria-keyshortcuts]="shortcut(action)"
-        [attr.aria-disabled]="actionDisabled(action) ? 'true' : null"
-        (click)="run(action)"
+    <div class="andes-image-preview__footer" data-slot="image-preview-footer">
+      @if (total() > 1) {
+      <div
+        class="andes-image-preview__counter"
+        data-slot="image-preview-counter"
+        aria-hidden="true"
+        [class]="parts().classNames.counter ?? ''"
+        [style]="parts().styles.counter ?? null"
       >
-        <andes-image-icon [name]="action" />
-      </button>
-      } @if (cfg().extraActions; as extra) {
-      <ng-container
-        [ngTemplateOutlet]="extra"
-        [ngTemplateOutletContext]="extraContext()"
-      />
+        @if (cfg().countTemplate; as countTemplate) {
+        <ng-container
+          [ngTemplateOutlet]="countTemplate"
+          [ngTemplateOutletContext]="countContext()"
+        />
+        } @else { {{ index() + 1 }} / {{ total() }} }
+      </div>
       }
+
+      <div
+        class="andes-image-preview__toolbar"
+        data-slot="image-preview-toolbar"
+        role="group"
+        [class]="parts().classNames.toolbar ?? ''"
+        [style]="parts().styles.toolbar ?? null"
+        [attr.aria-label]="text().toolbar"
+      >
+        @if (cfg().toolbarTemplate; as toolbar) {
+        <ng-container
+          [ngTemplateOutlet]="toolbar"
+          [ngTemplateOutletContext]="toolbarContext()"
+        />
+        } @else {
+        <ng-container [ngTemplateOutlet]="defaultToolbar" />
+        }
+      </div>
     </div>
 
     <div class="andes-image-preview__sr" role="status" aria-live="polite">
@@ -150,4 +187,39 @@
     </div>
   </div>
   }
+</ng-template>
+
+<ng-template #defaultToolbar>
+  @for (action of toolbarActions(); track action) { @if (ratioBefore() ===
+  action) {
+  <ng-container [ngTemplateOutlet]="ratioTemplate" />
+  }
+  <button
+    type="button"
+    class="andes-image-preview__button"
+    [attr.data-action]="action"
+    [attr.aria-label]="text()[action]"
+    [attr.title]="text()[action]"
+    [attr.aria-keyshortcuts]="shortcut(action)"
+    [attr.aria-disabled]="actionDisabled(action) ? 'true' : null"
+    (click)="run(action)"
+  >
+    <andes-image-icon [name]="action" />
+  </button>
+  @if (ratioAfter() === action) {
+  <ng-container [ngTemplateOutlet]="ratioTemplate" />
+  } } @if (cfg().extraActions; as extra) {
+  <ng-container
+    [ngTemplateOutlet]="extra"
+    [ngTemplateOutletContext]="extraContext()"
+  />
+  }
+</ng-template>
+
+<ng-template #ratioTemplate>
+  <span class="andes-image-preview__ratio" data-slot="image-preview-ratio"
+    ><span class="andes-image-preview__ratio-label"
+      >{{ text().zoomRatio }} </span
+    >{{ ratio() }}</span
+  >
 </ng-template>

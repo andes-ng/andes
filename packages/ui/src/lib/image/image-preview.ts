@@ -38,12 +38,17 @@ import {
 import {
   resolveImageLabels,
   resolvePreviewConfig,
+  type AndesImageClassNames,
   type AndesImageCountContext,
   type AndesImageExtraActionsContext,
   type AndesImageLabels,
   type AndesImagePreviewAction,
+  type AndesImagePreviewActions,
   type AndesImagePreviewConfig,
   type AndesImagePreviewItem,
+  type AndesImageRenderContext,
+  type AndesImageStyles,
+  type AndesImageToolbarContext,
   type AndesImageTransform,
   type AndesImageTransformAction,
   type AndesImageTransformEvent,
@@ -53,6 +58,14 @@ import {
 export const ANDES_IMAGE_PREVIEW_BACKDROP_CLASS =
   'andes-image-preview-backdrop';
 const BACKDROP_BLUR_CLASS = 'andes-image-preview-backdrop--blur';
+/**
+ * The viewer's scrim: darker than the dialog scrim (`--andes-color-overlay`), so the picture
+ * and the light controls stand out. Override `--andes-image-preview-scrim` to retune it.
+ */
+const PREVIEW_SCRIM =
+  'var(--andes-image-preview-scrim, color-mix(in srgb, ' +
+  'var(--andes-color-ghost-foreground, #111827) 45%, ' +
+  'var(--andes-color-overlay, rgb(15 23 42 / 45%))))';
 const PANE_CLASS = 'andes-image-preview-pane';
 
 /** Distance the arrow keys pan a zoomed image per press, in px. */
@@ -63,6 +76,8 @@ const DRAG_THRESHOLD = 4;
 const SWIPE_DISTANCE = 60;
 /** Double-click / double-tap zoom target. */
 const DOUBLE_CLICK_SCALE = 2;
+/** Longest the previous picture may stay while it cross-fades out (the fade is 300ms). */
+const LEAVING_TIMEOUT_MS = 400;
 
 const SHORTCUTS: Readonly<Record<AndesImagePreviewAction, string>> = {
   zoomIn: '+',
@@ -86,6 +101,23 @@ interface DragState {
 }
 
 type LoadState = 'loading' | 'loaded' | 'error';
+
+/** The picture that is fading out while the next one fades in. */
+interface LeavingFrame {
+  readonly key: number;
+  readonly src: string;
+  readonly alt: string;
+  readonly css: string;
+}
+
+/** What the cross-fade compares between two renders. */
+interface FrameSource {
+  readonly key: number;
+  readonly open: boolean;
+  readonly src: string | null;
+  readonly alt: string;
+  readonly css: string;
+}
 
 /** Best-effort file name for the download action. */
 function fileNameOf(item: AndesImagePreviewItem, url: string): string {
@@ -148,6 +180,15 @@ export class AndesImagePreview {
   readonly config = input<AndesImagePreviewConfig | null>(null);
   /** Localised strings; unset fields keep their English default. */
   readonly labels = input<AndesImageLabels | null>(null);
+  /** Classes for the viewer's parts (`viewer`, `toolbar`, `viewerImage`, `counter`). */
+  readonly classNames = input<AndesImageClassNames | null>(null);
+  /** Inline styles for the same parts. */
+  readonly styles = input<AndesImageStyles | null>(null);
+  /**
+   * The element the viewer grows out of when it opens and shrinks back into when it closes,
+   * usually the thumbnail. Without one, the viewer zooms from the centre of the screen.
+   */
+  readonly origin = input<HTMLElement | null>(null);
 
   /** The transform changed; `action` says why. */
   readonly transformChange = output<AndesImageTransformEvent>();
@@ -186,14 +227,79 @@ export class AndesImagePreview {
     return this.usingFallback() && item.fallback ? item.fallback : item.src;
   });
 
-  protected readonly loadState = linkedSignal<string | null, LoadState>({
-    source: this.src,
-    computation: (src) => (src ? 'loading' : 'error'),
+  /** A custom `imageTemplate` has no load event to wait for: it counts as loaded. */
+  protected readonly loadState = linkedSignal<
+    { src: string | null; custom: boolean },
+    LoadState
+  >({
+    source: () => ({ src: this.src(), custom: !!this.cfg().imageTemplate }),
+    computation: ({ src, custom }) =>
+      custom ? 'loaded' : src ? 'loading' : 'error',
   });
 
   protected readonly dragging = signal(false);
 
+  /** `x y` of the origin element's centre on screen, the viewer's transform origin. */
+  protected readonly originPoint = signal<string | null>(null);
+
+  /**
+   * The previous picture while it fades out under the next one. It keeps the transform it had,
+   * so a zoomed image fades where it was rather than jumping back to fit first.
+   */
+  protected readonly leaving = linkedSignal<FrameSource, LeavingFrame | null>({
+    source: () => ({
+      key: this.index(),
+      open: this.open(),
+      src: this.src(),
+      alt: this.item()?.alt ?? '',
+      css: this.css(),
+    }),
+    computation: (next, previous) => {
+      if (!previous) {
+        return null;
+      }
+      const before = previous.source;
+      if (before.key === next.key) {
+        return next.open ? previous.value : null;
+      }
+      if (!before.open || !next.open || !before.src || this.reducedMotion()) {
+        return null;
+      }
+      return {
+        key: before.key,
+        src: before.src,
+        alt: before.alt,
+        css: before.css,
+      };
+    },
+  });
+
+  protected readonly parts = computed(() => ({
+    classNames: this.classNames() ?? {},
+    styles: this.styles() ?? {},
+  }));
+
   protected readonly css = computed(() => imageTransformCss(this.transform()));
+  /** "150%": the zoom factor as the toolbar shows it. */
+  protected readonly ratio = computed(
+    () => `${Math.round(this.transform().scale * 100)}%`,
+  );
+  /** The ratio sits after zoom out (between the two zoom buttons), or before zoom in. */
+  protected readonly ratioAfter = computed(() => {
+    const config = this.cfg();
+    return config.zoomRatio && this.toolbarActions().includes('zoomOut')
+      ? 'zoomOut'
+      : null;
+  });
+  protected readonly ratioBefore = computed(() => {
+    const config = this.cfg();
+    const actions = this.toolbarActions();
+    return config.zoomRatio &&
+      !actions.includes('zoomOut') &&
+      actions.includes('zoomIn')
+      ? 'zoomIn'
+      : null;
+  });
   protected readonly zoomed = computed(() => isZoomed(this.transform()));
   protected readonly canPan = computed(
     () => this.zoomed() && this.cfg().movable,
@@ -226,6 +332,35 @@ export class AndesImagePreview {
     current: this.index() + 1,
     total: this.total(),
   }));
+  /** What a custom toolbar or the built-in one can call. */
+  protected readonly actions: AndesImagePreviewActions = {
+    zoomIn: () => this.zoomIn(),
+    zoomOut: () => this.zoomOut(),
+    rotateLeft: () => this.rotate(-1),
+    rotateRight: () => this.rotate(1),
+    flipX: () => this.flip('x'),
+    flipY: () => this.flip('y'),
+    reset: () => this.reset(),
+    download: () => this.download(),
+    previous: () => this.previous(),
+    next: () => this.next(),
+    goTo: (index) => this.goTo(index),
+    close: () => this.close(),
+  };
+  protected readonly renderContext = computed<AndesImageRenderContext | null>(
+    () => {
+      const item = this.item();
+      return item
+        ? {
+            $implicit: item,
+            item,
+            index: this.index(),
+            total: this.total(),
+            transform: this.transform(),
+          }
+        : null;
+    },
+  );
   protected readonly extraContext =
     computed<AndesImageExtraActionsContext | null>(() => {
       const item = this.item();
@@ -242,8 +377,33 @@ export class AndesImagePreview {
     });
 
   private readonly surface = viewChild<TemplateRef<unknown>>('surface');
+  private readonly defaultToolbar =
+    viewChild<TemplateRef<unknown>>('defaultToolbar');
   private readonly stage = viewChild<ElementRef<HTMLElement>>('stage');
-  private readonly image = viewChild<ElementRef<HTMLImageElement>>('image');
+  /** The transformed element: the `<img>`, or the box around an `imageTemplate`. */
+  private readonly image = viewChild<ElementRef<HTMLElement>>('image');
+
+  protected readonly toolbarContext = computed<AndesImageToolbarContext | null>(
+    () => {
+      const item = this.item();
+      const defaultToolbar = this.defaultToolbar();
+      if (!item || !defaultToolbar) {
+        return null;
+      }
+      const image = this.image()?.nativeElement;
+      return {
+        $implicit: this.actions,
+        actions: this.actions,
+        item,
+        index: this.index(),
+        total: this.total(),
+        transform: this.transform(),
+        image: image instanceof HTMLImageElement ? image : null,
+        disabled: (action) => this.actionDisabled(action),
+        defaultToolbar,
+      };
+    },
+  );
 
   private drag: DragState | null = null;
   private suppressClick = false;
@@ -286,8 +446,40 @@ export class AndesImagePreview {
           this.open.set(false);
           return;
         }
-        this.transform.set(ANDES_IMAGE_IDENTITY_TRANSFORM);
+        if (!this.overlay.isOpen()) {
+          this.transform.set(ANDES_IMAGE_IDENTITY_TRANSFORM);
+          this.originPoint.set(this.measureOrigin());
+        }
         this.overlay.open(template);
+        this.overlay
+          .backdropElement()
+          ?.style.setProperty('background', PREVIEW_SCRIM);
+      });
+    });
+
+    // The fading picture normally leaves on `animationend`; this covers a stylesheet that
+    // removed the animation, so it can never linger under the next one.
+    effect((onCleanup) => {
+      const frame = this.leaving();
+      if (!frame) {
+        return;
+      }
+      const timer = setTimeout(() => {
+        if (untracked(this.leaving) === frame) {
+          this.leaving.set(null);
+        }
+      }, LEAVING_TIMEOUT_MS);
+      onCleanup(() => clearTimeout(timer));
+    });
+
+    // Paging moves the point the viewer shrinks back into to the thumbnail now shown.
+    effect(() => {
+      this.index();
+      this.origin();
+      untracked(() => {
+        if (this.overlay.isOpen()) {
+          this.originPoint.set(this.measureOrigin());
+        }
       });
     });
 
@@ -422,6 +614,11 @@ export class AndesImagePreview {
 
   protected shortcut(action: AndesImagePreviewAction): string | null {
     return SHORTCUTS[action] || null;
+  }
+
+  /** The fading-out picture finished: drop it. */
+  protected onLeft(): void {
+    this.leaving.set(null);
   }
 
   protected step(delta: number): void {
@@ -583,7 +780,7 @@ export class AndesImagePreview {
       startY: event.clientY,
       originX: transform.x,
       originY: transform.y,
-      onStage: event.target === event.currentTarget,
+      onStage: this.isEmptyArea(event),
       moved: false,
     };
   }
@@ -663,7 +860,7 @@ export class AndesImagePreview {
     if (
       suppressed ||
       !pressedOnStage ||
-      event.target !== event.currentTarget ||
+      !this.isEmptyArea(event) ||
       !this.cfg().closeOnScrimClick
     ) {
       return;
@@ -693,6 +890,38 @@ export class AndesImagePreview {
     }
     const target = Math.min(this.cfg().maxScale, DOUBLE_CLICK_SCALE);
     this.zoomAt(target, 'doubleClick', this.focalPoint(event));
+  }
+
+  /** A press on the stage or the box that centres the picture, not on the picture. */
+  private isEmptyArea(event: Event): boolean {
+    const target = event.target as HTMLElement | null;
+    return (
+      target === event.currentTarget ||
+      !!target?.classList.contains('andes-image-preview__canvas')
+    );
+  }
+
+  private reducedMotion(): boolean {
+    const view = this.document.defaultView;
+    return (
+      typeof view?.matchMedia === 'function' &&
+      view.matchMedia('(prefers-reduced-motion: reduce)').matches
+    );
+  }
+
+  /** Centre of the origin element on screen, or `null` when it has no box to grow from. */
+  private measureOrigin(): string | null {
+    const origin = this.origin();
+    if (!origin?.isConnected) {
+      return null;
+    }
+    const rect = origin.getBoundingClientRect();
+    if (!rect.width || !rect.height) {
+      return null;
+    }
+    const x = Math.round(rect.left + rect.width / 2);
+    const y = Math.round(rect.top + rect.height / 2);
+    return `${x}px ${y}px`;
   }
 
   private zoomBy(direction: 1 | -1, action: AndesImageTransformAction): void {

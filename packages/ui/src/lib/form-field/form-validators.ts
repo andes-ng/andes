@@ -1,8 +1,10 @@
 import type {
   AbstractControl,
+  AsyncValidatorFn,
   ValidationErrors,
   ValidatorFn,
 } from '@angular/forms';
+import { concatMap, defer, first, from, switchMap, timer } from 'rxjs';
 
 /** Whether a value counts as "nothing entered", so a validator leaves it to `required`. */
 function isEmpty(value: unknown): boolean {
@@ -18,6 +20,13 @@ function isEmpty(value: unknown): boolean {
  * only spaces, an exact length, a URL, a value from a fixed set and a value equal to another
  * control's. Each one passes on an empty value, like `Validators.minLength` does, so it
  * combines with `Validators.required`. The built-in messages cover each error key.
+ *
+ * Three helpers compose validators instead of checking a value. Angular runs every validator
+ * of a control and merges their errors (`messageMode="first"` then only hides the extra
+ * messages), and runs the async ones in parallel, only once the sync ones pass. {@link first}
+ * and {@link firstAsync} stop at the first failing validator, so a later one - a server call -
+ * never runs for a value an earlier one already rejected. {@link debounceAsync} waits for the
+ * value to settle before an async validator runs.
  *
  * They are `ValidatorFn`s for reactive and template-driven forms. Signal forms already ship
  * `required`, `email`, `min`, `max`, `minLength`, `maxLength` and `pattern`; write the rest with
@@ -83,6 +92,58 @@ export const AndesValidators = {
       allowed.some((item) => Object.is(item, control.value))
         ? null
         : { oneOf: { allowed: allowed.join(', ') } };
+  },
+
+  /**
+   * Runs `validators` in order and returns the errors of the first one that fails; the rest do
+   * not run. `null` and `undefined` entries are skipped, so it takes a conditional list:
+   *
+   * ```ts
+   * new FormControl('', AndesValidators.first(Validators.required, Validators.email));
+   * ```
+   */
+  first(
+    ...validators: readonly (ValidatorFn | null | undefined)[]
+  ): ValidatorFn {
+    return (control) => {
+      for (const validator of validators) {
+        const errors = validator?.(control);
+        if (errors) {
+          return errors;
+        }
+      }
+      return null;
+    };
+  },
+
+  /**
+   * The async counterpart of {@link first}: runs `validators` one after the other, waiting for
+   * each, and settles on the errors of the first that fails - later ones, a slower server
+   * call among them, never start. Angular's own async validators run in parallel.
+   */
+  firstAsync(...validators: readonly AsyncValidatorFn[]): AsyncValidatorFn {
+    return (control) =>
+      from(validators).pipe(
+        concatMap((validator) => defer(() => validator(control))),
+        first((errors) => !!errors, null),
+      );
+  },
+
+  /**
+   * Runs `validator` once the control has gone `milliseconds` without changing. A new value
+   * cancels the wait (Angular drops the async validation it replaces), so a username check
+   * asks the server when the user stops typing, not on every key. The control is `pending`
+   * meanwhile. Set the `validateDebounce` input on a field or form to do this to the
+   * validators already on the control.
+   */
+  debounceAsync(
+    validator: AsyncValidatorFn,
+    milliseconds: number,
+  ): AsyncValidatorFn {
+    return (control) =>
+      timer(milliseconds).pipe(
+        switchMap(() => defer(() => validator(control))),
+      );
   },
 
   /**

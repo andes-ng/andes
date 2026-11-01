@@ -50,6 +50,7 @@ import {
 } from './form-field-tokens';
 import { AndesFormLabel } from './form-label';
 import { ANDES_FORM_LOCALE, ANDES_FORM_LOCALE_EN } from './form-locale';
+import { AndesValidators } from './form-validators';
 
 let nextFieldId = 0;
 
@@ -70,6 +71,15 @@ function optionalBoolean(value: unknown): boolean | undefined {
   return value === undefined || value === null
     ? undefined
     : booleanAttribute(value);
+}
+
+/** A negative or non-numeric delay is no delay. */
+function optionalDelay(value: unknown): number | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  const delay = Number(value);
+  return Number.isFinite(delay) && delay > 0 ? delay : 0;
 }
 
 function toTrack(column: AndesFormColumn): string {
@@ -229,6 +239,17 @@ export class AndesFormField implements AndesFormFieldApi {
    * Reactive and template-driven forms only; signal forms re-validate on their own.
    */
   readonly dependsOn = input<string | readonly string[] | undefined>(undefined);
+
+  /**
+   * Milliseconds to wait after the control's last change before its async validators run (`0`
+   * runs them at once). The field is `validating` meanwhile, and a change inside the window
+   * cancels the wait, so a username check asks the server once the user stops typing. Overrides
+   * the form's `validateDebounce`. Applies to the async validators the control has when it
+   * binds, for reactive and template-driven forms; signal forms have their own `debounce()`.
+   */
+  readonly validateDebounce = input<number | undefined, unknown>(undefined, {
+    transform: optionalDelay,
+  });
 
   /** Classes for the parts of this field - `root`, `label`, `control`, `help`, `extra` and
    *  `error` - added to the form's. */
@@ -526,6 +547,10 @@ export class AndesFormField implements AndesFormFieldApi {
     () => this.feedbackIcons() ?? this.form?.feedbackIcons() ?? null,
   );
 
+  protected readonly resolvedValidateDebounce = computed(
+    () => this.validateDebounce() ?? this.form?.validateDebounce() ?? 0,
+  );
+
   protected readonly resolvedMessageMode = computed<AndesFormMessageMode>(
     () => this.messageMode() ?? this.form?.messageMode() ?? 'all',
   );
@@ -651,6 +676,33 @@ export class AndesFormField implements AndesFormFieldApi {
       const subscriptions = this.watchDependencies();
       onCleanup(() => subscriptions.forEach((s) => s.unsubscribe()));
     });
+    effect((onCleanup) => {
+      onCleanup(this.debounceAsyncValidators());
+    });
+  }
+
+  /**
+   * Wraps the control's async validators so they wait `validateDebounce` ms after the last
+   * change. Angular cancels the running async validation when the value changes again, which
+   * drops the wait. Returns the callback that puts the original validators back - unless the
+   * consumer replaced them meanwhile.
+   */
+  private debounceAsyncValidators(): () => void {
+    const delay = this.resolvedValidateDebounce();
+    const control = this.controlApi()?.control() as
+      (AbstractControl & { events?: unknown }) | null | undefined;
+    // Signal forms' stand-in control has no events: it debounces with its own `debounce()`.
+    if (!delay || !control?.events || !control.asyncValidator) {
+      return () => undefined;
+    }
+    const original = control.asyncValidator;
+    const wrapped = AndesValidators.debounceAsync(original, delay);
+    control.setAsyncValidators(wrapped);
+    return () => {
+      if (control.asyncValidator === wrapped) {
+        control.setAsyncValidators(original);
+      }
+    };
   }
 
   /** Whether this field is re-validating its control right now - stops two fields that depend

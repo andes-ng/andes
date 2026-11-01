@@ -283,6 +283,8 @@ export interface AndesFormApi {
   readonly messageMode: Signal<AndesFormMessageMode>;
   readonly classNames: Signal<AndesFormClassNames>;
   readonly styles: Signal<AndesFormStyles>;
+  /** Milliseconds a field waits after its last change before its async validators run. */
+  readonly validateDebounce: Signal<number>;
   /** Prefix of the field ids the form generates from control paths, when set. */
   readonly name: Signal<string | undefined>;
   /** Whether the form was submitted and not reset since. */

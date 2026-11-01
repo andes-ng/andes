@@ -10,6 +10,7 @@ import {
   inject,
   Injector,
   input,
+  numberAttribute,
   output,
   signal,
   type Signal,
@@ -219,6 +220,14 @@ export class AndesForm implements AndesFormApi {
   /** Every failing validator's message (`all`), or only the first; each field's own
    *  `messageMode` wins. */
   readonly messageMode = input<AndesFormMessageMode>('all');
+  /**
+   * Milliseconds every field waits after its last change before running its async validators
+   * (`0`, the default, runs them at once): a username check then asks the server once the user
+   * stops typing, not on every key. The field is `validating` meanwhile. Each field's own
+   * `validateDebounce` wins. Reactive and template-driven forms; signal forms have their own
+   * `debounce()`.
+   */
+  readonly validateDebounce = input(0, { transform: numberAttribute });
   /** Classes for the parts of the form: `root` is this element, the others are the default
    *  for every field inside, before the field's own. */
   readonly classNames = input<AndesFormClassNames>({});

@@ -2,6 +2,7 @@ import {
   andesMentionsDefaultFilter,
   andesMentionsDefaultValidateSearch,
   andesMentionsFindContext,
+  andesMentionsGetMentions,
   andesMentionsInsert,
 } from './mentions-context';
 import {
@@ -270,5 +271,62 @@ describe('andesMentionsResolveSide', () => {
     expect(andesMentionsResolveSide(anchor, { top: 0, height: 0 }, 'top')).toBe(
       'top',
     );
+  });
+});
+
+describe('andesMentionsGetMentions', () => {
+  it('lists the mentions in order', () => {
+    expect(andesMentionsGetMentions('hi @ana and @luis!')).toEqual([
+      { prefix: '@', value: 'ana' },
+      { prefix: '@', value: 'luis!' },
+    ]);
+  });
+
+  it('reads several triggers, longest first', () => {
+    expect(
+      andesMentionsGetMentions('@ana #urgent ##deep', {
+        prefix: ['@', '#', '##'],
+      }),
+    ).toEqual([
+      { prefix: '@', value: 'ana' },
+      { prefix: '#', value: 'urgent' },
+      { prefix: '##', value: 'deep' },
+    ]);
+  });
+
+  it('accepts a single trigger as a string', () => {
+    expect(andesMentionsGetMentions('#a @b', { prefix: '#' })).toEqual([
+      { prefix: '#', value: 'a' },
+    ]);
+  });
+
+  it('ignores a trigger in the middle of a word and a bare trigger', () => {
+    expect(andesMentionsGetMentions('mail@host.com @ and @')).toEqual([]);
+  });
+
+  it('stops a mention at the split, or at a line break', () => {
+    expect(
+      andesMentionsGetMentions('@ana, @luis, bye', { split: ', ' }),
+    ).toEqual([
+      { prefix: '@', value: 'ana' },
+      { prefix: '@', value: 'luis' },
+    ]);
+    expect(andesMentionsGetMentions('@ana\n@luis')).toEqual([
+      { prefix: '@', value: 'ana' },
+      { prefix: '@', value: 'luis' },
+    ]);
+  });
+
+  it('stops at whitespace when the split is empty', () => {
+    expect(andesMentionsGetMentions('@ana @luis', { split: '' })).toEqual([
+      { prefix: '@', value: 'ana' },
+      { prefix: '@', value: 'luis' },
+    ]);
+  });
+
+  it('copes with empty and missing text', () => {
+    expect(andesMentionsGetMentions('')).toEqual([]);
+    expect(andesMentionsGetMentions(null)).toEqual([]);
+    expect(andesMentionsGetMentions(undefined)).toEqual([]);
   });
 });

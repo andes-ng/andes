@@ -57,6 +57,15 @@ export type AndesMentionsType = 'textarea' | 'input';
 /** Which side of the caret the suggestions prefer. They flip when it does not fit. */
 export type AndesMentionsPlacement = 'top' | 'bottom';
 
+/** Whether, and along which axes, the user can drag the field's corner to resize it. */
+export type AndesMentionsResize = 'none' | 'vertical' | 'horizontal' | 'both';
+
+/** Emitted when the field's rendered box changes size (a drag, or `autoSize` growing). */
+export interface AndesMentionsResizeEvent {
+  width: number;
+  height: number;
+}
+
 /** Row bounds for `autoSize`; `minRows` falls back to `rows`, `maxRows` to unbounded. */
 export interface AndesMentionsAutoSize {
   minRows?: number;
@@ -72,6 +81,19 @@ export type AndesMentionsOptions =
 export interface AndesMentionsOptionContext {
   $implicit: AndesMentionOption;
   query: string;
+  prefix: string;
+}
+
+/** Template context of a `[popupTemplate]`. */
+export interface AndesMentionsPopupContext {
+  /**
+   * The list's default body: the options, the loading row or the empty state. Render it
+   * with `*ngTemplateOutlet` wherever it belongs among the extra content.
+   */
+  $implicit: TemplateRef<void>;
+  /** What was typed after the trigger. */
+  query: string;
+  /** The trigger it follows. */
   prefix: string;
 }
 
@@ -185,6 +207,7 @@ export class AndesMentions implements ControlValueAccessor {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly overlay = inject(AndesOverlayPrimitive);
   private readonly navigation = inject(AndesListNavigation);
+  private readonly destroyRef = inject(DestroyRef);
 
   private readonly fieldRef = viewChild(AndesMentionsField);
   private readonly caretRef =
@@ -235,6 +258,15 @@ export class AndesMentions implements ControlValueAccessor {
   >(undefined);
   /** Which side of the caret the suggestions prefer. Default `'bottom'`. */
   readonly placement = input<AndesMentionsPlacement>('bottom');
+  /**
+   * Wraps the list's body with extra content: a header, a footer action, a hint. The template
+   * receives the default body as `$implicit`. While set, the list stays open even when
+   * nothing matches and `notFoundContent` is `null`, so the extra content stays reachable.
+   * Pressing inside it keeps the caret in the field.
+   */
+  readonly popupTemplate = input<
+    TemplateRef<AndesMentionsPopupContext> | null | undefined
+  >(undefined);
   /** Extra classes on the suggestion list. */
   readonly panelClass = input<string | readonly string[] | null>(null);
   /** What assistive tech hears when the list opens or its length changes. */
@@ -260,9 +292,17 @@ export class AndesMentions implements ControlValueAccessor {
     boolean | AndesMentionsAutoSize,
     boolean | AndesMentionsAutoSize | string | null | undefined
   >(false, { transform: autoSizeAttribute });
+  /** Whether the user can drag the field's corner to resize it. Off by default. */
+  readonly resize = input<AndesMentionsResize>('none');
   readonly maxLength = input<number | undefined>(undefined);
   /** Show a `length/maxLength` counter under the field. */
   readonly showCount = input(false, { transform: booleanAttribute });
+  /** Show a button that empties the field while it holds text. */
+  readonly allowClear = input(false, { transform: booleanAttribute });
+  /** Replaces the clear button's default round "x". */
+  readonly clearIcon = input<TemplateRef<unknown> | undefined>(undefined);
+  /** The clear button's accessible name - translate it with the rest of the form. */
+  readonly clearLabel = input('Clear');
   /** Focus the field when it first renders. */
   readonly autoFocus = input(false, { transform: booleanAttribute });
   readonly ariaLabel = input<string | undefined>(undefined, {
@@ -285,6 +325,12 @@ export class AndesMentions implements ControlValueAccessor {
   readonly optionSelected = output<AndesMentionsSelectEvent>();
   /** The suggestions opened or closed. */
   readonly openChanged = output<boolean>();
+  /** The suggestion list scrolled (load more rows when it nears the end). */
+  readonly popupScroll = output<Event>();
+  /** The clear button emptied the field. */
+  readonly cleared = output<void>();
+  /** The field's rendered box changed size: a drag of its corner, or `autoSize` growing. */
+  readonly resized = output<AndesMentionsResizeEvent>();
   readonly focused = output<FocusEvent>();
   readonly blurred = output<FocusEvent>();
 
@@ -340,6 +386,19 @@ export class AndesMentions implements ControlValueAccessor {
     () => this.autoSize() !== false && this.isTextarea(),
   );
 
+  /** Dragging is for a multi-line field, and `autoSize` owns the height. */
+  protected readonly effectiveResize = computed<AndesMentionsResize>(() =>
+    this.isTextarea() && !this.autoSizeEnabled() ? this.resize() : 'none',
+  );
+
+  protected readonly showClear = computed(
+    () =>
+      this.allowClear() &&
+      this.value().length > 0 &&
+      !this.isDisabled() &&
+      !this.readonly(),
+  );
+
   protected readonly wrapperClasses = computed(() =>
     clsx(
       'andes-mentions-wrapper',
@@ -353,6 +412,8 @@ export class AndesMentions implements ControlValueAccessor {
       this.isDisabled() && 'andes-mentions-wrapper--disabled',
       this.readonly() && 'andes-mentions-wrapper--readonly',
       this.autoSizeEnabled() && 'andes-mentions-wrapper--auto-size',
+      this.allowClear() && 'andes-mentions-wrapper--clearable',
+      `andes-mentions-wrapper--resize-${this.effectiveResize()}`,
     ),
   );
 
@@ -423,7 +484,8 @@ export class AndesMentions implements ControlValueAccessor {
     return (
       this.loading() ||
       this.filteredOptions().length > 0 ||
-      this.notFoundContent() !== null
+      this.notFoundContent() !== null ||
+      !!this.popupTemplate()
     );
   });
 
@@ -439,8 +501,6 @@ export class AndesMentions implements ControlValueAccessor {
   });
 
   constructor() {
-    const destroyRef = inject(DestroyRef);
-
     this.overlay.configure({
       layer: 'dropdown',
       role: 'listbox',
@@ -479,13 +539,14 @@ export class AndesMentions implements ControlValueAccessor {
         this.openChanged.emit(false);
       }
     });
-    destroyRef.onDestroy(() => this.positionObserver?.disconnect());
+    this.destroyRef.onDestroy(() => this.positionObserver?.disconnect());
 
     afterNextRender(() => {
       this.overlay.registerAnchor(this.caretRef());
       if (this.autoFocus() && !this.isDisabled()) {
         this.focus();
       }
+      this.observeSize();
     });
 
     // Placement.
@@ -568,6 +629,8 @@ export class AndesMentions implements ControlValueAccessor {
       this.autoSize();
       this.rows();
       this.size();
+      // The clear button's room narrows the text, which can change how it wraps.
+      this.showClear();
       this.adjustAutoSize();
     });
   }
@@ -604,6 +667,17 @@ export class AndesMentions implements ControlValueAccessor {
       this.suppressedStart = context.start;
     }
     this.context.set(null);
+  }
+
+  /** @internal Empties the field from the clear button and puts the caret back in it. */
+  clear(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.commit('');
+    this.suppressedStart = null;
+    this.context.set(null);
+    this.cleared.emit();
+    this.fieldElement()?.focus();
   }
 
   /** @internal Picks the highlighted option; `false` when there is none. */
@@ -736,6 +810,11 @@ export class AndesMentions implements ControlValueAccessor {
   }
 
   /** @internal */
+  onPopupScroll(event: Event): void {
+    this.popupScroll.emit(event);
+  }
+
+  /** @internal */
   optionKey(option: AndesMentionOption): string | number {
     return option.key ?? option.value;
   }
@@ -831,6 +910,39 @@ export class AndesMentions implements ControlValueAccessor {
         this.placement(),
       ),
     );
+  }
+
+  /** Reports the field's box whenever its size changes, as `resized`. */
+  private observeSize(): void {
+    const field = this.fieldElement();
+    if (!field || typeof ResizeObserver === 'undefined') {
+      return;
+    }
+    let lastWidth = field.offsetWidth;
+    let lastHeight = field.offsetHeight;
+    const observer = new ResizeObserver(() => {
+      const width = field.offsetWidth;
+      const height = field.offsetHeight;
+      if (width === lastWidth && height === lastHeight) {
+        return;
+      }
+      const widthChanged = width !== lastWidth;
+      lastWidth = width;
+      lastHeight = height;
+      // A narrower or wider box re-wraps the text, so the row count may have changed. Height
+      // changes alone are skipped: they are usually this very measurement's own output.
+      if (widthChanged) {
+        this.adjustAutoSize();
+        lastHeight = field.offsetHeight;
+      }
+      if (this.context()) {
+        this.updateCaretAnchor();
+        this.overlay.updatePosition();
+      }
+      this.resized.emit({ width, height: lastHeight });
+    });
+    observer.observe(field);
+    this.destroyRef.onDestroy(() => observer.disconnect());
   }
 
   private adjustAutoSize(): void {

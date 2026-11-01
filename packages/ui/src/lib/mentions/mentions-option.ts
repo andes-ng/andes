@@ -31,6 +31,7 @@ let nextOptionId = 0;
   host: {
     class: 'andes-mentions-option',
     role: 'option',
+    '[class]': 'extraClass()',
     '[attr.id]': 'itemId',
     '[attr.aria-selected]': 'active() ? "true" : "false"',
     '[attr.aria-disabled]': 'isDisabled() ? "true" : null',
@@ -60,6 +61,11 @@ export class AndesMentionsOption
   readonly isDisabled: Signal<boolean> = computed(
     () => !!this.option().disabled,
   );
+
+  protected readonly extraClass = computed(() => {
+    const extra = this.option().class;
+    return (typeof extra === 'string' ? extra : extra?.join(' ')) ?? '';
+  });
 
   protected readonly active = computed(
     () => this.navigation.activeItem() === this,

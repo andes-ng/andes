@@ -923,7 +923,12 @@ describe('AndesMentions', () => {
         'box-shadow: 0 0 0 2px var(--_andes-mentions-ring)',
       );
       expect(focus).toContain('outline: none');
-      expect(css).not.toContain('outline-offset');
+      expect(focus).not.toContain('outline-offset');
+      // Only the clear button's own focus ring may be offset - it hugs a small disc.
+      expect(css.match(/outline-offset/g)).toHaveLength(1);
+      expect(css).toMatch(
+        /\.andes-mentions__clear:focus-visible\s*\{[^}]*outline-offset/,
+      );
       expect(css).toMatch(/\.andes-mentions__control\s*\{[^}]*outline: 0/);
     });
 

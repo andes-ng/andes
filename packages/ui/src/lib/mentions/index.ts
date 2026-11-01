@@ -5,6 +5,9 @@ export type {
   AndesMentionsOptionContext,
   AndesMentionsOptions,
   AndesMentionsPlacement,
+  AndesMentionsPopupContext,
+  AndesMentionsResize,
+  AndesMentionsResizeEvent,
   AndesMentionsSearchEvent,
   AndesMentionsSelectEvent,
   AndesMentionsSize,
@@ -16,10 +19,12 @@ export {
   andesMentionsDefaultFilter,
   andesMentionsDefaultValidateSearch,
   andesMentionsFindContext,
+  andesMentionsGetMentions,
   andesMentionsInsert,
 } from './mentions-context';
 export type {
   AndesMentionContext,
+  AndesMentionEntry,
   AndesMentionFilter,
   AndesMentionInsertion,
   AndesMentionOption,

@@ -10,6 +10,8 @@ export interface AndesMentionOption {
   readonly key?: string | number;
   /** Anything a custom option template wants to render (an avatar URL, a role). */
   readonly data?: unknown;
+  /** Extra class or classes on this option's row in the list. */
+  readonly class?: string | readonly string[];
 }
 
 /** The mention being typed: the trigger, where it starts and what follows it. */
@@ -150,4 +152,68 @@ export function andesMentionsInsert(
     text: next,
     caret: Math.min(caret, next.length),
   };
+}
+
+/** A mention found in a finished text: the trigger and the value that follows it. */
+export interface AndesMentionEntry {
+  readonly prefix: string;
+  readonly value: string;
+}
+
+/**
+ * Lists the mentions in `text`, in order: every trigger at the start of the text or after
+ * whitespace, followed by at least one character. A mention runs up to the first `split` (or
+ * line break), or up to the next whitespace when `split` is empty. The same rule that opens
+ * the suggestions, so what the field wrote is read back unchanged.
+ *
+ * ```ts
+ * andesMentionsGetMentions('hi @ana and #urgent', { prefix: ['@', '#'] });
+ * // [{ prefix: '@', value: 'ana' }, { prefix: '#', value: 'urgent' }]
+ * ```
+ */
+export function andesMentionsGetMentions(
+  text: string | null | undefined,
+  config: {
+    prefix?: string | readonly string[];
+    split?: string;
+  } = {},
+): AndesMentionEntry[] {
+  const source = text ?? '';
+  const raw = config.prefix ?? '@';
+  const prefixes = (typeof raw === 'string' ? [raw] : [...raw])
+    .filter((prefix) => prefix.length > 0)
+    // The longest first, so '##' is not read as '#' followed by '#...'.
+    .sort((a, b) => b.length - a.length);
+  const split = config.split ?? ' ';
+  const mentions: AndesMentionEntry[] = [];
+
+  let index = 0;
+  while (index < source.length) {
+    const prefix = prefixes.find((candidate) =>
+      source.startsWith(candidate, index),
+    );
+    const atBoundary = index === 0 || /\s/.test(source.charAt(index - 1));
+    if (!prefix || !atBoundary) {
+      index++;
+      continue;
+    }
+    const from = index + prefix.length;
+    let to = source.length;
+    for (let cursor = from; cursor < source.length; cursor++) {
+      if (
+        /[\r\n]/.test(source.charAt(cursor)) ||
+        (split
+          ? source.startsWith(split, cursor)
+          : /\s/.test(source.charAt(cursor)))
+      ) {
+        to = cursor;
+        break;
+      }
+    }
+    if (to > from) {
+      mentions.push({ prefix, value: source.slice(from, to) });
+    }
+    index = Math.max(to, from);
+  }
+  return mentions;
 }

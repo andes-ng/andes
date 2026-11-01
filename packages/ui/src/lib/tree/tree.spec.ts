@@ -2088,23 +2088,26 @@ describe('AndesTree', () => {
       ).toBe('-0.375rem');
     });
 
-    it('tints the node a drop would go into, and outlines it in forced colours', () => {
+    it('frames the whole row a drop would go into, and keeps the frame in forced colours', () => {
       const css = cssText();
+      const frame = ".andes-tree__row[data-drop='inside']::after";
+      expect(declaredValue(css, frame, 'border')).toBe(
+        '1px solid var(--andes-color-primary, #2563eb)',
+      );
+      expect(declaredValue(css, frame, 'inset')).toBe('0 0 var(--_gap)');
       expect(
         declaredValue(
           css,
-          ".andes-tree__row[data-drop='inside'] .andes-tree__content",
-          'background-color',
+          ".andes-tree__drop-indicator[data-position='inside']",
+          'display',
         ),
-      ).toBe(
-        'color-mix( in srgb, var(--andes-color-primary, #2563eb) 12%, transparent )',
-      );
+      ).toBe('none');
       const forced = css.slice(css.indexOf('@media (forced-colors: active)'));
       expect(forced).toMatch(
         /\.andes-tree__drop-indicator\s*{[^}]*background-color: Highlight/,
       );
       expect(forced).toMatch(
-        /\[data-drop='inside'\] \.andes-tree__content\s*{[^}]*outline: 2px solid Highlight/,
+        /\[data-drop='inside'\]::after\s*{[^}]*border-color: Highlight/,
       );
     });
 

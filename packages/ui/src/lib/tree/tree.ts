@@ -41,6 +41,7 @@ import type {
   AndesTreeEntry,
   AndesTreeExpandEvent,
   AndesTreeFieldNames,
+  AndesTreeIndex,
   AndesTreeKey,
   AndesTreeLabels,
   AndesTreeLoadData,
@@ -62,7 +63,6 @@ import {
   andesGetTreeAncestors,
   andesHighlightSegments,
   andesIsTreeDescendantOrSelf,
-  andesMoveTreeNode,
   andesToggleCheck,
 } from './tree-utils';
 
@@ -77,6 +77,12 @@ const DEFAULT_LABELS: AndesTreeLabels = {
   moved: (title, position, target) =>
     `${title} moved ${position === 'inside' ? 'into' : position} ${target}`,
 };
+
+/** A move the tree emitted and waits to see in `nodes`, to announce it and keep focus on it. */
+interface AndesTreePendingMove {
+  readonly info: AndesTreeDropInfo;
+  readonly focus: boolean;
+}
 
 /** How long a dragged node must hover a closed parent before it opens. */
 const DRAG_EXPAND_DELAY_MS = 600;
@@ -144,6 +150,19 @@ function draggableAttribute(
  * on, Alt + arrow keys move the focused node: Up / Down past a sibling, Right into the sibling
  * above it, Left out to its parent's level.
  *
+ * ## Moving nodes
+ *
+ * A drop (or an Alt + arrow move) emits `nodeDrop`; the tree never changes `nodes` itself. Apply
+ * the move to your data - `andesMoveTreeNode()` returns the moved copy - and once the node
+ * shows up in its new place the tree announces it and, after a keyboard move, keeps focus on it.
+ *
+ * ```ts
+ * onDrop(event: AndesTreeDropEvent) {
+ *   const moved = andesMoveTreeNode(this.nodes(), event.dragKey, event.targetKey, event.position);
+ *   if (moved) this.nodes.set(moved);
+ * }
+ * ```
+ *
  * ## Large trees
  *
  * `virtualScroll` renders only the rows in view (the tree then needs a `height`); every row still
@@ -180,8 +199,8 @@ export class AndesTree {
    */
   readonly listId = `${this.treeId}-list`;
 
-  /** The nodes. A two-way model so a drop (or a keyboard move) can reorder them in place. */
-  readonly nodes = model<AndesTreeNode[]>([]);
+  /** The nodes. The tree only reads them: a drop is reported through `nodeDrop`. */
+  readonly nodes = input<AndesTreeNode[]>([]);
   /** Renames the properties read from each node. */
   readonly fieldNames = input<AndesTreeFieldNames | undefined>(undefined);
 
@@ -295,7 +314,7 @@ export class AndesTree {
   readonly nodeLoadError = output<AndesTreeLoadErrorEvent>();
   readonly nodeDragStart = output<AndesTreeNodeEvent>();
   readonly nodeDragEnd = output<AndesTreeNodeEvent>();
-  /** A node was moved. The `nodes` model already holds the result. */
+  /** A node was dropped, or moved from the keyboard. Apply the move to `nodes`. */
   readonly nodeDrop = output<AndesTreeDropEvent>();
 
   protected readonly nodeTemplateDirective = contentChild(
@@ -330,6 +349,7 @@ export class AndesTree {
   private typeaheadTimer: ReturnType<typeof setTimeout> | null = null;
   private dragExpandTimer: ReturnType<typeof setTimeout> | null = null;
   private expandAllApplied = false;
+  private pendingMove: AndesTreePendingMove | null = null;
   private readonly itemIds = new Map<AndesTreeKey, string>();
   private readonly itemKeys = new Map<string, AndesTreeKey>();
 
@@ -528,6 +548,11 @@ export class AndesTree {
           this.expandedKeys.set([...current, ...missing]);
         }
       });
+    });
+
+    effect(() => {
+      const index = this.index();
+      untracked(() => this.settleMove(index));
     });
 
     effect(() => {
@@ -1336,7 +1361,7 @@ export class AndesTree {
     );
     this.finishDrag();
     if (resolved) {
-      this.commitMove(resolved.info);
+      this.emitMove(resolved.info, 'pointer');
     }
   }
 
@@ -1446,31 +1471,64 @@ export class AndesTree {
     return this.dragKey() === key;
   }
 
-  private commitMove(info: AndesTreeDropInfo): boolean {
-    const next = andesMoveTreeNode(
-      this.nodes(),
-      info.dragKey,
-      info.targetKey,
-      info.position,
-      this.fieldNames(),
-    );
-    if (!next) {
-      return false;
+  /**
+   * Reports a move. The consumer applies it; meanwhile the branch the node lands in is opened,
+   * so it is in view as soon as `nodes` carry it.
+   */
+  private emitMove(
+    info: AndesTreeDropInfo,
+    via: AndesTreeDropEvent['via'],
+  ): void {
+    const target = this.index().byKey.get(info.targetKey);
+    const parent = info.position === 'inside' ? target : target?.parent;
+    if (parent) {
+      this.expandKeys(
+        [...andesGetTreeAncestors(parent), parent]
+          .map((entry) => entry.key)
+          .filter((key) => !this.expandedSet().has(key)),
+      );
     }
-    this.nodes.set(next);
-    // Show the node where it landed: open the branch it now sits in.
-    const index = this.index();
-    const moved = index.byKey.get(info.dragKey);
-    this.expandKeys(
-      moved?.parent && !this.expandedSet().has(moved.parent.key)
-        ? [...andesGetTreeAncestors(moved).map((entry) => entry.key)]
-        : [],
+    this.pendingMove = { info, focus: via === 'keyboard' };
+    this.nodeDrop.emit({ ...info, via });
+  }
+
+  /** Once `nodes` hold an emitted move, announces it and keeps a keyboard user on the node. */
+  private settleMove(index: AndesTreeIndex): void {
+    const pending = this.pendingMove;
+    const moved = pending && index.byKey.get(pending.info.dragKey);
+    if (!pending || !moved || !this.landed(index, moved, pending.info)) {
+      return;
+    }
+    this.pendingMove = null;
+    const target = index.byKey.get(pending.info.targetKey);
+    this.announcement.set(
+      this.text().moved(
+        moved.title,
+        pending.info.position,
+        target?.title ?? '',
+      ),
     );
-    const title = index.byKey.get(info.dragKey)?.title ?? '';
-    const targetTitle = index.byKey.get(info.targetKey)?.title ?? '';
-    this.announcement.set(this.text().moved(title, info.position, targetTitle));
-    this.nodeDrop.emit({ ...info, nodes: next });
-    return true;
+    if (pending.focus) {
+      this.activeKey.set(moved.key);
+      afterNextRender(() => this.itemElement(moved.key)?.focus(), {
+        injector: this.injector,
+      });
+    }
+  }
+
+  /** Whether a node sits where a move put it: before, inside (first) or after its target. */
+  private landed(
+    index: AndesTreeIndex,
+    moved: AndesTreeEntry,
+    info: AndesTreeDropInfo,
+  ): boolean {
+    if (info.position === 'inside') {
+      return moved.parent?.key === info.targetKey && moved.index === 0;
+    }
+    const siblings = moved.parent ? moved.parent.children : index.roots;
+    const neighbour =
+      siblings[moved.index + (info.position === 'before' ? 1 : -1)];
+    return neighbour?.key === info.targetKey;
   }
 
   private moveWithKeyboard(
@@ -1520,11 +1578,6 @@ export class AndesTree {
     if (this.allowDrop()?.(info) === false) {
       return;
     }
-    if (this.commitMove(info)) {
-      this.activeKey.set(entry.key);
-      afterNextRender(() => this.itemElement(entry.key)?.focus(), {
-        injector: this.injector,
-      });
-    }
+    this.emitMove(info, 'keyboard');
   }
 }

@@ -10,6 +10,7 @@ import { Subject } from 'rxjs';
 import { declaredValue, toPx } from '../../testing/computed-style';
 import { AndesTree } from './tree';
 import { AndesTreeNodeTemplate } from './tree-node-template';
+import { andesMoveTreeNode } from './tree-utils';
 import type {
   AndesTreeCheckEvent,
   AndesTreeDropEvent,
@@ -52,7 +53,7 @@ function sample(): AndesTreeNode[] {
   imports: [AndesTree, AndesTreeNodeTemplate],
   template: `
     <andes-tree
-      [(nodes)]="nodes"
+      [nodes]="nodes()"
       [(expandedKeys)]="expanded"
       [(selectedKeys)]="selected"
       [(checkedKeys)]="checked"
@@ -82,7 +83,7 @@ function sample(): AndesTreeNode[] {
       (nodeExpand)="expands.push($event)"
       (nodeSelect)="selects.push($event)"
       (nodeCheck)="checks.push($event)"
-      (nodeDrop)="drops.push($event)"
+      (nodeDrop)="onDrop($event)"
       (nodeLoadError)="loadErrors.push($event)"
       (nodeClick)="clicks = clicks + 1"
     >
@@ -137,9 +138,27 @@ class HostComponent {
   expands: AndesTreeExpandEvent[] = [];
   selects: AndesTreeSelectEvent[] = [];
   checks: AndesTreeCheckEvent[] = [];
+  /** Whether the host applies each reported move to its data, as a consumer would. */
+  applyDrops = true;
   drops: AndesTreeDropEvent[] = [];
   loadErrors: AndesTreeLoadErrorEvent[] = [];
   clicks = 0;
+
+  onDrop(event: AndesTreeDropEvent): void {
+    this.drops.push(event);
+    if (this.applyDrops) {
+      const moved = andesMoveTreeNode(
+        this.nodes(),
+        event.dragKey,
+        event.targetKey,
+        event.position,
+        this.fieldNames(),
+      );
+      if (moved) {
+        this.nodes.set(moved);
+      }
+    }
+  }
 }
 
 type Fixture = ComponentFixture<HostComponent>;
@@ -1514,7 +1533,51 @@ describe('AndesTree', () => {
       expect(target.querySelector('.andes-tree__drop-indicator')).toBeNull();
     });
 
-    it('reorders on drop, updates the nodes model and reports the move', () => {
+    it('reports a drop without touching the nodes, and stays quiet until they carry it', () => {
+      const fixture = setup((h) => {
+        h.draggable.set(true);
+        h.applyDrops = false;
+      });
+      const before = fixture.componentInstance.nodes();
+      const { target } = drag(fixture, 'Archivo', 'Almacén central', 10);
+      target.dispatchEvent(dragEvent('drop', 10));
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.drops).toEqual([
+        expect.objectContaining({
+          dragKey: 'c',
+          targetKey: 'a',
+          position: 'before',
+          via: 'pointer',
+        }),
+      ]);
+      expect(fixture.componentInstance.drops[0]).not.toHaveProperty('nodes');
+      expect(fixture.componentInstance.nodes()).toBe(before);
+      expect(before.map((n) => n.key)).toEqual(['a', 'b', 'c']);
+      expect(titles(fixture)[0]).toBe('Almacén central');
+      const live = fixture.nativeElement.querySelector('.andes-tree__live');
+      expect(live.textContent).toBe('');
+
+      // The consumer applies it later: the announcement follows.
+      fixture.componentInstance.nodes.set(
+        andesMoveTreeNode(before, 'c', 'a', 'before') as AndesTreeNode[],
+      );
+      fixture.detectChanges();
+      expect(live.textContent).toBe('Archivo moved before Almacén central');
+    });
+
+    it('opens the branch a node is dropped into before the consumer applies it', () => {
+      const fixture = setup((h) => {
+        h.draggable.set(true);
+        h.applyDrops = false;
+      });
+      const { target } = drag(fixture, 'Archivo', 'Sucursal norte', 50);
+      target.dispatchEvent(dragEvent('drop', 50));
+      fixture.detectChanges();
+      expect(fixture.componentInstance.expanded()).toEqual(['b']);
+    });
+
+    it('reorders on drop once the consumer applies the move, and announces it', () => {
       const fixture = setup((h) => h.draggable.set(true));
       const { target, over } = drag(fixture, 'Archivo', 'Almacén central', 10);
       expect(over.defaultPrevented).toBe(true);
@@ -1666,8 +1729,29 @@ describe('AndesTree', () => {
           dragKey: 'a',
           targetKey: 'b',
           position: 'after',
+          via: 'keyboard',
         });
         expect(document.activeElement).toBe(node(fixture, 'Almacén central'));
+        expect(
+          fixture.nativeElement.querySelector('.andes-tree__live').textContent,
+        ).toBe('Almacén central moved after Sucursal norte');
+      });
+
+      it('leaves the data alone when the consumer does not apply a keyboard move', () => {
+        const fixture = start((h) => (h.applyDrops = false));
+        const a = node(fixture, 'Almacén central');
+        a.focus();
+        key(a, 'ArrowDown', { altKey: true });
+        fixture.detectChanges();
+        expect(fixture.componentInstance.drops).toHaveLength(1);
+        expect(fixture.componentInstance.nodes().map((n) => n.key)).toEqual([
+          'a',
+          'b',
+          'c',
+        ]);
+        expect(
+          fixture.nativeElement.querySelector('.andes-tree__live').textContent,
+        ).toBe('');
       });
 
       it('moves up with Alt+ArrowUp', () => {

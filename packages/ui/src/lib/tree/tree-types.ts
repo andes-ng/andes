@@ -189,10 +189,14 @@ export interface AndesTreeDropInfo {
   position: AndesTreeDropPosition;
 }
 
-/** Emitted once a node is moved, by dropping it or from the keyboard. */
+/**
+ * Emitted when a node is dropped, or moved with Alt + arrow keys. The tree never changes
+ * `nodes` itself: apply the move to your data, for instance with
+ * `andesMoveTreeNode(nodes, event.dragKey, event.targetKey, event.position)`.
+ */
 export interface AndesTreeDropEvent extends AndesTreeDropInfo {
-  /** The tree after the move (already applied to the `nodes` model). */
-  nodes: AndesTreeNode[];
+  /** Whether the move came from a pointer drop or from the keyboard. */
+  via: 'pointer' | 'keyboard';
 }
 
 export interface AndesTreeNodeEvent {
@@ -242,7 +246,7 @@ export interface AndesTreeLabels {
   loading: string;
   /** Announced when a filter changes. */
   results: (count: number) => string;
-  /** Announced after a node is moved with the keyboard or dropped. */
+  /** Announced once a dropped (or keyboard-moved) node shows up in its new place. */
   moved: (
     title: string,
     position: AndesTreeDropPosition,

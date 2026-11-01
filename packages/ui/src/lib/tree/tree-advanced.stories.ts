@@ -5,10 +5,12 @@ import { AndesInput } from '../input/input';
 import { AndesTree } from './tree';
 import { AndesTreeNodeTemplate } from './tree-node-template';
 import type {
+  AndesTreeDropEvent,
   AndesTreeKey,
   AndesTreeLoadData,
   AndesTreeNode,
 } from './tree-types';
+import { andesMoveTreeNode } from './tree-utils';
 
 const TREE_IMPORTS = [
   AndesTree,
@@ -197,7 +199,7 @@ export const LoadOnDemand: Story = {
       styles: STORY_STYLES,
       template: `
         <div class="panel">
-          <andes-tree aria-label="Carga bajo demanda" [(nodes)]="nodes" [(expandedKeys)]="expanded" [loadData]="loadData" />
+          <andes-tree aria-label="Carga bajo demanda" [nodes]="nodes" [(expandedKeys)]="expanded" [loadData]="loadData" />
         </div>
       `,
     };
@@ -208,7 +210,7 @@ export const LoadOnDemand: Story = {
  * Drag a node onto another: the top and bottom quarter of a row drop before or after it, the
  * middle drops inside. Without a pointer, Alt + arrow keys move the focused node: Up and Down past
  * a sibling, Right into the sibling above, Left out to the parent's level. The `nodeDrop` output
- * reports each move and `nodes` already holds the result.
+ * reports each move; the story applies it to its data with `andesMoveTreeNode`.
  */
 export const DragAndDrop: Story = {
   render: () => ({
@@ -218,13 +220,16 @@ export const DragAndDrop: Story = {
       expanded: ['lima'],
       moves: [] as string[],
       recordMove: function (
-        this: { moves: string[] },
-        event: {
-          dragKey: AndesTreeKey;
-          position: string;
-          targetKey: AndesTreeKey;
-        },
+        this: { moves: string[]; nodes: AndesTreeNode[] },
+        event: AndesTreeDropEvent,
       ) {
+        this.nodes =
+          andesMoveTreeNode(
+            this.nodes,
+            event.dragKey,
+            event.targetKey,
+            event.position,
+          ) ?? this.nodes;
         this.moves = [
           `${String(event.dragKey)} → ${event.position} ${String(event.targetKey)}`,
           ...this.moves,
@@ -238,7 +243,7 @@ export const DragAndDrop: Story = {
           aria-label="Reordenar almacenes"
           draggable
           blockNode
-          [(nodes)]="nodes"
+          [nodes]="nodes"
           [(expandedKeys)]="expanded"
           (nodeDrop)="recordMove($event)"
         />

@@ -344,4 +344,12 @@ describe('AndesCalendar styles', () => {
       expect(number).not.toBeNull();
     });
   });
+
+  describe('preview through a committed boundary', () => {
+    it('fills the whole cell of a committed start or end that the preview passes through', () => {
+      expect(source).toMatch(
+        /day--in-preview:not\(\.andes-calendar__day--preview-start\):not\(\.andes-calendar__day--preview-end\)::before\s*{[^}]*inset-inline: 0/,
+      );
+    });
+  });
 });

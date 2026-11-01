@@ -465,6 +465,14 @@
   inset-inline-end: 50%;
 }
 
+/* A committed boundary that the preview runs through (the old end of a range whose end is being
+   picked again, or its old start) is an inner cell of the preview: its band fills the whole cell,
+   not the half its committed role gives it, so no white gap is left beside its chip. */
+/* prettier-ignore */
+.andes-calendar:not(.andes-calendar--week-picker):has(.andes-calendar__day--in-preview) .andes-calendar__day--in-preview:not(.andes-calendar__day--preview-start):not(.andes-calendar__day--preview-end)::before {
+  inset-inline: 0;
+}
+
 /* How wide a cell's chip is, for the band that ends at its edge: a day's chip is the 24px chip,
    a period's (month, quarter, year) is at least 3.75rem, and a cell the template fills whole has
    no gap around its chip. */

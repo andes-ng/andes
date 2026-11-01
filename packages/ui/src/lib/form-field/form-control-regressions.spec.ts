@@ -164,6 +164,17 @@ class ManualBindingHost {
   readonly name = new FormControl('', Validators.required);
 }
 
+@Component({
+  selector: 'andes-test-explicit-id-host',
+  imports: [ReactiveFormsModule, AndesFormField, AndesFormControl],
+  template: `<andes-form-field label="Name" id="name">
+    <input andesFormControl [formControl]="name" />
+  </andes-form-field>`,
+})
+class ExplicitIdHost {
+  readonly name = new FormControl('');
+}
+
 describe('AndesFormControl - regressions', () => {
   describe('signal forms', () => {
     it('binds [formField] on a native input inside a field without throwing', async () => {
@@ -303,5 +314,17 @@ describe('AndesFormControl - regressions', () => {
 
     expect(input.id).toBe(label.htmlFor);
     expect(input.getAttribute('aria-labelledby')).toBe(label.id);
+  });
+
+  it('puts an explicit field id on the control only, not on the field host too', async () => {
+    const fixture = TestBed.createComponent(ExplicitIdHost);
+    await settle(fixture);
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelectorAll('#name')).toHaveLength(1);
+    expect(el.querySelector('#name')?.tagName).toBe('INPUT');
+    expect(el.querySelector('andes-form-field')?.hasAttribute('id')).toBe(
+      false,
+    );
   });
 });

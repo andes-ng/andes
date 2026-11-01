@@ -109,6 +109,8 @@ function toTrack(column: AndesFormColumn): string {
   encapsulation: ViewEncapsulation.None,
   host: {
     '[attr.hidden]': 'isHidden() ? "" : null',
+    // The `id` input names the control; left on the host too, it would duplicate the id.
+    '[attr.id]': 'null',
   },
   providers: [
     {

@@ -1179,35 +1179,41 @@
   min-height: 0;
 }
 
-/* Footer: extra content on the left, Now / OK on the right. */
+/* Footer: the extra content on a row of its own, with a rule under it when Now / OK follow;
+   Now at the start and OK at the end of the row below. */
 
 .andes-date-picker__footer {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--andes-space-2);
-  padding: var(--andes-space-2) var(--andes-space-3);
+  flex-direction: column;
+  align-items: stretch;
   border-top: 1px solid var(--andes-color-border);
 }
 
 .andes-date-picker__extra-footer {
+  display: flex;
+  align-items: center;
   min-width: 0;
+  min-height: 2.375rem;
+  padding-inline: var(--andes-space-3);
   color: var(--andes-color-muted-foreground);
 }
 
 .andes-date-picker__footer-actions {
   display: flex;
-  flex: 1;
   align-items: center;
   justify-content: space-between;
   gap: var(--andes-space-2);
+  padding: var(--andes-space-2) var(--andes-space-3);
 }
 
-/* With an extra footer the actions keep to the end; alone, a lone Now link centers
-   and Now + OK spread to the two edges. */
+/* prettier-ignore */
 .andes-date-picker__extra-footer + .andes-date-picker__footer-actions {
-  flex: none;
-  margin-inline-start: auto;
+  border-top: 1px solid var(--andes-color-border);
+}
+
+/* An extra footer alone leaves no empty row behind it. */
+.andes-date-picker__footer-actions:not(:has(> *)) {
+  display: none;
 }
 
 .andes-date-picker__footer-actions > :only-child {

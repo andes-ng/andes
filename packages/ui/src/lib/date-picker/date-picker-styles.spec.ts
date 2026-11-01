@@ -536,4 +536,35 @@ describe('AndesDatePicker styles', () => {
       );
     });
   });
+
+  describe('footer', () => {
+    it('stacks the extra content above Now and OK, with a rule between the two rows', () => {
+      expect(
+        declaredValue(source, '.andes-date-picker__footer', 'flex-direction'),
+      ).toBe('column');
+      expect(
+        declaredValue(source, '.andes-date-picker__extra-footer', 'min-height'),
+      ).toBe('2.375rem');
+      expect(css).toMatch(
+        /\.andes-date-picker__extra-footer \+ \.andes-date-picker__footer-actions \{[^}]*border-top: 1px solid var\(--andes-color-border\)/,
+      );
+    });
+
+    it('puts Now at the start and OK at the end of its row, and drops the row when it is empty', () => {
+      expect(
+        declaredValue(
+          source,
+          '.andes-date-picker__footer-actions',
+          'justify-content',
+        ),
+      ).toBe('space-between');
+      expect(
+        declaredValue(
+          source,
+          '.andes-date-picker__footer-actions:not(:has(> *))',
+          'display',
+        ),
+      ).toBe('none');
+    });
+  });
 });

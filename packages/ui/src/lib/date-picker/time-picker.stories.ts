@@ -337,7 +337,7 @@ export const Addon: Story = {
         <span style="font-size: 0.75rem;">Opening hours are 09:00 to 18:00 ({{ view }} panel)</span>
       </ng-template>
       <ng-template #noonButton>
-        <andes-button size="xs" variant="link" (click)="time = noon">Noon</andes-button>
+        <andes-button size="sm" variant="link" (click)="time = noon">Noon</andes-button>
       </ng-template>
       <div style="display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; align-items: flex-start;">
         <div style="width: 19rem; min-height: 24rem;">

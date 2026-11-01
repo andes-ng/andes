@@ -449,6 +449,32 @@ andes-form-label {
   );
 }
 
+/* A library control draws its own trailing parts (a clear button, a caret, a password eye, a
+   counter) inside a box this stylesheet does not pad, so the icon would sit on top of them.
+   Next to a control that is not a native input, select or textarea, the icon moves out of the
+   box instead: it follows the control, 8px after its trailing edge, centred on a one-line
+   control. */
+/* prettier-ignore */
+.andes-form-field--has-feedback > .andes-form-field__control:not(:has(> :is(input, textarea, select))) {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--andes-space-2);
+}
+
+/* prettier-ignore */
+.andes-form-field--has-feedback > .andes-form-field__control:not(:has(> :is(input, textarea, select))) > :first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* prettier-ignore */
+.andes-form-field--has-feedback > .andes-form-field__control:not(:has(> :is(input, textarea, select))) > .andes-form-field__feedback {
+  position: static;
+  flex: none;
+  margin-block-start: calc((var(--_andes-form-control-height, 2rem) - 1rem) / 2);
+  transform: none;
+}
+
 /* noStyle: only the projected control is laid out, as if the field weren't there. Last in
    the file so it beats the layout rules above at equal specificity. */
 .andes-form-field--no-style,

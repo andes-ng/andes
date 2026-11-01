@@ -3,54 +3,78 @@
    because the layout already mirrored them for right-to-left charts; card content still
    follows the page direction.
 
+   The look is deliberately quiet: a canvas one step darker than the cards, cards with a
+   hairline border one step lighter than the card, 1px neutral connectors and a small round
+   toggle on the card edge. No shadows, gradients or accent bars by default.
+
    Hooks are read with a fallback instead of being declared on :host, so a consumer rule on the
-   element (andes-org-chart { --andes-org-chart-height: 40rem; }) is never outranked:
+   element (andes-org-chart { --andes-org-chart-height: 40rem; }) or on a card (through
+   `nodeClass`) is never outranked:
      --andes-org-chart-height                    block size of the chart (32rem)
      --andes-org-chart-background                canvas background
-     --andes-org-chart-dot-color                 background dot grid (transparent hides it)
+     --andes-org-chart-dot-color                 background dot grid (none unless set)
      --andes-org-chart-border-color              chart border
      --andes-org-chart-radius                    chart corner radius
      --andes-org-chart-node-background           card background
      --andes-org-chart-node-foreground           card text
      --andes-org-chart-node-muted-foreground     card secondary text (role)
-     --andes-org-chart-node-border-color         card border
-     --andes-org-chart-node-radius               card corner radius
-     --andes-org-chart-node-shadow               card shadow
-     --andes-org-chart-node-hover-shadow         card shadow on hover
-     --andes-org-chart-node-accent               accent stripe, avatar tint, selection (a node's
-                                                 own `color` or `levelColors` set it per card)
+     --andes-org-chart-node-border-color         card hairline
+     --andes-org-chart-node-hover-border-color   card hairline on hover
+     --andes-org-chart-node-radius               card corner radius (8px)
+     --andes-org-chart-node-shadow               card shadow (none)
+     --andes-org-chart-node-accent               selection color, and the initials tint of a
+                                                 person with a `color` or a `levelColors` entry
      --andes-org-chart-node-selected-background  selected card background
-     --andes-org-chart-match-color               ring around search matches
-     --andes-org-chart-dimmed-opacity            opacity of the accent, photo and lines off the
+     --andes-org-chart-avatar-size               avatar diameter (40px)
+     --andes-org-chart-avatar-background         initials background
+     --andes-org-chart-avatar-foreground         initials color
+     --andes-org-chart-match-color               border of search matches
+     --andes-org-chart-dimmed-opacity            opacity of photos, toggles and lines off the
                                                  search path (their text only turns muted)
      --andes-org-chart-connector-color           connector stroke
-     --andes-org-chart-connector-width           connector stroke width
+     --andes-org-chart-connector-width           connector stroke width (1px)
      --andes-org-chart-connector-highlight-color connector on a search path
      --andes-org-chart-secondary-color           dotted-line (secondary) links
      --andes-org-chart-secondary-dasharray       dash pattern of secondary links
-     --andes-org-chart-badge-background          count badge background
-     --andes-org-chart-badge-foreground          count badge text
-     --andes-org-chart-badge-border-color        count badge border
+     --andes-org-chart-toggle-size               expand / collapse toggle diameter (20px)
+     --andes-org-chart-toggle-background         toggle background
+     --andes-org-chart-toggle-foreground         toggle icon and count
+     --andes-org-chart-toggle-border-color       toggle hairline
+     --andes-org-chart-checkbox-color            checkbox fill when checked or mixed
      --andes-org-chart-controls-background       zoom controls panel
      --andes-org-chart-duration                  animation length (also the `animationDuration`
                                                  input, which this overrides)
    Every part carries a data-slot attribute (org-chart-viewport, -canvas, -links, -link,
-   -secondary-link, -tree, -node, -card, -avatar, -name, -title, -badge, -controls, -zoom,
-   -toolbar, -empty). Cards carry data-key (the node key), data-kind (root | branch | leaf),
-   data-selected, data-expanded, data-matched, data-highlighted, data-dimmed, data-disabled,
-   data-readonly, data-assistant and data-loading; tree connectors carry data-from, data-to and
-   data-kind (tree | assistant | stack | secondary), for structural styling. */
+   -secondary-link, -tree, -node, -card, -checkbox, -avatar, -name, -title, -toggle, -controls,
+   -zoom, -toolbar, -empty). Cards carry data-key (the node key), data-kind (root | branch |
+   leaf), data-selected, data-checked (checked | mixed), data-expanded, data-matched,
+   data-highlighted, data-dimmed, data-disabled, data-readonly, data-assistant, data-accent and
+   data-loading; tree connectors carry data-from, data-to and data-kind (tree | assistant |
+   stack | secondary), for structural styling. */
 
 :host {
   --_andes-org-chart-motion: var(
     --andes-org-chart-duration,
-    var(--_andes-org-chart-duration, 280ms)
+    var(--_andes-org-chart-duration, 240ms)
   );
   --_andes-org-chart-ease: var(
     --andes-motion-ease-out,
     cubic-bezier(0.2, 0, 0, 1)
   );
   --_andes-org-chart-accent: var(--andes-color-primary);
+  /* Theme steps: the canvas sits one step below the card, the hairline one step above it. */
+  --_andes-org-chart-canvas: var(--andes-color-muted);
+  --_andes-org-chart-hairline: color-mix(
+    in srgb,
+    var(--andes-color-border) 65%,
+    var(--andes-color-card)
+  );
+  --_andes-org-chart-hairline-strong: var(--andes-color-border);
+  --_andes-org-chart-line: color-mix(
+    in srgb,
+    var(--andes-color-muted-foreground) 45%,
+    var(--andes-color-muted)
+  );
 
   position: relative;
   display: block;
@@ -59,11 +83,28 @@
   box-sizing: border-box;
   block-size: var(--andes-org-chart-height, 32rem);
   border: 1px solid
-    var(--andes-org-chart-border-color, var(--andes-color-border));
+    var(--andes-org-chart-border-color, var(--_andes-org-chart-hairline));
   border-radius: var(--andes-org-chart-radius, var(--andes-radius-lg));
-  background: var(--andes-org-chart-background, var(--andes-color-background));
+  background: var(--andes-org-chart-background, var(--_andes-org-chart-canvas));
   color: var(--andes-color-foreground);
   font-family: var(--andes-font-family), sans-serif;
+}
+
+/* In the dark theme the muted color equals the card color, so the canvas uses the page
+   background instead, and the hairline the full border color. */
+:host-context([data-andes-theme='dark']) {
+  --_andes-org-chart-canvas: var(--andes-color-background);
+  --_andes-org-chart-hairline: var(--andes-color-border);
+  --_andes-org-chart-hairline-strong: color-mix(
+    in srgb,
+    var(--andes-color-muted-foreground) 45%,
+    var(--andes-color-border)
+  );
+  --_andes-org-chart-line: color-mix(
+    in srgb,
+    var(--andes-color-muted-foreground) 55%,
+    var(--andes-color-background)
+  );
 }
 
 /* ------------------------------------------------------------------ viewport and canvas */
@@ -80,14 +121,10 @@
   -webkit-user-select: none;
   background-image: radial-gradient(
     circle,
-    var(
-        --andes-org-chart-dot-color,
-        color-mix(in srgb, var(--andes-color-border) 80%, transparent)
-      )
-      1px,
+    var(--andes-org-chart-dot-color, transparent) 1px,
     transparent 1.2px
   );
-  background-size: 20px 20px;
+  background-size: 24px 24px;
 }
 
 :host([data-panning]) .andes-org-chart__viewport {
@@ -135,11 +172,8 @@
 
 .andes-org-chart__link {
   fill: none;
-  stroke: var(
-    --andes-org-chart-connector-color,
-    color-mix(in srgb, var(--andes-color-muted-foreground) 55%, transparent)
-  );
-  stroke-width: var(--andes-org-chart-connector-width, 1.5px);
+  stroke: var(--andes-org-chart-connector-color, var(--_andes-org-chart-line));
+  stroke-width: var(--andes-org-chart-connector-width, 1px);
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -149,15 +183,15 @@
     --andes-org-chart-connector-highlight-color,
     var(--_andes-org-chart-accent)
   );
-  stroke-width: calc(var(--andes-org-chart-connector-width, 1.5px) + 0.5px);
+  stroke-width: calc(var(--andes-org-chart-connector-width, 1px) + 0.5px);
 }
 
 .andes-org-chart__link--secondary {
   stroke: var(
     --andes-org-chart-secondary-color,
-    var(--andes-color-warning-hover)
+    var(--andes-color-muted-foreground)
   );
-  stroke-dasharray: var(--andes-org-chart-secondary-dasharray, 6 4);
+  stroke-dasharray: var(--andes-org-chart-secondary-dasharray, 4 4);
 }
 
 :host([data-searching]) .andes-org-chart__link-group:not([data-highlighted]) {
@@ -227,42 +261,26 @@
   box-sizing: border-box;
   overflow: hidden;
   padding-block: var(--andes-space-3);
-  padding-inline: calc(var(--andes-space-3) + 4px) var(--andes-space-3);
+  padding-inline: var(--andes-space-4);
   border: 1px solid
-    var(--andes-org-chart-node-border-color, var(--andes-color-border));
+    var(--andes-org-chart-node-border-color, var(--_andes-org-chart-hairline));
   border-radius: var(--andes-org-chart-node-radius, var(--andes-radius-lg));
   background: var(--andes-org-chart-node-background, var(--andes-color-card));
-  box-shadow: var(--andes-org-chart-node-shadow, var(--andes-shadow-sm));
+  box-shadow: var(--andes-org-chart-node-shadow, none);
   color: var(
     --andes-org-chart-node-foreground,
     var(--andes-color-card-foreground)
   );
   transition:
     border-color var(--andes-motion-duration-fast, 150ms) ease,
-    box-shadow var(--andes-motion-duration-fast, 150ms) ease,
     background-color var(--andes-motion-duration-fast, 150ms) ease;
 }
 
-/* The accent stripe on the card's leading edge. */
-.andes-org-chart__card::before {
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: 0;
-  inline-size: 3px;
-  background: var(
-    --andes-org-chart-node-accent,
-    var(--_andes-org-chart-accent)
-  );
-  content: '';
-}
-
 .andes-org-chart__node:hover .andes-org-chart__card {
-  border-color: color-mix(
-    in srgb,
-    var(--andes-org-chart-node-accent, var(--_andes-org-chart-accent)) 45%,
-    var(--andes-org-chart-node-border-color, var(--andes-color-border))
+  border-color: var(
+    --andes-org-chart-node-hover-border-color,
+    var(--_andes-org-chart-hairline-strong)
   );
-  box-shadow: var(--andes-org-chart-node-hover-shadow, var(--andes-shadow-md));
 }
 
 .andes-org-chart__node[data-selected] .andes-org-chart__card {
@@ -278,9 +296,6 @@
       var(--andes-org-chart-node-background, var(--andes-color-card))
     )
   );
-  box-shadow:
-    0 0 0 1px var(--andes-org-chart-node-accent, var(--_andes-org-chart-accent)),
-    var(--andes-org-chart-node-shadow, var(--andes-shadow-sm));
 }
 
 .andes-org-chart__node:focus-visible .andes-org-chart__card {
@@ -293,39 +308,25 @@
 }
 
 .andes-org-chart__node[data-matched] .andes-org-chart__card {
-  box-shadow:
-    0 0 0 2px var(--andes-org-chart-match-color, var(--andes-color-warning)),
-    var(--andes-org-chart-node-shadow, var(--andes-shadow-sm));
+  border-color: var(--andes-org-chart-match-color, var(--andes-color-warning));
+  box-shadow: inset 0 0 0 1px
+    var(--andes-org-chart-match-color, var(--andes-color-warning));
 }
 
-/* Off the search path: the chrome fades, the text only turns muted, so it keeps its contrast. */
-.andes-org-chart__node[data-dimmed] .andes-org-chart__card {
-  border-color: color-mix(
-    in srgb,
-    var(--andes-org-chart-node-border-color, var(--andes-color-border)) 60%,
-    transparent
-  );
-  box-shadow: none;
-}
-
-.andes-org-chart__node[data-dimmed] .andes-org-chart__card::before,
-.andes-org-chart__node[data-dimmed] .andes-org-chart__avatar-image {
+/* Off the search path: decoration fades, the text only turns muted, so it keeps its contrast. */
+.andes-org-chart__node[data-dimmed] .andes-org-chart__avatar-image,
+.andes-org-chart__node[data-dimmed] .andes-org-chart__toggle {
   opacity: var(--andes-org-chart-dimmed-opacity, 0.35);
 }
 
 .andes-org-chart__node[data-dimmed] .andes-org-chart__name,
-.andes-org-chart__node[data-dimmed] .andes-org-chart__title,
-.andes-org-chart__node[data-dimmed] .andes-org-chart__badge {
+.andes-org-chart__node[data-dimmed] .andes-org-chart__title {
   color: var(--andes-color-muted-foreground);
 }
 
 .andes-org-chart__node[data-dimmed] .andes-org-chart__avatar {
   background: var(--andes-color-muted);
   color: var(--andes-color-muted-foreground);
-}
-
-.andes-org-chart__node[data-dimmed] .andes-org-chart__badge {
-  border-color: var(--andes-color-border);
 }
 
 .andes-org-chart__node[data-disabled] .andes-org-chart__card {
@@ -344,25 +345,40 @@
   flex: none;
   place-items: center;
   overflow: hidden;
-  inline-size: 2.5rem;
-  block-size: 2.5rem;
+  inline-size: var(--andes-org-chart-avatar-size, 2.5rem);
+  block-size: var(--andes-org-chart-avatar-size, 2.5rem);
   border-radius: var(--andes-radius-full);
-  background: color-mix(
-    in srgb,
-    var(--andes-org-chart-node-accent, var(--_andes-org-chart-accent)) 14%,
-    var(--andes-org-chart-node-background, var(--andes-color-card))
+  background: var(
+    --andes-org-chart-avatar-background,
+    var(--andes-color-secondary)
   );
-  /* Mostly the card's own text color, tinted by the accent: readable on the light tint in both
-     themes, whatever the accent (a dark accent on a dark card would not be). */
-  color: color-mix(
-    in srgb,
-    var(--andes-org-chart-node-accent, var(--_andes-org-chart-accent)) 45%,
-    var(--andes-org-chart-node-foreground, var(--andes-color-card-foreground))
+  color: var(
+    --andes-org-chart-avatar-foreground,
+    color-mix(
+      in srgb,
+      var(--andes-color-foreground) 80%,
+      var(--andes-color-secondary)
+    )
   );
   font-size: var(--andes-font-size-sm);
-  font-weight: var(--andes-font-weight-semibold);
+  font-weight: var(--andes-font-weight-medium);
   line-height: 1;
+  letter-spacing: 0.01em;
   user-select: none;
+}
+
+/* A person with a color (own field or level color) gets a tinted initials circle. */
+.andes-org-chart__node[data-accent] .andes-org-chart__avatar {
+  background: color-mix(
+    in srgb,
+    var(--andes-org-chart-node-accent) 18%,
+    var(--andes-org-chart-node-background, var(--andes-color-card))
+  );
+  color: color-mix(
+    in srgb,
+    var(--andes-org-chart-node-accent) 45%,
+    var(--andes-org-chart-node-foreground, var(--andes-color-card-foreground))
+  );
 }
 
 .andes-org-chart__avatar-image {
@@ -400,9 +416,38 @@
   line-height: var(--andes-line-height-xs);
 }
 
-/* ------------------------------------------------------------------ count badge */
+/* ------------------------------------------------------------------ checkbox */
 
-.andes-org-chart__badge {
+.andes-org-chart__checkbox {
+  display: grid;
+  flex: none;
+  place-items: center;
+  box-sizing: border-box;
+  inline-size: 1rem;
+  block-size: 1rem;
+  border: 1px solid var(--andes-color-input);
+  border-radius: var(--andes-radius-sm);
+  background: var(--andes-org-chart-node-background, var(--andes-color-card));
+  color: var(--andes-color-primary-foreground);
+  cursor: pointer;
+}
+
+.andes-org-chart__checkbox svg {
+  inline-size: 0.75rem;
+  block-size: 0.75rem;
+}
+
+.andes-org-chart__node[data-checked] .andes-org-chart__checkbox {
+  border-color: var(
+    --andes-org-chart-checkbox-color,
+    var(--andes-color-primary)
+  );
+  background: var(--andes-org-chart-checkbox-color, var(--andes-color-primary));
+}
+
+/* ------------------------------------------------------------------ expand / collapse toggle */
+
+.andes-org-chart__toggle {
   --_andes-org-chart-chevron: 0deg;
 
   position: absolute;
@@ -410,88 +455,83 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 1px;
+  gap: 2px;
   box-sizing: border-box;
-  min-inline-size: 1.5rem;
-  block-size: 1.25rem;
+  min-inline-size: var(--andes-org-chart-toggle-size, 1.25rem);
+  block-size: var(--andes-org-chart-toggle-size, 1.25rem);
   margin: 0;
-  padding-block: 0;
-  padding-inline: 0.375rem 0.25rem;
+  padding: 0;
   border: 1px solid
-    var(--andes-org-chart-badge-border-color, var(--andes-color-border));
+    var(
+      --andes-org-chart-toggle-border-color,
+      var(--_andes-org-chart-hairline-strong)
+    );
   border-radius: var(--andes-radius-full);
-  background: var(--andes-org-chart-badge-background, var(--andes-color-card));
-  box-shadow: var(--andes-shadow-sm);
+  background: var(--andes-org-chart-toggle-background, var(--andes-color-card));
   color: var(
-    --andes-org-chart-badge-foreground,
+    --andes-org-chart-toggle-foreground,
     var(--andes-color-muted-foreground)
   );
   font: inherit;
   font-size: 0.6875rem;
   font-variant-numeric: tabular-nums;
-  font-weight: var(--andes-font-weight-semibold);
+  font-weight: var(--andes-font-weight-medium);
   line-height: 1;
   cursor: pointer;
   translate: -50% -50%;
   transition:
     border-color var(--andes-motion-duration-fast, 150ms) ease,
-    color var(--andes-motion-duration-fast, 150ms) ease,
-    scale var(--andes-motion-duration-fast, 150ms) ease;
+    color var(--andes-motion-duration-fast, 150ms) ease;
 }
 
-.andes-org-chart__badge:not([data-expanded]) {
-  border-color: var(
-    --andes-org-chart-node-accent,
-    var(--_andes-org-chart-accent)
-  );
-  color: var(--andes-org-chart-badge-foreground, var(--andes-color-foreground));
+/* With a count the circle becomes a small pill. */
+.andes-org-chart__toggle[data-count] {
+  padding-inline: 0.375rem 0.25rem;
 }
 
-.andes-org-chart__badge:hover {
-  border-color: var(
-    --andes-org-chart-node-accent,
-    var(--_andes-org-chart-accent)
-  );
-  color: var(--andes-org-chart-node-accent, var(--_andes-org-chart-accent));
-  scale: 1.08;
+.andes-org-chart__toggle:hover {
+  border-color: var(--andes-color-muted-foreground);
+  color: var(--andes-color-foreground);
 }
 
-/* The badge sits on the card edge that faces the reports. */
-:host([data-children-side='bottom']) .andes-org-chart__badge {
+/* The toggle sits on the card edge that faces the reports. */
+:host([data-children-side='bottom']) .andes-org-chart__toggle {
   top: 100%;
   left: 50%;
 }
 
-:host([data-children-side='top']) .andes-org-chart__badge {
+:host([data-children-side='top']) .andes-org-chart__toggle {
   --_andes-org-chart-chevron: 180deg;
 
   top: 0;
   left: 50%;
 }
 
-:host([data-children-side='right']) .andes-org-chart__badge {
+:host([data-children-side='right']) .andes-org-chart__toggle {
   --_andes-org-chart-chevron: -90deg;
 
   top: 50%;
   left: 100%;
 }
 
-:host([data-children-side='left']) .andes-org-chart__badge {
+:host([data-children-side='left']) .andes-org-chart__toggle {
   --_andes-org-chart-chevron: 90deg;
 
   top: 50%;
   left: 0;
 }
 
-.andes-org-chart__count {
-  padding-inline-end: 1px;
+.andes-org-chart__toggle-icon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
 }
 
 .andes-org-chart__chevron,
 .andes-org-chart__spinner {
   flex: none;
-  inline-size: 0.875rem;
-  block-size: 0.875rem;
+  inline-size: 0.75rem;
+  block-size: 0.75rem;
 }
 
 .andes-org-chart__chevron {
@@ -500,12 +540,11 @@
 }
 
 /* Expanded: the chevron points back at the card ("collapse into it"). */
-.andes-org-chart__badge[data-expanded] .andes-org-chart__chevron {
+.andes-org-chart__toggle[data-expanded] .andes-org-chart__chevron {
   rotate: calc(var(--_andes-org-chart-chevron) + 180deg);
 }
 
-.andes-org-chart__badge[data-loading] {
-  padding-inline: 0.25rem;
+.andes-org-chart__toggle[data-loading] {
   cursor: progress;
 }
 
@@ -533,13 +572,12 @@
   align-items: center;
   gap: 2px;
   padding: var(--andes-space-1);
-  border: 1px solid var(--andes-color-border);
+  border: 1px solid var(--_andes-org-chart-hairline);
   border-radius: var(--andes-radius-lg);
   background: var(
     --andes-org-chart-controls-background,
     var(--andes-color-popover)
   );
-  box-shadow: var(--andes-shadow-md);
   color: var(--andes-color-popover-foreground);
 }
 
@@ -562,7 +600,7 @@
   inline-size: 60%;
   block-size: 1px;
   margin-block: 2px;
-  background: var(--andes-color-border);
+  background: var(--_andes-org-chart-hairline);
 }
 
 .andes-org-chart__toolbar {
@@ -585,7 +623,7 @@
   .andes-org-chart__link,
   .andes-org-chart__link-group,
   .andes-org-chart__card,
-  .andes-org-chart__badge,
+  .andes-org-chart__toggle,
   .andes-org-chart__chevron {
     transition: none !important;
     animation: none !important;
@@ -604,10 +642,6 @@
   .andes-org-chart__card {
     border-color: CanvasText;
     box-shadow: none;
-  }
-
-  .andes-org-chart__card::before {
-    background: CanvasText;
   }
 
   .andes-org-chart__node[data-selected] .andes-org-chart__card {
@@ -632,10 +666,19 @@
     stroke: Highlight;
   }
 
-  .andes-org-chart__badge {
+  .andes-org-chart__toggle {
     border-color: ButtonText;
     background: ButtonFace;
     color: ButtonText;
-    box-shadow: none;
+  }
+
+  .andes-org-chart__checkbox {
+    border-color: ButtonText;
+  }
+
+  .andes-org-chart__node[data-checked] .andes-org-chart__checkbox {
+    border-color: Highlight;
+    background: Highlight;
+    color: HighlightText;
   }
 }

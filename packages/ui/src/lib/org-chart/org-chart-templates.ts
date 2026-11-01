@@ -5,7 +5,7 @@ import type {
   AndesOrgChartLinkKind,
 } from './org-chart-layout';
 
-/** What a node template, a badge template and every node event receive about a node. */
+/** What a node template, a toggle template and every node event receive about a node. */
 export interface AndesOrgChartNodeContext<T = unknown> {
   /** The consumer's own data item, so `let-person` gives it directly. */
   readonly $implicit: T;
@@ -30,6 +30,7 @@ export interface AndesOrgChartNodeContext<T = unknown> {
   readonly expandable: boolean;
   /** `loadChildren` is fetching this node's reports. */
   readonly loading: boolean;
+  /** Selected, or in `checkbox` mode checked. */
   readonly selected: boolean;
   /** Matches the current `search`. */
   readonly matched: boolean;
@@ -38,7 +39,7 @@ export interface AndesOrgChartNodeContext<T = unknown> {
   readonly disabled: boolean;
   readonly readonly: boolean;
   readonly assistant: boolean;
-  /** Expands or collapses the node, as the badge does. */
+  /** Expands or collapses the node, as the toggle does. */
   readonly toggle: () => void;
   /** Selects or deselects the node, as a click does. */
   readonly select: () => void;
@@ -67,7 +68,7 @@ export interface AndesOrgChartConnectorContext<T = unknown> {
 
 /**
  * Replaces the content of every card. The card itself (size, position, focus ring, selection
- * and the count badge) stays the chart's.
+ * and the expand / collapse toggle) stays the chart's.
  *
  * ```html
  * <ng-template andesOrgChartNode let-person let-initials="initials">…</ng-template>
@@ -79,11 +80,32 @@ export class AndesOrgChartNodeTemplate<T = unknown> {
     inject<TemplateRef<AndesOrgChartNodeContext<T>>>(TemplateRef);
 }
 
-/** Replaces the content of the count badge that expands and collapses a card. */
-@Directive({ selector: 'ng-template[andesOrgChartBadge]' })
-export class AndesOrgChartBadgeTemplate<T = unknown> {
+/** Replaces the whole content of the toggle that expands and collapses a card. */
+@Directive({ selector: 'ng-template[andesOrgChartToggle]' })
+export class AndesOrgChartToggleTemplate<T = unknown> {
   readonly template =
     inject<TemplateRef<AndesOrgChartNodeContext<T>>>(TemplateRef);
+}
+
+/** What a toggle icon template receives. */
+export interface AndesOrgChartToggleIconContext<T = unknown> {
+  /** Whether the card is expanded. */
+  readonly $implicit: boolean;
+  readonly node: AndesOrgChartNodeContext<T>;
+}
+
+/**
+ * Replaces only the icon inside the toggle (the button, its position and the optional count
+ * stay the chart's):
+ *
+ * ```html
+ * <ng-template andesOrgChartToggleIcon let-expanded>{{ expanded ? '-' : '+' }}</ng-template>
+ * ```
+ */
+@Directive({ selector: 'ng-template[andesOrgChartToggleIcon]' })
+export class AndesOrgChartToggleIconTemplate<T = unknown> {
+  readonly template =
+    inject<TemplateRef<AndesOrgChartToggleIconContext<T>>>(TemplateRef);
 }
 
 /**

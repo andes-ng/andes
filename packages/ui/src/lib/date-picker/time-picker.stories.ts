@@ -340,15 +340,15 @@ export const Addon: Story = {
         <andes-button size="sm" variant="link" (click)="time = noon">Noon</andes-button>
       </ng-template>
       <div style="display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; align-items: flex-start;">
-        <div style="width: 19rem; min-height: 24rem;">
+        <div style="width: 19rem; min-height: 28rem;">
           <p [style]="caption">Single, with a note</p>
           <andes-date-picker picker="time" locale="en-GB" [extraFooter]="note" [value]="time" [open]="true" aria-label="Time with a note" />
         </div>
-        <div style="width: 19rem; min-height: 24rem;">
+        <div style="width: 19rem; min-height: 28rem;">
           <p [style]="caption">Single, with a button</p>
           <andes-date-picker picker="time" locale="en-GB" [extraFooter]="noonButton" [(value)]="time" [open]="true" aria-label="Time with a button" />
         </div>
-        <div style="width: 22rem; min-height: 24rem;">
+        <div style="width: 22rem; min-height: 28rem;">
           <p [style]="caption">Range, with a note</p>
           <andes-date-picker picker="time" mode="range" locale="en-GB" [extraFooter]="note" [value]="range" [open]="true" aria-label="Time range with a note" />
         </div>

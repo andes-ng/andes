@@ -254,15 +254,15 @@ export const ExtraFooter: Story = {
         <span style="font-size: 0.75rem;">Picking a {{ view === 'date' ? 'day' : view }}. Weekends are not delivered.</span>
       </ng-template>
       <div style="display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; align-items: flex-start;">
-        <div style="width: 21rem; min-height: 27rem;">
+        <div style="width: 21rem; min-height: 29rem;">
           <p [style]="caption">Single</p>
           <andes-date-picker locale="en-US" [extraFooter]="footer" [ngModel]="picked" [open]="true" aria-label="Date with footer" />
         </div>
-        <div style="width: 38rem; min-height: 27rem;">
+        <div style="width: 38rem; min-height: 29rem;">
           <p [style]="caption">Range</p>
           <andes-date-picker mode="range" locale="en-US" [extraFooter]="footer" [open]="true" aria-label="Range with footer" />
         </div>
-        <div style="width: 21rem; min-height: 27rem;">
+        <div style="width: 21rem; min-height: 29rem;">
           <p [style]="caption">Multiple, with needConfirm</p>
           <andes-date-picker mode="multiple" locale="en-US" needConfirm [extraFooter]="footer" [open]="true" aria-label="Multiple with footer" />
         </div>

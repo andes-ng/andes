@@ -292,6 +292,14 @@ export class AndesCascader
    * hidden tags. Off, it is plain text with the hidden paths as a native tooltip.
    */
   readonly maxTagPopover = input(true, { transform: booleanAttribute });
+  /**
+   * With `multiple`, the most paths the value holds. Once it is reached the options that are
+   * not checked can no longer be checked (they still open their columns), and a check whose
+   * branch would overshoot it is refused.
+   */
+  readonly maxCount = input<number | undefined, unknown>(undefined, {
+    transform: optionalNumber,
+  });
   /** Longest tag text, in characters, before it is cut short with "...". */
   readonly maxTagTextLength = input<number | undefined, unknown>(undefined, {
     transform: optionalNumber,
@@ -587,6 +595,17 @@ export class AndesCascader
     return count === terminals.length ? 'checked' : 'indeterminate';
   }
 
+  /** Whether the value holds `maxCount` paths. */
+  private readonly atMax = computed(() => {
+    const max = this.maxCount();
+    return this.multiple() && max !== undefined && this.entries().length >= max;
+  });
+
+  /** Whether `maxCount` keeps this option from being checked (it is not checked yet). */
+  protected isBlocked(node: AndesCascaderNode): boolean {
+    return this.atMax() && this.checkState(node) !== 'checked';
+  }
+
   protected ariaChecked(node: AndesCascaderNode): string {
     const state = this.checkState(node);
     return state === 'indeterminate' ? 'mixed' : String(state === 'checked');
@@ -831,6 +850,10 @@ export class AndesCascader
 
   protected resultChecked(result: AndesCascaderSearchResult): boolean {
     return this.checkedKeys().has(result.key);
+  }
+
+  protected resultBlocked(result: AndesCascaderSearchResult): boolean {
+    return this.isBlocked(result.nodes[result.nodes.length - 1]);
   }
 
   protected resultSelected(result: AndesCascaderSearchResult): boolean {
@@ -1758,6 +1781,14 @@ export class AndesCascader
           ...checked,
           ...terminals.map((t) => t.key).filter((key) => !checked.has(key)),
         ];
+    const max = this.maxCount();
+    if (
+      !allChecked &&
+      max !== undefined &&
+      this.checkedSelection(keys).paths.length > max
+    ) {
+      return;
+    }
     const before = this.shownCheckStates();
     this.commitChecked(keys);
     this.playCheckMotion(before);
@@ -1808,6 +1839,15 @@ export class AndesCascader
   }
 
   private commitChecked(terminalKeys: readonly string[]): void {
+    const { paths, options } = this.checkedSelection(terminalKeys);
+    this.commit(paths, options);
+  }
+
+  /** The paths (and their options) a set of checked leaves makes, by `showCheckedStrategy`. */
+  private checkedSelection(terminalKeys: readonly string[]): {
+    paths: AndesCascaderValue[][];
+    options: AndesCascaderOption[][];
+  } {
     const tree = this.tree();
     const extras = this.entries()
       .filter((entry) => entry.nodes === null)
@@ -1824,7 +1864,7 @@ export class AndesCascader
       ...extras.map(() => [] as AndesCascaderOption[]),
       ...nodes.map((node) => nodePath(node).map((entry) => entry.option)),
     ];
-    this.commit(paths, options);
+    return { paths, options };
   }
 
   /** The outermost nodes whose every pickable leaf is checked. */

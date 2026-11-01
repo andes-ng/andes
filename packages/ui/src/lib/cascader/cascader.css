@@ -813,6 +813,18 @@ button.andes-cascader__combobox {
   font-weight: 600;
 }
 
+/* `maxCount` reached: an option that is not checked can no longer be, though a branch still
+   opens its column. */
+.andes-cascader__option[data-blocked] .andes-cascader__check {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.andes-cascader__option[data-blocked][aria-disabled='true'] {
+  color: var(--andes-color-muted-foreground);
+  cursor: not-allowed;
+}
+
 .andes-cascader__option[data-disabled] {
   color: var(--andes-color-muted-foreground);
   cursor: not-allowed;

@@ -38,6 +38,7 @@ const PLACES: AndesCascaderOption[] = [
       [maxTagPlaceholder]="placeholder()"
       [maxTagPopover]="maxTagPopover()"
       [maxTagTextLength]="maxTagTextLength()"
+      [maxCount]="maxCount()"
       (selectionChange)="changes.push($event)"
     />
   `,
@@ -61,6 +62,7 @@ class TagsHost {
   );
   readonly maxTagPopover = signal(true);
   readonly maxTagTextLength = signal<number | undefined>(undefined);
+  readonly maxCount = signal<number | undefined>(undefined);
   readonly changes: AndesCascaderChange[] = [];
 }
 
@@ -224,6 +226,71 @@ describe('AndesCascader tags', () => {
       fixture.detectChanges();
       expect(tagTexts().length).toBe(4);
       expect(rest()).toBeNull();
+    });
+  });
+
+  describe('maxCount', () => {
+    const item = (label: string) =>
+      Array.from(
+        document.querySelectorAll<HTMLElement>('[data-slot="cascader-option"]'),
+      ).find(
+        (el) => el.textContent?.replace(/\s+/g, ' ').trim() === label,
+      ) as HTMLElement;
+    const open = () => {
+      (
+        field().querySelector('[data-slot="cascader-trigger"]') as HTMLElement
+      ).click();
+      fixture.detectChanges();
+      item('Perú').click();
+      fixture.detectChanges();
+    };
+
+    it('stops more paths from being checked once the value holds maxCount', () => {
+      const host = setup((h) => {
+        h.maxTagCount.set(undefined);
+        h.maxCount.set(2);
+        h.value.set([['peru', 'lima']]);
+      });
+      open();
+      expect(item('Cusco').hasAttribute('data-blocked')).toBe(false);
+
+      item('Cusco').click();
+      fixture.detectChanges();
+      expect(host.value()).toEqual([
+        ['peru', 'lima'],
+        ['peru', 'cusco'],
+      ]);
+      expect(item('Arequipa').hasAttribute('data-blocked')).toBe(true);
+      expect(item('Arequipa').getAttribute('aria-disabled')).toBe('true');
+      // A branch still opens its column, and a checked path can still be taken off.
+      expect(item('Perú').hasAttribute('aria-disabled')).toBe(false);
+      expect(item('Cusco').hasAttribute('data-blocked')).toBe(false);
+
+      item('Arequipa').click();
+      fixture.detectChanges();
+      expect(host.value()).toEqual([
+        ['peru', 'lima'],
+        ['peru', 'cusco'],
+      ]);
+
+      item('Cusco').click();
+      fixture.detectChanges();
+      expect(host.value()).toEqual([['peru', 'lima']]);
+      expect(item('Arequipa').hasAttribute('data-blocked')).toBe(false);
+    });
+
+    it('refuses a branch whose leaves would overshoot it', () => {
+      const host = setup((h) => {
+        h.maxTagCount.set(undefined);
+        h.maxCount.set(3);
+        h.value.set([]);
+      });
+      open();
+      (
+        item('Perú').querySelector('.andes-cascader__check') as HTMLElement
+      ).click();
+      fixture.detectChanges();
+      expect(host.value()).toEqual([]);
     });
   });
 });

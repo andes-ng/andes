@@ -415,7 +415,12 @@
         [id]="resultId(i)"
         [attr.aria-selected]="multiple() ? null : resultSelected(result)"
         [attr.aria-checked]="multiple() ? resultChecked(result) : null"
-        [attr.aria-disabled]="result.disabled ? 'true' : null"
+        [attr.aria-disabled]="
+          result.disabled || (multiple() && resultBlocked(result))
+            ? 'true'
+            : null
+        "
+        [attr.data-blocked]="multiple() && resultBlocked(result) ? '' : null"
         [attr.data-active]="i === activeResultIndex() ? '' : null"
         [attr.data-highlighted]="i === highlightedResult() ? '' : null"
         [attr.data-disabled]="result.disabled ? '' : null"
@@ -477,7 +482,12 @@
           [attr.aria-expanded]="isBranch(node) ? isExpanded(node) : null"
           [attr.aria-selected]="multiple() ? null : isSelectedNode(node)"
           [attr.aria-checked]="multiple() ? ariaChecked(node) : null"
-          [attr.aria-disabled]="node.disabled ? 'true' : null"
+          [attr.aria-disabled]="
+            node.disabled || (isBlocked(node) && !isBranch(node))
+              ? 'true'
+              : null
+          "
+          [attr.data-blocked]="multiple() && isBlocked(node) ? '' : null"
           [attr.data-active]="isActive(node) ? '' : null"
           [attr.data-highlighted]="isHighlighted(node) ? '' : null"
           [attr.data-expanded]="isExpanded(node) ? '' : null"

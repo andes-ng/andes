@@ -183,7 +183,7 @@ export const NeedConfirmTypes: Story = {
   render: () => ({
     moduleMetadata: { imports: [FormsModule] },
     props: { types: TYPES, picked: FEB_15, caption: CAPTION },
-    template: `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0.75rem 1.5rem; align-items: start; align-content: start; min-height: 32rem;">
+    template: `<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 18rem)); gap: 0.75rem 1.5rem; align-items: start; align-content: start; min-height: 32rem;">
       <p [style]="caption">needConfirm off (default)</p>
       <p [style]="caption">needConfirm</p>
       <p [style]="caption">range with needConfirm</p>

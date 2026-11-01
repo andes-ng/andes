@@ -112,14 +112,24 @@ export function andesOrgChartLinkPath(
       style === 'straight' ? 0 : style === 'curved' ? radius * 2 : radius,
     );
   }
+  // The diagonal part of a straight or curved link spans as much of the main axis before the
+  // fork as after it. Without assistants that is the whole gap from the parent; with them the
+  // link first runs down the stem past the assistants instead of cutting across their cards.
+  const forkStart = points[1];
+  const forkEnd = points[points.length - 2];
+  const reach = { x: last.x - forkEnd.x, y: last.y - forkEnd.y };
+  const stemLength = distance(first, forkStart);
+  const bend =
+    stemLength > Math.hypot(reach.x, reach.y) + 0.01
+      ? { x: forkStart.x - reach.x, y: forkStart.y - reach.y }
+      : first;
+  const stem = bend === first ? '' : ` L${point(bend)}`;
   if (style === 'straight') {
-    return `M${point(first)} L${point(last)}`;
+    return `M${point(first)}${stem} L${point(last)}`;
   }
   if (style === 'curved') {
     // Control points on the fork line keep the curve leaving and entering along the main axis.
-    const forkStart = points[1];
-    const forkEnd = points[points.length - 2];
-    return `M${point(first)} C${point(forkStart)} ${point(forkEnd)} ${point(last)}`;
+    return `M${point(first)}${stem} C${point(forkStart)} ${point(forkEnd)} ${point(last)}`;
   }
   return andesOrgChartRoundedPath(points, radius);
 }

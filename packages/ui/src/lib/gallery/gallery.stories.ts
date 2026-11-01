@@ -1,21 +1,9 @@
-import {
-  andesOverlayPreset,
-  AndesOverlayContentPrimitive,
-  AndesOverlayPrimitive,
-  provideAndesOverlay,
-} from '@andes-ng/primitives';
 import { DOCUMENT } from '@angular/common';
-import {
-  Component,
-  DestroyRef,
-  inject,
-  input,
-  signal,
-  type TemplateRef,
-  viewChild,
-} from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 
+import { AndesButton } from '../button/button';
+import { ANDES_DIALOG_IMPORTS } from '../dialog/dialog';
 import { AndesGallery } from './gallery';
 import { AndesGalleryItem } from './gallery-item';
 import type {
@@ -468,16 +456,20 @@ export const RightToLeft: Story = {
 
 @Component({
   selector: 'andes-story-gallery-controlled',
-  imports: [AndesGallery],
+  imports: [AndesGallery, AndesButton],
   template: `
     <div
       style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 1rem; font: 14px/22px system-ui;"
     >
-      <button type="button" (click)="index.set(0)">First</button>
-      <button type="button" (click)="index.set(images.length - 1)">Last</button>
-      <button type="button" (click)="fullscreen.set(true)">
-        Open full screen
-      </button>
+      <andes-button variant="outline" (click)="index.set(0)"
+        >First</andes-button
+      >
+      <andes-button variant="outline" (click)="index.set(images.length - 1)"
+        >Last</andes-button
+      >
+      <andes-button (click)="fullscreen.set(true)"
+        >Open full screen</andes-button
+      >
       <span>activeIndex: {{ index() }}, fullscreen: {{ fullscreen() }}</span>
       <span>last change: {{ lastChange() }}</span>
     </div>
@@ -512,56 +504,34 @@ export const Controlled: Story = {
   render: () => ({ template: `<andes-story-gallery-controlled />` }),
 };
 
-/**
- * A minimal modal dialog on the overlay primitive the library's dialogs are built on, so the
- * story shows the gallery inside one and its lightbox stacking over it.
- */
+/** The library's own dialog with a gallery in it, whose lightbox stacks over the dialog. */
 @Component({
   selector: 'andes-story-gallery-dialog',
-  imports: [AndesGallery, AndesOverlayContentPrimitive],
-  providers: [provideAndesOverlay()],
+  imports: [AndesGallery, AndesButton, ...ANDES_DIALOG_IMPORTS],
   template: `
-    <button type="button" style="font: 14px/22px system-ui;" (click)="open()">
-      Open the dialog
-    </button>
-    <ng-template #panel>
-      <div
-        andesOverlayContent
-        aria-labelledby="story-gallery-dialog-title"
-        style="box-sizing: border-box; width: min(44rem, calc(100vw - 2rem)); padding: 1.25rem; border-radius: var(--andes-radius-lg); background: var(--andes-color-popover); color: var(--andes-color-popover-foreground); box-shadow: var(--andes-shadow-lg); font: 14px/22px system-ui;"
-      >
-        <h2
-          id="story-gallery-dialog-title"
-          style="margin: 0 0 0.75rem; font: 600 16px/24px system-ui;"
-        >
-          {{ title() }}
-        </h2>
+    <andes-button (click)="open.set(true)">Open the dialog</andes-button>
+    <andes-dialog [(open)]="open">
+      <andes-dialog-content *andesDialogContent>
+        <div andesDialogHeader>
+          <h2 andesDialogTitle>Trip album</h2>
+          <p andesDialogDescription>
+            Full screen opens a lightbox over the dialog; Escape closes it
+            first.
+          </p>
+        </div>
         <div style="height: 22rem;">
           <andes-gallery [images]="images" />
         </div>
-        <p style="margin: 0.75rem 0;">
-          Full screen opens a lightbox over the dialog; Escape closes it first.
-        </p>
-        <button type="button" (click)="overlay.close('close-button')">
-          Done
-        </button>
-      </div>
-    </ng-template>
+        <div andesDialogFooter>
+          <andes-button variant="secondary" andesDialogClose>Done</andes-button>
+        </div>
+      </andes-dialog-content>
+    </andes-dialog>
   `,
 })
 class DialogDemo {
-  readonly title = input('Trip album');
-  protected readonly overlay = inject(AndesOverlayPrimitive);
+  protected readonly open = signal(false);
   protected readonly images = SIX;
-  private readonly panel = viewChild.required<TemplateRef<unknown>>('panel');
-
-  constructor() {
-    this.overlay.configure(andesOverlayPreset('dialog'));
-  }
-
-  protected open(): void {
-    this.overlay.open(this.panel());
-  }
 }
 
 export const InADialog: Story = {

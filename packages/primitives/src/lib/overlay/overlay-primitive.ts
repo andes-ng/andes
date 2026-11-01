@@ -705,26 +705,46 @@ export class AndesOverlayPrimitive {
       }),
     );
 
+    const handleOutside = (event: MouseEvent): void => {
+      this._outsidePointer.next(event);
+      if (!this._config().closeOnOutsideClick) {
+        return;
+      }
+      const target = event.target as Node | null;
+      // A click on the trigger is the trigger's own business — closing here as
+      // well would fight its toggle and leave the overlay flickering.
+      const anchor = this._anchor();
+      if (anchor && target && anchor.contains(target)) {
+        return;
+      }
+      // The backdrop is technically "outside" the pane, but it has its own,
+      // more precise close reason.
+      if (target && ref.backdropElement?.contains(target)) {
+        return;
+      }
+      this.close('outside-click');
+    };
+
     this.openSubscriptions.add(
-      ref.outsidePointerEvents().subscribe((event) => {
-        this._outsidePointer.next(event);
-        if (!this._config().closeOnOutsideClick) {
-          return;
-        }
-        const target = event.target as Node | null;
-        // A click on the trigger is the trigger's own business — closing here as
-        // well would fight its toggle and leave the overlay flickering.
-        const anchor = this._anchor();
-        if (anchor && target && anchor.contains(target)) {
-          return;
-        }
-        // The backdrop is technically "outside" the pane, but it has its own,
-        // more precise close reason.
-        if (target && ref.backdropElement?.contains(target)) {
-          return;
-        }
-        this.close('outside-click');
-      }),
+      ref.outsidePointerEvents().subscribe(handleOutside),
+    );
+
+    // The CDK listens on `body`, so a click on the page's root element, which is
+    // all there is below a body shorter than the window, never reaches it. Only
+    // the topmost overlay answers, as it does for body clicks.
+    const doc = ref.hostElement.ownerDocument;
+    const onRootClick = (event: MouseEvent): void => {
+      const container = ref.hostElement.parentElement;
+      if (
+        event.target === doc.documentElement &&
+        container?.lastElementChild === ref.hostElement
+      ) {
+        handleOutside(event);
+      }
+    };
+    doc.addEventListener('click', onRootClick, true);
+    this.openSubscriptions.add(() =>
+      doc.removeEventListener('click', onRootClick, true),
     );
 
     this.openSubscriptions.add(

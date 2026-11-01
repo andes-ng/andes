@@ -339,6 +339,101 @@
   unicode-bidi: isolate;
 }
 
+/* With `maxTagPopover` (the default) the "+ N" tag is a button opening the popover. */
+.andes-tree-select__tag--rest[role='button'] {
+  cursor: pointer;
+  outline: none;
+  transition:
+    background-color var(--andes-duration-base, 150ms) ease,
+    color var(--andes-duration-base, 150ms) ease;
+}
+
+.andes-tree-select__tag--rest[role='button']:hover,
+.andes-tree-select__tag--rest[role='button'][data-state='open'] {
+  background-color: color-mix(
+    in srgb,
+    var(--andes-color-muted, #f1f5f9) 88%,
+    var(--andes-color-foreground, #0f172a)
+  );
+  color: var(--andes-color-foreground, #0f172a);
+}
+
+.andes-tree-select__tag--rest[role='button']:focus-visible {
+  outline: 2px solid var(--andes-color-focus-ring, #2563eb);
+  outline-offset: -2px;
+}
+
+.andes-tree-select__tag--rest[aria-disabled='true'] {
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .andes-tree-select__tag--rest[role='button'] {
+    transition: none;
+  }
+}
+
+/*
+  `maxTagCount="responsive"`: one row of tags, never wrapping. The field counts how many fit
+  from an invisible measuring row holding all of them.
+*/
+/* prettier-ignore */
+.andes-tree-select__trigger[data-responsive] .andes-tree-select__selection {
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.andes-tree-select__trigger[data-responsive] .andes-tree-select__tag {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+/* prettier-ignore */
+.andes-tree-select__trigger[data-responsive] .andes-tree-select__tag--rest {
+  flex-shrink: 0;
+}
+
+.andes-tree-select__measure {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  display: flex;
+  width: max-content;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.andes-tree-select__measure-item {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+/*
+  The "+ N" popover (the select's, from select-overflow.css) renders outside the field, so its
+  tags take their size from the popover's own `data-size`.
+*/
+.andes-select__overflow {
+  --_tag-height: calc(var(--andes-control-height-md, 2rem) - 0.625rem);
+}
+
+.andes-select__overflow[data-size='sm'] {
+  --_tag-height: calc(var(--andes-control-height-sm, 1.5rem) - 0.5rem);
+}
+
+.andes-select__overflow[data-size='lg'] {
+  --_tag-height: calc(var(--andes-control-height-lg, 2.5rem) - 0.625rem);
+}
+
+.andes-select__overflow[data-size='sm'] .andes-tree-select__tag {
+  padding-inline: var(--andes-space-1, 0.25rem);
+  border-radius: 0.125rem;
+  font-size: 0.75rem;
+}
+
+.andes-select__overflow[data-size='lg'] .andes-tree-select__tag {
+  border-radius: var(--andes-control-radius-md, 0.375rem);
+}
+
 .andes-tree-select__tag-label {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -360,6 +455,13 @@
 
 .andes-tree-select__tag-remove:hover {
   color: var(--andes-color-foreground, #0f172a);
+}
+
+/* Only a Tab stop inside the "+ N" popover; in the field, Backspace removes tags. */
+.andes-tree-select__tag-remove:focus-visible {
+  color: var(--andes-color-foreground, #0f172a);
+  outline: 2px solid var(--andes-color-focus-ring, #2563eb);
+  outline-offset: 1px;
 }
 
 .andes-tree-select__tag-remove svg {

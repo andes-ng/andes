@@ -2,6 +2,7 @@ export { AndesTreeSelect } from './tree-select';
 export type {
   AndesTreeSelectLabeledValue,
   AndesTreeSelectLabels,
+  AndesTreeSelectMaxTagCount,
   AndesTreeSelectMaxTagPlaceholder,
   AndesTreeSelectModel,
   AndesTreeSelectOption,

@@ -1,5 +1,6 @@
 import {
   andesOverlayPreset,
+  AndesOverlayContentPrimitive,
   AndesOverlayPrimitive,
   provideAndesOverlay,
   type AndesOverlayAlign,
@@ -32,7 +33,12 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NG_VALUE_ACCESSOR, type ControlValueAccessor } from '@angular/forms';
 
+import { AndesSelectOverflow } from '../select/select-overflow';
 import { matchTriggerWidthAttribute } from '../select/select-state';
+import {
+  andesMeasureTagFit,
+  AndesTagOverflowHost,
+} from '../select/tag-overflow';
 import { AndesTree, type AndesTreeExpandAction } from '../tree/tree';
 import { AndesTreeNodeTemplate } from '../tree/tree-node-template';
 import type {
@@ -55,6 +61,7 @@ import {
 import type {
   AndesTreeSelectLabeledValue,
   AndesTreeSelectLabels,
+  AndesTreeSelectMaxTagCount,
   AndesTreeSelectMaxTagPlaceholder,
   AndesTreeSelectModel,
   AndesTreeSelectOption,
@@ -77,7 +84,11 @@ const DEFAULT_LABELS: AndesTreeSelectLabels = {
   clear: 'Clear',
   remove: (title) => `Remove ${title}`,
   more: (count) => `+ ${count} ...`,
+  moreSelected: (count) => `${count} more selected`,
 };
+
+/** Room kept on a responsive row for the in-field search input (its 4rem minimum), in px. */
+const RESPONSIVE_SEARCH_RESERVE = 64;
 
 // The panel stays above or below the field: beside it, it would no longer read as its list.
 const PLACEMENTS: Readonly<
@@ -98,6 +109,13 @@ function optionalNumber(value: unknown): number | undefined {
   return value === undefined || value === null || value === ''
     ? undefined
     : numberAttribute(value);
+}
+
+/** `'responsive'` stays as is; anything else goes through {@link optionalNumber}. */
+function maxTagCountAttribute(
+  value: unknown,
+): AndesTreeSelectMaxTagCount | undefined {
+  return value === 'responsive' ? value : optionalNumber(value);
 }
 
 function isLabeled(value: unknown): value is AndesTreeSelectLabeledValue {
@@ -146,6 +164,13 @@ function toKeys(
  * value (and the tags) contain when a parent is checked: `child` (the default) only the leaves,
  * `parent` the topmost checked nodes, `all` every checked node.
  *
+ * ## Tags
+ *
+ * A multiple select shows a tag per node. `maxTagCount` collapses the tags past a number - or,
+ * `'responsive'`, past what fits on one row - into a "+ N" tag, which opens a popover listing
+ * (and removing) the hidden ones; `maxTagPopover="false"` makes it plain text instead.
+ * `maxTagTextLength` cuts long tags short.
+ *
  * ## Search
  *
  * `showSearch` adds a search box that filters the tree, in the panel by default or in the field
@@ -178,12 +203,22 @@ function toKeys(
  */
 @Component({
   selector: 'andes-tree-select',
-  imports: [NgTemplateOutlet, AndesTree],
+  imports: [
+    NgTemplateOutlet,
+    AndesTree,
+    AndesOverlayContentPrimitive,
+    AndesSelectOverflow,
+  ],
   templateUrl: './tree-select.html',
-  styleUrl: './tree-select.css',
+  // The "+ N" popover is the select's, on the select's popover surface.
+  styleUrls: ['./tree-select.css', '../select/select-overflow.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     provideAndesOverlay(),
+    {
+      provide: AndesTagOverflowHost,
+      useExisting: forwardRef(() => AndesTreeSelect),
+    },
     {
       provide: NG_VALUE_ACCESSOR,
       useExisting: forwardRef(() => AndesTreeSelect),
@@ -202,9 +237,12 @@ function toKeys(
     '[attr.data-disabled]': 'isDisabled() ? "" : null',
   },
 })
-export class AndesTreeSelect implements ControlValueAccessor {
+export class AndesTreeSelect
+  implements ControlValueAccessor, AndesTagOverflowHost<AndesTreeSelectTag>
+{
   private readonly injector = inject(Injector);
   private readonly overlay = inject(AndesOverlayPrimitive);
+  private readonly destroyRef = inject(DestroyRef);
 
   /** The options. Update it to deliver children loaded on demand. */
   readonly nodes = input<AndesTreeNode[]>([]);
@@ -260,13 +298,26 @@ export class AndesTreeSelect implements ControlValueAccessor {
   /** Tallest the panel's list grows before it scrolls (a number is px). */
   readonly panelHeight = input<number>(320);
 
-  /** How many tags to show before the rest collapse into one "+ N" tag. */
-  readonly maxTagCount = input<number | undefined, unknown>(undefined, {
-    transform: optionalNumber,
-  });
+  /**
+   * How many tags to show before the rest collapse into one "+ N" tag. `'responsive'` keeps the
+   * tags on one row and shows as many as fit.
+   */
+  readonly maxTagCount = input<AndesTreeSelectMaxTagCount | undefined, unknown>(
+    undefined,
+    { transform: maxTagCountAttribute },
+  );
   readonly maxTagPlaceholder = input<
     AndesTreeSelectMaxTagPlaceholder | undefined
   >(undefined);
+  /**
+   * Whether the "+ N" tag is a button opening a popover that lists - and removes - the hidden
+   * tags. Off, it is plain text with the hidden titles as a native tooltip.
+   */
+  readonly maxTagPopover = input(true, { transform: booleanAttribute });
+  /** Longest tag text, in characters, before it is cut short with "...". */
+  readonly maxTagTextLength = input<number | undefined, unknown>(undefined, {
+    transform: optionalNumber,
+  });
 
   readonly placement = input<AndesTreeSelectPlacement>('bottomLeft');
   /**
@@ -374,7 +425,8 @@ export class AndesTreeSelect implements ControlValueAccessor {
   readonly isOpen = this.overlay.isOpen;
 
   private readonly disabledByForm = signal(false);
-  protected readonly isDisabled = computed(
+  /** Whether the select is disabled, by its input or by its form control. */
+  readonly isDisabled = computed(
     () => this.disabled() || this.disabledByForm(),
   );
 
@@ -451,17 +503,38 @@ export class AndesTreeSelect implements ControlValueAccessor {
       .join(', '),
   );
 
-  protected readonly visibleTags = computed<AndesTreeSelectTag[]>(() => {
+  /** Whether tags are fitted to one row (`maxTagCount="responsive"`). */
+  protected readonly responsive = computed(
+    () => this.maxTagCount() === 'responsive' && this.multiMode(),
+  );
+  private readonly responsiveCount = signal<number | null>(null);
+  /** Every tag of the selection, before `maxTagCount` applies. */
+  protected readonly allTags = computed<AndesTreeSelectTag[]>(() =>
+    this.selectedOptions().map((option) => ({
+      ...option,
+      closable: !this.isDisabled(),
+    })),
+  );
+  /** How many tags the field shows, or `undefined` for all of them. */
+  private readonly shownCount = computed(() => {
     const max = this.maxTagCount();
-    const all = this.selectedOptions();
-    const tags = max === undefined ? all : all.slice(0, Math.max(0, max));
-    return tags.map((option) => ({ ...option, closable: !this.isDisabled() }));
+    if (max === 'responsive') {
+      return this.responsive()
+        ? (this.responsiveCount() ?? undefined)
+        : undefined;
+    }
+    return max === undefined ? undefined : Math.max(0, max);
   });
-  protected readonly omittedTags = computed(() => {
-    const max = this.maxTagCount();
-    return max === undefined
-      ? []
-      : this.selectedOptions().slice(Math.max(0, max));
+  /** The tags the field shows. */
+  readonly visibleTags = computed<AndesTreeSelectTag[]>(() => {
+    const count = this.shownCount();
+    const all = this.allTags();
+    return count === undefined ? all : all.slice(0, count);
+  });
+  /** The tags hidden behind the "+ N" tag. */
+  readonly omittedTags = computed<AndesTreeSelectTag[]>(() => {
+    const count = this.shownCount();
+    return count === undefined ? [] : this.allTags().slice(count);
   });
   protected readonly omittedTemplate = computed(() => {
     const placeholder = this.maxTagPlaceholder();
@@ -516,6 +589,11 @@ export class AndesTreeSelect implements ControlValueAccessor {
     const rule = this.widthRule();
     return typeof rule === 'number' ? rule : null;
   });
+
+  private readonly selection = viewChild<ElementRef<HTMLElement>>('selection');
+  private readonly measure = viewChild<ElementRef<HTMLElement>>('measure');
+  /** The open "+ N" popover's pane: focus moving into it has not left the select. */
+  private readonly overflowPane = signal<HTMLElement | null>(null);
 
   private expandAllApplied = false;
   private onChange: (value: AndesTreeSelectModel) => void = () => undefined;
@@ -593,6 +671,28 @@ export class AndesTreeSelect implements ControlValueAccessor {
       }
     });
 
+    // A resized field re-fits responsive tags.
+    afterNextRender(() => {
+      if (typeof ResizeObserver === 'undefined') {
+        return;
+      }
+      const observer = new ResizeObserver(() => this.fitTags());
+      observer.observe(this.box().nativeElement);
+      this.destroyRef.onDestroy(() => observer.disconnect());
+    });
+
+    // Re-fit once the measuring row has rendered a changed set of tags.
+    afterRenderEffect(() => {
+      this.allTags();
+      this.searchInTrigger();
+      if (!this.responsive()) {
+        untracked(() => this.responsiveCount.set(null));
+        return;
+      }
+      this.measure();
+      untracked(() => this.fitTags());
+    });
+
     this.overlay.opened.pipe(takeUntilDestroyed()).subscribe(() => {
       this.openState.set(true);
       this.watchPanelScroll();
@@ -605,7 +705,7 @@ export class AndesTreeSelect implements ControlValueAccessor {
       this.onTouched();
       this.openState.set(false);
     });
-    inject(DestroyRef).onDestroy(() => this.unwatchPanelScroll());
+    this.destroyRef.onDestroy(() => this.unwatchPanelScroll());
 
     afterNextRender(() => {
       if (this.defaultOpen() && !this.isOpen()) {
@@ -678,6 +778,56 @@ export class AndesTreeSelect implements ControlValueAccessor {
    * Template helpers
    * ------------------------------------------------------------------------------------- */
 
+  /* ---------------------------------------------------------------------------------------
+   * The "+ N" popover (AndesTagOverflowHost)
+   * ------------------------------------------------------------------------------------- */
+
+  maxTagPopoverLabelFor(count: number): string {
+    return this.text().moreSelected(count);
+  }
+
+  registerOverflowPanel(element: HTMLElement | null): void {
+    this.overflowPane.set(element);
+  }
+
+  canRemoveTag(tag: AndesTreeSelectTag): boolean {
+    return tag.closable;
+  }
+
+  removeTag(tag: AndesTreeSelectTag): void {
+    this.removeOption(tag);
+  }
+
+  /** Focus moved into the popover, which counts as the field. */
+  onFocusIn(event: FocusEvent): void {
+    this.focused.emit(event);
+  }
+
+  /** Focus left the popover: as leaving the field, unless it went back into it. */
+  onFocusOut(event: FocusEvent): void {
+    this.onBoxFocusOut(event);
+  }
+
+  /**
+   * Counts how many tags fit on the field's one row, for `maxTagCount="responsive"`, from the
+   * invisible measuring row; an in-field search keeps room for its input.
+   */
+  private fitTags(): void {
+    const measure = this.measure()?.nativeElement;
+    const selection = this.selection()?.nativeElement;
+    if (!this.responsive() || !measure || !selection) {
+      return;
+    }
+    const count = andesMeasureTagFit(
+      measure,
+      selection,
+      this.searchInTrigger() ? RESPONSIVE_SEARCH_RESERVE : 0,
+    );
+    if (count !== null) {
+      this.responsiveCount.set(count);
+    }
+  }
+
   protected omittedText(omitted: AndesTreeSelectOption[]): string {
     const placeholder = this.maxTagPlaceholder();
     return typeof placeholder === 'function'
@@ -685,8 +835,30 @@ export class AndesTreeSelect implements ControlValueAccessor {
       : this.text().more(omitted.length);
   }
 
-  protected tagContext(tag: AndesTreeSelectTag): AndesTreeSelectTagContext {
-    return { $implicit: tag, onClose: () => this.removeOption(tag) };
+  /** Native tooltip of the "+ N" tag with `maxTagPopover` off: the titles it stands for. */
+  protected omittedTitle(): string {
+    return this.omittedTags()
+      .map((tag) => tag.title)
+      .join(', ');
+  }
+
+  /** A tag's text, cut short past `maxTagTextLength`. */
+  protected tagText(tag: AndesTreeSelectOption): string {
+    const max = this.maxTagTextLength();
+    return max !== undefined && tag.title.length > max
+      ? `${tag.title.slice(0, max)}...`
+      : tag.title;
+  }
+
+  /** Context of a `tagTemplate` tag; `remove` is the popover's own removal, when in it. */
+  protected tagContext(
+    tag: AndesTreeSelectTag,
+    remove?: (tag: AndesTreeSelectTag) => void,
+  ): AndesTreeSelectTagContext {
+    return {
+      $implicit: tag,
+      onClose: () => (remove ? remove(tag) : this.removeOption(tag)),
+    };
   }
 
   private optionFor(key: AndesTreeKey): AndesTreeSelectOption {
@@ -802,17 +974,19 @@ export class AndesTreeSelect implements ControlValueAccessor {
     }
   }
 
-  protected onFocusIn(event: FocusEvent): void {
+  protected onBoxFocusIn(event: FocusEvent): void {
     this.focused.emit(event);
   }
 
-  protected onFocusOut(event: FocusEvent): void {
+  protected onBoxFocusOut(event: FocusEvent): void {
     this.blurred.emit(event);
     const next = event.relatedTarget as Node | null;
     const pane = this.overlay.panelElement();
     const inside =
       !!next &&
-      (this.box().nativeElement.contains(next) || !!pane?.contains(next));
+      (this.box().nativeElement.contains(next) ||
+        !!pane?.contains(next) ||
+        !!this.overflowPane()?.contains(next));
     if (!inside && !this.isOpen()) {
       this.onTouched();
     }

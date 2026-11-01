@@ -20,6 +20,7 @@
   [attr.data-invalid]="invalid() ? '' : null"
   [attr.data-clearable]="showClear() ? '' : null"
   [attr.data-searchable]="searchInTrigger() ? '' : null"
+  [attr.data-responsive]="responsive() ? '' : null"
   [attr.role]="searchInTrigger() ? null : 'combobox'"
   [attr.tabindex]="searchInTrigger() || isDisabled() ? null : 0"
   [attr.id]="searchInTrigger() ? null : (id() ?? null)"
@@ -35,8 +36,8 @@
   (mousedown)="onBoxMouseDown($event)"
   (click)="onBoxClick($event)"
   (keydown)="onComboboxKeydown($event)"
-  (focusin)="onFocusIn($event)"
-  (focusout)="onFocusOut($event)"
+  (focusin)="onBoxFocusIn($event)"
+  (focusout)="onBoxFocusOut($event)"
 >
   @if (prefix(); as prefixTemplate) {
   <span class="andes-tree-select__prefix" data-slot="tree-select-prefix">
@@ -44,64 +45,153 @@
   </span>
   }
 
-  <div class="andes-tree-select__selection">
-    @if (multiMode()) { @for (option of visibleTags(); track option.key) { @if
-    (tagTemplate(); as customTag) {
-    <ng-container
-      [ngTemplateOutlet]="customTag"
-      [ngTemplateOutletContext]="tagContext(option)"
-    />
-    } @else {
-    <span
-      class="andes-tree-select__tag"
-      data-slot="tree-select-tag"
-      [attr.title]="option.title"
-    >
-      <span class="andes-tree-select__tag-label">{{ option.title }}</span>
-      @if (!isDisabled()) {
-      <!--
-        Out of the tab order on purpose: keyboard users remove tags with Backspace from the
-        field, which is one tab stop instead of one per tag.
-      -->
-      <button
-        type="button"
-        tabindex="-1"
-        class="andes-tree-select__tag-remove"
-        [attr.aria-label]="text().remove(option.title)"
-        (click)="removeOption(option, $event)"
+  <div #selection class="andes-tree-select__selection">
+    <!--
+      One tag, shared by the visible row, the responsive measuring row and the "+ N" popover.
+      `remove` is set in the popover only: there each remove button is a Tab stop and removing
+      keeps focus inside it.
+    -->
+    <ng-template #tagSlot let-option let-remove="remove">
+      @if (tagTemplate(); as customTag) {
+      <ng-container
+        [ngTemplateOutlet]="customTag"
+        [ngTemplateOutletContext]="tagContext(option, remove)"
+      />
+      } @else {
+      <span
+        class="andes-tree-select__tag"
+        data-slot="tree-select-tag"
+        [attr.title]="option.title"
       >
-        @if (removeIcon(); as removeTemplate) {
-        <ng-container [ngTemplateOutlet]="removeTemplate" />
-        } @else {
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          aria-hidden="true"
+        <span class="andes-tree-select__tag-label">{{ tagText(option) }}</span>
+        @if (option.closable) {
+        <!--
+          In the field, out of the tab order on purpose: keyboard users remove tags with
+          Backspace from the field, which is one tab stop instead of one per tag.
+        -->
+        <button
+          type="button"
+          class="andes-tree-select__tag-remove"
+          [attr.tabindex]="remove ? null : -1"
+          [attr.aria-label]="text().remove(option.title)"
+          (click)="remove ? remove(option, $event) : removeOption(option, $event)"
         >
-          <path
-            d="M18 6 6 18M6 6l12 12"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
+          @if (removeIcon(); as removeTemplate) {
+          <ng-container [ngTemplateOutlet]="removeTemplate" />
+          } @else {
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            aria-hidden="true"
+          >
+            <path
+              d="M18 6 6 18M6 6l12 12"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          }
+        </button>
         }
-      </button>
+      </span>
       }
-    </span>
-    } } @if (omittedTags().length > 0) {
-    <span
-      class="andes-tree-select__tag andes-tree-select__tag--rest"
-      data-slot="tree-select-tag-rest"
-    >
+    </ng-template>
+
+    <!-- What the "+ N" tag reads: the maxTagPlaceholder template or function, or the label. -->
+    <ng-template #restLabel let-omitted>
       @if (omittedTemplate(); as rest) {
       <ng-container
         [ngTemplateOutlet]="rest"
+        [ngTemplateOutletContext]="{ $implicit: omitted }"
+      />
+      } @else { {{ omittedText(omitted) }} }
+    </ng-template>
+
+    @if (multiMode()) { @for (option of visibleTags(); track option.key) {
+    <ng-container
+      [ngTemplateOutlet]="tagSlot"
+      [ngTemplateOutletContext]="{ $implicit: option }"
+    />
+    } @if (omittedTags().length > 0) {
+    <!--
+      The "+ N" tag: a button opening a popover of the hidden tags (the select's own
+      AndesSelectOverflow), or, with maxTagPopover off, plain text with a native tooltip. Its
+      popover template lives inside it so that it shares the tag's overlay.
+    -->
+    <span
+      #overflow="andesSelectOverflow"
+      class="andes-tree-select__tag andes-tree-select__tag--rest"
+      data-slot="tree-select-tag-rest"
+      [andesSelectOverflow]="overflowPanel"
+      [attr.title]="maxTagPopover() ? null : omittedTitle()"
+    >
+      <ng-container
+        [ngTemplateOutlet]="restLabel"
         [ngTemplateOutletContext]="{ $implicit: omittedTags() }"
       />
-      } @else { {{ omittedText(omittedTags()) }} }
+      <ng-template #overflowPanel>
+        <div
+          andesOverlayContent
+          class="andes-select__overflow"
+          data-slot="tree-select-overflow"
+          [attr.aria-label]="overflow.label()"
+          [attr.dir]="overflow.direction()"
+          [attr.data-size]="size()"
+          (pointerenter)="overflow.onPanelPointerEnter($event)"
+          (pointerleave)="overflow.onPanelPointerLeave($event)"
+          (focusin)="overflow.onPanelFocusIn($event)"
+          (focusout)="overflow.onPanelFocusOut($event)"
+          (keydown)="overflow.onPanelKeydown($event)"
+        >
+          <div class="andes-select__overflow-body">
+            <ul class="andes-select__overflow-list" role="list">
+              @for (option of omittedTags(); track option.key) {
+              <li class="andes-select__overflow-item">
+                <ng-container
+                  [ngTemplateOutlet]="tagSlot"
+                  [ngTemplateOutletContext]="{
+                    $implicit: option,
+                    remove: overflow.remove
+                  }"
+                />
+              </li>
+              }
+            </ul>
+          </div>
+        </div>
+      </ng-template>
     </span>
+    } @if (responsive()) {
+    <!--
+      Every tag, laid out on one invisible row, so the field can tell how many fit before
+      deciding which ones to show. Inert: nothing in it is reachable.
+    -->
+    <div
+      #measure
+      class="andes-tree-select__measure"
+      data-slot="tree-select-tag-measure"
+      aria-hidden="true"
+      inert
+    >
+      @for (option of allTags(); track option.key) {
+      <span class="andes-tree-select__measure-item" data-measure="tag">
+        <ng-container
+          [ngTemplateOutlet]="tagSlot"
+          [ngTemplateOutletContext]="{ $implicit: option }"
+        />
+      </span>
+      }
+      <span class="andes-tree-select__measure-item" data-measure="rest">
+        <span class="andes-tree-select__tag andes-tree-select__tag--rest">
+          <ng-container
+            [ngTemplateOutlet]="restLabel"
+            [ngTemplateOutletContext]="{ $implicit: allTags() }"
+          />
+        </span>
+      </span>
+    </div>
     } } @else if (hasValue()) {
     <span
       class="andes-tree-select__value"

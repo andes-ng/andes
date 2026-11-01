@@ -59,6 +59,12 @@ export interface AndesTreeSelectPanelContext {
   close: () => void;
 }
 
+/**
+ * How many tags the field shows before the rest collapse into one "+ N" tag: a number, or
+ * `'responsive'` to fit as many as one row of the field holds.
+ */
+export type AndesTreeSelectMaxTagCount = number | 'responsive';
+
 /** What `maxTagPlaceholder` is given when a function: the tags that are not shown. */
 export type AndesTreeSelectMaxTagPlaceholder =
   | ((omitted: AndesTreeSelectOption[]) => string)
@@ -80,4 +86,6 @@ export interface AndesTreeSelectLabels {
   remove: (title: string) => string;
   /** Text of the tag that stands for the tags hidden by `maxTagCount`. */
   more: (count: number) => string;
+  /** Accessible name of that tag, and of the popover it opens, listing the hidden tags. */
+  moreSelected: (count: number) => string;
 }

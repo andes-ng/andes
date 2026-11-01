@@ -225,6 +225,13 @@ export class AndesTree {
    */
   readonly disabledKeys = input<readonly AndesTreeKey[]>([]);
 
+  /**
+   * Opens the ancestors of every key in `expandedKeys`, writing them into the model, so a
+   * deep key alone is enough to show its node. While it is on, a parent cannot close over an
+   * open descendant; turn it off once the user starts opening and closing branches.
+   */
+  readonly autoExpandParent = input(false, { transform: booleanAttribute });
+
   /** Open every node that has children, once, when the first nodes arrive. */
   readonly defaultExpandAll = input(false, { transform: booleanAttribute });
 
@@ -591,6 +598,31 @@ export class AndesTree {
       if (this.defaultExpandAll()) {
         untracked(() => this.expandAll());
       }
+    });
+
+    effect(() => {
+      const keys = this.expandedKeys();
+      if (!this.autoExpandParent()) {
+        return;
+      }
+      const index = this.index();
+      untracked(() => {
+        const open = new Set(keys);
+        const missing: AndesTreeKey[] = [];
+        for (const key of keys) {
+          for (
+            let parent = index.byKey.get(key)?.parent;
+            parent && !open.has(parent.key);
+            parent = parent.parent
+          ) {
+            open.add(parent.key);
+            missing.push(parent.key);
+          }
+        }
+        if (missing.length > 0) {
+          this.expandedKeys.set([...keys, ...missing]);
+        }
+      });
     });
 
     effect(() => {

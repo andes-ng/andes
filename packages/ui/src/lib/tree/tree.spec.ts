@@ -68,6 +68,7 @@ function sample(): AndesTreeNode[] {
       [checkable]="checkable()"
       [checkStrictly]="checkStrictly()"
       [defaultExpandAll]="defaultExpandAll()"
+      [autoExpandParent]="autoExpandParent()"
       [showLine]="showLine()"
       [showIcon]="showIcon()"
       [showLeafIcon]="leafIconTemplate() ? leafTpl : showLeafIcon()"
@@ -125,6 +126,7 @@ class HostComponent {
   readonly checkable = signal(false);
   readonly checkStrictly = signal(false);
   readonly defaultExpandAll = signal(false);
+  readonly autoExpandParent = signal(false);
   readonly showLine = signal(false);
   readonly showIcon = signal(false);
   readonly showLeafIcon = signal(false);
@@ -480,6 +482,30 @@ describe('AndesTree', () => {
       fixture.componentInstance.nodes.set(sample());
       fixture.detectChanges();
       expect(fixture.componentInstance.expanded()).toEqual([]);
+    });
+
+    it('opens the ancestors of the expanded keys with autoExpandParent', () => {
+      const fixture = setup((h) => {
+        h.autoExpandParent.set(true);
+        h.expanded.set(['a1']);
+      });
+      expect(fixture.componentInstance.expanded()).toEqual(['a1', 'a']);
+      expect(titles(fixture)).toContain('Estante X');
+
+      // A key set later is followed too.
+      fixture.componentInstance.expanded.set(['b1x-missing', 'b1']);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.expanded()).toEqual([
+        'b1x-missing',
+        'b1',
+        'b',
+      ]);
+    });
+
+    it('leaves the ancestors closed without autoExpandParent', () => {
+      const fixture = setup((h) => h.expanded.set(['a1']));
+      expect(fixture.componentInstance.expanded()).toEqual(['a1']);
+      expect(titles(fixture)).not.toContain('Estante X');
     });
 
     it('exposes expandAll, collapseAll, expandKeys, collapseKeys and toggleExpanded', () => {

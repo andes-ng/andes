@@ -133,6 +133,9 @@
         @for (week of panel.rows; track week.key) {
         <div class="andes-calendar__row" role="row">
           @if (week.weekNumber !== null) {
+          <!-- A pointer shortcut for the row: the days in it are the keyboard way to pick the
+               same week, so the number needs neither a key handler nor a tab stop. -->
+          <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
           <div
             class="andes-calendar__week-number"
             role="rowheader"

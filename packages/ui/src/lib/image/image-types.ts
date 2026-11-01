@@ -30,6 +30,7 @@ export type AndesImageTransformAction =
   | 'doubleClick'
   | 'keyboard'
   | 'move'
+  | 'pinch'
   | 'navigate';
 
 /** The geometric state of the previewed image. */

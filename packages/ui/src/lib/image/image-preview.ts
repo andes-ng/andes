@@ -31,9 +31,6 @@ import {
   clamp,
   imageTransformCss,
   isIdentityTransform,
-  isZoomed,
-  reboundTransform,
-  zoomTransform,
 } from './image-transform';
 import {
   resolveImageLabels,
@@ -50,9 +47,9 @@ import {
   type AndesImageStyles,
   type AndesImageToolbarContext,
   type AndesImageTransform,
-  type AndesImageTransformAction,
   type AndesImageTransformEvent,
 } from './image-types';
+import { AndesImageViewerController } from './image-viewer';
 
 /** Class on the scrim; `image-preview.css` retimes its fade and adds the blur variant. */
 export const ANDES_IMAGE_PREVIEW_BACKDROP_CLASS =
@@ -70,12 +67,6 @@ const PANE_CLASS = 'andes-image-preview-pane';
 
 /** Distance the arrow keys pan a zoomed image per press, in px. */
 const KEY_PAN_STEP = 48;
-/** Movement below this is still a click, not a drag. */
-const DRAG_THRESHOLD = 4;
-/** Horizontal travel that turns a drag of a fitted image into a previous/next swipe. */
-const SWIPE_DISTANCE = 60;
-/** Double-click / double-tap zoom target. */
-const DOUBLE_CLICK_SCALE = 2;
 /** Longest the previous picture may stay while it cross-fades out (the fade is 300ms). */
 const LEAVING_TIMEOUT_MS = 400;
 
@@ -89,16 +80,6 @@ const SHORTCUTS: Readonly<Record<AndesImagePreviewAction, string>> = {
   reset: '0',
   download: '',
 };
-
-interface DragState {
-  readonly id: number;
-  readonly startX: number;
-  readonly startY: number;
-  readonly originX: number;
-  readonly originY: number;
-  readonly onStage: boolean;
-  moved: boolean;
-}
 
 type LoadState = 'loading' | 'loaded' | 'error';
 
@@ -237,7 +218,7 @@ export class AndesImagePreview {
       custom ? 'loaded' : src ? 'loading' : 'error',
   });
 
-  protected readonly dragging = signal(false);
+  protected readonly dragging = computed(() => this.viewer.dragging());
 
   /** `x y` of the origin element's centre on screen, the viewer's transform origin. */
   protected readonly originPoint = signal<string | null>(null);
@@ -300,10 +281,8 @@ export class AndesImagePreview {
       ? 'zoomIn'
       : null;
   });
-  protected readonly zoomed = computed(() => isZoomed(this.transform()));
-  protected readonly canPan = computed(
-    () => this.zoomed() && this.cfg().movable,
-  );
+  protected readonly zoomed = computed(() => this.viewer.zoomed());
+  protected readonly canPan = computed(() => this.viewer.canPan());
   protected readonly canPrevious = computed(
     () => this.total() > 1 && (this.cfg().loop || this.index() > 0),
   );
@@ -405,10 +384,16 @@ export class AndesImagePreview {
     },
   );
 
-  private drag: DragState | null = null;
-  private suppressClick = false;
-  /** Whether the press that led to the next click began on the empty stage. */
-  private pressedOnStage = true;
+  /** Zoom, rotate, flip, pan, pinch and swipe: the gestures shared with the gallery. */
+  private readonly viewer = new AndesImageViewerController(this.transform, {
+    limits: () => this.cfg(),
+    stage: () => this.stage()?.nativeElement,
+    image: () => this.image()?.nativeElement,
+    isEmptyArea: (event) => this.isEmptyArea(event),
+    rtl: () => this.directionality.value === 'rtl',
+    changed: (event) => this.transformChange.emit(event),
+    swipe: (direction) => this.step(direction),
+  });
 
   constructor() {
     this.overlay.configure({
@@ -517,37 +502,27 @@ export class AndesImagePreview {
 
   /** Zooms in one step. */
   zoomIn(): void {
-    this.zoomBy(1, 'zoomIn');
+    this.viewer.zoomIn();
   }
 
   /** Zooms out one step. */
   zoomOut(): void {
-    this.zoomBy(-1, 'zoomOut');
+    this.viewer.zoomOut();
   }
 
   /** Rotates a quarter turn: positive is clockwise. */
   rotate(direction: 1 | -1): void {
-    const transform = this.transform();
-    this.commit(
-      this.rebound({ ...transform, rotate: transform.rotate + 90 * direction }),
-      direction > 0 ? 'rotateRight' : 'rotateLeft',
-    );
+    this.viewer.rotate(direction);
   }
 
   /** Mirrors the image on the horizontal (`'x'`) or vertical (`'y'`) screen axis. */
   flip(axis: 'x' | 'y'): void {
-    const transform = this.transform();
-    this.commit(
-      axis === 'x'
-        ? { ...transform, flipX: !transform.flipX }
-        : { ...transform, flipY: !transform.flipY },
-      axis === 'x' ? 'flipX' : 'flipY',
-    );
+    this.viewer.flip(axis);
   }
 
   /** Back to fit-to-viewport, unrotated, unmirrored. */
   reset(): void {
-    this.commit(ANDES_IMAGE_IDENTITY_TRANSFORM, 'reset');
+    this.viewer.reset();
   }
 
   /** Saves the shown image, through a blob where the browser allows it. */
@@ -644,7 +619,7 @@ export class AndesImagePreview {
 
   protected onLoad(): void {
     this.loadState.set('loaded');
-    this.settlePan();
+    this.viewer.settle();
   }
 
   protected onError(): void {
@@ -671,17 +646,16 @@ export class AndesImagePreview {
     const rtl = this.directionality.value === 'rtl';
     const key = event.key;
     const lower = key.length === 1 ? key.toLowerCase() : key;
-    const transform = this.transform();
     let handled = true;
 
     switch (lower) {
       case '+':
       case '=':
-        this.zoomBy(1, 'keyboard');
+        this.viewer.zoomBy(1, 'keyboard');
         break;
       case '-':
       case '_':
-        this.zoomBy(-1, 'keyboard');
+        this.viewer.zoomBy(-1, 'keyboard');
         break;
       case '0':
         this.reset();
@@ -730,14 +704,7 @@ export class AndesImagePreview {
               : lower === 'ArrowDown'
                 ? -KEY_PAN_STEP
                 : 0;
-          this.commit(
-            this.rebound({
-              ...transform,
-              x: transform.x + dx,
-              y: transform.y + dy,
-            }),
-            'keyboard',
-          );
+          this.viewer.panBy(dx, dy, 'keyboard');
         } else if (lower === 'ArrowLeft' || lower === 'ArrowRight') {
           const toward = (lower === 'ArrowRight') !== rtl ? 1 : -1;
           this.step(toward);
@@ -756,110 +723,26 @@ export class AndesImagePreview {
   }
 
   protected onWheel(event: WheelEvent): void {
-    const config = this.cfg();
-    if (!config.wheel) {
-      return;
-    }
-    event.preventDefault();
-    const delta = event.deltaY * (event.deltaMode === 1 ? 33 : 1);
-    // One 100px mouse-wheel notch is half a zoom step; a trackpad pinch (reported as
-    // ctrl+wheel with small deltas) is made four times as sensitive.
-    const exponent = clamp(-delta / (event.ctrlKey ? 25 : 200), -1, 1);
-    const next = this.transform().scale * (1 + config.scaleStep) ** exponent;
-    this.zoomAt(next, 'wheel', this.focalPoint(event));
+    this.viewer.onWheel(event);
   }
 
   protected onPointerDown(event: PointerEvent): void {
-    if ((event.pointerType === 'mouse' && event.button !== 0) || this.drag) {
-      return;
-    }
-    const transform = this.transform();
-    this.drag = {
-      id: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      originX: transform.x,
-      originY: transform.y,
-      onStage: this.isEmptyArea(event),
-      moved: false,
-    };
+    this.viewer.onPointerDown(event);
   }
 
   protected onPointerMove(event: PointerEvent): void {
-    const drag = this.drag;
-    if (!drag || drag.id !== event.pointerId) {
-      return;
-    }
-    const dx = event.clientX - drag.startX;
-    const dy = event.clientY - drag.startY;
-    if (!drag.moved) {
-      if (Math.hypot(dx, dy) < DRAG_THRESHOLD) {
-        return;
-      }
-      drag.moved = true;
-      this.dragging.set(true);
-      // Capture only once it is a real drag: capturing on press would retarget the
-      // click that follows a plain press onto the stage.
-      try {
-        (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-      } catch {
-        // Not every environment can capture; the drag still works while over the stage.
-      }
-    }
-    if (this.canPan()) {
-      this.transform.set({
-        ...this.transform(),
-        x: drag.originX + dx,
-        y: drag.originY + dy,
-      });
-    }
+    this.viewer.onPointerMove(event);
   }
 
   protected onPointerEnd(event: PointerEvent): void {
-    const drag = this.drag;
-    if (!drag || drag.id !== event.pointerId) {
-      return;
-    }
-    this.drag = null;
-    this.dragging.set(false);
-    this.suppressClick = drag.moved;
-    this.pressedOnStage = drag.onStage;
-    try {
-      (event.currentTarget as HTMLElement).releasePointerCapture(
-        event.pointerId,
-      );
-    } catch {
-      // Nothing was captured.
-    }
-    if (!drag.moved) {
-      return;
-    }
-
-    if (this.canPan()) {
-      const settled = this.rebound(this.transform());
-      this.transform.set(settled);
-      this.transformChange.emit({ transform: settled, action: 'move' });
-      return;
-    }
-    if (event.type !== 'pointerup' || this.zoomed()) {
-      return;
-    }
-    const dx = event.clientX - drag.startX;
-    const dy = event.clientY - drag.startY;
-    if (Math.abs(dx) >= SWIPE_DISTANCE && Math.abs(dx) > Math.abs(dy) * 1.5) {
-      const rtl = this.directionality.value === 'rtl';
-      this.step(dx > 0 !== rtl ? -1 : 1);
-    }
+    this.viewer.onPointerEnd(event);
   }
 
   protected onStageClick(event: MouseEvent): void {
-    const suppressed = this.suppressClick;
-    const pressedOnStage = this.pressedOnStage;
-    this.suppressClick = false;
-    this.pressedOnStage = true;
+    const press = this.viewer.takeClick();
     if (
-      suppressed ||
-      !pressedOnStage ||
+      press.suppressed ||
+      !press.pressedOnEmptyArea ||
       !this.isEmptyArea(event) ||
       !this.cfg().closeOnScrimClick
     ) {
@@ -883,13 +766,7 @@ export class AndesImagePreview {
   }
 
   protected onImageDoubleClick(event: MouseEvent): void {
-    event.preventDefault();
-    if (this.zoomed()) {
-      this.reset();
-      return;
-    }
-    const target = Math.min(this.cfg().maxScale, DOUBLE_CLICK_SCALE);
-    this.zoomAt(target, 'doubleClick', this.focalPoint(event));
+    this.viewer.onDoubleClick(event);
   }
 
   /** A press on the stage or the box that centres the picture, not on the picture. */
@@ -922,80 +799,6 @@ export class AndesImagePreview {
     const x = Math.round(rect.left + rect.width / 2);
     const y = Math.round(rect.top + rect.height / 2);
     return `${x}px ${y}px`;
-  }
-
-  private zoomBy(direction: 1 | -1, action: AndesImageTransformAction): void {
-    const { scaleStep } = this.cfg();
-    const scale = this.transform().scale;
-    this.zoomAt(
-      direction > 0 ? scale * (1 + scaleStep) : scale / (1 + scaleStep),
-      action,
-    );
-  }
-
-  private zoomAt(
-    scale: number,
-    action: AndesImageTransformAction,
-    focal?: { x: number; y: number },
-  ): void {
-    const { minScale, maxScale } = this.cfg();
-    let next = zoomTransform(
-      this.transform(),
-      scale,
-      minScale,
-      maxScale,
-      focal,
-    );
-    if (next.scale <= 1) {
-      next = { ...next, x: 0, y: 0 };
-    }
-    this.commit(this.rebound(next), action);
-  }
-
-  /** Pointer position measured from the viewport centre. */
-  private focalPoint(event: MouseEvent): { x: number; y: number } {
-    const stage = this.stage()?.nativeElement;
-    if (!stage) {
-      return { x: 0, y: 0 };
-    }
-    const rect = stage.getBoundingClientRect();
-    return {
-      x: event.clientX - (rect.left + rect.width / 2),
-      y: event.clientY - (rect.top + rect.height / 2),
-    };
-  }
-
-  private rebound(transform: AndesImageTransform): AndesImageTransform {
-    const stage = this.stage()?.nativeElement;
-    const image = this.image()?.nativeElement;
-    if (!stage || !image) {
-      return transform;
-    }
-    return reboundTransform(
-      transform,
-      { width: stage.clientWidth, height: stage.clientHeight },
-      { width: image.offsetWidth, height: image.offsetHeight },
-    );
-  }
-
-  /** Re-checks the pan once the image has its real size (after a load). */
-  private settlePan(): void {
-    const transform = this.transform();
-    const next = this.rebound(transform);
-    if (next !== transform) {
-      this.transform.set(next);
-    }
-  }
-
-  private commit(
-    transform: AndesImageTransform,
-    action: AndesImageTransformAction,
-  ): void {
-    if (transform === this.transform()) {
-      return;
-    }
-    this.transform.set(transform);
-    this.transformChange.emit({ transform, action });
   }
 
   private clickAnchor(href: string, name: string): void {

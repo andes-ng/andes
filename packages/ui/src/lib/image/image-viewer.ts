@@ -1,4 +1,11 @@
-import { computed, signal, type WritableSignal } from '@angular/core';
+import {
+  computed,
+  effect,
+  linkedSignal,
+  signal,
+  untracked,
+  type WritableSignal,
+} from '@angular/core';
 
 import {
   ANDES_IMAGE_IDENTITY_TRANSFORM,
@@ -12,6 +19,18 @@ import type {
   AndesImageTransformAction,
   AndesImageTransformEvent,
 } from './image-types';
+
+/**
+ * The viewers' scrim: darker than the dialog scrim (`--andes-color-overlay`), so the picture
+ * and the light controls stand out. Override `--andes-image-preview-scrim` to retune it.
+ */
+export const ANDES_IMAGE_VIEWER_SCRIM =
+  'var(--andes-image-preview-scrim, color-mix(in srgb, ' +
+  'var(--andes-color-ghost-foreground, #111827) 45%, ' +
+  'var(--andes-color-overlay, rgb(15 23 42 / 45%))))';
+
+/** Longest the previous picture may stay while it cross-fades out (the fade is 300ms). */
+const LEAVING_TIMEOUT_MS = 400;
 
 /** Movement below this is still a click, not a drag. */
 const DRAG_THRESHOLD = 4;
@@ -414,4 +433,125 @@ export class AndesImageViewerController {
       // Nothing was captured.
     }
   }
+}
+
+/** Whether the user asked the system for reduced motion. */
+export function andesPrefersReducedMotion(document: Document): boolean {
+  const view = document.defaultView;
+  return (
+    typeof view?.matchMedia === 'function' &&
+    view.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+}
+
+/** Best-effort file name for a download: `name`, else the last URL segment. */
+export function andesImageFileName(url: string, name?: string): string {
+  if (name) {
+    return name;
+  }
+  if (url.startsWith('data:')) {
+    const type = /^data:image\/([a-z0-9.+-]+)/i.exec(url)?.[1] ?? 'png';
+    return `image.${type === 'svg+xml' ? 'svg' : type}`;
+  }
+  const path = url.split(/[?#]/)[0];
+  const last = path.slice(path.lastIndexOf('/') + 1);
+  return last || 'image';
+}
+
+/** Saves `url` as `name`, through a blob where the browser allows it. */
+export async function andesDownloadImage(
+  document: Document,
+  url: string,
+  name: string,
+): Promise<void> {
+  const clickAnchor = (href: string) => {
+    const anchor = document.createElement('a');
+    anchor.href = href;
+    anchor.download = name;
+    anchor.rel = 'noopener';
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+  };
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(String(response.status));
+    }
+    const objectUrl = URL.createObjectURL(await response.blob());
+    clickAnchor(objectUrl);
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  } catch {
+    // Cross-origin without CORS: a plain download link is the best that is left.
+    clickAnchor(url);
+  }
+}
+
+/** The picture that is fading out while the next one fades in. */
+export interface AndesLeavingFrame {
+  readonly key: number;
+  readonly src: string;
+  readonly alt: string;
+  readonly css: string;
+}
+
+/** What the cross-fade compares between two renders. */
+export interface AndesFrameSource {
+  /** Index of the shown picture. */
+  readonly key: number;
+  /** Whether the viewer is showing at all. */
+  readonly open: boolean;
+  readonly src: string | null;
+  readonly alt: string;
+  /** The shown picture's CSS transform. */
+  readonly css: string;
+}
+
+/**
+ * The previous picture while it fades out under the next one, for a viewer to render beside
+ * the current one. It keeps the transform it had, so a zoomed picture fades where it was
+ * rather than jumping back to fit first. Set it to `null` on the frame's `animationend`; a
+ * timer drops it anyway if the animation never runs. Call it in an injection context.
+ */
+export function andesCrossFade(
+  source: () => AndesFrameSource,
+  reducedMotion: () => boolean,
+): WritableSignal<AndesLeavingFrame | null> {
+  const leaving = linkedSignal<AndesFrameSource, AndesLeavingFrame | null>({
+    source,
+    computation: (next, previous) => {
+      if (!previous) {
+        return null;
+      }
+      const before = previous.source;
+      if (before.key === next.key) {
+        return next.open ? previous.value : null;
+      }
+      if (!before.open || !next.open || !before.src || reducedMotion()) {
+        return null;
+      }
+      return {
+        key: before.key,
+        src: before.src,
+        alt: before.alt,
+        css: before.css,
+      };
+    },
+  });
+
+  effect((onCleanup) => {
+    const frame = leaving();
+    if (!frame) {
+      return;
+    }
+    const timer = setTimeout(() => {
+      if (untracked(leaving) === frame) {
+        leaving.set(null);
+      }
+    }, LEAVING_TIMEOUT_MS);
+    onCleanup(() => clearTimeout(timer));
+  });
+
+  return leaving;
 }

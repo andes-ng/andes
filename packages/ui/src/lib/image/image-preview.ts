@@ -49,26 +49,23 @@ import {
   type AndesImageTransform,
   type AndesImageTransformEvent,
 } from './image-types';
-import { AndesImageViewerController } from './image-viewer';
+import {
+  andesCrossFade,
+  andesDownloadImage,
+  andesImageFileName,
+  andesPrefersReducedMotion,
+  ANDES_IMAGE_VIEWER_SCRIM,
+  AndesImageViewerController,
+} from './image-viewer';
 
 /** Class on the scrim; `image-preview.css` retimes its fade and adds the blur variant. */
 export const ANDES_IMAGE_PREVIEW_BACKDROP_CLASS =
   'andes-image-preview-backdrop';
 const BACKDROP_BLUR_CLASS = 'andes-image-preview-backdrop--blur';
-/**
- * The viewer's scrim: darker than the dialog scrim (`--andes-color-overlay`), so the picture
- * and the light controls stand out. Override `--andes-image-preview-scrim` to retune it.
- */
-const PREVIEW_SCRIM =
-  'var(--andes-image-preview-scrim, color-mix(in srgb, ' +
-  'var(--andes-color-ghost-foreground, #111827) 45%, ' +
-  'var(--andes-color-overlay, rgb(15 23 42 / 45%))))';
 const PANE_CLASS = 'andes-image-preview-pane';
 
 /** Distance the arrow keys pan a zoomed image per press, in px. */
 const KEY_PAN_STEP = 48;
-/** Longest the previous picture may stay while it cross-fades out (the fade is 300ms). */
-const LEAVING_TIMEOUT_MS = 400;
 
 const SHORTCUTS: Readonly<Record<AndesImagePreviewAction, string>> = {
   zoomIn: '+',
@@ -82,37 +79,6 @@ const SHORTCUTS: Readonly<Record<AndesImagePreviewAction, string>> = {
 };
 
 type LoadState = 'loading' | 'loaded' | 'error';
-
-/** The picture that is fading out while the next one fades in. */
-interface LeavingFrame {
-  readonly key: number;
-  readonly src: string;
-  readonly alt: string;
-  readonly css: string;
-}
-
-/** What the cross-fade compares between two renders. */
-interface FrameSource {
-  readonly key: number;
-  readonly open: boolean;
-  readonly src: string | null;
-  readonly alt: string;
-  readonly css: string;
-}
-
-/** Best-effort file name for the download action. */
-function fileNameOf(item: AndesImagePreviewItem, url: string): string {
-  if (item.name) {
-    return item.name;
-  }
-  if (url.startsWith('data:')) {
-    const type = /^data:image\/([a-z0-9.+-]+)/i.exec(url)?.[1] ?? 'png';
-    return `image.${type === 'svg+xml' ? 'svg' : type}`;
-  }
-  const path = url.split(/[?#]/)[0];
-  const last = path.slice(path.lastIndexOf('/') + 1);
-  return last || 'image';
-}
 
 /**
  * The full-viewport image viewer behind `andes-image` and `andes-image-group`.
@@ -227,33 +193,16 @@ export class AndesImagePreview {
    * The previous picture while it fades out under the next one. It keeps the transform it had,
    * so a zoomed image fades where it was rather than jumping back to fit first.
    */
-  protected readonly leaving = linkedSignal<FrameSource, LeavingFrame | null>({
-    source: () => ({
+  protected readonly leaving = andesCrossFade(
+    () => ({
       key: this.index(),
       open: this.open(),
       src: this.src(),
       alt: this.item()?.alt ?? '',
       css: this.css(),
     }),
-    computation: (next, previous) => {
-      if (!previous) {
-        return null;
-      }
-      const before = previous.source;
-      if (before.key === next.key) {
-        return next.open ? previous.value : null;
-      }
-      if (!before.open || !next.open || !before.src || this.reducedMotion()) {
-        return null;
-      }
-      return {
-        key: before.key,
-        src: before.src,
-        alt: before.alt,
-        css: before.css,
-      };
-    },
-  });
+    () => andesPrefersReducedMotion(this.document),
+  );
 
   protected readonly parts = computed(() => ({
     classNames: this.classNames() ?? {},
@@ -438,23 +387,8 @@ export class AndesImagePreview {
         this.overlay.open(template);
         this.overlay
           .backdropElement()
-          ?.style.setProperty('background', PREVIEW_SCRIM);
+          ?.style.setProperty('background', ANDES_IMAGE_VIEWER_SCRIM);
       });
-    });
-
-    // The fading picture normally leaves on `animationend`; this covers a stylesheet that
-    // removed the animation, so it can never linger under the next one.
-    effect((onCleanup) => {
-      const frame = this.leaving();
-      if (!frame) {
-        return;
-      }
-      const timer = setTimeout(() => {
-        if (untracked(this.leaving) === frame) {
-          this.leaving.set(null);
-        }
-      }, LEAVING_TIMEOUT_MS);
-      onCleanup(() => clearTimeout(timer));
     });
 
     // Paging moves the point the viewer shrinks back into to the thumbnail now shown.
@@ -532,19 +466,11 @@ export class AndesImagePreview {
     if (!item || !url) {
       return;
     }
-    const name = fileNameOf(item, url);
-    try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(String(response.status));
-      }
-      const objectUrl = URL.createObjectURL(await response.blob());
-      this.clickAnchor(objectUrl, name);
-      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
-    } catch {
-      // Cross-origin without CORS: a plain download link is the best that is left.
-      this.clickAnchor(url, name);
-    }
+    await andesDownloadImage(
+      this.document,
+      url,
+      andesImageFileName(url, item.name),
+    );
     this.transformChange.emit({
       transform: this.transform(),
       action: 'download',
@@ -778,14 +704,6 @@ export class AndesImagePreview {
     );
   }
 
-  private reducedMotion(): boolean {
-    const view = this.document.defaultView;
-    return (
-      typeof view?.matchMedia === 'function' &&
-      view.matchMedia('(prefers-reduced-motion: reduce)').matches
-    );
-  }
-
   /** Centre of the origin element on screen, or `null` when it has no box to grow from. */
   private measureOrigin(): string | null {
     const origin = this.origin();
@@ -799,16 +717,5 @@ export class AndesImagePreview {
     const x = Math.round(rect.left + rect.width / 2);
     const y = Math.round(rect.top + rect.height / 2);
     return `${x}px ${y}px`;
-  }
-
-  private clickAnchor(href: string, name: string): void {
-    const anchor = this.document.createElement('a');
-    anchor.href = href;
-    anchor.download = name;
-    anchor.rel = 'noopener';
-    anchor.style.display = 'none';
-    this.document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
   }
 }

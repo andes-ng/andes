@@ -317,6 +317,72 @@ export const Multiple: Story = {
 };
 
 /**
+ * Tag density. `maxTagCount="responsive"` keeps the tags on one row and shows as many as fit -
+ * resize the container - and the "+ N ..." tag opens a popover listing (and removing) the
+ * hidden paths, on hover, click or keyboard. `maxTagPlaceholder` rewords that tag,
+ * `maxTagTextLength` cuts long tags short and `maxCount` caps the selection. The tags line up
+ * with a multiple select's.
+ */
+export const TagDensity: Story = {
+  name: 'Tag density',
+  render: () => ({
+    moduleMetadata: { imports: IMPORTS },
+    props: {
+      places: PLACES,
+      many: [
+        ['lima', 'lima-province', 'miraflores'],
+        ['lima', 'lima-province', 'san-isidro'],
+        ['cusco', 'cusco-province', 'wanchaq'],
+        ['callao'],
+        ['lima', 'huaral', 'chancay'],
+      ],
+      capped: [['callao']],
+      more: (omitted: readonly unknown[]) => `y ${omitted.length} más`,
+    },
+    template: `
+      <div style="display: flex; flex-direction: column; gap: 0.75rem; width: 380px;">
+        <div style="resize: horizontal; overflow: hidden; width: 380px; min-width: 160px; max-width: 640px; padding-block-end: 4px;">
+          <andes-cascader aria-label="Places (responsive)" multiple allowClear maxTagCount="responsive" [options]="places" [(value)]="many" />
+        </div>
+        <span style="font-size: 0.75rem;">maxTagCount="responsive" - drag the corner to resize</span>
+        <andes-cascader aria-label="Places (custom +N)" multiple [maxTagCount]="1" [maxTagPlaceholder]="more" [maxTagTextLength]="12" [options]="places" [(value)]="many" />
+        <span style="font-size: 0.75rem;">maxTagPlaceholder as a function, maxTagTextLength=12</span>
+        <andes-cascader aria-label="Places (up to three)" multiple [maxCount]="3" placeholder="Pick up to three" [options]="places" [(value)]="capped" />
+        <span style="font-size: 0.75rem;">maxCount=3 - the other options stop taking a check once three are picked</span>
+      </div>
+    `,
+  }),
+};
+
+/**
+ * Icons. `expandIcon` replaces the arrow of an option that opens a column, and with
+ * `showSearch` a `searchIcon` stands in for the chevron while the panel is open.
+ */
+export const Icons: Story = {
+  render: () => ({
+    moduleMetadata: { imports: IMPORTS },
+    props: { places: PLACES },
+    template: `
+      <ng-template #plus>
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </ng-template>
+      <ng-template #magnifier>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5" />
+          <path d="m10.5 10.5 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+        </svg>
+      </ng-template>
+      <div style="display: flex; flex-direction: column; gap: 0.75rem; width: 320px;">
+        <andes-cascader aria-label="Places (custom expand icon)" placeholder="Pick a place" [options]="places" [expandIcon]="plus" />
+        <andes-cascader aria-label="Places (search icon)" placeholder="Search a place" showSearch [options]="places" [searchIcon]="magnifier" />
+      </div>
+    `,
+  }),
+};
+
+/**
  * `showSearch` filters every path: single, `multiple`, and with a custom `filter`/`sort`/
  * `limit` object (the third field matches only the last label, lists the shortest labels
  * first and caps the list at five).

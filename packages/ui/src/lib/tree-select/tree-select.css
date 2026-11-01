@@ -772,6 +772,18 @@
   .andes-tree-select__panel[data-andes-closing][data-side='top'] {
     transform-origin: bottom center;
   }
+
+  /* Once placed, the side the overlay really took (`data-placed-side`, after a flip) wins
+     over the requested one, so the panel grows out of the edge that touches the field. */
+  /* prettier-ignore */
+  .andes-tree-select__panel[data-state='open'][data-placed-side='bottom'], .andes-tree-select__panel[data-andes-closing][data-placed-side='bottom'] {
+    transform-origin: top center;
+  }
+
+  /* prettier-ignore */
+  .andes-tree-select__panel[data-state='open'][data-placed-side='top'], .andes-tree-select__panel[data-andes-closing][data-placed-side='top'] {
+    transform-origin: bottom center;
+  }
 }
 
 .andes-tree-select__search {

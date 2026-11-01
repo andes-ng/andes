@@ -1321,6 +1321,28 @@ describe('AndesTreeSelect', () => {
       ).toContain('andes-tree-select-tag-enter');
     });
 
+    it('grows the panel from the side the overlay really placed it on', () => {
+      const bodies = atRuleBodies(noPreference).join('\n');
+      expect(
+        declaredValue(
+          bodies,
+          ".andes-tree-select__panel[data-andes-closing][data-placed-side='top']",
+          'transform-origin',
+        ),
+      ).toBe('bottom center');
+      expect(
+        declaredValue(
+          bodies,
+          ".andes-tree-select__panel[data-state='open'][data-placed-side='bottom']",
+          'transform-origin',
+        ),
+      ).toBe('top center');
+      // The placed side comes after, and so wins over, the requested one.
+      expect(bodies.indexOf("[data-placed-side='top']")).toBeGreaterThan(
+        bodies.indexOf("[data-side='top']"),
+      );
+    });
+
     it('sets the font on the panel root, which renders outside the host', () => {
       expect(
         declaredValue(css, '.andes-tree-select__panel', 'font-family'),

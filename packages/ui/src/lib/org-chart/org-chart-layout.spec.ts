@@ -656,6 +656,21 @@ describe('connector paths', () => {
     );
   });
 
+  it('runs straight and curved links down the stem past the assistants first', () => {
+    const long = [
+      { x: 50, y: 40 },
+      { x: 50, y: 140 },
+      { x: 150, y: 140 },
+      { x: 150, y: 160 },
+    ];
+    expect(andesOrgChartLinkPath(long, 'tree', 'straight', 8)).toBe(
+      'M50 40 L50 120 L150 160',
+    );
+    expect(andesOrgChartLinkPath(long, 'tree', 'curved', 8)).toBe(
+      'M50 40 L50 120 C50 140 150 140 150 160',
+    );
+  });
+
   it('keeps the stem of stacked links in every style', () => {
     const stack = [
       { x: 10, y: 40 },

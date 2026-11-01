@@ -104,7 +104,12 @@ interface Pinch {
 export class AndesImageViewerController {
   readonly dragging = signal(false);
   readonly zoomed = computed(() => isZoomed(this.transform()));
-  readonly canPan = computed(() => this.zoomed() && this.host.limits().movable);
+  /** The picture follows a drag at any zoom, and springs back when it is let go off-centre. */
+  readonly canPan = computed(() => this.host.limits().movable);
+  /** The arrow keys pan only a zoomed picture; a fitted one pages through the items. */
+  readonly canPanByKey = computed(
+    () => this.zoomed() && this.host.limits().movable,
+  );
 
   private readonly presses = new Map<number, Press>();
   private pinch: Pinch | null = null;
@@ -184,7 +189,7 @@ export class AndesImageViewerController {
 
   /** Pans by a distance in px (arrow keys); only a zoomed, movable picture moves. */
   panBy(dx: number, dy: number, action: AndesImageTransformAction): boolean {
-    if (!this.canPan()) {
+    if (!this.canPanByKey()) {
       return false;
     }
     const transform = this.transform();
@@ -307,17 +312,29 @@ export class AndesImageViewerController {
     if (!press.moved) {
       return;
     }
-    if (this.canPan()) {
-      this.commit(this.rebound(this.transform()), 'move', true);
-      return;
-    }
-    if (event.type !== 'pointerup' || this.zoomed() || !this.host.swipe) {
-      return;
-    }
     const dx = event.clientX - press.startX;
     const dy = event.clientY - press.startY;
-    if (Math.abs(dx) >= SWIPE_DISTANCE && Math.abs(dx) > Math.abs(dy) * 1.5) {
+    if (
+      event.type === 'pointerup' &&
+      !this.zoomed() &&
+      this.host.swipe &&
+      Math.abs(dx) >= SWIPE_DISTANCE &&
+      Math.abs(dx) > Math.abs(dy) * 1.5
+    ) {
+      // A swipe of a fitted picture pages through the items, and the next one starts centred.
       this.host.swipe(dx > 0 !== this.host.rtl() ? -1 : 1);
+      return;
+    }
+    if (this.canPan()) {
+      // A fitted picture always goes back to the centre; a zoomed one only as far as it must
+      // to keep covering the viewport.
+      this.commit(
+        this.zoomed()
+          ? this.rebound(this.transform())
+          : { ...this.transform(), x: 0, y: 0 },
+        'move',
+        true,
+      );
     }
   }
 

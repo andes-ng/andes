@@ -4,6 +4,7 @@
   class="andes-image__placeholder andes-image__placeholder--progress"
   data-slot="image-placeholder"
 >
+  <span class="andes-image__wash" aria-hidden="true"></span>
   @if (progressPercent() !== null) {
   <span
     class="andes-image__progress"
@@ -22,8 +23,6 @@
   <span class="andes-image__progress-text" aria-hidden="true"
     >{{ progressPercent() }}%</span
   >
-  } @else {
-  <span class="andes-image__wash" aria-hidden="true"></span>
   }
 </span>
 } @else {

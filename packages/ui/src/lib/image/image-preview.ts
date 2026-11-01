@@ -232,6 +232,7 @@ export class AndesImagePreview {
   });
   protected readonly zoomed = computed(() => this.viewer.zoomed());
   protected readonly canPan = computed(() => this.viewer.canPan());
+  protected readonly canPanByKey = computed(() => this.viewer.canPanByKey());
   protected readonly canPrevious = computed(
     () => this.total() > 1 && (this.cfg().loop || this.index() > 0),
   );
@@ -617,7 +618,7 @@ export class AndesImagePreview {
       case 'ArrowRight':
       case 'ArrowUp':
       case 'ArrowDown': {
-        if (this.canPan()) {
+        if (this.canPanByKey()) {
           const dx =
             lower === 'ArrowLeft'
               ? KEY_PAN_STEP

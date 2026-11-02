@@ -3,7 +3,7 @@ import { Component, signal, viewChild } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { readFileSync } from 'node:fs';
 
-import { expectLength } from '../../testing/computed-style';
+import { declaredValue, expectLength } from '../../testing/computed-style';
 import { ANDES_ALERT_DIALOG_IMPORTS, AndesAlertDialog } from './alert-dialog';
 import { ANDES_DIALOG_IMPORTS, AndesDialog } from './dialog';
 import type { AndesDialogSize } from './dialog-base';
@@ -1015,26 +1015,22 @@ describe('dialog motion', () => {
   // relies on `:has()`, so the cascade cannot be read back here.
   const css = readFileSync('packages/ui/src/lib/dialog/dialog.css', 'utf8');
 
-  it('enters with a short, soft scale-and-fade', () => {
+  it('enters with Ant Design zoom and fade: 300ms on its ease-out-circ curve from 20%', () => {
     const rule = /animation:\s*andes-dialog-enter\s+([\d.]+)s\s+([^;]+);/.exec(
       css,
     );
     expect(rule).not.toBeNull();
-    const seconds = Number(rule?.[1]);
-    expect(seconds).toBeGreaterThanOrEqual(0.15);
-    expect(seconds).toBeLessThanOrEqual(0.18);
-    expect(rule?.[2]).toBe('cubic-bezier(0.2, 0, 0, 1)');
+    expect(Number(rule?.[1])).toBe(0.3);
+    expect(rule?.[2]).toBe('cubic-bezier(0.08, 0.82, 0.17, 1)');
 
     const keyframes =
       /@keyframes andes-dialog-enter\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
-    const scales = [...keyframes.matchAll(/scale\(([\d.]+)\)/g)].map((m) =>
-      Number(m[1]),
+    expect(keyframes).toMatch(
+      /from\s*\{\s*opacity:\s*0;\s*transform:\s*scale\(0\.2\);/,
     );
-    expect(scales.length).toBeGreaterThan(0);
-    for (const scale of scales) {
-      expect(scale).toBeGreaterThanOrEqual(0.95);
-      expect(scale).toBeLessThanOrEqual(1);
-    }
+    expect(keyframes).toMatch(
+      /to\s*\{\s*opacity:\s*1;\s*transform:\s*scale\(1\);/,
+    );
   });
 
   it('drops the entry animation under reduced motion', () => {
@@ -1044,25 +1040,24 @@ describe('dialog motion', () => {
     expect(reduced).toMatch(/animation:\s*none/);
   });
 
-  it('leaves with a quicker, accelerating mirror of its entry', () => {
+  it('leaves in 200ms on Ant Design ease-in-out-circ curve, shrinking back to 20%', () => {
     const rule =
       /\.andes-overlay-pane\[data-andes-closing\]:has\([^{]*\{([^}]*)\}/.exec(
         css,
       )?.[1] ?? '';
     expect(rule).toContain('pointer-events: none');
     const exit =
-      /animation:\s*andes-dialog-exit\s+var\(--andes-duration-fast,\s*([\d.]+)s\)\s+var\(--andes-ease-in,[^;]+\)\s+forwards;/.exec(
+      /animation:\s*andes-dialog-exit\s+([\d.]+)s\s+(cubic-bezier\([^)]*\))\s+forwards;/.exec(
         rule,
       );
     expect(exit).not.toBeNull();
-    const seconds = Number(exit?.[1]);
-    expect(seconds).toBeGreaterThanOrEqual(0.12);
-    expect(seconds).toBeLessThanOrEqual(0.15);
+    expect(Number(exit?.[1])).toBe(0.2);
+    expect(exit?.[2]).toBe('cubic-bezier(0.78, 0.14, 0.15, 0.86)');
 
     const keyframes =
       /@keyframes andes-dialog-exit\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
     expect(keyframes).toMatch(
-      /to\s*\{\s*opacity:\s*0;\s*transform:\s*scale\(0\.97\);/,
+      /to\s*\{\s*opacity:\s*0;\s*transform:\s*scale\(0\.2\);/,
     );
   });
 
@@ -1072,9 +1067,21 @@ describe('dialog motion', () => {
         css,
       )?.[1] ?? '';
     expect(rule).toMatch(
-      /animation:\s*andes-dialog-scrim-exit\s+var\(--andes-duration-fast,\s*0\.13s\)/,
+      /animation:\s*andes-dialog-scrim-exit\s+0\.2s\s+linear\s+forwards;/,
     );
-    expect(rule).toContain('forwards');
+  });
+
+  it('fades the scrim in linearly over 200ms, as Ant Design does', () => {
+    expect(
+      declaredValue(css, '.andes-dialog-backdrop', 'transition-duration'),
+    ).toBe('0.2s');
+    expect(
+      declaredValue(
+        css,
+        '.andes-dialog-backdrop',
+        'transition-timing-function',
+      ),
+    ).toBe('linear');
   });
 
   it('closes instantly under reduced motion', () => {

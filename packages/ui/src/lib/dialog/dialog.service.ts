@@ -218,12 +218,13 @@ export class AndesDialogMethodRef {
 }
 
 const METHOD_ICON_PATHS: Record<AndesDialogMethodKind, string> = {
-  // `confirm` shares the exclamation glyph with `warning`: both ask for attention.
-  confirm: 'M12 7.5v5.5M12 16.5h.01',
-  warning: 'M12 7.5v5.5M12 16.5h.01',
-  error: 'M9 9l6 6M15 9l-6 6',
-  info: 'M12 11v5.5M12 7.5h.01',
-  success: 'M8 12.5l2.75 2.75L16 10',
+  // `confirm` shares the exclamation glyph with `warning`, as Ant Design's does: both
+  // ask for attention. Each is cut out of a full-size disc.
+  confirm: 'M12 6.5v7M12 17.25h.01',
+  warning: 'M12 6.5v7M12 17.25h.01',
+  error: 'M8.25 8.25l7.5 7.5M15.75 8.25l-7.5 7.5',
+  info: 'M12 10.5v7M12 6.75h.01',
+  success: 'M7.25 12.5l3.25 3.25L16.75 9.5',
 };
 
 /**
@@ -284,8 +285,12 @@ const METHOD_ICON_PATHS: Record<AndesDialogMethodKind, string> = {
               @if (cfg.icon) {
                 <ng-container *ngTemplateOutlet="cfg.icon" />
               } @else {
-                <svg viewBox="0 0 24 24" focusable="false">
-                  <circle cx="12" cy="12" r="9.25" />
+                <svg
+                  class="andes-dialog__method-glyph"
+                  viewBox="0 0 24 24"
+                  focusable="false"
+                >
+                  <circle cx="12" cy="12" r="12" />
                   <path [attr.d]="iconPath()" />
                 </svg>
               }

@@ -201,6 +201,12 @@ export function dialogWidthStyles(
   return styles;
 }
 
+/** Splits a class input (one string of space-separated names, or an array) into names. */
+function toClassArray(value: string | readonly string[] | null): string[] {
+  const names = typeof value === 'string' ? [value] : (value ?? []);
+  return names.flatMap((entry) => entry.split(/\s+/)).filter(Boolean);
+}
+
 /** `numberAttribute`, but an absent value stays `null` rather than becoming `NaN`. */
 function optionalNumber(value: unknown): number | null {
   if (value === null || value === undefined || value === '') {
@@ -259,6 +265,10 @@ export abstract class AndesDialogRoot {
   abstract readonly centered: Signal<boolean>;
   /** Show a skeleton in place of the body while content loads. */
   abstract readonly loading: Signal<boolean>;
+  /** Fill the viewport edge to edge. */
+  abstract readonly fullscreen: Signal<boolean>;
+  /** Render the built-in maximize/restore control next to the "x". */
+  abstract readonly maximizable: Signal<boolean>;
   /** The footer the surface renders after the consumer's content. */
   abstract readonly footer: Signal<AndesDialogFooterOption>;
   /** Built-in footer: OK label. */
@@ -291,6 +301,8 @@ export abstract class AndesDialogRoot {
   abstract hide(reason?: AndesOverlayCloseReason): void;
   /** Opens the dialog if closed, closes it if open. */
   abstract toggle(): void;
+  /** Switches between the regular surface and the fullscreen one. */
+  abstract toggleFullscreen(): void;
   /** The built-in OK action: emits `ok`. Does not close; the consumer decides when. */
   abstract requestOk(): void;
   /**
@@ -356,6 +368,11 @@ export abstract class AndesDialogRootBase implements AndesDialogRoot {
    */
   readonly mask = input(true, { transform: booleanAttribute });
   /**
+   * Extra class (or classes) on the backdrop scrim, for restyling the mask - a gradient
+   * instead of the flat dim, say. Takes effect on the next open.
+   */
+  readonly maskClass = input<string | readonly string[] | null>(null);
+  /**
    * Blur the page behind the backdrop scrim, on top of dimming it. Takes effect on the
    * next open, and only while `mask` is on.
    */
@@ -374,6 +391,17 @@ export abstract class AndesDialogRootBase implements AndesDialogRoot {
    * dialog stays labelled) and hiding the footer.
    */
   readonly loading = input(false, { transform: booleanAttribute });
+  /**
+   * Fill the viewport edge to edge instead of floating as a card: the surface drops its
+   * width, height cap and rounded corners. Two-way (`[(fullscreen)]`), so the built-in
+   * maximize control (`maximizable`) and the consumer stay in sync.
+   */
+  readonly fullscreen = model(false);
+  /**
+   * Render a maximize/restore control beside the "x" that toggles `fullscreen`. Only
+   * the default dialog surface has one: an alert dialog has no controls in its corner.
+   */
+  readonly maximizable = input(false, { transform: booleanAttribute });
   /**
    * Destroy the surface's content when the dialog closes, re-creating it on the next
    * open. On by default, because an Angular template view only exists while attached and lazy creation is what this
@@ -506,9 +534,11 @@ export abstract class AndesDialogRootBase implements AndesDialogRoot {
         hasBackdrop: this.mask(),
         restoreFocus: this.restoreFocus(),
         trapFocus: this.trapFocus(),
-        backdropClass: this.maskBlur()
-          ? [ANDES_DIALOG_BACKDROP_CLASS, ANDES_DIALOG_BACKDROP_BLUR_CLASS]
-          : ANDES_DIALOG_BACKDROP_CLASS,
+        backdropClass: [
+          ANDES_DIALOG_BACKDROP_CLASS,
+          ...(this.maskBlur() ? [ANDES_DIALOG_BACKDROP_BLUR_CLASS] : []),
+          ...toClassArray(this.maskClass()),
+        ],
         ...this.configOverrides(),
       });
     });
@@ -625,6 +655,10 @@ export abstract class AndesDialogRootBase implements AndesDialogRoot {
     }
   }
 
+  toggleFullscreen(): void {
+    this.fullscreen.update((value) => !value);
+  }
+
   requestOk(): void {
     if (this.isOpen()) {
       this.ok.emit();
@@ -726,16 +760,25 @@ export function registerDialogLabel(part: 'title' | 'description'): string {
 
 /**
  * The classes both surfaces derive from their root: size step, explicit width, top
- * placement and the loading state. Kept in one place so Dialog and Alert Dialog cannot
+ * placement, fullscreen and the loading state. Kept in one place so Dialog and Alert Dialog cannot
  * drift apart on what an input means visually.
  */
 export function dialogSurfaceClasses(root: AndesDialogRoot): string[] {
   const classes = ['andes-dialog', `andes-dialog--${root.size()}`];
-  if (root.width() !== null) {
-    classes.push('andes-dialog--custom-width');
+  if (root.fullscreen()) {
+    // Fullscreen owns the whole box, so the width and placement classes stay off
+    // rather than being outranked one by one in the stylesheet.
+    classes.push('andes-dialog--fullscreen');
+  } else {
+    if (root.width() !== null) {
+      classes.push('andes-dialog--custom-width');
+    }
+    if (!root.centered()) {
+      classes.push('andes-dialog--top');
+    }
   }
-  if (!root.centered()) {
-    classes.push('andes-dialog--top');
+  if (root.maximizable()) {
+    classes.push('andes-dialog--maximizable');
   }
   if (root.loading()) {
     classes.push('andes-dialog--loading');

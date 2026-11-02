@@ -196,6 +196,10 @@ export class AndesDialogContent extends AndesDialogSurfaceBase {
   readonly showCloseButton = input(true, { transform: booleanAttribute });
   /** Accessible label for the built-in close control. */
   readonly closeLabel = input('Close');
+  /** Accessible label for the maximize control (`maximizable` on the root). */
+  readonly maximizeLabel = input('Maximize');
+  /** Accessible label for the maximize control while the dialog is fullscreen. */
+  readonly restoreLabel = input('Restore');
   /**
    * Render the built-in close control but disable it, for a step the user must not
    * abandon midway (a payment being captured). Escape and outside clicks are separate

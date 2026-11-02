@@ -7,39 +7,11 @@ import { ANDES_ALERT_DIALOG_IMPORTS, AndesAlertDialog } from './alert-dialog';
 
 /**
  * Each story fills `result` from the dialog's own handlers, so what the user chose is
- * visible after the dialog has gone. The trigger is a native `<button>`: the overlay
- * primitive puts `aria-haspopup`/`aria-expanded`/`aria-controls` on the element the
- * directive sits on, and those are only valid on an element with an interactive role.
+ * visible after the dialog has gone. The triggers are `<andes-button>`s: the directive
+ * moves the ARIA state it keeps in sync onto the real button inside.
  */
 const STYLES = `
   <style>
-    .sb-trigger {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      height: 2rem;
-      padding: 0 var(--andes-space-4);
-      border: 1px solid transparent;
-      border-radius: var(--andes-radius-md);
-      background-color: var(--andes-color-danger);
-      color: var(--andes-color-danger-foreground);
-      font-family: var(--andes-font-family), sans-serif;
-      font-weight: var(--andes-font-weight-medium);
-      font-size: 0.875rem;
-      cursor: pointer;
-      transition: background-color 0.15s ease;
-    }
-    .sb-trigger:hover { background-color: var(--andes-color-danger-hover); }
-    .sb-trigger:focus-visible {
-      outline: 2px solid var(--andes-color-danger);
-      outline-offset: 2px;
-    }
-    .sb-trigger--neutral {
-      background-color: var(--andes-color-primary);
-      color: var(--andes-color-primary-foreground);
-    }
-    .sb-trigger--neutral:hover { background-color: var(--andes-color-primary-hover); }
-    .sb-trigger--neutral:focus-visible { outline-color: var(--andes-color-focus-ring); }
     .sb-row { display: flex; flex-wrap: wrap; gap: var(--andes-space-2); }
     .sb-result {
       margin: var(--andes-space-3) 0 0;
@@ -84,7 +56,7 @@ export const TypeToConfirm: Story = {
       template: `
         ${STYLES}
         <andes-alert-dialog initialFocus="input" (cancelled)="result.set('Cancelled.')">
-          <button type="button" class="sb-trigger" andesAlertDialogTrigger>Delete project</button>
+          <andes-button danger andesAlertDialogTrigger>Delete project</andes-button>
 
           <andes-alert-dialog-content *andesAlertDialogContent>
             <div andesAlertDialogHeader>
@@ -127,7 +99,7 @@ export const TypeToConfirmStrict: Story = {
       template: `
         ${STYLES}
         <andes-alert-dialog (cancelled)="result.set('Cancelled.')">
-          <button type="button" class="sb-trigger" andesAlertDialogTrigger>Delete all backups</button>
+          <andes-button danger andesAlertDialogTrigger>Delete all backups</andes-button>
 
           <andes-alert-dialog-content *andesAlertDialogContent>
             <div andesAlertDialogHeader>
@@ -177,7 +149,7 @@ export const AcknowledgeCheckbox: Story = {
       template: `
         ${STYLES}
         <andes-alert-dialog (cancelled)="result.set('Cancelled.')">
-          <button type="button" class="sb-trigger" andesAlertDialogTrigger>Delete workspace</button>
+          <andes-button danger andesAlertDialogTrigger>Delete workspace</andes-button>
 
           <andes-alert-dialog-content *andesAlertDialogContent>
             <div andesAlertDialogHeader>
@@ -225,7 +197,7 @@ export const Countdown: Story = {
       template: `
         ${STYLES}
         <andes-alert-dialog (cancelled)="result.set('Cancelled.')">
-          <button type="button" class="sb-trigger" andesAlertDialogTrigger>Drop database</button>
+          <andes-button danger andesAlertDialogTrigger>Drop database</andes-button>
 
           <andes-alert-dialog-content *andesAlertDialogContent>
             <div andesAlertDialogHeader>
@@ -269,7 +241,7 @@ export const HoldToConfirm: Story = {
       template: `
         ${STYLES}
         <andes-alert-dialog (cancelled)="result.set('Cancelled.')">
-          <button type="button" class="sb-trigger" andesAlertDialogTrigger>Empty trash</button>
+          <andes-button danger andesAlertDialogTrigger>Empty trash</andes-button>
 
           <andes-alert-dialog-content *andesAlertDialogContent>
             <div andesAlertDialogHeader>
@@ -329,7 +301,7 @@ export const AsyncWithRecovery: Story = {
       template: `
         ${STYLES}
         <andes-alert-dialog (opened)="reset()" (cancelled)="result.set('Cancelled.')">
-          <button type="button" class="sb-trigger" andesAlertDialogTrigger>Delete project</button>
+          <andes-button danger andesAlertDialogTrigger>Delete project</andes-button>
 
           <andes-alert-dialog-content *andesAlertDialogContent>
             <div andesAlertDialogHeader>
@@ -370,7 +342,7 @@ export const UnsavedChanges: Story = {
       template: `
         ${STYLES}
         <andes-alert-dialog tone="warning" initialFocus="action">
-          <button type="button" class="sb-trigger sb-trigger--neutral" andesAlertDialogTrigger>Close editor</button>
+          <andes-button andesAlertDialogTrigger>Close editor</andes-button>
 
           <andes-alert-dialog-content *andesAlertDialogContent>
             <div andesAlertDialogHeader>
@@ -407,9 +379,10 @@ export const UnsavedChanges: Story = {
 };
 
 /**
- * `tone` draws the icon of the question: danger, warning, info or success. The icons differ in
- * shape as well as colour (octagon, triangle, circle), so the tone never rests on colour
- * alone; the surface itself stays neutral.
+ * `tone` draws the icon of the question: danger, warning, info or success. It is the same
+ * filled disc `andes-alert` and the dialog service draw, with a cross, an exclamation mark,
+ * an "i" or a check cut out of it, so the tone never rests on colour alone; the surface
+ * itself stays neutral.
  */
 export const Tones: Story = {
   render: () => {
@@ -458,7 +431,7 @@ export const Tones: Story = {
         <div class="sb-row">
           @for (item of tones; track item.tone) {
             <andes-alert-dialog [tone]="item.tone" (cancelled)="result.set('Cancelled the ' + item.tone + ' dialog.')">
-              <button type="button" class="sb-trigger sb-trigger--neutral" andesAlertDialogTrigger>{{ item.trigger }}</button>
+              <andes-button andesAlertDialogTrigger>{{ item.trigger }}</andes-button>
 
               <andes-alert-dialog-content *andesAlertDialogContent>
                 <div andesAlertDialogHeader>
@@ -510,7 +483,7 @@ export const ImpactSummary: Story = {
       template: `
         ${STYLES}
         <andes-alert-dialog tone="danger" (cancelled)="result.set('Cancelled.')">
-          <button type="button" class="sb-trigger" andesAlertDialogTrigger>Delete organization</button>
+          <andes-button danger andesAlertDialogTrigger>Delete organization</andes-button>
 
           <andes-alert-dialog-content *andesAlertDialogContent>
             <div andesAlertDialogHeader>
@@ -568,7 +541,7 @@ export const DontAskAgain: Story = {
       template: `
         ${STYLES}
         <andes-alert-dialog (cancelled)="result.set('Cancelled.')">
-          <button type="button" class="sb-trigger sb-trigger--neutral" andesAlertDialogTrigger>Archive project</button>
+          <andes-button andesAlertDialogTrigger>Archive project</andes-button>
 
           <andes-alert-dialog-content *andesAlertDialogContent>
             <div andesAlertDialogHeader>
@@ -608,7 +581,7 @@ export const AccidentGuards: Story = {
       template: `
         ${STYLES}
         <andes-alert-dialog initialFocus="cancel" (cancelled)="result.set('Cancelled.')">
-          <button type="button" class="sb-trigger" andesAlertDialogTrigger>Revoke access</button>
+          <andes-button danger andesAlertDialogTrigger>Revoke access</andes-button>
 
           <andes-alert-dialog-content *andesAlertDialogContent>
             <div andesAlertDialogHeader>
@@ -678,7 +651,7 @@ export const DangerZone: Story = {
           (opened)="reset()"
           (cancelled)="result.set('Cancelled.')"
         >
-          <button type="button" class="sb-trigger" andesAlertDialogTrigger>Delete organization</button>
+          <andes-button danger andesAlertDialogTrigger>Delete organization</andes-button>
 
           <andes-alert-dialog-content *andesAlertDialogContent>
             <div andesAlertDialogHeader>

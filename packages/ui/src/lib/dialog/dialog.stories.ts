@@ -1,3 +1,5 @@
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideCircleX } from '@ng-icons/lucide';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
@@ -5,40 +7,12 @@ import { AndesInput } from '../input/input';
 import { ANDES_DIALOG_IMPORTS, AndesDialog } from './dialog';
 
 /**
- * Buttons inside the stories are `AndesButton` wherever the element is not the
- * trigger. The trigger itself is a native `<button>`: the overlay primitive puts
- * `aria-haspopup`/`aria-expanded`/`aria-controls` on the element the directive sits
- * on, and those attributes are only valid on an element with an interactive role -
- * putting the directive on the `<andes-button>` host wrapper would land them on a
- * roleless element and fail axe's `aria-allowed-attr`.
+ * Every button in these stories is an `AndesButton`, the trigger included:
+ * `andesDialogTrigger` sits on the `<andes-button>` and moves the ARIA state to the real
+ * button inside it.
  */
-const TRIGGER_STYLES = `
+const FIELD_STYLES = `
   <style>
-    /* Metrics copied from .andes-button--md rather than invented: 2.25rem/0.875rem was a
-       step that does not exist in the button scale, so the trigger read as a button from
-       a different system than the AndesButtons it opens. */
-    .sb-dialog-trigger {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: var(--andes-space-2);
-      height: 2rem;
-      padding: 0 var(--andes-space-4);
-      border: 1px solid transparent;
-      border-radius: var(--andes-radius-md);
-      background-color: var(--andes-color-primary);
-      color: var(--andes-color-primary-foreground);
-      font-family: var(--andes-font-family), sans-serif;
-      font-weight: var(--andes-font-weight-medium);
-      font-size: 0.875rem;
-      cursor: pointer;
-      transition: background-color 0.15s ease;
-    }
-    .sb-dialog-trigger:hover { background-color: var(--andes-color-primary-hover); }
-    .sb-dialog-trigger:focus-visible {
-      outline: 2px solid var(--andes-color-focus-ring);
-      outline-offset: 2px;
-    }
     .sb-field {
       display: flex;
       flex-direction: column;
@@ -84,7 +58,7 @@ const meta: Meta<AndesDialog> = {
     },
     props: args,
     template: `
-      ${TRIGGER_STYLES}
+      ${FIELD_STYLES}
       <andes-dialog
         [size]="size"
         [closeOnEscape]="closeOnEscape"
@@ -97,7 +71,7 @@ const meta: Meta<AndesDialog> = {
         [restoreFocus]="restoreFocus"
         [trapFocus]="trapFocus"
       >
-        <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Edit profile</button>
+        <andes-button andesDialogTrigger>Edit profile</andes-button>
 
         <andes-dialog-content *andesDialogContent>
           <div andesDialogHeader>
@@ -138,11 +112,11 @@ export const Sizes: Story = {
     moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS, AndesButton] },
     props: { sizes: ['sm', 'md', 'lg', 'xl'] },
     template: `
-      ${TRIGGER_STYLES}
+      ${FIELD_STYLES}
       <div style="display: flex; flex-wrap: wrap; gap: var(--andes-space-2);">
         @for (size of sizes; track size) {
           <andes-dialog [size]="size">
-            <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Size {{ size }}</button>
+            <andes-button andesDialogTrigger>Size {{ size }}</andes-button>
 
             <andes-dialog-content *andesDialogContent>
               <div andesDialogHeader>
@@ -172,12 +146,15 @@ export const Sizes: Story = {
  */
 export const Dismissal: Story = {
   render: () => ({
-    moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS, AndesButton] },
+    moduleMetadata: {
+      imports: [ANDES_DIALOG_IMPORTS, AndesButton, NgIcon],
+      providers: [provideIcons({ lucideCircleX })],
+    },
     template: `
-      ${TRIGGER_STYLES}
+      ${FIELD_STYLES}
       <div style="display: flex; flex-wrap: wrap; gap: var(--andes-space-2);">
         <andes-dialog>
-          <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Without close button</button>
+          <andes-button andesDialogTrigger>Without close button</andes-button>
 
           <andes-dialog-content *andesDialogContent [showCloseButton]="false">
             <div andesDialogHeader>
@@ -193,7 +170,7 @@ export const Dismissal: Story = {
         </andes-dialog>
 
         <andes-dialog [closeOnEscape]="false" [closeOnOutsideClick]="false">
-          <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Not dismissible</button>
+          <andes-button andesDialogTrigger>Not dismissible</andes-button>
 
           <andes-dialog-content *andesDialogContent>
             <div andesDialogHeader>
@@ -210,7 +187,7 @@ export const Dismissal: Story = {
         </andes-dialog>
 
         <andes-dialog>
-          <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Custom close icon</button>
+          <andes-button andesDialogTrigger>Custom close icon</andes-button>
 
           <andes-dialog-content *andesDialogContent [closeIcon]="icon" closeLabel="Dismiss">
             <div andesDialogHeader>
@@ -222,10 +199,7 @@ export const Dismissal: Story = {
       </div>
 
       <ng-template #icon>
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" style="fill: none; stroke: currentcolor; stroke-width: 2; stroke-linecap: round;">
-          <circle cx="12" cy="12" r="9" />
-          <path d="M9 9l6 6M15 9l-6 6" />
-        </svg>
+        <ng-icon name="lucideCircleX" size="1rem" aria-hidden="true" />
       </ng-template>
     `,
   }),
@@ -239,10 +213,10 @@ export const Mask: Story = {
   render: () => ({
     moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS, AndesButton] },
     template: `
-      ${TRIGGER_STYLES}
+      ${FIELD_STYLES}
       <div style="display: flex; flex-wrap: wrap; gap: var(--andes-space-2);">
         <andes-dialog [maskBlur]="true">
-          <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Blurred mask</button>
+          <andes-button andesDialogTrigger>Blurred mask</andes-button>
 
           <andes-dialog-content *andesDialogContent>
             <div andesDialogHeader>
@@ -257,7 +231,7 @@ export const Mask: Story = {
         </andes-dialog>
 
         <andes-dialog [mask]="false">
-          <button type="button" class="sb-dialog-trigger" andesDialogTrigger>No mask</button>
+          <andes-button andesDialogTrigger>No mask</andes-button>
 
           <andes-dialog-content *andesDialogContent>
             <div andesDialogHeader>
@@ -283,9 +257,9 @@ export const ScrollingContent: Story = {
     moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS, AndesButton] },
     props: { ...args, paragraphs: Array.from({ length: 14 }, (_, i) => i + 1) },
     template: `
-      ${TRIGGER_STYLES}
+      ${FIELD_STYLES}
       <andes-dialog>
-        <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Release notes</button>
+        <andes-button andesDialogTrigger>Release notes</andes-button>
 
         <andes-dialog-content *andesDialogContent>
           <div andesDialogHeader>
@@ -317,9 +291,9 @@ export const Maximizable: Story = {
     moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS, AndesButton] },
     props: { paragraphs: Array.from({ length: 6 }, (_, i) => i + 1) },
     template: `
-      ${TRIGGER_STYLES}
+      ${FIELD_STYLES}
       <andes-dialog [maximizable]="true" #dialog>
-        <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Open document</button>
+        <andes-button andesDialogTrigger>Open document</andes-button>
 
         <andes-dialog-content *andesDialogContent>
           <div andesDialogHeader>
@@ -349,12 +323,12 @@ export const Maximizable: Story = {
  */
 export const TopAlignedResponsiveWidth: Story = {
   render: () => ({
-    moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS] },
+    moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS, AndesButton] },
     props: { width: { xs: '100%', md: '80%', lg: 720, xl: 960 } },
     template: `
-      ${TRIGGER_STYLES}
+      ${FIELD_STYLES}
       <andes-dialog [centered]="false" [width]="width" footer="default" okText="Done" [showCancel]="false" #dialog (ok)="dialog.hide()">
-        <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Open wide dialog</button>
+        <andes-button andesDialogTrigger>Open wide dialog</andes-button>
 
         <andes-dialog-content *andesDialogContent>
           <div andesDialogHeader>

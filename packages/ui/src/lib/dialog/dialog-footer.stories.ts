@@ -7,40 +7,12 @@ import { AndesInput } from '../input/input';
 import { ANDES_DIALOG_IMPORTS, AndesDialog } from './dialog';
 
 /**
- * Buttons inside the stories are `AndesButton` wherever the element is not the
- * trigger. The trigger itself is a native `<button>`: the overlay primitive puts
- * `aria-haspopup`/`aria-expanded`/`aria-controls` on the element the directive sits
- * on, and those attributes are only valid on an element with an interactive role -
- * putting the directive on the `<andes-button>` host wrapper would land them on a
- * roleless element and fail axe's `aria-allowed-attr`.
+ * Every button in these stories is an `AndesButton`, the trigger included:
+ * `andesDialogTrigger` sits on the `<andes-button>` and moves the ARIA state to the real
+ * button inside it.
  */
-const TRIGGER_STYLES = `
+const FIELD_STYLES = `
   <style>
-    /* Metrics copied from .andes-button--md rather than invented: 2.25rem/0.875rem was a
-       step that does not exist in the button scale, so the trigger read as a button from
-       a different system than the AndesButtons it opens. */
-    .sb-dialog-trigger {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: var(--andes-space-2);
-      height: 2rem;
-      padding: 0 var(--andes-space-4);
-      border: 1px solid transparent;
-      border-radius: var(--andes-radius-md);
-      background-color: var(--andes-color-primary);
-      color: var(--andes-color-primary-foreground);
-      font-family: var(--andes-font-family), sans-serif;
-      font-weight: var(--andes-font-weight-medium);
-      font-size: 0.875rem;
-      cursor: pointer;
-      transition: background-color 0.15s ease;
-    }
-    .sb-dialog-trigger:hover { background-color: var(--andes-color-primary-hover); }
-    .sb-dialog-trigger:focus-visible {
-      outline: 2px solid var(--andes-color-focus-ring);
-      outline-offset: 2px;
-    }
     .sb-field {
       display: flex;
       flex-direction: column;
@@ -76,7 +48,9 @@ export const BuiltInFooter: Story = {
     const saving = signal(false);
     const log = signal<string[]>([]);
     return {
-      moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS, AndesInput] },
+      moduleMetadata: {
+        imports: [ANDES_DIALOG_IMPORTS, AndesInput, AndesButton],
+      },
       props: {
         open,
         saving,
@@ -92,7 +66,7 @@ export const BuiltInFooter: Story = {
         },
       },
       template: `
-        ${TRIGGER_STYLES}
+        ${FIELD_STYLES}
         <andes-dialog
           [(open)]="open"
           footer="default"
@@ -102,7 +76,7 @@ export const BuiltInFooter: Story = {
           (ok)="save()"
           (cancelled)="push('cancelled: ' + $event)"
         >
-          <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Edit profile</button>
+          <andes-button andesDialogTrigger>Edit profile</andes-button>
 
           <andes-dialog-content *andesDialogContent>
             <div andesDialogHeader>
@@ -130,9 +104,9 @@ export const BuiltInFooter: Story = {
  */
 export const Destructive: Story = {
   render: () => ({
-    moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS] },
+    moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS, AndesButton] },
     template: `
-      ${TRIGGER_STYLES}
+      ${FIELD_STYLES}
       <div style="display: flex; flex-wrap: wrap; gap: var(--andes-space-2);">
         <andes-dialog
           #dialog
@@ -143,7 +117,7 @@ export const Destructive: Story = {
           autoFocusButton="cancel"
           (ok)="dialog.hide()"
         >
-          <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Delete file</button>
+          <andes-button andesDialogTrigger>Delete file</andes-button>
 
           <andes-dialog-content *andesDialogContent>
             <div andesDialogHeader>
@@ -163,7 +137,7 @@ export const Destructive: Story = {
           autoFocusButton="cancel"
           (ok)="propsDialog.hide()"
         >
-          <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Remove users (button props)</button>
+          <andes-button andesDialogTrigger>Remove users (button props)</andes-button>
 
           <andes-dialog-content *andesDialogContent>
             <div andesDialogHeader>
@@ -186,14 +160,14 @@ export const CustomFooter: Story = {
     moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS, AndesButton] },
     props: { lastAction: '' },
     template: `
-      ${TRIGGER_STYLES}
+      ${FIELD_STYLES}
       <andes-dialog
         #dialog
         [footer]="footer"
         (ok)="lastAction = 'publish'; dialog.hide()"
         (cancelled)="lastAction = 'cancel'"
       >
-        <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Publish post</button>
+        <andes-button andesDialogTrigger>Publish post</andes-button>
 
         <andes-dialog-content *andesDialogContent>
           <div andesDialogHeader>
@@ -226,7 +200,7 @@ export const ExtendDefaultFooter: Story = {
     },
     props: { lastAction: '' },
     template: `
-      ${TRIGGER_STYLES}
+      ${FIELD_STYLES}
       <andes-dialog
         #dialog
         [footer]="footer"
@@ -234,7 +208,7 @@ export const ExtendDefaultFooter: Story = {
         (ok)="lastAction = 'submit'; dialog.hide()"
         (cancelled)="lastAction = 'cancel'"
       >
-        <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Submit expense</button>
+        <andes-button andesDialogTrigger>Submit expense</andes-button>
 
         <andes-dialog-content *andesDialogContent>
           <div andesDialogHeader>

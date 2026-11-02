@@ -7,40 +7,12 @@ import { AndesInput } from '../input/input';
 import { ANDES_DIALOG_IMPORTS, AndesDialog } from './dialog';
 
 /**
- * Buttons inside the stories are `AndesButton` wherever the element is not the
- * trigger. The trigger itself is a native `<button>`: the overlay primitive puts
- * `aria-haspopup`/`aria-expanded`/`aria-controls` on the element the directive sits
- * on, and those attributes are only valid on an element with an interactive role -
- * putting the directive on the `<andes-button>` host wrapper would land them on a
- * roleless element and fail axe's `aria-allowed-attr`.
+ * Every button in these stories is an `AndesButton`, the trigger included:
+ * `andesDialogTrigger` sits on the `<andes-button>` and moves the ARIA state to the real
+ * button inside it.
  */
-const TRIGGER_STYLES = `
+const FIELD_STYLES = `
   <style>
-    /* Metrics copied from .andes-button--md rather than invented: 2.25rem/0.875rem was a
-       step that does not exist in the button scale, so the trigger read as a button from
-       a different system than the AndesButtons it opens. */
-    .sb-dialog-trigger {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: var(--andes-space-2);
-      height: 2rem;
-      padding: 0 var(--andes-space-4);
-      border: 1px solid transparent;
-      border-radius: var(--andes-radius-md);
-      background-color: var(--andes-color-primary);
-      color: var(--andes-color-primary-foreground);
-      font-family: var(--andes-font-family), sans-serif;
-      font-weight: var(--andes-font-weight-medium);
-      font-size: 0.875rem;
-      cursor: pointer;
-      transition: background-color 0.15s ease;
-    }
-    .sb-dialog-trigger:hover { background-color: var(--andes-color-primary-hover); }
-    .sb-dialog-trigger:focus-visible {
-      outline: 2px solid var(--andes-color-focus-ring);
-      outline-offset: 2px;
-    }
     .sb-field {
       display: flex;
       flex-direction: column;
@@ -70,8 +42,8 @@ export const ControlledOpenState: Story = {
     moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS, AndesButton] },
     props: { open: false },
     template: `
-      ${TRIGGER_STYLES}
-      <button type="button" class="sb-dialog-trigger" (click)="open = true">Open from outside</button>
+      ${FIELD_STYLES}
+      <andes-button (click)="open = true">Open from outside</andes-button>
 
       <andes-dialog [(open)]="open">
         <andes-dialog-content *andesDialogContent>
@@ -97,10 +69,10 @@ export const LifecycleEvents: Story = {
     const log = signal<string[]>([]);
     const push = (entry: string) => log.update((l) => [...l.slice(-5), entry]);
     return {
-      moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS] },
+      moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS, AndesButton] },
       props: { log, push },
       template: `
-        ${TRIGGER_STYLES}
+        ${FIELD_STYLES}
         <andes-dialog
           footer="default"
           [showCancel]="false"
@@ -111,7 +83,7 @@ export const LifecycleEvents: Story = {
           (cancelled)="push('cancelled: ' + $event)"
           (closed)="push('closed: ' + $event)"
         >
-          <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Open</button>
+          <andes-button andesDialogTrigger>Open</andes-button>
 
           <andes-dialog-content *andesDialogContent>
             <div andesDialogHeader>
@@ -134,7 +106,7 @@ export const LoadingSkeleton: Story = {
   render: () => {
     const loading = signal(false);
     return {
-      moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS] },
+      moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS, AndesButton] },
       props: {
         loading,
         load() {
@@ -143,9 +115,9 @@ export const LoadingSkeleton: Story = {
         },
       },
       template: `
-        ${TRIGGER_STYLES}
+        ${FIELD_STYLES}
         <andes-dialog [loading]="loading()" footer="default" (opened)="load()" #dialog (ok)="dialog.hide()">
-          <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Load invoice</button>
+          <andes-button andesDialogTrigger>Load invoice</andes-button>
 
           <andes-dialog-content *andesDialogContent>
             <div andesDialogHeader>
@@ -168,11 +140,13 @@ export const LoadingSkeleton: Story = {
  */
 export const KeepContentAlive: Story = {
   render: () => ({
-    moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS, AndesInput] },
+    moduleMetadata: {
+      imports: [ANDES_DIALOG_IMPORTS, AndesInput, AndesButton],
+    },
     template: `
-      ${TRIGGER_STYLES}
+      ${FIELD_STYLES}
       <andes-dialog [destroyOnClose]="false" footer="default" okText="Close" [showCancel]="false" #dialog (ok)="dialog.hide()">
-        <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Draft message</button>
+        <andes-button andesDialogTrigger>Draft message</andes-button>
 
         <andes-dialog-content *andesDialogContent>
           <div andesDialogHeader>
@@ -201,12 +175,12 @@ export const Draggable: Story = {
       imports: [ANDES_DIALOG_IMPORTS, AndesButton, CdkDrag, CdkDragHandle],
     },
     template: `
-      ${TRIGGER_STYLES}
+      ${FIELD_STYLES}
       <style>
         .sb-drag-handle { cursor: move; user-select: none; }
       </style>
       <andes-dialog footer="default" okText="Done" [showCancel]="false" #dialog (ok)="dialog.hide()">
-        <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Open movable dialog</button>
+        <andes-button andesDialogTrigger>Open movable dialog</andes-button>
 
         <andes-dialog-content *andesDialogContent cdkDrag>
           <div andesDialogHeader class="sb-drag-handle" cdkDragHandle>

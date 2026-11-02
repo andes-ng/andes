@@ -4,41 +4,6 @@ import type { Meta, StoryObj } from '@storybook/angular';
 import { AndesButton } from '../button/button';
 import { ANDES_ALERT_DIALOG_IMPORTS, AndesAlertDialog } from './alert-dialog';
 
-/**
- * The trigger is a native `<button>` rather than `<andes-button>`: the overlay
- * primitive puts `aria-haspopup`/`aria-expanded`/`aria-controls` on the element the
- * directive sits on, and those are only valid on an element with an interactive
- * role.
- */
-const TRIGGER_STYLES = `
-  <style>
-    /* Metrics copied from .andes-button--md rather than invented: 2.25rem/0.875rem was a
-       step that does not exist in the button scale, so the trigger read as a button from
-       a different system than the AndesButtons it opens. */
-    .sb-alert-trigger {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      height: 2rem;
-      padding: 0 var(--andes-space-4);
-      border: 1px solid transparent;
-      border-radius: var(--andes-radius-md);
-      background-color: var(--andes-color-danger);
-      color: var(--andes-color-danger-foreground);
-      font-family: var(--andes-font-family), sans-serif;
-      font-weight: var(--andes-font-weight-medium);
-      font-size: 0.875rem;
-      cursor: pointer;
-      transition: background-color 0.15s ease;
-    }
-    .sb-alert-trigger:hover { background-color: var(--andes-color-danger-hover); }
-    .sb-alert-trigger:focus-visible {
-      outline: 2px solid var(--andes-color-danger);
-      outline-offset: 2px;
-    }
-  </style>
-`;
-
 const meta: Meta<AndesAlertDialog> = {
   title: 'Feedback/Alert Dialog',
   component: AndesAlertDialog,
@@ -57,15 +22,12 @@ const meta: Meta<AndesAlertDialog> = {
     moduleMetadata: { imports: [ANDES_ALERT_DIALOG_IMPORTS, AndesButton] },
     props: args,
     template: `
-      ${TRIGGER_STYLES}
       <andes-alert-dialog
         [size]="size"
         [closeOnEscape]="closeOnEscape"
         [lockScroll]="lockScroll"
       >
-        <button type="button" class="sb-alert-trigger" andesAlertDialogTrigger>
-          Delete project
-        </button>
+        <andes-button danger andesAlertDialogTrigger>Delete project</andes-button>
 
         <andes-alert-dialog-content *andesAlertDialogContent>
           <div andesAlertDialogHeader>
@@ -107,13 +69,10 @@ export const Sizes: Story = {
     moduleMetadata: { imports: [ANDES_ALERT_DIALOG_IMPORTS, AndesButton] },
     props: { sizes: ['sm', 'md', 'lg', 'xl'] },
     template: `
-      ${TRIGGER_STYLES}
       <div style="display: flex; flex-wrap: wrap; gap: var(--andes-space-2);">
         @for (size of sizes; track size) {
           <andes-alert-dialog [size]="size">
-            <button type="button" class="sb-alert-trigger" andesAlertDialogTrigger>
-              Size {{ size }}
-            </button>
+            <andes-button danger andesAlertDialogTrigger>Size {{ size }}</andes-button>
 
             <andes-alert-dialog-content *andesAlertDialogContent>
               <div andesAlertDialogHeader>
@@ -141,11 +100,8 @@ export const ReportsTheOutcome: Story = {
     moduleMetadata: { imports: [ANDES_ALERT_DIALOG_IMPORTS, AndesButton] },
     props: { ...args, confirmed: false, lastReason: '' },
     template: `
-      ${TRIGGER_STYLES}
       <andes-alert-dialog (closed)="lastReason = $event">
-        <button type="button" class="sb-alert-trigger" andesAlertDialogTrigger>
-          Revoke access
-        </button>
+        <andes-button danger andesAlertDialogTrigger>Revoke access</andes-button>
 
         <andes-alert-dialog-content *andesAlertDialogContent>
           <div andesAlertDialogHeader>
@@ -185,7 +141,7 @@ export const AsyncConfirmation: Story = {
     const open = signal(false);
     const deleting = signal(false);
     return {
-      moduleMetadata: { imports: [ANDES_ALERT_DIALOG_IMPORTS] },
+      moduleMetadata: { imports: [ANDES_ALERT_DIALOG_IMPORTS, AndesButton] },
       props: {
         open,
         deleting,
@@ -198,8 +154,7 @@ export const AsyncConfirmation: Story = {
         },
       },
       template: `
-        ${TRIGGER_STYLES}
-        <andes-alert-dialog
+          <andes-alert-dialog
           [(open)]="open"
           footer="default"
           okText="Delete project"
@@ -210,9 +165,7 @@ export const AsyncConfirmation: Story = {
           [closeOnEscape]="!deleting()"
           (ok)="remove()"
         >
-          <button type="button" class="sb-alert-trigger" andesAlertDialogTrigger>
-            Delete project
-          </button>
+          <andes-button danger andesAlertDialogTrigger>Delete project</andes-button>
 
           <andes-alert-dialog-content *andesAlertDialogContent>
             <div andesAlertDialogHeader>

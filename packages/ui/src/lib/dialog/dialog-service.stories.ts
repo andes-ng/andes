@@ -7,6 +7,8 @@ import {
   viewChild,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideCircleX } from '@ng-icons/lucide';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
@@ -22,7 +24,8 @@ import {
  */
 @Component({
   selector: 'andes-dialog-service-demo',
-  imports: [AndesButton, NgTemplateOutlet],
+  imports: [AndesButton, NgIcon, NgTemplateOutlet],
+  viewProviders: [provideIcons({ lucideCircleX })],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="sb-demo">
@@ -79,15 +82,7 @@ import {
     </ng-template>
 
     <ng-template #closeIcon>
-      <svg
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-        focusable="false"
-        style="fill: none; stroke: currentcolor; stroke-width: 2; stroke-linecap: round"
-      >
-        <circle cx="12" cy="12" r="9" />
-        <path d="M9 9l6 6M15 9l-6 6" />
-      </svg>
+      <ng-icon name="lucideCircleX" size="1rem" aria-hidden="true" />
     </ng-template>
 
     <ng-template #richContent>

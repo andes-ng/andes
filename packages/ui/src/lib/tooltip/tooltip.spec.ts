@@ -44,6 +44,7 @@ import {
 } from './tooltip-semantic';
 import { AndesTooltipTrigger } from './tooltip-trigger';
 import { declaredValue, toPx } from '../../testing/computed-style';
+import { atRule } from '../../testing/at-rule';
 
 const TOOLTIP_CSS = 'packages/ui/src/lib/tooltip/tooltip.css';
 
@@ -264,10 +265,7 @@ describe('AndesTooltip', () => {
     // Read from the stylesheet source: jsdom runs no animations, and keyframes
     // are not reflected in the computed style.
     const css = readFileSync(TOOLTIP_CSS, 'utf8');
-    const keyframes = (name: string) =>
-      new RegExp(String.raw`@keyframes ${name}\s*\{([\s\S]*?)\n\}`).exec(
-        css,
-      )?.[1] ?? '';
+    const keyframes = (name: string) => atRule(css, `@keyframes ${name}`);
 
     it('enters with a fade and a zoom from 80%, in the fast duration', () => {
       expect(declaredValue(css, '.andes-tooltip', 'animation')).toBe(

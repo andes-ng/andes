@@ -223,9 +223,17 @@ describe('AndesUpload field variant', () => {
       await flush();
       expect(field()?.getAttribute('data-status')).toBe('uploading');
 
+      // Before the first progress event the line sweeps instead of sitting at 0.
+      expect(
+        field()
+          ?.querySelector('[role="progressbar"]')
+          ?.hasAttribute('data-indeterminate'),
+      ).toBe(true);
+
       host.requests[0].onProgress(40);
       detect();
       const bar = field()?.querySelector('[role="progressbar"]');
+      expect(bar?.hasAttribute('data-indeterminate')).toBe(false);
       expect(bar?.getAttribute('aria-valuenow')).toBe('40');
       expect(bar?.getAttribute('aria-label')).toBe('Uploading invoice.pdf');
       expect(text()?.textContent).toContain('40%');

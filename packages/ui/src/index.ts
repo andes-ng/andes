@@ -47,7 +47,7 @@ export * from './lib/date-picker';
 
 // @slot descriptions
 
-// @slot dialog
+export * from './lib/dialog';
 
 // @slot divider
 

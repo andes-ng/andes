@@ -27,7 +27,10 @@ const meta: Meta<AndesTooltip> = {
       options: ['hover', 'focus', 'click', 'contextMenu'],
     },
     color: { control: 'text' },
-    variant: { control: 'inline-radio', options: ['default', 'inverse'] },
+    variant: {
+      control: 'inline-radio',
+      options: ['default', 'light', 'inverse'],
+    },
     maxWidth: { control: 'text' },
     zIndex: { control: 'number' },
     destroyOnHidden: { control: 'boolean' },
@@ -224,10 +227,11 @@ export const Triggers: Story = {
 };
 
 /**
- * `color`: semantic presets or any CSS color; text color and arrow follow. The last row is
- * `variant="inverse"`: a dark surface with light text in either theme (switch the toolbar theme
- * to compare); on a dark page the fill lifts a few steps so the hint still reads as a layer above
- * the page.
+ * `color`: semantic presets or any CSS color; text color and arrow follow (the Ant Design hue
+ * names are in the Examples). The last rows are the other `variant`s: `light` follows the theme's
+ * popover surface, and `inverse` is a dark slate surface with light text in either theme (switch
+ * the toolbar theme to compare); on a dark page its fill lifts a few steps so the hint still reads
+ * as a layer above the page.
  */
 export const Colors: Story = {
   render: () => ({
@@ -248,6 +252,9 @@ export const Colors: Story = {
             <button type="button" andesTooltipTrigger>{{ custom }}</button>
           </andes-tooltip>
         }
+        <andes-tooltip content="Light: the theme's popover surface" variant="light" [open]="true">
+          <andes-button andesTooltipTrigger variant="outline">Light</andes-button>
+        </andes-tooltip>
         <andes-tooltip content="Inverse: dark surface, light text" variant="inverse" [open]="true">
           <andes-button andesTooltipTrigger variant="outline">Inverse</andes-button>
         </andes-tooltip>

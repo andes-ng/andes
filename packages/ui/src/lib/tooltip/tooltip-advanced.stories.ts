@@ -115,9 +115,9 @@ export const Timing: Story = {
 
 /**
  * `autoAdjustOverflow` (on by default): a tooltip that would leave the
- * viewport flips to the opposite side (top edge), falls back to a
- * perpendicular side when that does not fit either (left edge), and is shifted
- * back on screen as a last resort - the arrow follows it in every case. The
+ * viewport flips to the opposite side when the side it asked for has no room
+ * (top and left edges), and is shifted along the trigger to stay on screen
+ * (right and bottom corners) - the arrow follows it in every case. The
  * top-right trigger has it turned off and is clipped instead.
  */
 export const AutoAdjustOverflow: Story = {

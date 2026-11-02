@@ -1,0 +1,108 @@
+@if (placeholderKind() !== 'none' && status() === 'loading') { @if
+(placeholderKind() === 'progress') {
+<span
+  class="andes-image__placeholder andes-image__placeholder--progress"
+  data-slot="image-placeholder"
+>
+  <span class="andes-image__wash" aria-hidden="true"></span>
+  @if (progressPercent() !== null) {
+  <span
+    class="andes-image__progress"
+    data-slot="image-progress"
+    role="progressbar"
+    aria-valuemin="0"
+    aria-valuemax="100"
+    [attr.aria-valuenow]="progressPercent()"
+    [attr.aria-label]="text().loading"
+  >
+    <span
+      class="andes-image__progress-bar"
+      [style.width.%]="progressPercent()"
+    ></span>
+  </span>
+  <span class="andes-image__progress-text" aria-hidden="true"
+    >{{ progressPercent() }}%</span
+  >
+  }
+</span>
+} @else {
+<span
+  class="andes-image__placeholder"
+  data-slot="image-placeholder"
+  aria-hidden="true"
+  [class.andes-image__placeholder--skeleton]="placeholderKind() === 'skeleton'"
+>
+  @switch (placeholderKind()) { @case ('blur') { @if (placeholderSrc(); as
+  blurSrc) {
+  <img
+    class="andes-image__blur"
+    alt=""
+    [attr.src]="blurSrc"
+    [style.object-fit]="fit()"
+  />
+  } } @case ('template') { @if (placeholderTemplate(); as template) {
+  <ng-container [ngTemplateOutlet]="template" />
+  } } }
+</span>
+} }
+
+<img
+  #img
+  class="andes-image__img"
+  data-slot="image-img"
+  [class]="classNames()?.image ?? ''"
+  [style]="styles()?.image ?? null"
+  [class.andes-image__img--pending]="status() === 'loading' && placeholderKind() !== 'none'"
+  [attr.alt]="alt()"
+  [attr.sizes]="sizes() || null"
+  [attr.loading]="loading()"
+  [attr.decoding]="decoding()"
+  [attr.crossorigin]="crossOrigin()"
+  [attr.referrerpolicy]="referrerPolicy()"
+  [style.object-fit]="fit()"
+  (load)="onLoad($event)"
+  (error)="onError($event)"
+/>
+
+@if (status() === 'error') { @if (fallbackTemplate(); as template) {
+<span class="andes-image__fallback" data-slot="image-fallback">
+  <ng-container [ngTemplateOutlet]="template" />
+</span>
+} @else {
+<span class="andes-image__error" data-slot="image-error" aria-hidden="true">
+  <andes-image-icon name="imageOff" />
+</span>
+} } @if (canPreview()) {
+<button
+  #trigger
+  type="button"
+  class="andes-image__mask"
+  data-slot="image-mask"
+  aria-haspopup="dialog"
+  [class]="classNames()?.mask ?? ''"
+  [style]="styles()?.mask ?? null"
+  [class.andes-image__mask--bare]="!maskText() && !maskTemplate()"
+  [class.andes-image__mask--blur]="maskVariant() === 'blur'"
+  [class.andes-image__mask--clear]="maskVariant() === 'none'"
+  [attr.aria-label]="triggerLabel()"
+  (click)="openPreview()"
+>
+  @if (maskTemplate(); as template) {
+  <ng-container [ngTemplateOutlet]="template" />
+  } @else if (maskText(); as label) {
+  <andes-image-icon name="eye" class="andes-image__mask-icon" />
+  <span class="andes-image__mask-text">{{ label }}</span>
+  }
+</button>
+} @if (!group && previewConfig()) {
+<andes-image-preview
+  [items]="standaloneItems()"
+  [config]="previewConfig()"
+  [labels]="labels()"
+  [classNames]="classNames()"
+  [styles]="styles()"
+  [origin]="element"
+  [(open)]="previewOpen"
+  (transformChange)="previewTransformChange.emit($event)"
+/>
+}

@@ -1,6 +1,6 @@
 /*
  * The confirmation patterns of the alert dialog: the gating parts (phrase, acknowledge,
- * countdown), the action's blocked / pending / hold / shake states, the tone accent and the
+ * countdown), the action's blocked / pending / hold / shake states, the tone icon and the
  * impact and error summaries. Loaded by AndesAlertDialogContent next to dialog.css, which
  * renders with ViewEncapsulation.None for the same reason this file is plain global CSS:
  * the parts are consumer markup projected from the consumer's own view. Every class is
@@ -48,17 +48,6 @@
 .andes-alert-dialog__icon[data-tone='success'] {
   --andes-alert-tone: var(--andes-color-success);
   --andes-alert-tone-foreground: var(--andes-color-success-foreground);
-}
-
-/* A thin band along the top edge. The surface clips it to its rounded corners. */
-.andes-dialog[data-tone]::before {
-  content: '';
-  position: absolute;
-  inset-block-start: 0;
-  inset-inline: 0;
-  z-index: 2;
-  block-size: 3px;
-  background-color: var(--andes-alert-tone);
 }
 
 .andes-alert-dialog__icon {

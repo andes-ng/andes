@@ -407,9 +407,9 @@ export const UnsavedChanges: Story = {
 };
 
 /**
- * `tone` adds a coloured band along the top and drives the icon. The icons differ in
+ * `tone` draws the icon of the question: danger, warning, info or success. The icons differ in
  * shape as well as colour (octagon, triangle, circle), so the tone never rests on colour
- * alone.
+ * alone; the surface itself stays neutral.
  */
 export const Tones: Story = {
   render: () => {

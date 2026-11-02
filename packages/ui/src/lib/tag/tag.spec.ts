@@ -897,12 +897,20 @@ describe('AndesTag metrics and tints', () => {
       join(process.cwd(), 'packages/ui/src/lib/tag/tag.css'),
       'utf8',
     );
-    const rule = (variant: string) =>
-      css.match(
-        new RegExp(
-          `\\.andes-tag--color-warning\\.andes-tag--${variant}\\s*{([^}]*)}`,
-        ),
-      )?.[1] ?? '';
+    const rule = (variant: string) => {
+      const selector = `.andes-tag--color-warning.andes-tag--${variant}`;
+      for (
+        let at = css.indexOf(selector);
+        at !== -1;
+        at = css.indexOf(selector, at + 1)
+      ) {
+        const rest = css.slice(at + selector.length).trimStart();
+        if (rest.startsWith('{')) {
+          return rest.slice(1, rest.indexOf('}'));
+        }
+      }
+      return '';
+    };
 
     expect(rule('filled')).toMatch(/border-color:\s*transparent/);
     expect(rule('filled')).toMatch(

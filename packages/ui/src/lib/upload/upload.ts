@@ -9,6 +9,7 @@ import { NG_VALUE_ACCESSOR } from '@angular/forms';
 
 import { ANDES_BUTTON_CONTEXT } from '../button/button-context';
 import { AndesButton } from '../button/button';
+import { AndesImagePreview } from '../image/image-preview';
 import { AndesUploadBase } from './upload-base';
 import { AndesUploadIcon } from './upload-icon';
 
@@ -18,6 +19,10 @@ import { AndesUploadIcon } from './upload-icon';
  * behind it and is the control's single tab stop. A disabled upload also disables the
  * `andes-button`s inside it (through `ANDES_BUTTON_CONTEXT`).
  * Works with Forms (the value is the file list) and inside `andes-form-field`.
+ *
+ * The preview of a picture opens the library's image viewer (`andes-image-preview`) over all
+ * the pictures of the list, growing out of the thumbnail; `imagePreview`, `previewConfig` and
+ * `previewLabels` tune it, and a `preview` handler that calls `preventDefault()` replaces it.
  *
  * `variant="field"` draws it instead as one row the height of `andes-input` (sizes sm/md/lg):
  * a "choose" segment, the chosen file name, `{count} files` or a "No file chosen" placeholder,
@@ -29,7 +34,7 @@ import { AndesUploadIcon } from './upload-icon';
 @Component({
   selector: 'andes-upload',
   exportAs: 'andesUpload',
-  imports: [NgTemplateOutlet, AndesButton, AndesUploadIcon],
+  imports: [NgTemplateOutlet, AndesButton, AndesImagePreview, AndesUploadIcon],
   templateUrl: './upload.html',
   styleUrl: './upload.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -55,7 +60,7 @@ export class AndesUpload extends AndesUploadBase {}
 @Component({
   selector: 'andes-upload-dragger',
   exportAs: 'andesUploadDragger',
-  imports: [NgTemplateOutlet, AndesButton, AndesUploadIcon],
+  imports: [NgTemplateOutlet, AndesButton, AndesImagePreview, AndesUploadIcon],
   templateUrl: './upload.html',
   styleUrl: './upload.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

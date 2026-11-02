@@ -24,13 +24,16 @@ export {
   AndesUploadItemEvent,
 } from './upload-types';
 export type {
+  AndesUploadAcceptObject,
   AndesUploadAction,
   AndesUploadBeforeRemove,
   AndesUploadBeforeResult,
   AndesUploadBeforeUpload,
   AndesUploadChangeEvent,
+  AndesUploadClassNames,
   AndesUploadData,
   AndesUploadFile,
+  AndesUploadFileFlag,
   AndesUploadHttpErrorKind,
   AndesUploadIconContext,
   AndesUploadListOptions,
@@ -39,6 +42,9 @@ export type {
   AndesUploadMessageParams,
   AndesUploadMessages,
   AndesUploadItemContext,
+  AndesUploadPart,
+  AndesUploadPasteScope,
+  AndesUploadProgressOptions,
   AndesUploadRejectReason,
   AndesUploadRejection,
   AndesUploadRequest,
@@ -47,5 +53,6 @@ export type {
   AndesUploadSize,
   AndesUploadSource,
   AndesUploadStatus,
+  AndesUploadStyles,
   AndesUploadVariant,
 } from './upload-types';

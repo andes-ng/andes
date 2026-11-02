@@ -27,6 +27,15 @@ export type AndesUploadVariant = 'default' | 'field';
 /** How a batch of files reached the control. */
 export type AndesUploadSource = 'select' | 'drop' | 'paste' | 'api';
 
+/**
+ * Where a paste of files is taken:
+ * - `control`: while the focus is inside the control, or the pointer is over it (hover it and
+ *   press Ctrl/Cmd+V, no focus needed);
+ * - `page`: anywhere on the page (the control listens on the document), as long as the paste
+ *   is not meant for a text field or for another upload.
+ */
+export type AndesUploadPasteScope = 'control' | 'page';
+
 /** One entry of the file list (the control's value). */
 export interface AndesUploadFile<TResponse = unknown> {
   /** Stable identity; generated for files the user adds. */
@@ -74,7 +83,8 @@ export interface AndesUploadRejection {
 
 /**
  * What `preview` and `download` emit. Call `preventDefault()` synchronously to replace the
- * default (opening the file's URL for `preview`, following the link for `download`).
+ * default (the image viewer for a picture or opening the file's URL for `preview`, following
+ * the link for `download`).
  */
 export class AndesUploadItemEvent {
   private prevented = false;
@@ -176,14 +186,74 @@ export class AndesUploadCancelledError extends Error {
   }
 }
 
+/** A flag for every file, or a function that answers per file. */
+export type AndesUploadFileFlag =
+  boolean | ((file: AndesUploadFile) => boolean);
+
+/**
+ * `accept` as an object: `format` is the file input's `accept` list; `filter` says who checks
+ * the files against it. `native` leaves it to the browser's own picker (a dropped or pasted
+ * file is not checked again); a function decides for every file, chosen, dropped or pasted
+ * (reason `accept` when it answers `false`). Without `filter`, the control checks `format`.
+ */
+export interface AndesUploadAcceptObject {
+  format?: string;
+  filter?: 'native' | ((file: File) => boolean);
+}
+
 export interface AndesUploadListOptions {
-  /** The eye action; it only appears for files whose `url` is an `http(s)` or `blob:` address. */
-  showPreviewIcon?: boolean;
-  showRemoveIcon?: boolean;
-  showDownloadIcon?: boolean;
+  /**
+   * The eye action. It appears for pictures the image viewer can show (a web, `blob:` or
+   * `data:image` address, a thumbnail, or the chosen file itself) and for other files whose
+   * `url` is an `http(s)` or `blob:` address. Default: on for `picture-card` and
+   * `picture-circle` (where it is on the hover mask), off for `text` and `picture` rows, where
+   * the file name (and the thumbnail of a picture row) opens the preview instead. `true` shows
+   * it in rows too.
+   */
+  showPreviewIcon?: AndesUploadFileFlag;
+  showRemoveIcon?: AndesUploadFileFlag;
+  showDownloadIcon?: AndesUploadFileFlag;
   showRetryIcon?: boolean;
   /** The file size under the name (list rows only). */
   showFileSize?: boolean;
+  /** Replaces the eye icon of the preview action; the button and its label stay. */
+  previewIcon?: TemplateRef<AndesUploadIconContext>;
+  /** Replaces the icon of the download action (a short text works too). */
+  downloadIcon?: TemplateRef<AndesUploadIconContext>;
+  /** Replaces the icon of the remove action. */
+  removeIcon?: TemplateRef<AndesUploadIconContext>;
+  /** Extra text after the caption of a row (the size, a note...); empty shows nothing. */
+  extra?: (file: AndesUploadFile) => string | null | undefined;
+}
+
+/** The parts of the control that take a consumer's classes and inline styles. */
+export type AndesUploadPart = 'root' | 'trigger' | 'list' | 'item';
+
+/**
+ * Classes added beside each part's own: `root` the control's box, `trigger` the click / drop
+ * area (or the field row), `list` the file list and `item` every row or card. The parts render
+ * inside the component, so style these classes from a global stylesheet.
+ */
+export type AndesUploadClassNames = Partial<Record<AndesUploadPart, string>>;
+
+/** Inline styles set on each part, keyed like {@link AndesUploadClassNames}. */
+export type AndesUploadStyles = Partial<
+  Record<AndesUploadPart, Record<string, string | number>>
+>;
+
+/** How the progress of a file being sent is drawn. */
+export interface AndesUploadProgressOptions {
+  /**
+   * The colour of the filled bar (any CSS colour, a `var(--andes-*)` token works), or the two
+   * ends of a gradient that runs from the start of the bar to its end.
+   */
+  strokeColor?: string | { readonly from: string; readonly to: string };
+  /** Thickness of the bar in a list, in px. Default 2. */
+  strokeWidth?: number;
+  /** The text shown while sending; default `{percent}%`. */
+  format?: (percent: number, file: AndesUploadFile) => string;
+  /** `false` hides the text (the percent next to the name of a row); default `true`. */
+  showInfo?: boolean;
 }
 
 /** What a message function receives: the same values a `{placeholder}` would be filled with. */
@@ -230,6 +300,10 @@ export interface AndesUploadMessages {
   remove: AndesUploadMessage;
   retry: AndesUploadMessage;
   dropTitle: AndesUploadMessage;
+  /** The default trigger of a card or circle list, under its plus sign. */
+  upload: AndesUploadMessage;
+  /** What a card or circle shows in place of the picture while its file is sending. */
+  uploadingText?: AndesUploadMessage;
   /** Field variant: the text shown while no file is chosen. */
   noFileChosen: AndesUploadMessage;
   /** Field variant: the text shown for several files (`{count}`). */

@@ -9,6 +9,9 @@
     cubic-bezier(0.2, 0, 0, 1)
   );
   --_andes-upload-duration: var(--andes-motion-duration-mid, 150ms);
+  /* How long the bar takes to follow a new percent: longer than the gap between two events of a
+     fast upload, so it flows instead of stepping. */
+  --_andes-upload-fill: 350ms;
 
   font-family: var(--andes-font-family), sans-serif;
   font-size: var(--andes-text-font-size, 0.875rem);
@@ -89,7 +92,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--andes-space-5, 1.25rem) var(--andes-space-4, 1rem);
+  padding: var(--andes-space-4, 1rem);
   border: 1px dashed var(--andes-color-border, #d1d5db);
   border-radius: var(--andes-radius-lg, 0.5rem);
   background-color: color-mix(
@@ -122,13 +125,14 @@
 .andes-upload__drag {
   display: grid;
   justify-items: center;
-  gap: var(--andes-space-1, 0.25rem);
+  gap: 0;
 }
 
+/* The icon is 48px with 16px under it, the title 16px with 4px under it, as the reference. */
 .andes-upload__drag-icon {
   display: inline-flex;
-  margin-block-end: var(--andes-space-1, 0.25rem);
-  font-size: 2rem;
+  margin-block-end: var(--andes-space-4, 1rem);
+  font-size: 3rem;
   color: var(--andes-color-primary-text, var(--andes-color-primary, #2563eb));
 }
 
@@ -141,16 +145,20 @@
   margin: 0;
 }
 
+.andes-upload__drag-title {
+  margin-block-end: var(--andes-space-1, 0.25rem);
+  font-size: 1rem;
+  line-height: 1.5715;
+}
+
 .andes-upload__drag-hint {
-  font-size: 0.75rem;
-  line-height: 1.25rem;
   color: var(--andes-color-muted-foreground, #64748b);
 }
 
 /* ------------------------------------------------------------------ list */
 
 .andes-upload__list {
-  --_andes-upload-gap: var(--andes-space-1, 0.25rem);
+  --_andes-upload-gap: var(--andes-space-2, 0.5rem);
 
   display: grid;
   gap: var(--_andes-upload-gap);
@@ -176,13 +184,14 @@
   block-size: 100%;
 }
 
+/* A text row is one 22px line: the icon (14px), the name with 8px either side, the actions. The
+   actions are 24px boxes that overhang the line by 1px, as the reference draws them; they paint
+   no square of their own on hover (it would stick out of the 22px row), only their icon darkens. */
 .andes-upload__row {
   display: flex;
   align-items: center;
-  gap: var(--andes-space-2, 0.5rem);
-  min-block-size: 1.75rem;
-  padding: 0.125rem var(--andes-space-2, 0.5rem);
-  border-radius: var(--andes-radius-md, 0.375rem);
+  min-block-size: 1.375rem;
+  border-radius: var(--andes-radius-sm, 0.25rem);
   transition: background-color var(--_andes-upload-duration) ease;
 }
 
@@ -190,11 +199,14 @@
   background-color: var(--andes-color-accent, #f3f4f6);
 }
 
+/* The file icon of a text row is 14px (the row's text size, whatever the control's size), as the
+   reference draws it: with the 8px of the name's padding that leaves it the same air. */
 .andes-upload__thumb {
   display: inline-flex;
   flex: none;
   align-items: center;
   justify-content: center;
+  font-size: 0.875rem;
   color: var(--andes-color-muted-foreground, #64748b);
 }
 
@@ -212,6 +224,7 @@
   min-inline-size: 0;
   align-items: baseline;
   gap: 0 var(--andes-space-2, 0.5rem);
+  padding-inline: var(--andes-space-2, 0.5rem);
 }
 
 .andes-upload__name {
@@ -224,9 +237,28 @@
   text-decoration: none;
 }
 
-.andes-upload__name--link:hover {
+.andes-upload__name--link {
   color: var(--andes-color-primary-text, var(--andes-color-primary, #2563eb));
+}
+
+.andes-upload__name--link:hover {
   text-decoration: underline;
+}
+
+/* The name of a file with no address to link to (one just chosen) is a button that looks like
+   the link. */
+.andes-upload__name--button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+/* The thumbnail of a picture row opens the preview too. */
+.andes-upload__thumb--link {
+  cursor: pointer;
 }
 
 .andes-upload__name--link:focus-visible {
@@ -236,14 +268,19 @@
 }
 
 .andes-upload__caption,
+.andes-upload__extra,
 .andes-upload__error {
-  font-size: 0.75rem;
-  line-height: 1.25rem;
   color: var(--andes-color-muted-foreground, #64748b);
 }
 
 .andes-upload__caption {
   flex: none;
+}
+
+/* `showUploadList.extra`: a note after the caption, as quiet as the caption. */
+.andes-upload__extra {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
 }
 
 /* The message may be as long as a server likes. It sits beside the name when at least 8rem is
@@ -261,11 +298,12 @@
   display: inline-flex;
   flex: none;
   align-items: center;
-  gap: 0.125rem;
+  margin-block: -1px;
 }
 
 .andes-upload__action {
   display: inline-flex;
+  text-decoration: none;
   align-items: center;
   justify-content: center;
   inline-size: 1.5rem;
@@ -277,13 +315,19 @@
   color: var(--andes-color-muted-foreground, #64748b);
   font: inherit;
   cursor: pointer;
-  transition:
-    color var(--_andes-upload-duration) ease,
-    background-color var(--_andes-upload-duration) ease;
+  transition: color var(--_andes-upload-duration) ease;
+}
+
+/* A custom icon (`showUploadList.removeIcon`...) may be a word: the button grows to fit it, as a
+   small text button does (7px either side, the 14px text of the row). */
+.andes-upload__action--custom {
+  inline-size: auto;
+  min-inline-size: 1.5rem;
+  padding-inline: 0.4375rem;
+  white-space: nowrap;
 }
 
 .andes-upload__action:hover {
-  background-color: var(--andes-color-accent-hover, #e5e7eb);
   color: var(--andes-color-foreground, #0f172a);
 }
 
@@ -292,30 +336,78 @@
   outline-offset: 1px;
 }
 
-/* Error rows: the name and icon take the danger colour. */
+/* Error rows: the name, the icon and the action icons take the danger colour. */
 .andes-upload__item[data-status='error'] .andes-upload__thumb,
-.andes-upload__item[data-status='error'] .andes-upload__name {
+.andes-upload__item[data-status='error'] .andes-upload__name,
+.andes-upload:not(.andes-upload--card)
+  .andes-upload__item[data-status='error']
+  .andes-upload__action {
   color: var(--andes-color-danger-text, var(--andes-color-danger, #dc2626));
 }
 
 /* -------------------------------------------------------------- progress */
 
+/* `progress` sets the custom properties: a solid colour, a gradient (one per direction, so it
+   runs from the start of the bar to its end) and the thickness. The line is 2px and hangs
+   3px under a text row, starting where the name's text does (14px icon + 8px), so it lies
+   over the gap to the next row and does not make the row taller. */
 .andes-upload__progress {
-  position: relative;
-  block-size: 4px;
-  margin-block-start: 2px;
-  margin-inline: var(--andes-space-2, 0.5rem);
+  position: absolute;
+  inset-inline: 1.375rem 0;
+  inset-block-start: 1.5625rem;
+  block-size: var(--andes-upload-progress-size, 2px);
   overflow: hidden;
   border-radius: var(--andes-radius-full, 9999px);
-  background-color: var(--andes-color-secondary, #e5e7eb);
+  background-color: color-mix(
+    in srgb,
+    var(--andes-color-foreground, #0f172a) 6%,
+    transparent
+  );
 }
 
 .andes-upload__progress-bar {
   display: block;
   block-size: 100%;
   border-radius: inherit;
-  background-color: var(--andes-color-primary, #2563eb);
-  transition: inline-size 200ms var(--_andes-upload-ease);
+  background-color: var(
+    --andes-upload-progress-color,
+    var(--andes-color-primary, #2563eb)
+  );
+  background-image: var(--andes-upload-progress-fill, none);
+  transition: inline-size var(--_andes-upload-fill) var(--_andes-upload-ease);
+}
+
+/* Before the first progress event the line is a short segment sweeping along the track; the
+   fill itself stays at 0, so the first percent grows from the start instead of jumping. */
+.andes-upload__progress[data-indeterminate]::after,
+.andes-upload__field-progress[data-indeterminate]::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  inline-size: 35%;
+  border-radius: inherit;
+  background-color: var(
+    --andes-upload-progress-color,
+    var(--andes-color-primary, #2563eb)
+  );
+  background-image: var(--andes-upload-progress-fill, none);
+}
+
+.andes-upload__progress[data-indeterminate]:dir(rtl)::after,
+.andes-upload__field-progress[data-indeterminate]:dir(rtl)::after {
+  background-image: var(
+    --andes-upload-progress-fill-rtl,
+    var(--andes-upload-progress-fill, none)
+  );
+}
+
+.andes-upload__progress-bar:dir(rtl),
+.andes-upload__field-progress-bar:dir(rtl) {
+  background-image: var(
+    --andes-upload-progress-fill-rtl,
+    var(--andes-upload-progress-fill, none)
+  );
 }
 
 /* --------------------------------------------------------- picture list */
@@ -342,19 +434,36 @@
   border-style: dashed;
 }
 
-.andes-upload--picture .andes-upload__row {
-  min-block-size: 4rem;
-  padding: var(--andes-space-2, 0.5rem);
-  gap: var(--andes-space-3, 0.75rem);
+/* A tile being sent is the add tile's pale fill with the dashed border, as the reference. */
+.andes-upload--card
+  .andes-upload__item[data-status='uploading']
+  .andes-upload__row--boxed {
+  background-color: color-mix(
+    in srgb,
+    var(--andes-color-muted, #f1f5f9) 55%,
+    var(--andes-color-background, #ffffff)
+  );
 }
 
+.andes-upload--picture .andes-upload__row {
+  min-block-size: 0;
+  padding: var(--andes-space-2, 0.5rem);
+}
+
+/* The thumbnail is a 48px square with no corners of its own; a file without a picture, a
+   failed one and the spinner of one being sent put a 30px icon in it. */
 .andes-upload--picture .andes-upload__thumb {
   inline-size: 3rem;
   block-size: 3rem;
   overflow: hidden;
-  border-radius: var(--andes-radius-md, 0.375rem);
-  background-color: var(--andes-color-muted, #f1f5f9);
-  font-size: 1.5rem;
+  border-radius: 0;
+  font-size: 1.875rem;
+}
+
+.andes-upload--picture
+  .andes-upload__item[data-status='uploading']
+  .andes-upload__thumb {
+  color: var(--andes-color-primary-text, var(--andes-color-primary, #2563eb));
 }
 
 .andes-upload--picture .andes-upload__meta {
@@ -364,16 +473,26 @@
   gap: 0;
 }
 
+/* While sending, the name rides 2.5px up and the line sits under it, with the percent after. */
+.andes-upload--picture
+  .andes-upload__item[data-status='uploading']
+  .andes-upload__meta {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0 var(--andes-space-2, 0.5rem);
+  padding-block-end: 5px;
+}
+
 .andes-upload--picture .andes-upload__error {
   flex: none;
 }
 
+/* The line starts at the name's text (1px border + 8px padding + 48px thumbnail + 8px) and
+   ends 8px inside the row, 17px above its bottom edge. */
 .andes-upload--picture .andes-upload__progress {
-  margin-inline: 0;
-  margin-block-start: -0.375rem;
+  inset-inline: 4.0625rem 1.0625rem;
+  inset-block: auto 1.0625rem;
 }
-
-/* ----------------------------------------------------------------- cards */
 
 .andes-upload__cards {
   display: flex;
@@ -390,6 +509,7 @@
   block-size: var(--_andes-upload-card-size);
 }
 
+/* The tile is 102px with its 1px border: 8px of padding leave an 84px square for the picture. */
 .andes-upload__select--card {
   box-sizing: border-box;
   inline-size: var(--_andes-upload-card-size);
@@ -397,7 +517,6 @@
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  gap: var(--andes-space-1, 0.25rem);
   border: 1px dashed var(--andes-color-border, #d1d5db);
   border-radius: var(--andes-radius-lg, 0.5rem);
   background-color: color-mix(
@@ -405,18 +524,33 @@
     var(--andes-color-muted, #f1f5f9) 55%,
     var(--andes-color-background, #ffffff)
   );
-  color: var(--andes-color-muted-foreground, #64748b);
   text-align: center;
   transition: border-color var(--_andes-upload-duration) ease;
 }
 
 .andes-upload__select--card:not([data-disabled]):hover {
   border-color: var(--andes-color-primary, #2563eb);
-  color: var(--andes-color-foreground, #0f172a);
+}
+
+.andes-upload__select--card[data-disabled] {
+  color: var(--andes-color-muted-foreground, #64748b);
 }
 
 .andes-upload__select--card[data-circle] {
   border-radius: var(--andes-radius-full, 9999px);
+}
+
+/* The default content of a card trigger: a 14px plus in a 22px line, 8px over a 14px label. */
+.andes-upload__card-default {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--andes-space-2, 0.5rem);
+}
+
+.andes-upload__card-default-icon {
+  margin-block: 0.25rem;
+  font-size: 0.875rem;
 }
 
 .andes-upload--card .andes-upload__row {
@@ -424,10 +558,10 @@
   box-sizing: border-box;
   inline-size: 100%;
   block-size: 100%;
-  padding: var(--andes-space-1, 0.25rem);
+  padding: var(--andes-space-2, 0.5rem);
   overflow: hidden;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .andes-upload--circle .andes-upload__row {
@@ -436,25 +570,41 @@
 
 .andes-upload--card .andes-upload__thumb {
   position: absolute;
-  inset: var(--andes-space-1, 0.25rem);
-  border-radius: calc(var(--andes-radius-lg, 0.5rem) - 2px);
+  inset: var(--andes-space-2, 0.5rem);
+  border-radius: 0;
   overflow: hidden;
-  font-size: 1.5rem;
+  font-size: 1.875rem;
+}
+
+.andes-upload--card .andes-upload__img {
+  object-fit: contain;
 }
 
 .andes-upload--circle .andes-upload__thumb {
   border-radius: var(--andes-radius-full, 9999px);
 }
 
-/* A file without a picture: the icon rides at the top, the name and size sit below it. */
+/* A file without a picture (and a failed one) is a 30px icon near the top of the tile, 9px
+   under its border, with the name below it. */
 .andes-upload--card .andes-upload__thumb:not(.andes-upload__thumb--picture) {
   align-items: flex-start;
-  padding-block-start: 0.75rem;
+  padding-block-start: 0.5625rem;
   box-sizing: border-box;
-  background-color: var(--andes-color-muted, #f1f5f9);
 }
 
-/* The name and caption sit under the file icon; with a picture they are only read out. */
+/* While sending, the picture is "Uploading..." in the top 60px of the square. */
+.andes-upload__uploading {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  font-size: var(--andes-text-font-size, 0.875rem);
+  line-height: 3.75rem;
+  text-align: center;
+  color: var(--andes-color-foreground, #0f172a);
+}
+
+/* The name sits 54px under the top of the square (22px above its bottom edge); with a
+   picture it is only read out. */
 .andes-upload--card .andes-upload__meta {
   position: relative;
   z-index: 1;
@@ -464,8 +614,7 @@
   inline-size: 100%;
   min-inline-size: 0;
   box-sizing: border-box;
-  padding-inline: var(--andes-space-1, 0.25rem);
-  margin-block-start: 3rem;
+  margin-block-start: 3.375rem;
   gap: 0;
   text-align: center;
 }
@@ -474,90 +623,20 @@
   max-inline-size: 100%;
 }
 
-/* A failed card shows what went wrong: the name and the message (two lines at most; the whole
-   text is the tooltip) under the alert icon, on a plate that keeps them readable over a
-   picture. */
-.andes-upload--card
-  .andes-upload__item[data-status='error']
-  .andes-upload__meta {
-  font-size: 0.75rem;
-  line-height: 1rem;
-}
-
-.andes-upload--card .andes-upload__error {
-  display: -webkit-box;
+/* A failed card is the file's icon and its name in the danger colour inside the danger border,
+   like Ant: the message is the card's tooltip (and stays for screen readers), not text on the
+   card, and the actions are the same hover overlay as any other card. The size and the extra
+   text have no room on a tile either. */
+.andes-upload--card .andes-upload__error,
+.andes-upload--card .andes-upload__caption,
+.andes-upload--card .andes-upload__extra {
   flex: none;
-  max-inline-size: 100%;
-  overflow: hidden;
-  line-height: 1rem;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-}
-
-.andes-upload__meta--over {
-  margin-block-start: auto;
-  padding-block: var(--andes-space-1, 0.25rem);
-  border-radius: calc(var(--andes-radius-lg, 0.5rem) - 2px);
-  background-color: color-mix(
-    in srgb,
-    var(--andes-color-background, #ffffff) 92%,
-    transparent
-  );
-}
-
-.andes-upload__thumb-alert {
   position: absolute;
-  inset-block-start: 0.5rem;
-  inset-inline-start: 0.5rem;
-  color: var(--andes-color-danger-text, var(--andes-color-danger, #dc2626));
-}
-
-.andes-upload--card
-  .andes-upload__item[data-status='error']
-  .andes-upload__img {
-  opacity: 0.35;
-}
-
-/* The alert icon sits at the start of the top edge, and the actions of a failed card form a
-   strip along its end instead of the full overlay, which would cover the message (and, on
-   touch screens, is always shown). */
-.andes-upload--card
-  .andes-upload__item[data-status='error']
-  .andes-upload__thumb:not(.andes-upload__thumb--picture) {
-  justify-content: flex-start;
-  padding-block-start: 0.5rem;
-  padding-inline-start: 0.5rem;
-}
-
-.andes-upload--card
-  .andes-upload__item[data-status='error']
-  .andes-upload__actions {
-  inset-block: var(--andes-space-1, 0.25rem) auto;
-  block-size: 1.75rem;
-  justify-content: flex-end;
-  padding-inline: 0.125rem;
-  background-color: transparent;
-  opacity: 1;
-}
-
-.andes-upload--card
-  .andes-upload__item[data-status='error']
-  .andes-upload__action {
-  color: var(--andes-color-muted-foreground, #64748b);
-}
-
-.andes-upload--card
-  .andes-upload__item[data-status='error']
-  .andes-upload__action:hover {
-  background-color: var(--andes-color-accent-hover, #e5e7eb);
-  color: var(--andes-color-foreground, #0f172a);
-}
-
-.andes-upload--card
-  .andes-upload__item[data-status='error']
-  .andes-upload__action:focus-visible {
-  outline-color: var(--andes-color-focus-ring, #2563eb);
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
 }
 
 .andes-upload__meta--sr {
@@ -569,15 +648,21 @@
   clip-path: inset(50%);
 }
 
+/* The hover overlay covers the 84px square, with the eye and the trash 16px each in 24px
+   boxes (8px between the icons). */
 .andes-upload--card .andes-upload__actions {
   position: absolute;
-  inset: var(--andes-space-1, 0.25rem);
+  inset: var(--andes-space-2, 0.5rem);
   z-index: 2;
   justify-content: center;
-  border-radius: inherit;
+  margin: 0;
   background-color: var(--andes-color-overlay, rgb(15 23 42 / 45%));
   opacity: 0;
   transition: opacity var(--_andes-upload-duration) ease;
+}
+
+.andes-upload--circle .andes-upload__actions {
+  border-radius: var(--andes-radius-full, 9999px);
 }
 
 .andes-upload--card .andes-upload__item:hover .andes-upload__actions,
@@ -592,11 +677,11 @@
 }
 
 .andes-upload--card .andes-upload__action {
+  font-size: 1rem;
   color: #ffffff;
 }
 
 .andes-upload--card .andes-upload__action:hover {
-  background-color: rgb(255 255 255 / 20%);
   color: #ffffff;
 }
 
@@ -604,12 +689,11 @@
   outline-color: #ffffff;
 }
 
+/* The line runs along the square (9px in from the tile's edges) and ends 33px above the bottom. */
 .andes-upload--card .andes-upload__progress {
-  position: absolute;
-  inset-inline: var(--andes-space-3, 0.75rem);
-  inset-block-end: var(--andes-space-3, 0.75rem);
+  inset-inline: 0.5625rem;
+  inset-block: auto 2.0625rem;
   z-index: 3;
-  margin: 0;
 }
 
 .andes-upload--card .andes-upload__actions--busy {
@@ -862,8 +946,12 @@
 .andes-upload__field-progress-bar {
   display: block;
   block-size: 100%;
-  background-color: var(--andes-color-primary, #2563eb);
-  transition: inline-size 200ms var(--_andes-upload-ease);
+  background-color: var(
+    --andes-upload-progress-color,
+    var(--andes-color-primary, #2563eb)
+  );
+  background-image: var(--andes-upload-progress-fill, none);
+  transition: inline-size var(--_andes-upload-fill) var(--_andes-upload-ease);
 }
 
 .andes-upload__sr {
@@ -917,7 +1005,7 @@
   .andes-upload__item--leave {
     display: grid;
     pointer-events: none;
-    animation: andes-upload-row-out var(--andes-motion-duration-mid, 150ms)
+    animation: andes-upload-row-out var(--andes-motion-duration-slow, 200ms)
       var(--andes-motion-ease-in, cubic-bezier(0.4, 0, 1, 1)) forwards;
   }
 
@@ -935,17 +1023,37 @@
 
   .andes-upload--card .andes-upload__item--leave {
     display: block;
-    animation: andes-upload-card-out var(--andes-motion-duration-mid, 150ms)
+    animation: andes-upload-card-out var(--andes-motion-duration-slow, 200ms)
       var(--andes-motion-ease-in, cubic-bezier(0.4, 0, 1, 1)) forwards;
   }
 
-  /* A finished upload fills its bar, then fades it out; a failed one only fades. The inline
-     width is the last one drawn, so the fill has to override it. */
+  /* A finished upload fills its bar (it takes the fill time to get there), then fades it out; a
+     failed one only fades. The inline width is the last one drawn, so the fill has to override
+     it. */
   .andes-upload__progress--leave,
   .andes-upload__field-progress--leave {
     pointer-events: none;
-    animation: andes-upload-fade-out var(--andes-motion-duration-mid, 150ms)
-      ease-out var(--andes-motion-duration-fast, 120ms) forwards;
+    animation: andes-upload-fade-out var(--andes-motion-duration-slow, 200ms)
+      ease-out var(--_andes-upload-fill) forwards;
+  }
+
+  .andes-upload__item[data-status='error'] .andes-upload__progress--leave,
+  .andes-upload__field[data-status='error']
+    .andes-upload__field-progress--leave {
+    animation-delay: 0s;
+  }
+
+  /* Waiting for the first progress event: a segment sweeps along the track. */
+  .andes-upload__progress[data-indeterminate]::after,
+  .andes-upload__field-progress[data-indeterminate]::after {
+    animation: andes-upload-sweep 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  /* What changes when a file finishes (the spinner becomes the file's icon, the percent the
+     size) fades in instead of switching. */
+  .andes-upload[data-animate] .andes-upload__swap--enter {
+    animation: andes-upload-fade-in var(--andes-motion-duration-slow, 200ms)
+      ease-out;
   }
 
   .andes-upload__item[data-status='done'] .andes-upload__progress-bar,
@@ -1013,6 +1121,16 @@
     }
   }
 
+  @keyframes andes-upload-sweep {
+    from {
+      inset-inline-start: -35%;
+    }
+
+    to {
+      inset-inline-start: 100%;
+    }
+  }
+
   @keyframes andes-upload-fade-in {
     from {
       opacity: 0;
@@ -1039,9 +1157,12 @@
   }
 
   .andes-upload__progress-bar,
-  .andes-upload__field-progress-bar {
+  .andes-upload__field-progress-bar,
+  .andes-upload__progress-bar:dir(rtl),
+  .andes-upload__field-progress-bar:dir(rtl) {
     forced-color-adjust: none;
     background-color: Highlight;
+    background-image: none;
   }
 
   .andes-upload--card .andes-upload__actions {

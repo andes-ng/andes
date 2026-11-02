@@ -100,7 +100,7 @@ function failedFiles(): AndesUploadFile[] {
 }
 
 const meta: Meta<AndesUpload> = {
-  title: 'Data Entry/Upload',
+  title: 'Data Entry/Upload/Basics',
   component: AndesUpload,
   tags: ['autodocs'],
   decorators: [
@@ -111,7 +111,7 @@ const meta: Meta<AndesUpload> = {
     docs: {
       description: {
         component:
-          'File upload control. Project the trigger as content; the real, visually hidden file input stays focusable behind it, so keyboard and screen reader users get a labelled "choose files" control (Enter or Space opens the dialog). Files are checked against `accept`, `maxSize` and `maxCount`, pass through `beforeUpload`, and are sent with the built-in multipart transport (`action`, `method`, `headers`, `data`, `withCredentials`, `name`) or your own `customRequest`. The `fileList` model (also the form value) holds each file with its status (`ready`, `uploading`, `done`, `error`), percent, response and URLs. `changed`, `preview`, `download`, `remove`, `dropped` and `rejected` report what happens. The stories upload to a simulated transport.',
+          'File upload control. Project the trigger as content; the real, visually hidden file input stays focusable behind it, so keyboard and screen reader users get a labelled "choose files" control (Enter or Space opens the dialog). Files are checked against `accept`, `maxSize` and `maxCount`, pass through `beforeUpload`, and are sent with the built-in multipart transport (`action`, `method`, `headers`, `data`, `withCredentials`, `name`) or your own `customRequest`. The `fileList` model (also the form value) holds each file with its status (`ready`, `uploading`, `done`, `error`), percent, response and URLs. `changed`, `preview`, `download`, `remove`, `dropped` and `rejected` report what happens. A picture previews in the image viewer of the library. The stories upload to a simulated transport; the Examples page has a story for each example of the Ant Design Upload.',
       },
     },
   },
@@ -129,6 +129,8 @@ const meta: Meta<AndesUpload> = {
     disabled: { control: 'boolean' },
     autoUpload: { control: 'boolean' },
     allowPaste: { control: 'boolean' },
+    pasteScope: { control: 'inline-radio', options: ['control', 'page'] },
+    imagePreview: { control: 'boolean' },
   },
   args: {
     listType: 'text',
@@ -138,14 +140,17 @@ const meta: Meta<AndesUpload> = {
     disabled: false,
     autoUpload: true,
     allowPaste: true,
+    pasteScope: 'control',
+    imagePreview: true,
   },
   render: (args) => ({
     props: { ...args, request: simulatedUpload },
-    template: `<div style="max-width: 28rem;">
+    template: `<div style="max-width: 21rem;">
       <andes-upload
         [listType]="listType" [size]="size" [accept]="accept" [multiple]="multiple" [directory]="directory"
         [maxCount]="maxCount" [maxSize]="maxSize" [disabled]="disabled" [autoUpload]="autoUpload"
-        [allowPaste]="allowPaste" [customRequest]="request" aria-label="Attachments">
+        [allowPaste]="allowPaste" [pasteScope]="pasteScope" [imagePreview]="imagePreview"
+        [customRequest]="request" aria-label="Attachments">
         <andes-button variant="outline">Select files</andes-button>
       </andes-upload>
     </div>`,
@@ -156,6 +161,15 @@ export default meta;
 
 type Story = StoryObj<AndesUpload>;
 
+/**
+ * Choose files with the button (or drop them on it), then use the controls below to try the
+ * list types, the sizes and the limits.
+ *
+ * To paste: put the pointer over the control (or tab to it) and press Ctrl+V (Cmd+V on a Mac) to
+ * add what is on the clipboard, such as a copied file or a screenshot; no focus is needed.
+ * `allowPaste` turns pasting off; with `pasteScope="page"` the control takes a paste made
+ * anywhere on the page. Both are in the controls.
+ */
 export const Default: Story = {};
 
 /**
@@ -164,13 +178,16 @@ export const Default: Story = {};
  * files, or paste them; `dropIcon`, `dropTitle` and `dropHint` customise the content. With
  * `directory`, the picker chooses a folder and a dropped folder is walked: every file inside
  * is added, with its relative path on `webkitRelativePath`. A disabled dragger ignores clicks
- * and drops.
+ * and drops. To paste into the first one, hover it and press Ctrl+V (Cmd+V on a Mac); the
+ * `allowPaste` and `pasteScope` controls turn pasting off or widen it to the whole page.
  */
 export const Dragger: Story = {
-  render: () => ({
-    props: { request: simulatedUpload },
-    template: `<div style="display: grid; gap: 1rem; max-width: 32rem;">
-      <andes-upload-dragger [multiple]="true" [customRequest]="request" dropHint="PDF or images, up to 5 MB each" accept=".pdf,image/*" [maxSize]="5242880" aria-label="Supporting documents" />
+  args: { allowPaste: true, pasteScope: 'control' },
+  parameters: { controls: { include: ['allowPaste', 'pasteScope'] } },
+  render: (args) => ({
+    props: { ...args, request: simulatedUpload },
+    template: `<div style="display: grid; gap: 1rem; max-width: 21rem;">
+      <andes-upload-dragger [multiple]="true" [allowPaste]="allowPaste" [pasteScope]="pasteScope" [customRequest]="request" dropHint="PDF or images, up to 5 MB each" accept=".pdf,image/*" [maxSize]="5242880" aria-label="Supporting documents" />
       <andes-upload-dragger [directory]="true" [customRequest]="request" dropTitle="Drop a folder here, or click to choose one" dropHint="Every file in the folder is uploaded" aria-label="Folder" />
       <andes-upload-dragger [disabled]="true" dropHint="Uploads are closed for this order" aria-label="Documents (closed)" />
     </div>`,
@@ -195,7 +212,7 @@ export const SizesAndStates: Story = {
       request: simulatedUpload,
       files: EXISTING.slice(0, 2).map((f) => ({ ...f })),
     },
-    template: `<div style="display: grid; gap: 1.5rem; max-width: 28rem;">
+    template: `<div style="display: grid; gap: 1.5rem; max-width: 21rem;">
       <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
         <andes-upload size="sm" [customRequest]="request" aria-label="Small"><andes-button size="sm" variant="outline">Small</andes-button></andes-upload>
         <andes-upload size="md" [customRequest]="request" aria-label="Medium"><andes-button variant="outline">Medium</andes-button></andes-upload>
@@ -209,9 +226,7 @@ export const SizesAndStates: Story = {
       <andes-upload [disabled]="true" aria-label="Default trigger (locked)"></andes-upload>
       <div style="display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
         <andes-upload [aria-invalid]="true" [customRequest]="request" aria-label="Invalid, default trigger"></andes-upload>
-        <andes-upload listType="picture-card" [aria-invalid]="true" [customRequest]="request" aria-label="Invalid, card">
-          <span style="font-size: 0.75rem; line-height: 1.25rem;">+ Upload</span>
-        </andes-upload>
+        <andes-upload listType="picture-card" [aria-invalid]="true" [customRequest]="request" aria-label="Invalid, card" />
       </div>
       <andes-upload-dragger [aria-invalid]="true" [customRequest]="request" dropHint="Required: add the signed contract" aria-label="Invalid, drop area" />
     </div>`,
@@ -223,7 +238,7 @@ export const SizesAndStates: Story = {
   imports: [AndesUpload, AndesButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div style="display: grid; gap: 0.75rem; max-width: 28rem;">
+    <div style="display: grid; gap: 0.75rem; max-width: 21rem;">
       <andes-upload
         accept=".pdf,.png,.jpg"
         [maxSize]="1048576"
@@ -295,13 +310,13 @@ export const ExistingFiles: Story = {
     docs: {
       description: {
         story:
-          'Files that are already on the server come in through `fileList` with a `url`. The name links to the file, the preview action emits `preview` (call `preventDefault()` to show your own viewer instead of opening the URL) and the download action emits `download`. The preview action only appears for files whose `url` is an `http(s)` or `blob:` address (a picture added locally, or a `data:` URL, has nothing to open); a custom viewer can still be wired through `itemRender`. A failed entry shows its `errorMessage` and, with the original file, a retry action.',
+          'Files that are already on the server come in through `fileList` with a `url`. The name links to the file, and a plain click on the name (or on the eye of a card tile; rows have no eye unless `showPreviewIcon` asks for it) emits `preview`: a picture then opens in the image viewer, any other file opens its `http(s)` or `blob:` address in a new tab, and `preventDefault()` replaces both with your own handling. The download action emits `download`. A failed entry shows its `errorMessage` and, with the original file, a retry action.',
       },
     },
   },
   render: () => ({
     props: { files: EXISTING.map((f) => ({ ...f })) },
-    template: `<div style="max-width: 32rem;">
+    template: `<div style="max-width: 21rem;">
       <andes-upload [(fileList)]="files" [showUploadList]="{ showDownloadIcon: true }" aria-label="Attachments">
         <andes-button variant="outline">Add attachment</andes-button>
       </andes-upload>
@@ -313,7 +328,8 @@ export const ExistingFiles: Story = {
  * The three picture list types: `picture` rows with a thumbnail, `picture-card` tiles and
  * `picture-circle` for an avatar. Thumbnails are made from the chosen file with object URLs
  * that are revoked when the file leaves the list or the control is destroyed. Card actions
- * appear on hover and on keyboard focus.
+ * appear on hover and on keyboard focus; the eye opens the picture in the image viewer, even
+ * one that was only just chosen.
  */
 export const ListTypes: Story = {
   render: () => ({
@@ -322,16 +338,12 @@ export const ListTypes: Story = {
       gallery: EXISTING.slice(0, 2).map((f) => ({ ...f })),
       request: simulatedUpload,
     },
-    template: `<div style="display: grid; gap: 1.5rem; max-width: 32rem;">
+    template: `<div style="display: grid; gap: 1.5rem; max-width: 21rem;">
       <andes-upload listType="picture" accept="image/*" [multiple]="true" [(fileList)]="photos" [customRequest]="request" aria-label="Photos">
         <andes-button variant="outline">Upload photos</andes-button>
       </andes-upload>
-      <andes-upload listType="picture-card" accept="image/*" [multiple]="true" [maxCount]="6" [(fileList)]="gallery" [customRequest]="request" aria-label="Gallery">
-        <span style="font-size: 0.75rem; line-height: 1.25rem;">+ Upload</span>
-      </andes-upload>
-      <andes-upload listType="picture-circle" accept="image/*" [maxCount]="1" [customRequest]="request" aria-label="Profile photo">
-        <span style="font-size: 0.75rem; line-height: 1.25rem;">+ Photo</span>
-      </andes-upload>
+      <andes-upload listType="picture-card" accept="image/*" [multiple]="true" [maxCount]="6" [(fileList)]="gallery" [customRequest]="request" aria-label="Gallery" />
+      <andes-upload listType="picture-circle" accept="image/*" [maxCount]="1" [customRequest]="request" aria-label="Profile photo" />
     </div>`,
   }),
 };
@@ -342,7 +354,7 @@ export const ListTypes: Story = {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
-      style="display: grid; gap: 0.75rem; max-width: 28rem; justify-items: start;"
+      style="display: grid; gap: 0.75rem; max-width: 21rem; justify-items: start;"
     >
       <andes-upload
         #upload
@@ -399,7 +411,7 @@ export const Hooks: Story = {
       beforeRemove: () =>
         globalThis.confirm('Remove this file from the order?'),
     },
-    template: `<div style="max-width: 28rem;">
+    template: `<div style="max-width: 21rem;">
       <andes-upload [multiple]="true" [customRequest]="request" [beforeUpload]="before" [beforeRemove]="beforeRemove" aria-label="Order files">
         <andes-button variant="outline">Select files (names starting with "draft" are skipped)</andes-button>
       </andes-upload>
@@ -424,20 +436,18 @@ export const Progress: Story = {
       pictures: failedFiles(),
       cards: failedFiles(),
     },
-    template: `<div style="display: grid; gap: 1.5rem; max-width: 28rem;">
+    template: `<div style="display: grid; gap: 1.5rem; max-width: 21rem;">
       <andes-upload [multiple]="true" [customRequest]="request" aria-label="Files">
         <andes-button variant="outline">Select files</andes-button>
       </andes-upload>
-      <div style="max-width: 22rem; display: grid; gap: 1.5rem;">
+      <div style="max-width: 21rem; display: grid; gap: 1.5rem;">
         <andes-upload [(fileList)]="rows" aria-label="Failed files, list">
           <andes-button variant="outline">Add</andes-button>
         </andes-upload>
         <andes-upload listType="picture" [(fileList)]="pictures" aria-label="Failed files, pictures">
           <andes-button variant="outline">Add</andes-button>
         </andes-upload>
-        <andes-upload listType="picture-card" [(fileList)]="cards" aria-label="Failed files, cards">
-          <span style="font-size: 0.75rem; line-height: 1.25rem;">+ Upload</span>
-        </andes-upload>
+        <andes-upload listType="picture-card" [(fileList)]="cards" aria-label="Failed files, cards" />
       </div>
     </div>`,
   }),
@@ -455,13 +465,13 @@ export const CustomRows: Story = {
   },
   render: () => ({
     props: { files: EXISTING.slice(0, 2).map((f) => ({ ...f })) },
-    template: `<div style="max-width: 28rem;">
+    template: `<div style="max-width: 21rem;">
       <andes-upload [(fileList)]="files" [iconRender]="icon" aria-label="Attachments">
         <andes-button variant="outline">Add</andes-button>
       </andes-upload>
       <ng-template #icon let-file><strong aria-hidden="true">{{ file.name.slice(-3).toUpperCase() }}</strong></ng-template>
     </div>
-    <div style="max-width: 28rem; margin-top: 1rem;">
+    <div style="max-width: 21rem; margin-top: 1rem;">
       <andes-upload [(fileList)]="files" [itemRender]="row" aria-label="Attachments (custom rows)">
         <andes-button variant="outline">Add</andes-button>
       </andes-upload>
@@ -481,7 +491,7 @@ export const CustomRows: Story = {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <form
-      style="display: grid; gap: 0.5rem; max-width: 28rem;"
+      style="display: grid; gap: 0.5rem; max-width: 21rem;"
       (ngSubmit)="submitted.set(true)"
     >
       <span id="docs-label" style="font-weight: 500;"

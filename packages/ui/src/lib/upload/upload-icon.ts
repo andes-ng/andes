@@ -8,6 +8,8 @@ import {
 export type AndesUploadIconName =
   | 'upload'
   | 'cloud-upload'
+  | 'inbox'
+  | 'loading'
   | 'plus'
   | 'paperclip'
   | 'file'
@@ -27,6 +29,15 @@ const PATHS: Readonly<Record<AndesUploadIconName, readonly string[]>> = {
     'm8 17 4-4 4 4',
     'M20 16.5A4.5 4.5 0 0 0 17.5 8h-1.8A7 7 0 1 0 4 14.9',
   ],
+  inbox: [
+    'M22 12h-6l-2 3h-4l-2-3H2',
+    'M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z',
+  ],
+  /**
+   * A quarter of a ring, as thin as the reference's spinner: it turns while a file is sending.
+   * The ring fills the box (its stroke ends on the edge) so the arc is as big as the icon.
+   */
+  loading: ['M23.1 12A11.1 11.1 0 0 0 12 0.9'],
   plus: ['M5 12h14', 'M12 5v14'],
   paperclip: [
     'm21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48',
@@ -65,13 +76,26 @@ const PATHS: Readonly<Record<AndesUploadIconName, readonly string[]>> = {
 @Component({
   selector: 'andes-upload-icon',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { 'aria-hidden': 'true' },
+  host: {
+    'aria-hidden': 'true',
+    '[class.andes-upload-icon--spin]': "name() === 'loading'",
+  },
   styles: `
     :host {
       display: inline-flex;
       flex: none;
       width: 1em;
       height: 1em;
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      :host(.andes-upload-icon--spin) {
+        animation: andes-upload-icon-spin 1s linear infinite;
+      }
+    }
+    @keyframes andes-upload-icon-spin {
+      to {
+        rotate: 360deg;
+      }
     }
     svg {
       width: 100%;

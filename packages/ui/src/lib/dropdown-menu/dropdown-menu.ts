@@ -79,10 +79,10 @@ const PLACEMENTS: Readonly<
 
 /** Gap between trigger and panel - the `menu` preset's own value. */
 const SIDE_OFFSET = 4;
-/** Gap with an arrow: room for the ~7px the rotated arrow sticks out, plus the usual gap. */
-const ARROW_SIDE_OFFSET = 10;
+/** Gap with an arrow: room for the 5.5px the arrow's tip sticks out, plus a 6px gap (Ant Design's). */
+const ARROW_SIDE_OFFSET = 11.5;
 /** Closest the arrow's center may get to a panel corner, so it never overlaps the radius. */
-const ARROW_INSET = 14;
+const ARROW_INSET = 20;
 
 const CLOSE_REASONS: Partial<
   Record<AndesDropdownMenuOpenChangeSource, AndesOverlayCloseReason>
@@ -386,6 +386,8 @@ export class AndesDropdownMenu
   private virtualAnchor: HTMLElement | null = null;
   private closingSource: AndesDropdownMenuOpenChangeSource | null = null;
   private syncingFromInput = false;
+  /** The `size.minWidth` this menu last put on the overlay, to tell it from a wrapper's own. */
+  private appliedMinWidth: number | undefined;
   private hoverOpenTimer: ReturnType<typeof setTimeout> | undefined;
   private hoverCloseTimer: ReturnType<typeof setTimeout> | undefined;
   private stopArrowTracking: (() => void) | null = null;
@@ -813,6 +815,7 @@ export class AndesDropdownMenu
     );
     this.overlay.configure({
       positioning: this.positioning(),
+      size: this.sizeForTrigger(!!options.point),
       autoFocus:
         focus === 'first'
           ? 'first-tabbable'
@@ -837,6 +840,24 @@ export class AndesDropdownMenu
       this.trackArrow();
     }
     this.commit(true, source);
+  }
+
+  /**
+   * The panel is never narrower than the trigger it opens from (Ant Design's
+   * `minOverlayWidthMatchTrigger`); a menu opened at a point has no trigger to match. A
+   * `size.minWidth` that a wrapping component set itself is left alone.
+   */
+  private sizeForTrigger(atPoint: boolean) {
+    const size = this.overlay.config().size;
+    const foreign =
+      size.minWidth !== undefined && size.minWidth !== this.appliedMinWidth;
+    if (foreign) {
+      return size;
+    }
+    this.appliedMinWidth = atPoint
+      ? 0
+      : (this.triggerAnchor?.getBoundingClientRect().width ?? 0);
+    return { ...size, minWidth: this.appliedMinWidth };
   }
 
   private defaultFocus(source: AndesDropdownMenuOpenChangeSource): FocusOnOpen {

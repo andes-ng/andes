@@ -492,7 +492,8 @@ describe('AndesDropdownMenu - extended features', () => {
       expect(arrow).toBeTruthy();
       expect(arrow?.getAttribute('aria-hidden')).toBe('true');
       expect(arrow?.getAttribute('data-side')).toBeTruthy();
-      expect(positioning()).toMatchObject({ sideOffset: 10 });
+      // the arrow's 5.5px tip plus a 6px gap, as in Ant Design
+      expect(positioning()).toMatchObject({ sideOffset: 11.5 });
     });
 
     it('renders no arrow by default', async () => {
@@ -523,8 +524,8 @@ describe('AndesDropdownMenu - extended features', () => {
       byId('trigger').click();
       await settle(fixture);
 
-      // half the 100px trigger minus the arrow's 14px inset from the panel edge
-      expect(positioning()).toMatchObject({ alignOffset: 36 });
+      // half the 100px trigger minus the arrow's 20px inset from the panel edge
+      expect(positioning()).toMatchObject({ alignOffset: 30 });
       rect.mockRestore();
     });
   });
@@ -734,8 +735,8 @@ describe('AndesDropdownMenu - extended features', () => {
       await openRoot();
       const overlay = overlayOf(fixture, AndesDropdownMenuSub);
       expect(overlay.config().positioning).toMatchObject({
-        sideOffset: 2,
-        alignOffset: -5,
+        sideOffset: 0,
+        alignOffset: -4,
       });
 
       host.subOffset.set([8, 4]);
@@ -743,8 +744,8 @@ describe('AndesDropdownMenu - extended features', () => {
       expect(overlay.config().positioning).toMatchObject({
         side: 'right',
         align: 'start',
-        sideOffset: 10,
-        alignOffset: -1,
+        sideOffset: 8,
+        alignOffset: 0,
       });
     });
 

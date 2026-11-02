@@ -557,7 +557,7 @@ describe('AndesDropdownMenu', () => {
       expectLength(style.minHeight, '2rem');
     });
 
-    it('sets 14/22 panel text and a 12/20 caption group label', async () => {
+    it('sets 14/22 panel text and the same 14/22 muted group label', async () => {
       const { fixture, trigger, menu } = createHost();
       trigger().click();
       await open(fixture);
@@ -568,8 +568,9 @@ describe('AndesDropdownMenu', () => {
       const label = getComputedStyle(
         menu()!.querySelector('andes-dropdown-menu-label') as Element,
       );
-      expectLength(label.fontSize, '0.75rem');
-      expectLength(label.lineHeight, '1.25rem');
+      // The label is a 32px row like any other: the same 14/22 text, in the muted foreground.
+      expect(label.fontSize).toBe('var(--andes-text-font-size, 0.875rem)');
+      expect(label.lineHeight).toBe('var(--andes-text-line-height, 1.375rem)');
     });
 
     it('enters with the shared 150ms soft fade and a drift of at most 4px', () => {

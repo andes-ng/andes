@@ -30,11 +30,43 @@
 }
 
 /*
- * Filled variants get a 1px seam of page background between the halves; bordered
- * ones overlap their touching borders into a single line instead of a doubled one.
+ * Both halves of a filled split button share the button's own background, joined by one
+ * pale line - a translucent tint of the button's foreground over its fill, as Ant Design
+ * draws the seam (a lighter shade of the button colour) - not a darker caret half, a white
+ * rule or a gap showing the page. The halves overlap by 1px (the width of a bordered
+ * pair's shared line) and the seam is the caret's own first pixel column, so the total
+ * width matches Ant's. Solid primary and danger halves use 25% of their white foreground;
+ * the light `secondary` and `filled` ones 10% of their dark foreground. Bordered halves
+ * overlap their touching borders into a single line instead, and the ghost and link
+ * variants, with nothing to join, keep a 1px gap.
  */
 .andes-dropdown-button__caret {
   margin-inline-start: 1px;
+}
+
+.andes-dropdown-button[data-variant='primary'] .andes-dropdown-button__caret,
+.andes-dropdown-button[data-variant='danger'] .andes-dropdown-button__caret,
+.andes-dropdown-button[data-variant='secondary'] .andes-dropdown-button__caret,
+.andes-dropdown-button[data-variant='filled'] .andes-dropdown-button__caret {
+  margin-inline-start: -1px;
+}
+
+.andes-dropdown-button[data-variant='primary']
+  .andes-dropdown-button__caret
+  .andes-button,
+.andes-dropdown-button[data-variant='danger']
+  .andes-dropdown-button__caret
+  .andes-button {
+  box-shadow: inset 1px 0 0 color-mix(in srgb, currentcolor 25%, transparent);
+}
+
+.andes-dropdown-button[data-variant='secondary']
+  .andes-dropdown-button__caret
+  .andes-button,
+.andes-dropdown-button[data-variant='filled']
+  .andes-dropdown-button__caret
+  .andes-button {
+  box-shadow: inset 1px 0 0 color-mix(in srgb, currentcolor 10%, transparent);
 }
 
 .andes-dropdown-button[data-variant='outline'] .andes-dropdown-button__caret,

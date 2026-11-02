@@ -92,6 +92,7 @@ const CARET_SIZES: Readonly<Record<AndesButtonSize, AndesButtonSize>> = {
       [size]="caretSize()"
       [danger]="danger()"
       [disabled]="isDisabled()"
+      [loading]="menuLoading()"
       [aria-label]="menuLabel()"
     >
       @if (icon(); as caretIcon) {
@@ -175,6 +176,11 @@ export class AndesDropdownButton extends AndesDropdownMenu {
   readonly loadingDelay = input(0, { transform: numberAttribute });
   /** Replaces the main button's loading spinner. */
   readonly loadingIcon = input<TemplateRef<unknown> | undefined>(undefined);
+  /**
+   * Shows the loading state on the caret half instead of the main one: its icon is replaced
+   * by a spinner and, as with any loading button, it cannot open the menu meanwhile.
+   */
+  readonly menuLoading = input(false, { transform: booleanAttribute });
   /** Replaces the caret's chevron. */
   readonly icon = input<TemplateRef<unknown> | undefined>(undefined);
   /** Accessible name of the icon-only caret button. Default `'More actions'`. */

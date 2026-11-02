@@ -69,6 +69,14 @@
   box-shadow: inset 1px 0 0 color-mix(in srgb, currentcolor 10%, transparent);
 }
 
+/* While either half is loading there is no seam: the dimmed half and the solid one already
+   tell each other apart, and a pale line between them reads as a glitch. */
+.andes-dropdown-button:has(.andes-button--loading)
+  .andes-dropdown-button__caret
+  .andes-button {
+  box-shadow: none;
+}
+
 .andes-dropdown-button[data-variant='outline'] .andes-dropdown-button__caret,
 .andes-dropdown-button[data-variant='dashed'] .andes-dropdown-button__caret {
   margin-inline-start: -1px;

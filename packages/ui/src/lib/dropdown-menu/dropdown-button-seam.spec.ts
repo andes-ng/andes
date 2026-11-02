@@ -90,6 +90,16 @@ describe('dropdown-button.css (the line between the halves)', () => {
     }
   });
 
+  it('draws no line between the halves while either of them is loading', () => {
+    expect(
+      declaredValue(
+        BUTTON_CSS,
+        '.andes-dropdown-button:has(.andes-button--loading) .andes-dropdown-button__caret .andes-button',
+        'box-shadow',
+      ),
+    ).toBe('none');
+  });
+
   it('rounds only the outer corners of the pair', () => {
     expect(
       declaredValue(

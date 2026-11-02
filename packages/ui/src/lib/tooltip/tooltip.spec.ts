@@ -734,6 +734,17 @@ class AndesButtonHostComponent {
   readonly disabled = signal(false);
 }
 
+/** A tooltip that is open from the first render, on an `<andes-button>` trigger. */
+@Component({
+  imports: [AndesTooltip, AndesTooltipTrigger, AndesButton],
+  template: `
+    <andes-tooltip content="Save changes" [open]="true">
+      <andes-button andesTooltipTrigger>Save</andes-button>
+    </andes-tooltip>
+  `,
+})
+class OpenAndesButtonHostComponent {}
+
 /**
  * The wrapper pattern for a disabled control: a disabled control cannot take focus,
  * so a focusable wrapper is the trigger instead and keyboard users still reach the
@@ -1701,6 +1712,24 @@ describe('AndesTooltip (extended options)', () => {
           .querySelector('andes-button')
           .hasAttribute('aria-describedby'),
       ).toBe(false);
+    });
+
+    it('describes the inner button of a tooltip that is open from the first render', async () => {
+      const fixture = TestBed.createComponent(OpenAndesButtonHostComponent);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      const host = fixture.nativeElement.querySelector(
+        'andes-button',
+      ) as HTMLElement;
+      const inner = host.querySelector('button') as HTMLButtonElement;
+      const overlay = fixture.debugElement
+        .query(By.directive(AndesTooltip))
+        .injector.get(AndesOverlayPrimitive);
+
+      expect(overlay.isOpen()).toBe(true);
+      expect(inner.getAttribute('aria-describedby')).toBe(overlay.contentId);
+      expect(host.hasAttribute('aria-describedby')).toBe(false);
     });
 
     it('treats a disabled andes-button as a disabled trigger', async () => {

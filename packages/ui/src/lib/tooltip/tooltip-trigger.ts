@@ -1,9 +1,9 @@
 import { AndesOverlayPrimitive } from '@andes-ng/primitives';
 import {
   afterNextRender,
+  afterRenderEffect,
   DestroyRef,
   Directive,
-  effect,
   ElementRef,
   inject,
   untracked,
@@ -112,8 +112,11 @@ export class AndesTooltipTrigger {
     this.overlay.registerAnchor(this.elementRef);
     this.intent.registerTrigger({ target: () => this.target() });
 
+    // After render, not in a plain `effect`: a tooltip that starts open must find the real
+    // `<button>` an `<andes-button>` renders, and the wrapper's own host bindings must not
+    // overwrite the attribute afterwards.
     let describedElement: HTMLElement | null = null;
-    effect(() => {
+    afterRenderEffect(() => {
       const open = this.overlay.isOpen();
       untracked(() => {
         const id = this.overlay.contentId;

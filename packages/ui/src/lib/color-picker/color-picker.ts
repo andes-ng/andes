@@ -35,6 +35,10 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NG_VALUE_ACCESSOR, type ControlValueAccessor } from '@angular/forms';
 
+import {
+  andesIdRefs,
+  injectAndesFieldBinding,
+} from '../form-field/field-binding';
 import { clamp, type AndesColorFormat } from './color-math';
 import { AndesColorPickerPanel } from './color-picker-panel';
 import {
@@ -157,6 +161,7 @@ const TOUCH_WINDOW = 800;
     '[attr.aria-invalid]': 'null',
     '[attr.data-state]': 'isOpen() ? "open" : "closed"',
     '[attr.data-disabled]': 'isDisabled() ? "" : null',
+    '[attr.data-required]': 'isRequired() ? "" : null',
   },
 })
 export class AndesColorPicker
@@ -202,7 +207,11 @@ export class AndesColorPicker
    * (`gradient`), whose stops the area, sliders and fields then edit one at a time.
    */
   readonly mode = input<AndesColorPickerMode>('single');
-  readonly size = input<AndesColorPickerSize>('md');
+  /** `md` unless set, or the enclosing `andesForm`'s `size`. */
+  readonly size = input<AndesColorPickerSize | undefined>(undefined);
+  /** Marks the picker as required (`data-required`: a button has no `aria-required`); also
+   *  set by a required field. */
+  readonly required = input(false, { transform: booleanAttribute });
   readonly status = input<AndesColorPickerStatus | undefined>(undefined);
   readonly disabled = input(false, { transform: booleanAttribute });
   /**
@@ -311,8 +320,40 @@ export class AndesColorPicker
   protected readonly valueId = `andes-color-picker-value-${this.uid}`;
 
   private readonly disabledByForm = signal(false);
+
+  /** The enclosing form field and form: id, ARIA, status, size and disabled. */
+  protected readonly field = injectAndesFieldBinding();
+
+  /** The size in effect: `size`, else the form's, else `md`. */
+  readonly resolvedSize = computed<AndesColorPickerSize>(
+    () => this.size() ?? this.field.size() ?? 'md',
+  );
+
+  /** The status in effect: `status`, else the enclosing field's error or warning. */
+  readonly resolvedStatus = computed<AndesColorPickerStatus | undefined>(
+    () => this.status() ?? this.field.status(),
+  );
+
+  /** The trigger's id: `id`, else the enclosing field's control id. */
+  protected readonly controlId = computed(() => this.id() ?? this.field.id());
+
+  /** `aria-labelledby`, else the field's label - unless an `aria-label` names the picker. */
+  private readonly labelledBy = computed(
+    () =>
+      this.ariaLabelledby() ??
+      (this.ariaLabel() ? undefined : this.field.labelledBy()),
+  );
+
+  protected readonly describedBy = computed(() =>
+    andesIdRefs(this.ariaDescribedby(), this.field.describedBy()),
+  );
+
+  protected readonly isRequired = computed(
+    () => this.required() || this.field.required(),
+  );
+
   protected readonly isDisabled = computed(
-    () => this.disabled() || this.disabledByForm(),
+    () => this.disabled() || this.disabledByForm() || this.field.disabled(),
   );
 
   readonly isOpen = this.overlay.isOpen;
@@ -378,14 +419,14 @@ export class AndesColorPicker
   protected readonly textVisible = computed(() => this.showText() !== false);
 
   protected readonly triggerLabel = computed(() => {
-    if (this.ariaLabelledby()) {
+    if (this.labelledBy()) {
       return null;
     }
     const name = `${this.ariaLabel() ?? this.ctl.text().trigger}, ${this.summary()}`;
     return this.readOnly() ? `${name}, ${this.ctl.text().readOnly}` : name;
   });
   protected readonly triggerLabelledby = computed(() => {
-    const given = this.ariaLabelledby();
+    const given = this.labelledBy();
     return given ? `${given} ${this.valueId}` : null;
   });
   /** What the visually hidden value says: with `aria-labelledby`, it is the spoken value. */
@@ -395,7 +436,7 @@ export class AndesColorPicker
       : this.summary(),
   );
   protected readonly invalid = computed(
-    () => this.ariaInvalid() || this.status() === 'error',
+    () => this.ariaInvalid() || this.resolvedStatus() === 'error',
   );
 
   /** Single mode: the swatch's background colour. */

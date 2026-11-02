@@ -19,7 +19,7 @@ export * from './lib/avatar';
 
 // @slot badge
 
-// @slot breadcrumb
+export * from './lib/breadcrumb';
 
 export * from './lib/button';
 

@@ -476,6 +476,20 @@ describe('AndesToastViewport', () => {
         );
       });
 
+      it('drops the slide, scale and resize under reduced motion, keeping a 150ms fade', () => {
+        const block =
+          /@media \(prefers-reduced-motion: reduce\) \{([\s\S]*)\}\s*$/.exec(
+            region,
+          )?.[1] ?? '';
+        expect(block).toContain('transition: opacity 150ms ease');
+        expect(block).toContain('animation: andes-toast-fade 150ms ease');
+        expect(block).toContain(
+          'animation: andes-toast-fade-out 150ms ease forwards',
+        );
+        expect(block).not.toContain('translate');
+        expect(block).not.toContain('scale');
+      });
+
       it('collapses a deck by scaling 6% per card and peeking out the --_toast-peek, from the anchored edge', () => {
         const stacked = ':host([data-stacked]) andes-toast-item';
         expect(declaredValue(region, stacked, '--_toast-scale')).toBe(

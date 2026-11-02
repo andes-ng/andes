@@ -67,6 +67,31 @@ describe('AndesMessageService', () => {
     );
   });
 
+  it('maps classNames.title/styles.title onto the message text (the description part)', () => {
+    const service = createService();
+
+    service.open({
+      content: 'Styled',
+      classNames: { root: 'r', title: 't' },
+      styles: { title: { color: 'red' } },
+    });
+
+    expect(service.toasts()[0]).toEqual(
+      expect.objectContaining({
+        classNames: expect.objectContaining({ root: 'r', description: 't' }),
+        styles: expect.objectContaining({ description: { color: 'red' } }),
+      }),
+    );
+  });
+
+  it('defaults to a 16px gap and only the newest card of a collapsed deck', () => {
+    const service = createService();
+
+    expect(service.defaults()).toEqual(
+      expect.objectContaining({ gap: 16, visibleToasts: 1, stack: false }),
+    );
+  });
+
   it.each(['success', 'error', 'warning', 'info', 'loading'] as const)(
     '%s() sets the type',
     (type) => {

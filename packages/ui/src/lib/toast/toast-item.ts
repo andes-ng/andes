@@ -39,7 +39,8 @@ interface DragState {
 }
 
 /**
- * Renders a single toast's chrome (icon, title, message, buttons, close button) and its drag-to-dismiss gesture - with no live-region semantics of its own. Internal to
+ * Renders a single toast's chrome (icon, title, message, buttons, close button, progress
+ * bar) and its drag-to-dismiss gesture - with no live-region semantics of its own. Internal to
  * `@andes-ng/ui` - only `AndesToastRegion` instantiates it, so it stays unexported from the
  * package root; auto-dismiss, hover pause, queueing and the stack layout live elsewhere.
  *
@@ -68,9 +69,15 @@ interface DragState {
     '[attr.data-pause-on-hover]': 'toast().pauseOnHover ? "" : null',
     '[attr.data-clickable]': 'toast().onClick ? "" : null',
     '[attr.data-rich-colors]': 'toast().richColors ? "" : null',
+    '[attr.data-closable]': 'toast().dismissible ? "" : null',
+    '[attr.data-inline-buttons]': 'hasInlineButtons() ? "" : null',
+    '[attr.data-headless]': 'toast().headless ? "" : null',
+    // Not in the tab order, but focusable by script: the region's hotkey lands here.
+    tabindex: '-1',
     '[attr.data-swipeable]': 'swipeDirections().length ? "" : null',
     '[attr.dir]': 'rtl() ? "rtl" : null',
-    '[style]': 'toast().style ?? null',
+    '[style]': 'hostStyle()',
+    '(keydown.escape)': 'escaped.emit()',
     '(click)': 'onHostClick($event)',
     '(pointerdown)': 'onPointerDown($event)',
     '(pointermove)': 'onPointerMove($event)',
@@ -100,6 +107,8 @@ export class AndesToastItem {
   readonly bodyClicked = output<void>();
   /** The toast was dragged past the dismiss threshold, in this direction. */
   readonly swiped = output<AndesToastSwipeDirection>();
+  /** Escape was pressed while focus was inside the toast. */
+  readonly escaped = output<void>();
   /** The toast's natural (unclamped) border-box height changed, in px. */
   readonly heightChange = output<number>();
 
@@ -107,9 +116,34 @@ export class AndesToastItem {
 
   protected readonly hostClasses = computed(() => {
     const toast = this.toast();
-    const base = `andes-toast andes-toast--${toast.severity} andes-toast--${toast.flavor}`;
-    return toast.className ? `${base} ${toast.className}` : base;
+    return [
+      `andes-toast andes-toast--${toast.severity} andes-toast--${toast.flavor}`,
+      toast.className,
+      toast.classNames?.root,
+    ]
+      .filter(Boolean)
+      .join(' ');
   });
+
+  protected readonly hostStyle = computed(() => {
+    const { style, styles } = this.toast();
+    return style || styles?.root ? { ...styles?.root, ...style } : null;
+  });
+
+  /** The compact `cancel`/`action` buttons sit in the row, so the close button must clear them. */
+  protected readonly hasInlineButtons = computed(() => {
+    const { action, cancel } = this.toast();
+    return !!action || !!cancel;
+  });
+
+  /** Progress only makes sense when there is a countdown to visualise. */
+  protected readonly progressDuration = computed(() => {
+    const { showProgress, duration } = this.toast();
+    return showProgress && duration !== false && duration > 0 ? duration : null;
+  });
+
+  /** One-element list keyed by revision, so a key-based update restarts the bar's animation. */
+  protected readonly progressRevision = computed(() => [this.toast().revision]);
 
   protected readonly closeLabel = computed(() =>
     this.toast().flavor === 'message'
@@ -125,6 +159,7 @@ export class AndesToastItem {
 
   protected readonly iconContext = computed(() => ({
     $implicit: this.toast(),
+    close: () => this.dismissRequested.emit(),
   }));
 
   private drag: DragState | null = null;

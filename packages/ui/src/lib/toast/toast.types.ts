@@ -55,7 +55,36 @@ export interface AndesToastAction {
 /** Context handed to a custom `icon`/`closeIcon`/content template. */
 export interface AndesToastTemplateContext {
   readonly $implicit: AndesToast;
+  /** Closes the toast the template is rendered in (reason `'close-button'`). */
+  readonly close: () => void;
 }
+
+/**
+ * The parts of a toast `classNames`/`styles` can reach: `root` is the toast's own element,
+ * `wrapper` the row holding the icon, text and inline buttons, `content` the column of title,
+ * description and actions, and the rest are what their names say. On a message, `title` is
+ * the message text.
+ */
+export type AndesToastPart =
+  | 'root'
+  | 'wrapper'
+  | 'icon'
+  | 'content'
+  | 'title'
+  | 'description'
+  | 'actions'
+  | 'close'
+  | 'progress';
+
+/** Extra CSS class(es) per toast part. */
+export type AndesToastClassNames = Readonly<
+  Partial<Record<AndesToastPart, string>>
+>;
+
+/** Inline styles per toast part, as accepted by Angular's `[style]` binding. */
+export type AndesToastStyles = Readonly<
+  Partial<Record<AndesToastPart, AndesToastStyle>>
+>;
 
 /**
  * Extra attributes for a toast's root element - meant for `data-*` (e.g. `data-testid`) and
@@ -115,6 +144,17 @@ export interface AndesToastConfig {
   readonly cancel?: AndesToastAction;
   /** An action button group, rendered under the message. */
   readonly actions?: readonly AndesToastAction[];
+  /**
+   * Custom content for the row under the message, rendered instead of the `actions` group
+   * (any buttons or links; call the context's `close()` to dismiss). Right-aligned like the group.
+   */
+  readonly actionsTemplate?: TemplateRef<AndesToastTemplateContext>;
+  /**
+   * Replaces the toast's whole content (icon, title, message, buttons, close button) with
+   * your own. The card, its placement, motion, swiping and timer stay; `message` is still what
+   * screen readers announce. Call the context's `close()` to dismiss.
+   */
+  readonly headless?: TemplateRef<AndesToastTemplateContext>;
   /** Whether a close button is rendered. Default `true`. */
   readonly dismissible?: boolean;
   /**
@@ -132,6 +172,12 @@ export interface AndesToastConfig {
    * `true`.
    */
   readonly pauseOnHover?: boolean;
+  /**
+   * Draws a thin bar along the bottom edge that drains over the auto-dismiss countdown and
+   * pauses with it. Only for toasts that auto-dismiss. Default: the flavor's global
+   * `showProgress` (built-in `false`).
+   */
+  readonly showProgress?: boolean;
   /**
    * Tints the whole toast with its severity colour (background and border), instead of the
    * default neutral card where only the icon carries the colour. No effect on `neutral` and
@@ -156,6 +202,10 @@ export interface AndesToastConfig {
   readonly className?: string;
   /** Inline styles for the toast's root element, e.g. `{ width: '30rem' }`. */
   readonly style?: AndesToastStyle;
+  /** Extra CSS class(es) for individual parts of the toast (the icon, the title, the close button...). */
+  readonly classNames?: AndesToastClassNames;
+  /** Inline styles for individual parts of the toast. */
+  readonly styles?: AndesToastStyles;
   /** Extra `data-*`/`aria-*` attributes for the toast's root element. */
   readonly attributes?: AndesToastAttributes;
   /** Called when the toast body is clicked (not its buttons). Pointer-only. */
@@ -194,6 +244,16 @@ export interface AndesMessageConfig {
   readonly className?: string;
   /** Inline styles for the message's root element. */
   readonly style?: AndesToastStyle;
+  /** Extra CSS class(es) per part of the message: `root`, `wrapper`, `icon`, `title` (the text) and `close`. */
+  readonly classNames?: Pick<
+    AndesToastClassNames,
+    'root' | 'wrapper' | 'icon' | 'title' | 'close'
+  >;
+  /** Inline styles per part of the message: `root`, `wrapper`, `icon`, `title` (the text) and `close`. */
+  readonly styles?: Pick<
+    AndesToastStyles,
+    'root' | 'wrapper' | 'icon' | 'title' | 'close'
+  >;
   /** Extra `data-*`/`aria-*` attributes for the message's root element. */
   readonly attributes?: AndesToastAttributes;
   readonly onClick?: (ref: AndesToastRef<AndesMessageConfig>) => void;
@@ -219,10 +279,13 @@ export interface AndesToast {
   readonly action?: AndesToastAction;
   readonly cancel?: AndesToastAction;
   readonly actions: readonly AndesToastAction[];
+  readonly actionsTemplate?: TemplateRef<AndesToastTemplateContext>;
+  readonly headless?: TemplateRef<AndesToastTemplateContext>;
   readonly dismissible: boolean;
   readonly icon?: TemplateRef<AndesToastTemplateContext> | null;
   readonly closeIcon?: TemplateRef<AndesToastTemplateContext>;
   readonly pauseOnHover: boolean;
+  readonly showProgress: boolean;
   readonly richColors: boolean;
   /** `false` turns the default swiping off; an explicit `swipeDirections` still opts in. */
   readonly swipeToDismiss?: boolean;
@@ -231,11 +294,15 @@ export interface AndesToast {
   readonly role: AndesToastRole;
   readonly className?: string;
   readonly style?: AndesToastStyle;
+  readonly classNames?: AndesToastClassNames;
+  readonly styles?: AndesToastStyles;
   readonly attributes?: AndesToastAttributes;
   /** Typed loosely because a message's handle speaks `AndesMessageConfig`, a notification's `AndesToastConfig`. */
   readonly onClick?: (ref: AndesToastRef<never>) => void;
   readonly onClose?: (reason: AndesToastCloseReason) => void;
   readonly createdAt: number;
+  /** Counts key-based updates, so the progress bar can restart with the fresh countdown. */
+  readonly revision: number;
 }
 
 /**
@@ -278,6 +345,8 @@ export interface AndesToastGlobalConfig {
    */
   readonly overflow: AndesToastOverflow;
   readonly pauseOnHover: boolean;
+  /** Default `showProgress` for every toast of this flavor (see `AndesToastConfig`). */
+  readonly showProgress?: boolean;
   readonly dismissible: boolean;
   readonly closeIcon?: TemplateRef<AndesToastTemplateContext>;
   /**
@@ -286,10 +355,12 @@ export interface AndesToastGlobalConfig {
    * messages `false`.
    */
   readonly stack: AndesToastStackConfig;
-  /** How many cards of a collapsed deck stay visible, the front one included. Default `3`. */
+  /** How many cards of a collapsed deck stay visible, the front one included. Notifications `3`, messages `1` (only the newest). */
   readonly visibleToasts: number;
-  /** Space between expanded toasts, and how far each card of a collapsed deck peeks out, in px. Notifications 14, messages 8. */
+  /** Space between expanded toasts, in px. Default 16. */
   readonly gap: number;
+  /** How far each card of a collapsed deck peeks out below the one in front, in px. Default 8. */
+  readonly stackPeek?: number;
   /** Severity-tinted background and border for every toast of this flavor. Default `false`. */
   readonly richColors: boolean;
   /** Default `swipeToDismiss` for every toast of this flavor (see `AndesToastConfig`). */
@@ -328,8 +399,11 @@ export const ANDES_TOAST_DEFAULT_STACK_THRESHOLD = 1;
 /** Default number of cards a collapsed deck shows. */
 export const ANDES_TOAST_DEFAULT_VISIBLE_TOASTS = 3;
 
-/** Default space between notifications, in px. */
-export const ANDES_TOAST_DEFAULT_GAP = 14;
+/** Default space between expanded toasts, in px. */
+export const ANDES_TOAST_DEFAULT_GAP = 16;
+
+/** Default distance each card of a collapsed deck peeks out, in px. */
+export const ANDES_TOAST_DEFAULT_STACK_PEEK = 8;
 
 /** Messages for `promise()`: one per phase, each a string or built from the settled value. */
 export interface AndesToastPromiseMessages<T> {

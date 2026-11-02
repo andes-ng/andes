@@ -2,6 +2,11 @@
  * The toast card: a neutral raised surface where the severity is carried by the icon alone,
  * or - with richColors - by a tinted wash too. Layout inside the stack (position, depth,
  * enter/exit/swipe motion) belongs to toast-region.css; this file only paints the card.
+ *
+ * Sized like Ant Design's notification and message: 20px/24px padding (9px/12px on a
+ * message), an 8px radius, a 24px icon (16px on a message) 12px from the text, a 16px title
+ * over a 14px description 8px apart, and a 22px close button pinned to the top-end corner.
+ * The 1px border sits inside those sizes, so the paddings give it back.
  */
 :host {
   /* Component-local (not design tokens): the severity colour, and the surface the icon's
@@ -14,19 +19,24 @@
     var(--andes-color-border) 65%,
     var(--andes-color-card)
   );
+  --_toast-pad-block: calc(1.25rem - 1px);
+  --_toast-pad-inline: calc(1.5rem - 1px);
+  --_toast-shadow:
+    0 6px 16px 0 rgb(0 0 0 / 8%), 0 3px 6px -4px rgb(0 0 0 / 12%),
+    0 9px 28px 8px rgb(0 0 0 / 5%);
   position: relative;
   display: block;
   box-sizing: border-box;
-  padding: var(--andes-space-4);
+  padding: var(--_toast-pad-block) var(--_toast-pad-inline);
   border: 1px solid var(--_toast-border);
-  border-radius: var(--andes-toast-radius, 1.125rem);
+  border-radius: var(--andes-toast-radius, 0.5rem);
   background-color: var(--_toast-surface);
   color: var(--andes-color-card-foreground);
-  box-shadow: 0 4px 12px rgb(15 23 42 / 10%);
+  box-shadow: var(--andes-toast-shadow, var(--_toast-shadow));
   font-family: var(--andes-font-family), sans-serif;
   /* Set on the surface so the text and projected icons don't inherit the page's body size. */
   font-size: 0.875rem;
-  line-height: 1.25rem;
+  line-height: 1.375rem;
   overflow-wrap: anywhere;
   /* The region disables pointer-events on itself so empty space around a toast doesn't
      block clicks - pointer-events is inherited, so each toast opts back in. */
@@ -36,7 +46,9 @@
 
 :host-context([data-andes-theme='dark']) {
   --_toast-border: var(--andes-color-border);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 35%);
+  --_toast-shadow:
+    0 6px 16px 0 rgb(0 0 0 / 32%), 0 3px 6px -4px rgb(0 0 0 / 48%),
+    0 9px 28px 8px rgb(0 0 0 / 20%);
 }
 
 :host(:focus-visible) {
@@ -114,8 +126,8 @@
    takes it out of the tab order and accessibility tree until the stack expands. */
 :host > * {
   transition:
-    opacity 400ms ease,
-    visibility 400ms;
+    opacity var(--andes-toast-duration, 200ms) var(--_toast-ease, ease),
+    visibility var(--andes-toast-duration, 200ms);
 }
 
 :host([data-stack-behind]) > * {
@@ -125,18 +137,15 @@
 
 .andes-toast__row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.75rem;
 }
 
 .andes-toast__icon {
   flex-shrink: 0;
   display: inline-flex;
-  width: 1.25rem;
-  height: 1.25rem;
-  /* Pulls the 20px icon into the padding, so the text starts 40px in, as on a 16px-padded
-     card with a 16px icon slot. */
-  margin-inline: -0.25rem 0.0625rem;
+  width: 1.5rem;
+  height: 1.5rem;
   color: var(--_toast-accent);
 }
 
@@ -166,39 +175,58 @@
 .andes-toast__content {
   display: flex;
   flex-direction: column;
-  gap: 0.125rem;
+  gap: 0.5rem;
   flex: 1 1 auto;
   min-width: 0;
 }
 
 /*
- * Type scale: the headline line - the title, or the message when it stands alone - is 14px
- * medium; a message under a title is the same 14px size at regular weight in a softer ink, so
- * the card reads calm rather than loud.
+ * Type scale: a 16px title over a 14px description, both regular weight and in the one
+ * foreground ink - the size alone ranks them. A message without a title is the description.
  */
 .andes-toast__title,
 .andes-toast__message {
   margin: 0;
-  font-weight: var(--andes-font-weight-medium);
-}
-
-.andes-toast__message--description {
-  font-size: 0.875rem;
-  line-height: 1.25rem;
   font-weight: 400;
-  /* 78% of the foreground into the card: >= 7:1 in both themes, but clearly secondary. */
-  color: color-mix(
-    in srgb,
-    var(--andes-color-card-foreground) 78%,
-    var(--_toast-surface)
-  );
 }
 
+.andes-toast__title {
+  font-size: 1rem;
+  line-height: 1.5rem;
+}
+
+.andes-toast__message {
+  font-size: 0.875rem;
+  line-height: 1.375rem;
+}
+
+/* The close button hangs over the first line's end: that line keeps clear of it. A
+   description under a title starts below the button and so runs the full width. */
+:host([data-closable]:not([data-inline-buttons], [data-flavor='message']))
+  .andes-toast__title,
+:host([data-closable]:not([data-inline-buttons], [data-flavor='message']))
+  .andes-toast__message {
+  padding-inline-end: 1.5rem;
+}
+
+:host([data-closable]) .andes-toast__title + .andes-toast__message {
+  padding-inline-end: 0;
+}
+
+/* The compact buttons share the row with the text, so the row itself leaves room for the close
+   button instead. */
+:host([data-closable][data-inline-buttons]:not([data-flavor='message']))
+  .andes-toast__row {
+  padding-inline-end: 1.75rem;
+}
+
+/* Right-aligned, 12px under the text (the content's 8px gap plus this margin). */
 .andes-toast__actions {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: var(--andes-space-2);
-  margin-top: var(--andes-space-2);
+  margin-top: 0.25rem;
 }
 
 /* The compact inline buttons: an outlined "action" and a plain "cancel" before it, 28px high. */
@@ -207,6 +235,7 @@
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
+  align-self: center;
   box-sizing: border-box;
   height: 1.75rem;
   padding: 0 0.625rem;
@@ -262,47 +291,51 @@
   );
 }
 
-/* A ghost icon button at the end of the row, centred with the text and the action: 28px square,
-   8px corners, the cross in the muted ink until it is hovered. */
+/* A ghost icon button pinned to the top-end corner, inside the padding: 22px square, 4px
+   corners, the cross in a softened ink until it is hovered. */
 .andes-toast__close {
-  flex: none;
-  position: relative;
+  position: absolute;
+  top: var(--_toast-pad-block);
+  inset-inline-end: var(--_toast-pad-inline);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 1.375rem;
+  height: 1.375rem;
   padding: 0;
-  border: 1px solid transparent;
-  border-radius: var(--andes-radius-lg);
+  border: 0;
+  border-radius: 0.25rem;
   background-color: transparent;
-  color: var(--andes-color-muted-foreground);
+  color: color-mix(
+    in srgb,
+    var(--andes-color-card-foreground) 45%,
+    var(--_toast-surface)
+  );
   font-family: inherit;
   cursor: pointer;
   transition:
-    background-color 150ms ease,
-    color 150ms ease;
+    background-color 200ms ease,
+    color 200ms ease;
 }
 
 .andes-toast__close:hover {
   background-color: color-mix(
     in srgb,
-    var(--andes-color-card-foreground) 8%,
+    var(--andes-color-card-foreground) 6%,
     transparent
   );
   color: var(--andes-color-card-foreground);
 }
 
 .andes-toast__close svg {
-  width: 1rem;
-  height: 1rem;
+  width: 0.875rem;
+  height: 0.875rem;
 }
 
 .andes-toast__close-icon {
   display: inline-flex;
-  padding-inline: 0.25rem;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   line-height: 1;
 }
 
@@ -313,21 +346,71 @@
   outline-offset: 2px;
 }
 
-/* Message flavor: a compact single-line card - icon + text, sized to its content. */
+/* Message flavor: a compact single-line card - icon + text, sized to its content, 9px/12px
+   padding and a 16px icon 8px from the text. */
 :host([data-flavor='message']) {
+  --_toast-pad-block: calc(0.5625rem - 1px);
+  --_toast-pad-inline: calc(0.75rem - 1px);
   width: max-content;
   max-width: 100%;
-  padding: 0.5625rem 0.875rem;
 }
 
 :host([data-flavor='message']) .andes-toast__row {
+  align-items: center;
   gap: var(--andes-space-2);
 }
 
 :host([data-flavor='message']) .andes-toast__icon {
-  width: 1.125rem;
-  height: 1.125rem;
-  margin-inline: -0.125rem 0;
+  width: 1rem;
+  height: 1rem;
+}
+
+/* A dismissible message keeps its close button in the row, after the text. */
+:host([data-flavor='message']) .andes-toast__close {
+  position: relative;
+  inset: auto;
+  flex: none;
+  margin-inline-start: var(--andes-space-1);
+}
+
+/* The countdown: a 2px bar along the bottom edge, inset by the corner radius, draining over the
+   auto-dismiss duration. It pauses exactly when the queue's timer does: while the toast (or,
+   in a deck, the whole stack) is hovered, whenever focus is inside it, and while the page is
+   hidden - the region marks the first and last with data-paused. */
+.andes-toast__progress {
+  position: absolute;
+  bottom: 0;
+  inset-inline: 0.5rem;
+  block-size: 2px;
+  border-radius: 0.5rem;
+  background: var(
+    --andes-toast-progress-bg,
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--andes-color-primary) 55%, var(--_toast-surface)),
+      var(--andes-color-primary)
+    )
+  );
+  /* The track is the card; only the bar drains, towards the inline start. */
+  inline-size: 100%;
+  animation: andes-toast-progress linear forwards;
+  pointer-events: none;
+}
+
+:host([data-paused]) .andes-toast__progress,
+:host([data-pause-on-hover]:hover) .andes-toast__progress,
+:host(:focus-within) .andes-toast__progress {
+  animation-play-state: paused;
+}
+
+@keyframes andes-toast-progress {
+  from {
+    inline-size: 100%;
+  }
+
+  to {
+    inline-size: 0;
+  }
 }
 
 @keyframes andes-toast-spin {

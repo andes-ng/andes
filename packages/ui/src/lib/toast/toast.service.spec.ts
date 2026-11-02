@@ -554,9 +554,127 @@ describe('AndesToastService', () => {
         expect.objectContaining({
           stack: { threshold: 1 },
           visibleToasts: 3,
-          gap: 14,
+          gap: 16,
         }),
       );
+    });
+
+    describe('hidden tab', () => {
+      let hidden: ReturnType<typeof vi.spyOn>;
+
+      function setHidden(value: boolean): void {
+        hidden.mockReturnValue(value);
+        document.dispatchEvent(new Event('visibilitychange'));
+      }
+
+      beforeEach(() => {
+        hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(false);
+      });
+
+      afterEach(() => {
+        hidden.mockRestore();
+      });
+
+      it('holds every countdown while the page is hidden and carries on with the time left', () => {
+        vi.useFakeTimers();
+        const service = createService();
+
+        service.show({ message: 'a', duration: 3000 });
+        vi.advanceTimersByTime(1000);
+        setHidden(true);
+        expect(service.pageHidden()).toBe(true);
+
+        vi.advanceTimersByTime(60_000);
+        expect(service.toasts()).toHaveLength(1);
+
+        setHidden(false);
+        expect(service.pageHidden()).toBe(false);
+        vi.advanceTimersByTime(1999);
+        expect(service.toasts()).toHaveLength(1);
+        vi.advanceTimersByTime(1);
+        expect(service.toasts()).toHaveLength(0);
+      });
+
+      it('a toast shown in a hidden tab only starts counting down once the tab is visible', () => {
+        vi.useFakeTimers();
+        const service = createService();
+        setHidden(true);
+
+        service.show({ message: 'late', duration: 2000 });
+        vi.advanceTimersByTime(30_000);
+        expect(service.toasts()).toHaveLength(1);
+
+        setHidden(false);
+        vi.advanceTimersByTime(2000);
+        expect(service.toasts()).toHaveLength(0);
+      });
+
+      it('keeps a hover pause when the tab comes back, resuming only once both are released', () => {
+        vi.useFakeTimers();
+        const service = createService();
+        const { id } = service.show({ message: 'a', duration: 2000 });
+
+        service.pause(id);
+        setHidden(true);
+        setHidden(false);
+        vi.advanceTimersByTime(10_000);
+        expect(service.toasts()).toHaveLength(1);
+
+        service.resume(id);
+        vi.advanceTimersByTime(2000);
+        expect(service.toasts()).toHaveLength(0);
+      });
+
+      it('a toast closed while hidden leaves nothing to resume', () => {
+        vi.useFakeTimers();
+        const service = createService();
+        const { id } = service.show({ message: 'a', duration: 2000 });
+
+        setHidden(true);
+        service.dismiss(id);
+        setHidden(false);
+
+        expect(service.toasts()).toHaveLength(0);
+      });
+    });
+
+    it('resolves showProgress, classNames, styles and the templates onto the toast', () => {
+      const service = createService([
+        provideAndesToastConfig({ showProgress: true }),
+      ]);
+      const classNames = { icon: 'x' };
+      const styles = { title: { color: 'red' } };
+
+      service.show({ message: 'defaults' });
+      service.show({
+        message: 'custom',
+        showProgress: false,
+        classNames,
+        styles,
+      });
+
+      expect(service.toasts()[0]).toEqual(
+        expect.objectContaining({
+          showProgress: true,
+          classNames: undefined,
+          styles: undefined,
+          revision: 0,
+        }),
+      );
+      expect(service.toasts()[1]).toEqual(
+        expect.objectContaining({ showProgress: false, classNames, styles }),
+      );
+    });
+
+    it('counts key-based updates in revision', () => {
+      const service = createService();
+
+      service.show({ message: 'a', key: 'k' });
+      service.show({ message: 'b', key: 'k' });
+      service.update('k', { message: 'c' });
+
+      expect(service.toasts()).toHaveLength(1);
+      expect(service.toasts()[0].revision).toBe(2);
     });
 
     it('provideAndesToastConfig() sets app-wide defaults', () => {

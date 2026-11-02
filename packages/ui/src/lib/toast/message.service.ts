@@ -115,9 +115,16 @@ export class AndesMessageService extends AndesToastQueue<AndesMessageConfig> {
   }
 
   protected toToastConfig(config: AndesMessageConfig): AndesToastConfig {
-    const { content, contentTemplate, type, ...rest } = config;
+    const { content, contentTemplate, type, classNames, styles, ...rest } =
+      config;
+    // On a message the text is the one text part, which Ant calls `title`.
     return {
       ...rest,
+      classNames: classNames && {
+        ...classNames,
+        description: classNames.title,
+      },
+      styles: styles && { ...styles, description: styles.title },
       message: content,
       messageTemplate: contentTemplate,
       severity: type ?? 'info',

@@ -21,6 +21,7 @@ export const ANDES_TOAST_BUILTIN_DEFAULTS: AndesToastGlobalConfig = {
   maxCount: ANDES_TOAST_DEFAULT_MAX_VISIBLE,
   overflow: 'queue',
   pauseOnHover: true,
+  showProgress: false,
   dismissible: true,
   stack: { threshold: ANDES_TOAST_DEFAULT_STACK_THRESHOLD },
   swipeToDismiss: true,
@@ -36,11 +37,12 @@ export const ANDES_MESSAGE_BUILTIN_DEFAULTS: AndesToastGlobalConfig = {
   maxCount: Number.POSITIVE_INFINITY,
   overflow: 'queue',
   pauseOnHover: true,
+  showProgress: false,
   dismissible: false,
   stack: false,
   swipeToDismiss: false,
-  visibleToasts: ANDES_TOAST_DEFAULT_VISIBLE_TOASTS,
-  gap: 8,
+  visibleToasts: 1,
+  gap: ANDES_TOAST_DEFAULT_GAP,
   richColors: false,
 };
 

@@ -1,10 +1,27 @@
-<div #row class="andes-toast__row">
-  @if (toast().icon; as customIcon) {
-  <span class="andes-toast__icon" aria-hidden="true">
+<div
+  #row
+  class="andes-toast__row"
+  [class]="toast().classNames?.wrapper"
+  [style]="toast().styles?.wrapper ?? null"
+>
+  @if (toast().headless; as headless) {
+  <ng-container *ngTemplateOutlet="headless; context: iconContext()" />
+  } @else { @if (toast().icon; as customIcon) {
+  <span
+    class="andes-toast__icon"
+    aria-hidden="true"
+    [class]="toast().classNames?.icon"
+    [style]="toast().styles?.icon ?? null"
+  >
     <ng-container *ngTemplateOutlet="customIcon; context: iconContext()" />
   </span>
   } @else if (toast().icon !== null && toast().severity !== 'neutral') {
-  <span class="andes-toast__icon" aria-hidden="true">
+  <span
+    class="andes-toast__icon"
+    aria-hidden="true"
+    [class]="toast().classNames?.icon"
+    [style]="toast().styles?.icon ?? null"
+  >
     @if (toast().severity === 'loading') {
     <svg
       class="andes-toast__spinner"
@@ -41,17 +58,33 @@
   </span>
   }
 
-  <div class="andes-toast__content">
+  <div
+    class="andes-toast__content"
+    [class]="toast().classNames?.content"
+    [style]="toast().styles?.content ?? null"
+  >
     @if (toast().titleTemplate; as titleTemplate) {
-    <div class="andes-toast__title">
+    <div
+      class="andes-toast__title"
+      [class]="toast().classNames?.title"
+      [style]="toast().styles?.title ?? null"
+    >
       <ng-container *ngTemplateOutlet="titleTemplate; context: iconContext()" />
     </div>
     } @else if (toast().title) {
-    <p class="andes-toast__title">{{ toast().title }}</p>
+    <p
+      class="andes-toast__title"
+      [class]="toast().classNames?.title"
+      [style]="toast().styles?.title ?? null"
+    >
+      {{ toast().title }}
+    </p>
     } @if (toast().messageTemplate; as messageTemplate) {
     <div
       class="andes-toast__message"
       [class.andes-toast__message--description]="hasTitle()"
+      [class]="toast().classNames?.description"
+      [style]="toast().styles?.description ?? null"
     >
       <ng-container
         *ngTemplateOutlet="messageTemplate; context: iconContext()"
@@ -61,14 +94,30 @@
     <p
       class="andes-toast__message"
       [class.andes-toast__message--description]="hasTitle()"
+      [class]="toast().classNames?.description"
+      [style]="toast().styles?.description ?? null"
     >
       {{ toast().message }}
     </p>
-    } @if (toast().actions.length) {
-    <div class="andes-toast__actions">
+    } @if (toast().actionsTemplate; as actionsTemplate) {
+    <div
+      class="andes-toast__actions"
+      [class]="toast().classNames?.actions"
+      [style]="toast().styles?.actions ?? null"
+    >
+      <ng-container
+        *ngTemplateOutlet="actionsTemplate; context: iconContext()"
+      />
+    </div>
+    } @else if (toast().actions.length) {
+    <div
+      class="andes-toast__actions"
+      [class]="toast().classNames?.actions"
+      [style]="toast().styles?.actions ?? null"
+    >
       @for (groupAction of toast().actions; track $index) {
       <andes-button
-        size="xs"
+        size="sm"
         [variant]="groupAction.variant ?? ($first ? 'primary' : 'outline')"
         (click)="groupActionClicked.emit(groupAction)"
       >
@@ -99,6 +148,8 @@
   <button
     type="button"
     class="andes-toast__close"
+    [class]="toast().classNames?.close"
+    [style]="toast().styles?.close ?? null"
     [attr.aria-label]="closeLabel()"
     (click)="dismissRequested.emit()"
   >
@@ -111,7 +162,7 @@
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      stroke-width="2.5"
+      stroke-width="2"
       stroke-linecap="round"
       aria-hidden="true"
     >
@@ -119,5 +170,15 @@
     </svg>
     }
   </button>
-  }
+  } }
 </div>
+@if (progressDuration(); as progressMs) { @for (revision of progressRevision();
+track revision) {
+<div
+  class="andes-toast__progress"
+  aria-hidden="true"
+  [class]="toast().classNames?.progress"
+  [style.animation-duration.ms]="progressMs"
+  [style]="toast().styles?.progress ?? null"
+></div>
+} }

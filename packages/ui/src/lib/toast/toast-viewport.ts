@@ -2,15 +2,24 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DOCUMENT,
+  effect,
+  ElementRef,
   inject,
   input,
   linkedSignal,
+  untracked,
+  viewChildren,
 } from '@angular/core';
 
 import { AndesMessageService } from './message.service';
 import { AndesToastRegion } from './toast-region';
 import { AndesToastService } from './toast.service';
-import type { AndesToast, AndesToastPosition } from './toast.types';
+import {
+  ANDES_TOAST_DEFAULT_STACK_PEEK,
+  type AndesToast,
+  type AndesToastPosition,
+} from './toast.types';
 
 const PLACEMENTS: readonly AndesToastPosition[] = [
   'top-left',
@@ -20,6 +29,30 @@ const PLACEMENTS: readonly AndesToastPosition[] = [
   'bottom-center',
   'bottom-right',
 ];
+
+/** Whether `event` is the chord `hotkey` describes - `'Alt+T'`, `'Ctrl+Shift+N'`, `'Meta+/'`... */
+function matchesHotkey(event: KeyboardEvent, hotkey: string): boolean {
+  const parts = hotkey
+    .toLowerCase()
+    .split('+')
+    .map((part) => part.trim());
+  const key = parts.pop();
+  const has = (...names: string[]) =>
+    parts.some((part) => names.includes(part));
+  // `code` first: with Alt held, macOS reports `key` as a special character instead of "t".
+  const keyMatches =
+    !!key &&
+    (event.code.toLowerCase() === `key${key}` ||
+      event.code.toLowerCase() === key ||
+      event.key.toLowerCase() === key);
+  return (
+    keyMatches &&
+    event.altKey === has('alt', 'option') &&
+    event.ctrlKey === has('ctrl', 'control') &&
+    event.shiftKey === has('shift') &&
+    event.metaKey === has('meta', 'cmd', 'command')
+  );
+}
 
 /**
  * Mount this once, e.g. near the root of an app (`app.html`), to render both toast flavors:
@@ -43,7 +76,13 @@ const PLACEMENTS: readonly AndesToastPosition[] = [
  *
  * Rendering requires this explicit mount point, which keeps toasts inside the app's own
  * component tree (SSR-safe, no `ApplicationRef` side-attachment) - the same
- * trade-off `<router-outlet>` makes.
+ * trade-off `<router-outlet>` makes. Pass `container` to have the viewport move itself into
+ * another element (a shadow root's host, a micro-frontend's mount node) - it still covers the
+ * whole screen.
+ *
+ * Keyboard: the `hotkey` (default `Alt+T`) moves focus to the newest toast, which expands a
+ * deck and holds every countdown until focus leaves; Escape dismisses the focused toast and
+ * hands focus back to where it was.
  *
  * ## Why not `AndesOverlayPrimitive`
  *
@@ -77,17 +116,38 @@ const PLACEMENTS: readonly AndesToastPosition[] = [
   host: {
     class: 'andes-toast-viewport',
     '[attr.data-position]': 'defaultPlacement()',
+    '(document:keydown)': 'onDocumentKeydown($event)',
   },
 })
 export class AndesToastViewport {
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly document = inject(DOCUMENT);
   protected readonly toastService = inject(AndesToastService);
   protected readonly messageService = inject(AndesMessageService);
+
+  private readonly regionList = viewChildren(AndesToastRegion);
+  /** Where focus was when the hotkey pulled it into a toast. */
+  private returnFocusTo: HTMLElement | null = null;
 
   /**
    * Where notifications without their own `placement` go. Default: the global `placement`
    * from `provideAndesToastConfig()` (built-in `'bottom-right'`).
    */
   readonly position = input<AndesToastPosition | undefined>(undefined);
+
+  /**
+   * Chord that focuses the newest toast, e.g. `'Alt+T'` or `'Ctrl+Shift+N'`. `false` turns it
+   * off. Default `'Alt+T'`.
+   */
+  readonly hotkey = input<string | false>('Alt+T');
+
+  /**
+   * An element (or a selector for one) the viewport moves itself into, so toasts render inside
+   * it rather than where the viewport is declared. The toasts are still fixed to the screen.
+   */
+  readonly container = input<HTMLElement | string | null>(null);
+
+  protected readonly defaultPeek = ANDES_TOAST_DEFAULT_STACK_PEEK;
 
   protected readonly defaultPlacement = computed(
     () => this.position() ?? this.toastService.defaults().placement,
@@ -139,6 +199,52 @@ export class AndesToastViewport {
   protected readonly toastConfig = this.toastService.defaults;
   protected readonly messageConfig = this.messageService.defaults;
   protected readonly messages = this.messageService.visibleToasts;
+
+  constructor() {
+    effect(() => {
+      const container = this.container();
+      untracked(() => {
+        const target =
+          typeof container === 'string'
+            ? this.document.querySelector<HTMLElement>(container)
+            : container;
+        const host = this.host.nativeElement;
+        if (target && host.parentElement !== target) {
+          target.appendChild(host);
+        }
+      });
+    });
+  }
+
+  protected onDocumentKeydown(event: KeyboardEvent): void {
+    const hotkey = this.hotkey();
+    if (!hotkey || event.defaultPrevented || !matchesHotkey(event, hotkey)) {
+      return;
+    }
+    // The newest toast of the first region holding any: notifications, then messages.
+    const regions = this.regionList().filter((region) => region.hasToasts());
+    const active = this.document.activeElement;
+    for (const region of regions) {
+      if (region.focusFront()) {
+        event.preventDefault();
+        if (
+          active instanceof HTMLElement &&
+          !this.host.nativeElement.contains(active)
+        ) {
+          this.returnFocusTo = active;
+        }
+        return;
+      }
+    }
+  }
+
+  protected onEscaped(): void {
+    const target = this.returnFocusTo;
+    this.returnFocusTo = null;
+    if (target?.isConnected) {
+      target.focus();
+    }
+  }
 
   /** Same as `usedPlacements`, for the message region. */
   protected readonly messagesUsed = linkedSignal<boolean, boolean>({

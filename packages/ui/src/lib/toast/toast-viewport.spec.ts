@@ -4,6 +4,8 @@ import { Component, signal, TemplateRef, viewChild } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 
+import { declaredValue } from '../../testing/computed-style';
+
 import { AndesMessageService } from './message.service';
 import { provideAndesToastConfig } from './toast.config';
 import { AndesToastService } from './toast.service';
@@ -24,11 +26,23 @@ class HostComponent {
 @Component({
   imports: [AndesToastViewport],
   template: `
-    <andes-toast-viewport />
+    <button class="outside">outside</button>
+    <andes-toast-viewport [hotkey]="hotkey()" [container]="container()" />
     <ng-template #customIcon let-toast
       ><b class="custom-icon">{{ toast.severity }}</b></ng-template
     >
     <ng-template #customClose><i class="custom-close">x</i></ng-template>
+    <ng-template #actionsBlock let-close="close"
+      ><a class="custom-actions" href="#" (click)="close()"
+        >Got it</a
+      ></ng-template
+    >
+    <ng-template #headlessBlock let-toast let-close="close"
+      ><div class="headless-body">
+        {{ toast.message }}
+        <button class="headless-close" (click)="close()">x</button>
+      </div></ng-template
+    >
     <ng-template #richTitle let-toast
       ><em class="rich-title">{{ toast.title }}!</em></ng-template
     >
@@ -38,6 +52,12 @@ class HostComponent {
   `,
 })
 class TemplateHostComponent {
+  readonly hotkey = signal<string | false>('Alt+T');
+  readonly container = signal<HTMLElement | string | null>(null);
+  readonly actionsBlock =
+    viewChild.required<TemplateRef<AndesToastTemplateContext>>('actionsBlock');
+  readonly headlessBlock =
+    viewChild.required<TemplateRef<AndesToastTemplateContext>>('headlessBlock');
   readonly richTitle =
     viewChild.required<TemplateRef<AndesToastTemplateContext>>('richTitle');
   readonly richBody =
@@ -304,20 +324,180 @@ describe('AndesToastViewport', () => {
         'utf8',
       );
 
-      it('sits at the end of the row, centred with the text, not floating on a corner', () => {
+      it('is pinned to the top-end corner inside the padding, 22px square', () => {
         const { fixture, toasts } = createTemplateHost();
         toasts.show({ message: 'Saved', title: 'Done' });
         fixture.detectChanges();
-        const row = fixture.nativeElement.querySelector('.andes-toast__row');
-        const close = row?.querySelector(':scope > .andes-toast__close');
+        const root = fixture.nativeElement.querySelector('andes-toast-item');
+        const close = root?.querySelector(
+          ':scope > .andes-toast__row > .andes-toast__close',
+        );
         expect(close).toBeTruthy();
-        expect(row?.lastElementChild).toBe(close);
-        expect(css).toMatch(/\.andes-toast__row \{[^}]*align-items: center/);
-        const rule = /\.andes-toast__close \{([^}]*)\}/.exec(css)?.[1] ?? '';
-        expect(rule).not.toContain('position: absolute');
-        expect(rule).not.toMatch(/translate/);
-        expect(rule).toContain('width: 1.75rem');
-        expect(rule).toContain('height: 1.75rem');
+        expect(declaredValue(css, '.andes-toast__close', 'position')).toBe(
+          'absolute',
+        );
+        expect(declaredValue(css, '.andes-toast__close', 'top')).toBe(
+          'var(--_toast-pad-block)',
+        );
+        expect(
+          declaredValue(css, '.andes-toast__close', 'inset-inline-end'),
+        ).toBe('var(--_toast-pad-inline)');
+        expect(declaredValue(css, '.andes-toast__close', 'width')).toBe(
+          '1.375rem',
+        );
+        expect(declaredValue(css, '.andes-toast__close', 'height')).toBe(
+          '1.375rem',
+        );
+      });
+
+      it('marks a closable toast so its first line keeps clear of the button', () => {
+        const { fixture, toasts } = createTemplateHost();
+        toasts.show({ message: 'Closable', title: 'Done' });
+        toasts.show({ message: 'Sticky', dismissible: false });
+        toasts.show({
+          message: 'Buttons',
+          action: { label: 'Undo', onClick: () => undefined },
+        });
+        fixture.detectChanges();
+        const [closable, sticky, buttons] = Array.from(
+          fixture.nativeElement.querySelectorAll('andes-toast-item'),
+        ) as HTMLElement[];
+        expect(closable.hasAttribute('data-closable')).toBe(true);
+        expect(closable.hasAttribute('data-inline-buttons')).toBe(false);
+        expect(sticky.hasAttribute('data-closable')).toBe(false);
+        expect(buttons.hasAttribute('data-inline-buttons')).toBe(true);
+        expect(
+          declaredValue(
+            css,
+            ":host([data-closable]:not([data-inline-buttons], [data-flavor='message'])) .andes-toast__title",
+            'padding-inline-end',
+          ),
+        ).toBe('1.5rem');
+      });
+    });
+
+    describe('metrics shared with Ant Design', () => {
+      const item = readFileSync(
+        'packages/ui/src/lib/toast/toast-item.css',
+        'utf8',
+      );
+      const region = readFileSync(
+        'packages/ui/src/lib/toast/toast-region.css',
+        'utf8',
+      );
+
+      it('sizes a notification at 384px with 20px/24px padding, an 8px radius and a 24px icon', () => {
+        expect(declaredValue(region, ':host', 'width')).toBe(
+          'var(--andes-toast-width, 24rem)',
+        );
+        expect(declaredValue(item, ':host', '--_toast-pad-block')).toBe(
+          'calc(1.25rem - 1px)',
+        );
+        expect(declaredValue(item, ':host', '--_toast-pad-inline')).toBe(
+          'calc(1.5rem - 1px)',
+        );
+        expect(declaredValue(item, ':host', 'border-radius')).toBe(
+          'var(--andes-toast-radius, 0.5rem)',
+        );
+        expect(declaredValue(item, '.andes-toast__icon', 'width')).toBe(
+          '1.5rem',
+        );
+        expect(declaredValue(item, '.andes-toast__row', 'gap')).toBe('0.75rem');
+        expect(declaredValue(item, '.andes-toast__content', 'gap')).toBe(
+          '0.5rem',
+        );
+      });
+
+      it('sets a 16px/24px title over a 14px/22px description, both regular weight', () => {
+        expect(declaredValue(item, '.andes-toast__title', 'font-size')).toBe(
+          '1rem',
+        );
+        expect(declaredValue(item, '.andes-toast__title', 'line-height')).toBe(
+          '1.5rem',
+        );
+        expect(declaredValue(item, '.andes-toast__message', 'font-size')).toBe(
+          '0.875rem',
+        );
+        expect(
+          declaredValue(item, '.andes-toast__message', 'line-height'),
+        ).toBe('1.375rem');
+        expect(declaredValue(item, '.andes-toast__title', 'font-weight')).toBe(
+          '400',
+        );
+      });
+
+      it('sizes a message with 9px/12px padding, a 16px icon and an 8px gap', () => {
+        const message = ":host([data-flavor='message'])";
+        expect(declaredValue(item, message, '--_toast-pad-block')).toBe(
+          'calc(0.5625rem - 1px)',
+        );
+        expect(declaredValue(item, message, '--_toast-pad-inline')).toBe(
+          'calc(0.75rem - 1px)',
+        );
+        expect(
+          declaredValue(item, `${message} .andes-toast__icon`, 'width'),
+        ).toBe('1rem');
+        expect(declaredValue(item, `${message} .andes-toast__row`, 'gap')).toBe(
+          'var(--andes-space-2)',
+        );
+      });
+
+      it('moves in 200ms on an ease-in-out curve, sliding 64px in from the side edge', () => {
+        expect(declaredValue(region, ':host', '--_toast-duration')).toBe(
+          'var(--andes-toast-duration, 200ms)',
+        );
+        expect(declaredValue(region, ':host', '--_toast-ease')).toBe(
+          'cubic-bezier(0.645, 0.045, 0.355, 1)',
+        );
+        expect(declaredValue(region, ':host', '--_toast-slide')).toBe('4rem');
+        expect(
+          declaredValue(
+            region,
+            ":host([data-placement$='right'])",
+            '--_toast-enter-x',
+          ),
+        ).toBe('var(--_toast-slide)');
+        expect(
+          declaredValue(
+            region,
+            ":host([data-placement$='left'])",
+            '--_toast-enter-x',
+          ),
+        ).toBe('calc(var(--_toast-slide) * -1)');
+        expect(
+          declaredValue(
+            region,
+            ":host([data-placement$='center'])",
+            '--_toast-enter-y',
+          ),
+        ).toBe('calc(var(--_toast-lift) * var(--_toast-slide) * -1)');
+        expect(region).toMatch(
+          /@keyframes andes-toast-enter \{\s*from \{\s*opacity: 0;\s*translate: var\(--_toast-enter-x, 0\) var\(--_toast-enter-y, 0\);/,
+        );
+      });
+
+      it('collapses a deck by scaling 6% per card and peeking out the --_toast-peek, from the anchored edge', () => {
+        const stacked = ':host([data-stacked]) andes-toast-item';
+        expect(declaredValue(region, stacked, '--_toast-scale')).toBe(
+          'max(0.5, calc(1 - var(--_toast-depth, 0) * 0.06))',
+        );
+        expect(declaredValue(region, stacked, '--_toast-y')).toBe(
+          'calc( var(--_toast-lift) * var(--_toast-depth, 0) * var(--_toast-peek) )',
+        );
+        expect(
+          declaredValue(
+            region,
+            ":host([data-placement^='top'])",
+            '--_toast-origin',
+          ),
+        ).toBe('center bottom');
+        expect(
+          declaredValue(
+            region,
+            ":host([data-placement^='bottom'])",
+            '--_toast-origin',
+          ),
+        ).toBe('center top');
       });
     });
 
@@ -851,7 +1031,7 @@ describe('AndesToastViewport', () => {
         expect(height).toBeGreaterThanOrEqual(40);
         expect(newer.style.getPropertyValue('--_toast-offset')).toBe('0px');
         expect(older.style.getPropertyValue('--_toast-offset')).toBe(
-          `${height + 14}px`,
+          `${height + 16}px`,
         );
         expect(region.style.getPropertyValue('--_toast-front-height')).toBe(
           `${height}px`,
@@ -1077,6 +1257,522 @@ describe('AndesToastViewport', () => {
         false,
         true,
       ]);
+    });
+
+    describe('countdown progress bar', () => {
+      it('showProgress renders a bar that drains over the duration, only for timed toasts', () => {
+        const { fixture, toasts } = createTemplateHost();
+
+        toasts.show({ message: 'timed', duration: 4000, showProgress: true });
+        toasts.show({ message: 'sticky', duration: false, showProgress: true });
+        toasts.show({ message: 'off', duration: 4000 });
+        fixture.detectChanges();
+
+        const [timed, sticky, off] = Array.from(
+          fixture.nativeElement.querySelectorAll('andes-toast-item'),
+        ) as HTMLElement[];
+        const bar = timed.querySelector<HTMLElement>('.andes-toast__progress');
+        expect(bar?.style.animationDuration).toBe('4000ms');
+        expect(bar?.getAttribute('aria-hidden')).toBe('true');
+        expect(sticky.querySelector('.andes-toast__progress')).toBeNull();
+        expect(off.querySelector('.andes-toast__progress')).toBeNull();
+      });
+
+      it('showProgress can be turned on for every toast in the global config', () => {
+        const { fixture, toasts } = createTemplateHost([
+          provideAndesToastConfig({ showProgress: true }),
+        ]);
+
+        toasts.info('a');
+        toasts.info('b', { showProgress: false });
+        fixture.detectChanges();
+
+        const [a, b] = Array.from(
+          fixture.nativeElement.querySelectorAll('andes-toast-item'),
+        ) as HTMLElement[];
+        expect(a.querySelector('.andes-toast__progress')).not.toBeNull();
+        expect(b.querySelector('.andes-toast__progress')).toBeNull();
+      });
+
+      it('a key-based update restarts the bar', () => {
+        const { fixture, toasts } = createTemplateHost();
+
+        toasts.info('a', { key: 'k', showProgress: true });
+        fixture.detectChanges();
+        const before = fixture.nativeElement.querySelector(
+          '.andes-toast__progress',
+        );
+
+        toasts.info('b', { key: 'k', showProgress: true });
+        fixture.detectChanges();
+        const after = fixture.nativeElement.querySelector(
+          '.andes-toast__progress',
+        );
+
+        expect(after).not.toBeNull();
+        expect(after).not.toBe(before);
+      });
+
+      it('marks the toast paused while it is hovered, in step with its countdown', () => {
+        vi.useFakeTimers();
+        const { fixture, toasts } = createTemplateHost();
+
+        toasts.info('a', { showProgress: true, duration: 3000 });
+        toasts.info('b', {
+          showProgress: true,
+          duration: 3000,
+          pauseOnHover: false,
+        });
+        toasts.config({ stack: false });
+        fixture.detectChanges();
+        const [a, b] = Array.from(
+          fixture.nativeElement.querySelectorAll('andes-toast-item'),
+        ) as HTMLElement[];
+        expect(a.hasAttribute('data-paused')).toBe(false);
+
+        a.dispatchEvent(new MouseEvent('mouseenter'));
+        b.dispatchEvent(new MouseEvent('mouseenter'));
+        fixture.detectChanges();
+        expect(a.hasAttribute('data-paused')).toBe(true);
+        expect(b.hasAttribute('data-paused')).toBe(false);
+
+        a.dispatchEvent(new MouseEvent('mouseleave'));
+        fixture.detectChanges();
+        expect(a.hasAttribute('data-paused')).toBe(false);
+      });
+
+      it('holds the bar of every toast in a hovered deck', () => {
+        const { fixture, toasts } = createTemplateHost();
+
+        toasts.info('a', { showProgress: true });
+        toasts.info('b', { showProgress: true });
+        fixture.detectChanges();
+        const [region] = regions(fixture.nativeElement);
+        const rendered = Array.from(
+          region.querySelectorAll<HTMLElement>('andes-toast-item'),
+        );
+
+        region.dispatchEvent(new MouseEvent('mouseenter'));
+        fixture.detectChanges();
+        expect(rendered.every((i) => i.hasAttribute('data-paused'))).toBe(true);
+
+        region.dispatchEvent(new MouseEvent('mouseleave'));
+        fixture.detectChanges();
+        expect(rendered.some((i) => i.hasAttribute('data-paused'))).toBe(false);
+      });
+
+      it('pauses the bar while focus is inside the toast and while the page is hidden', () => {
+        const css = readFileSync(
+          'packages/ui/src/lib/toast/toast-item.css',
+          'utf8',
+        );
+        for (const selector of [
+          ':host([data-paused]) .andes-toast__progress',
+          ':host([data-pause-on-hover]:hover) .andes-toast__progress',
+          ':host(:focus-within) .andes-toast__progress',
+        ]) {
+          expect(declaredValue(css, selector, 'animation-play-state')).toBe(
+            'paused',
+          );
+        }
+
+        const { fixture, toasts } = createTemplateHost();
+        toasts.info('a', { showProgress: true });
+        fixture.detectChanges();
+        const item = fixture.nativeElement.querySelector(
+          'andes-toast-item',
+        ) as HTMLElement;
+        const hidden = vi
+          .spyOn(document, 'hidden', 'get')
+          .mockReturnValue(true);
+        try {
+          document.dispatchEvent(new Event('visibilitychange'));
+          fixture.detectChanges();
+          expect(item.hasAttribute('data-paused')).toBe(true);
+        } finally {
+          hidden.mockReturnValue(false);
+          document.dispatchEvent(new Event('visibilitychange'));
+          hidden.mockRestore();
+        }
+        fixture.detectChanges();
+        expect(item.hasAttribute('data-paused')).toBe(false);
+      });
+    });
+
+    describe('semantic parts', () => {
+      it('classNames and styles reach each part of a notification', () => {
+        const { fixture, toasts } = createTemplateHost();
+
+        toasts.success('Body text', {
+          title: 'Heading',
+          duration: false,
+          showProgress: true,
+          actions: [{ label: 'Open', onClick: () => undefined }],
+          className: 'legacy-root',
+          classNames: {
+            root: 'p-root',
+            wrapper: 'p-wrapper',
+            icon: 'p-icon',
+            content: 'p-content',
+            title: 'p-title',
+            description: 'p-description',
+            actions: 'p-actions',
+            close: 'p-close',
+          },
+          styles: {
+            root: { borderRadius: '16px' },
+            icon: { color: 'rgb(1, 2, 3)' },
+            title: { fontWeight: '600' },
+            description: { color: 'rgb(4, 5, 6)' },
+            close: { opacity: '0.5' },
+          },
+        });
+        fixture.detectChanges();
+
+        const root = fixture.nativeElement.querySelector(
+          'andes-toast-item',
+        ) as HTMLElement;
+        const part = (selector: string) =>
+          root.querySelector(selector) as HTMLElement;
+        expect(root.classList).toContain('p-root');
+        expect(root.classList).toContain('legacy-root');
+        expect(root.style.borderRadius).toBe('16px');
+        expect(part('.andes-toast__row').classList).toContain('p-wrapper');
+        expect(part('.andes-toast__icon').classList).toContain('p-icon');
+        expect(part('.andes-toast__icon').style.color).toBe('rgb(1, 2, 3)');
+        expect(part('.andes-toast__content').classList).toContain('p-content');
+        expect(part('.andes-toast__title').classList).toContain('p-title');
+        expect(part('.andes-toast__title').style.fontWeight).toBe('600');
+        expect(part('.andes-toast__message').classList).toContain(
+          'p-description',
+        );
+        expect(part('.andes-toast__message').style.color).toBe('rgb(4, 5, 6)');
+        expect(part('.andes-toast__actions').classList).toContain('p-actions');
+        expect(part('.andes-toast__close').classList).toContain('p-close');
+        expect(part('.andes-toast__close').style.opacity).toBe('0.5');
+        // The parts keep their own classes.
+        expect(part('.andes-toast__icon').classList).toContain(
+          'andes-toast__icon',
+        );
+      });
+
+      it('styles the progress bar next to its duration', () => {
+        const { fixture, toasts } = createTemplateHost();
+
+        toasts.info('x', {
+          showProgress: true,
+          classNames: { progress: 'p-bar' },
+          styles: { progress: { height: '4px' } },
+        });
+        fixture.detectChanges();
+
+        const bar = fixture.nativeElement.querySelector(
+          '.andes-toast__progress',
+        ) as HTMLElement;
+        expect(bar.classList).toContain('p-bar');
+        expect(bar.style.height).toBe('4px');
+        expect(bar.style.animationDuration).toBe('5000ms');
+      });
+
+      it('a message takes classNames.title and styles.title for its text', () => {
+        const { fixture, messages } = createTemplateHost();
+
+        messages.open({
+          type: 'success',
+          content: 'Saved',
+          classNames: { root: 'm-root', icon: 'm-icon', title: 'm-title' },
+          styles: { title: { color: 'rgb(7, 8, 9)' } },
+        });
+        fixture.detectChanges();
+
+        const root = fixture.nativeElement.querySelector(
+          'andes-toast-item',
+        ) as HTMLElement;
+        const text = root.querySelector('.andes-toast__message') as HTMLElement;
+        expect(root.classList).toContain('m-root');
+        expect(root.querySelector('.andes-toast__icon')?.classList).toContain(
+          'm-icon',
+        );
+        expect(text.classList).toContain('m-title');
+        expect(text.style.color).toBe('rgb(7, 8, 9)');
+      });
+    });
+
+    describe('custom content', () => {
+      it('actionsTemplate renders in place of the actions group, and its close() dismisses the toast', async () => {
+        const { fixture, host, toasts } = createTemplateHost();
+
+        const ref = toasts.info('Pick one', {
+          actions: [{ label: 'ignored', onClick: () => undefined }],
+          actionsTemplate: host.actionsBlock(),
+          duration: false,
+        });
+        fixture.detectChanges();
+
+        const actions = fixture.nativeElement.querySelector(
+          '.andes-toast__actions',
+        ) as HTMLElement;
+        expect(actions.querySelector('andes-button')).toBeNull();
+        const custom = actions.querySelector<HTMLElement>('.custom-actions');
+        expect(custom?.textContent).toBe('Got it');
+
+        custom?.click();
+        fixture.detectChanges();
+        await expect(ref.afterClosed).resolves.toBe('close-button');
+      });
+
+      it('the actions group buttons are the small (24px) size', () => {
+        const { fixture, toasts } = createTemplateHost();
+
+        toasts.info('x', {
+          actions: [
+            { label: 'a', onClick: () => undefined },
+            { label: 'b', onClick: () => undefined },
+          ],
+        });
+        fixture.detectChanges();
+
+        const buttons = fixture.nativeElement.querySelectorAll(
+          '.andes-toast__actions .andes-button--sm',
+        );
+        expect(buttons).toHaveLength(2);
+      });
+
+      it('headless replaces the whole content but keeps the announcement and the card', () => {
+        const announceSpy = vi.fn().mockResolvedValue(undefined);
+        const { fixture, host, toasts } = createTemplateHost([
+          { provide: LiveAnnouncer, useValue: { announce: announceSpy } },
+        ]);
+
+        const ref = toasts.success('Custom body', {
+          title: 'Hidden title',
+          headless: host.headlessBlock(),
+          action: { label: 'Undo', onClick: () => undefined },
+        });
+        fixture.detectChanges();
+
+        const root = fixture.nativeElement.querySelector(
+          'andes-toast-item',
+        ) as HTMLElement;
+        expect(root.hasAttribute('data-headless')).toBe(true);
+        expect(root.querySelector('.headless-body')?.textContent).toContain(
+          'Custom body',
+        );
+        for (const part of [
+          '.andes-toast__icon',
+          '.andes-toast__title',
+          '.andes-toast__message',
+          '.andes-toast__action',
+          '.andes-toast__close',
+        ]) {
+          expect(root.querySelector(part)).toBeNull();
+        }
+        expect(announceSpy).toHaveBeenCalledWith(
+          'Hidden title. Custom body',
+          'polite',
+        );
+
+        root.querySelector<HTMLElement>('.headless-close')?.click();
+        fixture.detectChanges();
+        expect(toasts.toasts()).toHaveLength(0);
+        expect(ref.id).toBeTruthy();
+      });
+    });
+
+    describe('keyboard and screen readers', () => {
+      function press(init: KeyboardEventInit): KeyboardEvent {
+        const event = new KeyboardEvent('keydown', {
+          bubbles: true,
+          cancelable: true,
+          ...init,
+        });
+        document.dispatchEvent(event);
+        return event;
+      }
+
+      it('a region holding toasts is a labelled landmark advertising the hotkey', () => {
+        const { fixture, toasts, messages } = createTemplateHost();
+
+        toasts.info('a');
+        messages.info('b');
+        fixture.detectChanges();
+
+        const [notifications, messageRegion] = regions(fixture.nativeElement);
+        expect(notifications.getAttribute('role')).toBe('region');
+        expect(notifications.getAttribute('aria-label')).toBe('Notifications');
+        expect(notifications.getAttribute('aria-keyshortcuts')).toBe('Alt+T');
+        expect(messageRegion.getAttribute('aria-label')).toBe('Messages');
+
+        toasts.destroy();
+        fixture.detectChanges();
+        expect(notifications.getAttribute('role')).toBeNull();
+        expect(notifications.getAttribute('aria-label')).toBeNull();
+        expect(notifications.getAttribute('aria-keyshortcuts')).toBeNull();
+      });
+
+      it('Alt+T focuses the newest toast, which expands the deck and holds its countdown', () => {
+        vi.useFakeTimers();
+        const { fixture, toasts } = createTemplateHost();
+        toasts.info('older', { duration: 2000 });
+        toasts.info('newer', { duration: 2000 });
+        fixture.detectChanges();
+        const [region] = regions(fixture.nativeElement);
+        const front = region.querySelector(
+          'andes-toast-item[data-front]',
+        ) as HTMLElement;
+        expect(region.hasAttribute('data-stacked')).toBe(true);
+
+        const event = press({ altKey: true, code: 'KeyT', key: '†' });
+        fixture.detectChanges();
+
+        expect(event.defaultPrevented).toBe(true);
+        expect(document.activeElement).toBe(front);
+        expect(front.getAttribute('tabindex')).toBe('-1');
+        expect(region.hasAttribute('data-stacked')).toBe(false);
+        vi.advanceTimersByTime(10_000);
+        expect(toasts.toasts().map((t) => t.message)).toContain('newer');
+      });
+
+      it('ignores other chords, a missing modifier, and a disabled hotkey', () => {
+        const { fixture, host, toasts } = createTemplateHost();
+        toasts.info('a');
+        fixture.detectChanges();
+        const item = fixture.nativeElement.querySelector('andes-toast-item');
+
+        press({ code: 'KeyT', key: 't' });
+        press({ altKey: true, shiftKey: true, code: 'KeyT', key: 'T' });
+        press({ altKey: true, code: 'KeyN', key: 'n' });
+        expect(document.activeElement).not.toBe(item);
+
+        host.hotkey.set(false);
+        fixture.detectChanges();
+        press({ altKey: true, code: 'KeyT', key: 't' });
+        expect(document.activeElement).not.toBe(item);
+        expect(
+          regions(fixture.nativeElement)[0].getAttribute('aria-keyshortcuts'),
+        ).toBeNull();
+      });
+
+      it('accepts any chord, e.g. Ctrl+Shift+N, and falls back to the key when there is no code', () => {
+        const { fixture, host, toasts } = createTemplateHost();
+        host.hotkey.set('Ctrl+Shift+N');
+        toasts.info('a');
+        fixture.detectChanges();
+        const item = fixture.nativeElement.querySelector('andes-toast-item');
+
+        press({ ctrlKey: true, shiftKey: true, key: 'N' });
+
+        expect(document.activeElement).toBe(item);
+      });
+
+      it('Escape dismisses the focused toast and returns focus to where it was', async () => {
+        const { fixture, toasts } = createTemplateHost();
+        const outside = fixture.nativeElement.querySelector(
+          '.outside',
+        ) as HTMLElement;
+        outside.focus();
+        const ref = toasts.info('a', { duration: false });
+        fixture.detectChanges();
+
+        press({ altKey: true, code: 'KeyT', key: 't' });
+        const item = fixture.nativeElement.querySelector(
+          'andes-toast-item',
+        ) as HTMLElement;
+        expect(document.activeElement).toBe(item);
+
+        item.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+        );
+        fixture.detectChanges();
+
+        await expect(ref.afterClosed).resolves.toBe('dismissed');
+        expect(document.activeElement).toBe(outside);
+      });
+
+      it('Escape on a button inside the toast dismisses it too', async () => {
+        const { fixture, toasts } = createTemplateHost();
+        const ref = toasts.info('a', { duration: false });
+        fixture.detectChanges();
+
+        fixture.nativeElement
+          .querySelector('.andes-toast__close')
+          .dispatchEvent(
+            new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+          );
+        fixture.detectChanges();
+
+        await expect(ref.afterClosed).resolves.toBe('dismissed');
+      });
+    });
+
+    describe('container', () => {
+      it('moves the viewport into the element, or the element a selector finds', () => {
+        const { fixture, host } = createTemplateHost();
+        const mount = document.createElement('div');
+        mount.id = 'toast-mount';
+        document.body.appendChild(mount);
+        try {
+          const viewport = fixture.nativeElement.querySelector(
+            'andes-toast-viewport',
+          ) as HTMLElement;
+          expect(viewport.parentElement).toBe(fixture.nativeElement);
+
+          host.container.set(mount);
+          fixture.detectChanges();
+          expect(viewport.parentElement).toBe(mount);
+
+          host.container.set(null);
+          host.container.set('#toast-mount');
+          fixture.detectChanges();
+          expect(viewport.parentElement).toBe(mount);
+
+          host.container.set('#missing');
+          fixture.detectChanges();
+          expect(viewport.parentElement).toBe(mount);
+        } finally {
+          fixture.destroy();
+          mount.remove();
+        }
+      });
+
+      it('still renders its toasts after the move', () => {
+        const { fixture, host, toasts } = createTemplateHost();
+        const mount = document.createElement('div');
+        document.body.appendChild(mount);
+        try {
+          host.container.set(mount);
+          fixture.detectChanges();
+          toasts.info('moved');
+          fixture.detectChanges();
+          expect(mount.querySelectorAll('andes-toast-item')).toHaveLength(1);
+        } finally {
+          fixture.destroy();
+          mount.remove();
+        }
+      });
+    });
+
+    describe('message defaults', () => {
+      it('shows only the newest message of a collapsed message deck, 16px apart when expanded', () => {
+        const { fixture, messages } = createTemplateHost();
+        messages.config({ stack: { threshold: 2 } });
+
+        messages.info('1');
+        messages.info('2');
+        messages.info('3');
+        fixture.detectChanges();
+
+        const [region] = regions(fixture.nativeElement);
+        const rendered = Array.from(
+          region.querySelectorAll<HTMLElement>('andes-toast-item'),
+        );
+        expect(region.hasAttribute('data-stacked')).toBe(true);
+        expect(
+          rendered.map((i) => i.hasAttribute('data-stack-overflow')),
+        ).toEqual([true, true, false]);
+        expect(region.style.getPropertyValue('--_toast-gap')).toBe('16px');
+        expect(region.style.getPropertyValue('--_toast-peek')).toBe('8px');
+      });
     });
 
     it('applies className to the toast root', () => {

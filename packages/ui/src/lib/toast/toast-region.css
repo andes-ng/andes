@@ -5,18 +5,25 @@
  * - expanded: each card sits --_toast-offset px from the edge (the heights of the cards in
  *   front of it plus a --_toast-gap between each), newest against the edge;
  * - collapsed (data-stacked): every card sits at the edge, each one behind the front nudged
- *   --_toast-gap px further back, scaled down 5% per step, and clamped to the front card's
- *   height so only its edge peeks out.
+ *   --_toast-peek px further back, scaled down 6% per step towards the edge it is anchored to,
+ *   and clamped to the front card's height so only its edge peeks out.
  *
  * --_toast-lift is the direction the stack grows in: -1 (upwards) from a bottom edge, 1
  * (downwards) from a top edge.
+ *
+ * Motion follows Ant Design: 200ms on an ease-in-out curve, and a card slides in from (and back
+ * out to) 64px beyond its side edge - sideways in a corner, vertically at an edge centre -
+ * while fading. --andes-toast-duration overrides the 200ms.
  */
 :host {
   --_toast-offset-default: 1.5rem;
+  --_toast-duration: var(--andes-toast-duration, 200ms);
+  --_toast-ease: cubic-bezier(0.645, 0.045, 0.355, 1);
+  --_toast-slide: 4rem;
   position: fixed;
   z-index: var(--andes-z-index-toast);
   box-sizing: border-box;
-  width: var(--andes-toast-width, 22.25rem);
+  width: var(--andes-toast-width, 24rem);
   max-width: calc(
     100vw - 2 * var(--_toast-offset-x, var(--_toast-offset-default))
   );
@@ -27,20 +34,28 @@
 
 :host([data-placement^='top']) {
   --_toast-lift: 1;
+  --_toast-origin: center bottom;
   top: var(--_toast-offset-default);
 }
 
 :host([data-placement^='bottom']) {
   --_toast-lift: -1;
+  --_toast-origin: center top;
   bottom: var(--_toast-offset-default);
 }
 
 :host([data-placement$='left']) {
+  --_toast-enter-x: calc(var(--_toast-slide) * -1);
   left: var(--_toast-offset-x, var(--_toast-offset-default));
 }
 
 :host([data-placement$='right']) {
+  --_toast-enter-x: var(--_toast-slide);
   right: var(--_toast-offset-x, var(--_toast-offset-default));
+}
+
+:host([data-placement$='center']) {
+  --_toast-enter-y: calc(var(--_toast-lift) * var(--_toast-slide) * -1);
 }
 
 /* Centred by auto margins between both insets rather than left: 50% + translateX(-50%), which
@@ -50,7 +65,7 @@
   margin-inline: auto;
 }
 
-/* Messages: a top-centre column of content-sized cards, 8px from the top. */
+/* Messages: a top-centre column of content-sized cards, 8px from the top, 16px apart. */
 :host([data-flavor='message']) {
   --_toast-offset-default: var(--andes-space-2);
   inset-inline: var(--andes-space-4);
@@ -70,14 +85,15 @@ andes-toast-item {
       calc(var(--_toast-y) + var(--_toast-swipe-y, 0px))
     )
     scale(var(--_toast-scale));
+  transform-origin: var(--_toast-origin);
   transition:
-    transform 400ms ease,
-    opacity 400ms ease,
-    height 400ms ease,
+    transform var(--_toast-duration) var(--_toast-ease),
+    opacity var(--_toast-duration) var(--_toast-ease),
+    height var(--_toast-duration) var(--_toast-ease),
     box-shadow 200ms ease;
-  /* Slides in from beyond the anchoring edge. The individual translate property composes
-     with the transform above, so a card entering mid-layout doesn't jump. */
-  animation: andes-toast-enter 400ms ease;
+  /* Slides in from beyond the side edge. The individual translate property composes with the
+     transform above, so a card entering mid-layout doesn't jump. */
+  animation: andes-toast-enter var(--_toast-duration) var(--_toast-ease);
 }
 
 :host([data-placement^='top']) andes-toast-item {
@@ -124,9 +140,9 @@ andes-toast-item {
 
 :host([data-stacked]) andes-toast-item {
   --_toast-y: calc(
-    var(--_toast-lift) * var(--_toast-depth, 0) * var(--_toast-gap)
+    var(--_toast-lift) * var(--_toast-depth, 0) * var(--_toast-peek)
   );
-  --_toast-scale: calc(1 - var(--_toast-depth, 0) * 0.05);
+  --_toast-scale: max(0.5, calc(1 - var(--_toast-depth, 0) * 0.06));
 }
 
 :host([data-stacked]) andes-toast-item:not([data-front]) {
@@ -143,11 +159,11 @@ andes-toast-item[data-swiping] {
   transition: none;
 }
 
-/* Exit: slides back out past the edge it came from while fading - or, when swiped, keeps
-   going in the swipe direction. Angular keeps the node until this animation ends. */
+/* Exit: slides back out the way it came in while fading - or, when swiped, keeps going in
+   the swipe direction. Angular keeps the node until this animation ends. */
 andes-toast-item.andes-toast--leaving {
   pointer-events: none;
-  animation: andes-toast-exit 200ms ease forwards;
+  animation: andes-toast-exit var(--_toast-duration) var(--_toast-ease) forwards;
 }
 
 andes-toast-item.andes-toast--leaving[data-swipe-out='left'] {
@@ -169,14 +185,14 @@ andes-toast-item.andes-toast--leaving[data-swipe-out='bottom'] {
 @keyframes andes-toast-enter {
   from {
     opacity: 0;
-    translate: 0 calc(var(--_toast-lift) * -100%);
+    translate: var(--_toast-enter-x, 0) var(--_toast-enter-y, 0);
   }
 }
 
 @keyframes andes-toast-exit {
   to {
     opacity: 0;
-    translate: 0 calc(var(--_toast-lift) * -100%);
+    translate: var(--_toast-enter-x, 0) var(--_toast-enter-y, 0);
   }
 }
 

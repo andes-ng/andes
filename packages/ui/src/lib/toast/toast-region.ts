@@ -6,6 +6,7 @@ import {
   ElementRef,
   inject,
   input,
+  output,
   signal,
   untracked,
 } from '@angular/core';
@@ -14,6 +15,7 @@ import { AndesToastItem } from './toast-item';
 import type { AndesToastController } from './toast-queue';
 import {
   ANDES_TOAST_DEFAULT_GAP,
+  ANDES_TOAST_DEFAULT_STACK_PEEK,
   ANDES_TOAST_DEFAULT_STACK_THRESHOLD,
   ANDES_TOAST_DEFAULT_VISIBLE_TOASTS,
   type AndesToast,
@@ -53,12 +55,13 @@ function toCssLength(value: number | string | undefined): string | null {
  *
  * With `stack` on, the toasts collapse into a deck once there are more than `threshold`: the
  * newest in front, up to `visibleToasts - 1` older ones peeking out behind it (each nudged
- * `gap` px further back and scaled down 5%), expanding back into the list while the pointer
+ * `peek` px further back and scaled down 6%), expanding back into the list while the pointer
  * is over the stack or focus is inside it. While a deck is hovered, every toast's countdown
  * pauses; in a plain list only the hovered toast's does.
  *
  * Also owns the remaining interaction wiring: focus pause, close/action/cancel buttons,
- * body clicks and swipe-to-dismiss.
+ * body clicks and swipe-to-dismiss. While it holds toasts it is a labelled landmark, so a
+ * screen-reader user can find it (and the viewport's hotkey can focus it).
  */
 @Component({
   selector: 'andes-toast-region',
@@ -71,12 +74,16 @@ function toCssLength(value: number | string | undefined): string | null {
     '[attr.data-placement]': 'placement()',
     '[attr.data-flavor]': 'flavor()',
     '[attr.data-stack-enabled]': 'stackThreshold() !== null ? "" : null',
+    '[attr.role]': 'toasts().length ? "region" : null',
+    '[attr.aria-label]': 'toasts().length ? label() : null',
+    '[attr.aria-keyshortcuts]': 'toasts().length ? hotkey() || null : null',
     '[attr.data-stacked]': 'stacked() ? "" : null',
     '[attr.data-hovered]': 'hovered() && stackThreshold() !== null ? "" : null',
     '[style.top]': 'topOffset()',
     '[style.bottom]': 'bottomOffset()',
     '[style.--_toast-offset-x]': 'inlineOffset()',
     '[style.--_toast-gap]': 'gap() + "px"',
+    '[style.--_toast-peek]': 'peek() + "px"',
     '[style.--_toast-front-height]': 'frontHeight()',
     '(mouseenter)': 'onMouseEnter()',
     '(mouseleave)': 'onMouseLeave()',
@@ -94,6 +101,9 @@ export class AndesToastRegion {
   readonly stack = input<AndesToastStackConfig>(false);
   readonly visibleToasts = input(ANDES_TOAST_DEFAULT_VISIBLE_TOASTS);
   readonly gap = input(ANDES_TOAST_DEFAULT_GAP);
+  readonly peek = input(ANDES_TOAST_DEFAULT_STACK_PEEK);
+  /** The hotkey that focuses the region, for `aria-keyshortcuts`. */
+  readonly hotkey = input<string | false>(false);
   readonly swipeDirections = input<
     readonly AndesToastSwipeDirection[] | undefined
   >(undefined);
@@ -102,14 +112,21 @@ export class AndesToastRegion {
   readonly bottom = input<number | string | undefined>(undefined);
   readonly rtl = input(false);
 
+  /** Escape was pressed inside a toast, which has just been dismissed. */
+  readonly escaped = output<void>();
+
   protected readonly hovered = signal(false);
   protected readonly focused = signal(false);
 
   /** Natural heights reported by each item, by toast id. */
   private readonly heights = signal<ReadonlyMap<string, number>>(new Map());
 
-  /** Ids whose timer this region paused because the stack is hovered. */
-  private readonly hoverPaused = new Set<string>();
+  /** Ids whose timer this region paused because the toast or its stack is hovered. */
+  private readonly hoverPaused = signal<ReadonlySet<string>>(new Set());
+
+  protected readonly label = computed(() =>
+    this.flavor() === 'message' ? 'Messages' : 'Notifications',
+  );
 
   protected readonly stackThreshold = computed(() => {
     const stack = this.stack();
@@ -211,9 +228,9 @@ export class AndesToastRegion {
       const hovered = this.hovered();
       untracked(() => {
         const ids = new Set(toasts.map((toast) => toast.id));
-        for (const id of [...this.hoverPaused]) {
+        for (const id of this.hoverPaused()) {
           if (!ids.has(id)) {
-            this.hoverPaused.delete(id);
+            this.releaseHover(id);
           }
         }
         if (hovered && this.stackThreshold() !== null) {
@@ -258,8 +275,8 @@ export class AndesToastRegion {
 
   protected onMouseLeave(): void {
     this.hovered.set(false);
-    for (const id of [...this.hoverPaused]) {
-      this.hoverPaused.delete(id);
+    for (const id of this.hoverPaused()) {
+      this.releaseHover(id);
       this.controller().resume(id);
     }
   }
@@ -269,11 +286,11 @@ export class AndesToastRegion {
     if (
       this.stackThreshold() !== null ||
       !toast.pauseOnHover ||
-      this.hoverPaused.has(toast.id)
+      this.hoverPaused().has(toast.id)
     ) {
       return;
     }
-    this.hoverPaused.add(toast.id);
+    this.holdForHover(toast.id);
     this.controller().pause(toast.id);
   }
 
@@ -281,7 +298,7 @@ export class AndesToastRegion {
     if (this.stackThreshold() !== null) {
       return;
     }
-    if (this.hoverPaused.delete(toast.id)) {
+    if (this.releaseHover(toast.id)) {
       this.controller().resume(toast.id);
     }
   }
@@ -295,19 +312,44 @@ export class AndesToastRegion {
     }
     action.onClick();
     if (action.dismissOnClick !== false) {
-      this.hoverPaused.delete(toast.id);
+      this.releaseHover(toast.id);
       this.controller().closeWithReason(toast.id, 'action');
     }
   }
 
   protected onClose(toast: AndesToast): void {
-    this.hoverPaused.delete(toast.id);
+    this.releaseHover(toast.id);
     this.controller().closeWithReason(toast.id, 'close-button');
   }
 
   protected onSwiped(toast: AndesToast): void {
-    this.hoverPaused.delete(toast.id);
+    this.releaseHover(toast.id);
     this.controller().closeWithReason(toast.id, 'swipe');
+  }
+
+  protected onEscape(toast: AndesToast): void {
+    this.releaseHover(toast.id);
+    this.controller().closeWithReason(toast.id, 'dismissed');
+    this.escaped.emit();
+  }
+
+  /** Whether the toast's countdown is held by the pointer or a hidden page, for the progress bar. */
+  protected isPaused(toast: AndesToast): boolean {
+    return this.hoverPaused().has(toast.id) || this.controller().pageHidden();
+  }
+
+  /** Whether any toast is open here. */
+  hasToasts(): boolean {
+    return this.toasts().length > 0;
+  }
+
+  /** Moves focus to the front toast (the newest of a deck, the first of a list). */
+  focusFront(): boolean {
+    const front = this.host.nativeElement.querySelector<HTMLElement>(
+      'andes-toast-item[data-front]',
+    );
+    front?.focus();
+    return !!front && front.ownerDocument.activeElement === front;
   }
 
   protected onBodyClick(toast: AndesToast): void {
@@ -326,10 +368,27 @@ export class AndesToastRegion {
 
   private pauseHovered(): void {
     for (const toast of this.toasts()) {
-      if (toast.pauseOnHover && !this.hoverPaused.has(toast.id)) {
-        this.hoverPaused.add(toast.id);
+      if (toast.pauseOnHover && !this.hoverPaused().has(toast.id)) {
+        this.holdForHover(toast.id);
         this.controller().pause(toast.id);
       }
     }
+  }
+
+  private holdForHover(id: string): void {
+    this.hoverPaused.update((current) => new Set(current).add(id));
+  }
+
+  /** Returns whether the id was held. */
+  private releaseHover(id: string): boolean {
+    if (!this.hoverPaused().has(id)) {
+      return false;
+    }
+    this.hoverPaused.update((current) => {
+      const next = new Set(current);
+      next.delete(id);
+      return next;
+    });
+    return true;
   }
 }

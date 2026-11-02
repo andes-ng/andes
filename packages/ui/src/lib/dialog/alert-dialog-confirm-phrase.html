@@ -1,0 +1,26 @@
+<label class="andes-alert-dialog__phrase-label" [attr.for]="inputId">
+  {{ labelParts().before }} @if (labelParts().hasPhrase) {
+  <code class="andes-alert-dialog__phrase">{{ phrase() }}</code>{{
+  labelParts().after }} }
+</label>
+<andes-input
+  [id]="inputId"
+  [(value)]="value"
+  [placeholder]="placeholder()"
+  [status]="status() === 'mismatch' ? 'error' : undefined"
+  [disabled]="state.pending()"
+  [aria-describedby]="hintId"
+  autocomplete="off"
+  (pressEnter)="onEnter($event)"
+  (blurred)="onBlur()"
+  (paste)="onPaste($event)"
+  (drop)="onPaste($event)"
+/>
+<p
+  class="andes-alert-dialog__phrase-hint"
+  role="status"
+  [id]="hintId"
+  [attr.data-state]="status()"
+>
+  {{ hint() }}
+</p>

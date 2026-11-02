@@ -41,3 +41,22 @@ export {
   AndesAlertDialogTitle,
   AndesAlertDialogTrigger,
 } from './alert-dialog';
+export type {
+  AndesAlertDialogHoldMessages,
+  AndesAlertDialogInitialFocus,
+  AndesAlertDialogTone,
+} from './alert-dialog';
+export { AndesAlertDialogSecondary } from './alert-dialog';
+export { AndesAlertDialogAcknowledge } from './alert-dialog-acknowledge';
+export {
+  AndesAlertDialogConfirmPhrase,
+  matchesConfirmPhrase,
+} from './alert-dialog-confirm-phrase';
+export type { AndesConfirmPhraseOptions } from './alert-dialog-confirm-phrase';
+export { AndesAlertDialogCountdown } from './alert-dialog-countdown';
+export {
+  AndesAlertDialogError,
+  AndesAlertDialogIcon,
+} from './alert-dialog-feedback';
+export { AndesAlertDialogImpact } from './alert-dialog-impact';
+export type { AndesAlertDialogImpactItem } from './alert-dialog-impact';

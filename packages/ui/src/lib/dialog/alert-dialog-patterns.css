@@ -1,0 +1,404 @@
+/*
+ * The confirmation patterns of the alert dialog: the gating parts (phrase, acknowledge,
+ * countdown), the action's blocked / pending / hold / shake states, the tone accent and the
+ * impact and error summaries. Loaded by AndesAlertDialogContent next to dialog.css, which
+ * renders with ViewEncapsulation.None for the same reason this file is plain global CSS:
+ * the parts are consumer markup projected from the consumer's own view. Every class is
+ * namespaced `andes-alert-dialog__*` or `andes-dialog__*`. Tokens only, logical properties
+ * throughout (RTL needs no overrides), and every animation has a reduced-motion twin.
+ */
+
+/* ------------------------------------------------------------------ hidden helpers */
+
+/* The live region and the sentence behind the blocked action's aria-describedby: present
+   for assistive technology, invisible and out of the layout. */
+.andes-alert-dialog__sr {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------------- tone */
+
+.andes-dialog[data-tone='danger'],
+.andes-alert-dialog__icon[data-tone='danger'] {
+  --andes-alert-tone: var(--andes-color-danger);
+  --andes-alert-tone-foreground: var(--andes-color-danger-foreground);
+}
+
+.andes-dialog[data-tone='warning'],
+.andes-alert-dialog__icon[data-tone='warning'] {
+  --andes-alert-tone: var(--andes-color-warning);
+  --andes-alert-tone-foreground: var(--andes-color-warning-foreground);
+}
+
+.andes-dialog[data-tone='info'],
+.andes-alert-dialog__icon[data-tone='info'] {
+  --andes-alert-tone: var(--andes-color-info);
+  --andes-alert-tone-foreground: var(--andes-color-info-foreground);
+}
+
+.andes-dialog[data-tone='success'],
+.andes-alert-dialog__icon[data-tone='success'] {
+  --andes-alert-tone: var(--andes-color-success);
+  --andes-alert-tone-foreground: var(--andes-color-success-foreground);
+}
+
+/* A thin band along the top edge. The surface clips it to its rounded corners. */
+.andes-dialog[data-tone]::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: 2;
+  block-size: 3px;
+  background-color: var(--andes-alert-tone);
+}
+
+.andes-alert-dialog__icon {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  display: inline-flex;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  color: var(--andes-alert-tone);
+}
+
+.andes-alert-dialog__icon svg {
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.andes-alert-dialog__icon-shape {
+  fill: var(--andes-alert-tone);
+  stroke: var(--andes-alert-tone);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.andes-alert-dialog__icon-glyph {
+  fill: none;
+  stroke: var(--andes-alert-tone-foreground);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Room for the icon beside the title and description. The header is already a sticky
+   (so positioned) box inside the dialog's viewport, which the icon anchors to. */
+.andes-dialog__header:has(> .andes-alert-dialog__icon) {
+  padding-inline-start: calc(1.5rem + var(--andes-space-3));
+}
+
+/* ----------------------------------------------------------------- footer actions */
+
+/* The third answer sits at the start edge, away from Cancel and the action. */
+.andes-dialog__secondary {
+  margin-inline-end: auto;
+}
+
+/* The control inside an action: the real button within <andes-button>, or the host when
+   the directive sits on a native button. */
+.andes-dialog__action[data-pending] {
+  cursor: progress;
+}
+
+.andes-dialog__action[data-pending] .andes-button::before,
+.andes-dialog__action[data-pending]:is(button, a)::before {
+  content: '';
+  box-sizing: border-box;
+  display: inline-block;
+  flex-shrink: 0;
+  inline-size: 1em;
+  block-size: 1em;
+  border: max(1.5px, 0.12em) solid currentcolor;
+  border-inline-end-color: transparent;
+  border-radius: var(--andes-radius-full);
+  animation: andes-alert-dialog-spin 1s linear infinite;
+}
+
+.andes-dialog__action[data-pending]:is(button, a)::before {
+  margin-inline-end: var(--andes-space-2);
+}
+
+@keyframes andes-alert-dialog-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Hold to confirm: the label never selects, a long press never opens a menu, and a
+   translucent fill of the label's own colour sweeps across while the hold runs. */
+.andes-dialog__action[data-hold] {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+
+.andes-dialog__action[data-hold]:is(button, a) {
+  position: relative;
+  overflow: hidden;
+}
+
+.andes-dialog__action[data-hold] .andes-button::after,
+.andes-dialog__action[data-hold]:is(button, a)::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  inline-size: 0;
+  background-color: color-mix(in srgb, currentcolor 30%, transparent);
+  pointer-events: none;
+}
+
+.andes-dialog__action[data-holding] .andes-button::after,
+.andes-dialog__action[data-holding]:is(button, a)::after {
+  animation: andes-alert-dialog-hold var(--andes-hold-duration, 1500ms) linear
+    forwards;
+}
+
+@keyframes andes-alert-dialog-hold {
+  to {
+    inline-size: 100%;
+  }
+}
+
+/* A blocked attempt: a short side-to-side shake of the control. */
+.andes-dialog__action[data-shake] .andes-button,
+.andes-dialog__action[data-shake]:is(button, a) {
+  animation: andes-alert-dialog-shake 400ms var(--andes-motion-ease-out) both;
+}
+
+@keyframes andes-alert-dialog-shake {
+  20%,
+  60% {
+    transform: translateX(-4px);
+  }
+  40%,
+  80% {
+    transform: translateX(4px);
+  }
+}
+
+/* ---------------------------------------------------------------- confirm phrase */
+
+.andes-alert-dialog__phrase-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--andes-space-2);
+}
+
+.andes-alert-dialog__phrase-label {
+  color: var(--andes-color-popover-foreground);
+  font-weight: var(--andes-font-weight-medium);
+}
+
+/* One click selects the whole phrase, to copy it or to see exactly what to type. */
+.andes-alert-dialog__phrase {
+  padding: 0.125rem 0.375rem;
+  border-radius: var(--andes-radius-sm);
+  background-color: color-mix(
+    in srgb,
+    var(--andes-color-foreground) 8%,
+    transparent
+  );
+  font-family: var(--andes-font-family-mono), monospace;
+  font-size: 0.875em;
+  overflow-wrap: anywhere;
+  -webkit-user-select: all;
+  user-select: all;
+}
+
+/* Always occupies its line, so the dialog does not jump when the first message arrives. */
+.andes-alert-dialog__phrase-hint {
+  min-block-size: 1.25rem;
+  margin: 0;
+  color: var(--andes-color-muted-foreground);
+  font-size: var(--andes-font-size-xs);
+  line-height: 1.25rem;
+}
+
+.andes-alert-dialog__phrase-hint[data-state='matched'] {
+  color: var(--andes-color-success-text);
+}
+
+.andes-alert-dialog__phrase-hint[data-state='mismatch'] {
+  color: var(--andes-color-danger-text);
+}
+
+/* ------------------------------------------------------------------- countdown */
+
+.andes-alert-dialog__countdown {
+  display: flex;
+  flex-direction: column;
+  gap: var(--andes-space-2);
+}
+
+.andes-alert-dialog__countdown-text {
+  margin: 0;
+  color: var(--andes-color-muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.andes-alert-dialog__countdown-bar {
+  display: block;
+  block-size: 3px;
+  overflow: hidden;
+  border-radius: var(--andes-radius-full);
+  background-color: color-mix(
+    in srgb,
+    var(--andes-color-foreground) 10%,
+    transparent
+  );
+}
+
+.andes-alert-dialog__countdown-fill {
+  display: block;
+  block-size: 100%;
+  background-color: var(--andes-alert-tone, var(--andes-color-primary));
+  transition: inline-size 1s linear;
+}
+
+.andes-alert-dialog__countdown[data-state='ready']
+  .andes-alert-dialog__countdown-fill {
+  background-color: var(--andes-color-success);
+}
+
+.andes-alert-dialog__countdown[data-state='ready']
+  .andes-alert-dialog__countdown-text {
+  color: var(--andes-color-success-text);
+}
+
+/* -------------------------------------------------------------------- impact */
+
+.andes-alert-dialog__impact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--andes-space-2);
+  padding: var(--andes-space-3);
+  border: 1px solid var(--andes-color-border);
+  border-radius: var(--andes-radius-md);
+  background-color: color-mix(
+    in srgb,
+    var(--andes-color-foreground) 4%,
+    transparent
+  );
+}
+
+.andes-alert-dialog__impact-heading {
+  margin: 0;
+  color: var(--andes-color-popover-foreground);
+  font-weight: var(--andes-font-weight-medium);
+}
+
+.andes-alert-dialog__impact-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--andes-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.andes-alert-dialog__impact-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--andes-space-3);
+}
+
+.andes-alert-dialog__impact-text {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.andes-alert-dialog__impact-detail {
+  color: var(--andes-color-muted-foreground);
+  font-size: var(--andes-font-size-xs);
+  line-height: 1rem;
+}
+
+.andes-alert-dialog__impact-count {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.andes-alert-dialog__impact-toggle {
+  align-self: flex-start;
+}
+
+/* ---------------------------------------------------------------------- error */
+
+.andes-alert-dialog__error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--andes-space-2);
+  padding: var(--andes-space-2) var(--andes-space-3);
+  border: 1px solid
+    color-mix(in srgb, var(--andes-color-danger) 40%, transparent);
+  border-radius: var(--andes-radius-md);
+  background-color: color-mix(
+    in srgb,
+    var(--andes-color-danger) 8%,
+    transparent
+  );
+  color: var(--andes-color-danger-text);
+}
+
+/* `display: flex` above would otherwise beat the [hidden] the part sets while there
+   is no failure to show. */
+.andes-alert-dialog__error[hidden] {
+  display: none;
+}
+
+.andes-alert-dialog__error-icon {
+  flex-shrink: 0;
+  inline-size: 1rem;
+  block-size: 1rem;
+  margin-block-start: 0.1875rem;
+}
+
+.andes-alert-dialog__error-icon circle {
+  fill: currentcolor;
+}
+
+.andes-alert-dialog__error-icon path {
+  fill: none;
+  stroke: var(--andes-color-popover);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+/* --------------------------------------------------------------- reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  .andes-dialog__action[data-pending] .andes-button::before,
+  .andes-dialog__action[data-pending]:is(button, a)::before {
+    animation-duration: 2.4s;
+  }
+
+  /* The hold still has to be held, so its progress stays visible - in steps. */
+  .andes-dialog__action[data-holding] .andes-button::after,
+  .andes-dialog__action[data-holding]:is(button, a)::after {
+    animation-timing-function: steps(5, end);
+  }
+
+  .andes-dialog__action[data-shake] .andes-button,
+  .andes-dialog__action[data-shake]:is(button, a) {
+    animation: none;
+  }
+
+  .andes-alert-dialog__countdown-fill {
+    transition: none;
+  }
+}

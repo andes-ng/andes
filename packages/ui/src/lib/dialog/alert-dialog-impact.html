@@ -1,0 +1,31 @@
+@if (heading(); as text) {
+<p class="andes-alert-dialog__impact-heading" [id]="headingId">{{ text }}</p>
+}
+<ul
+  class="andes-alert-dialog__impact-list"
+  [attr.aria-labelledby]="heading() ? headingId : null"
+>
+  @for (item of visible(); track item.label) {
+  <li class="andes-alert-dialog__impact-item">
+    <span class="andes-alert-dialog__impact-text">
+      <span class="andes-alert-dialog__impact-label">{{ item.label }}</span>
+      @if (item.detail) {
+      <span class="andes-alert-dialog__impact-detail">{{ item.detail }}</span>
+      }
+    </span>
+    @if (item.count !== undefined) {
+    <span class="andes-alert-dialog__impact-count">{{ item.count }}</span>
+    }
+  </li>
+  }
+</ul>
+@if (collapsible()) {
+<andes-button
+  class="andes-alert-dialog__impact-toggle"
+  variant="link"
+  size="sm"
+  (click)="toggle()"
+>
+  {{ toggleLabel() }}
+</andes-button>
+}

@@ -1,12 +1,14 @@
-import type { Meta, StoryObj } from '@storybook/angular';
+import { type Meta, moduleMetadata, type StoryObj } from '@storybook/angular';
 import { fn } from 'storybook/test';
 
+import { AndesButton } from '../button/button';
 import { AndesAlert } from './alert';
 
 const meta: Meta<AndesAlert> = {
-  title: 'Feedback/Alert',
+  title: 'Feedback/Alert/Basics',
   component: AndesAlert,
   tags: ['autodocs'],
+  decorators: [moduleMetadata({ imports: [AndesButton] })],
   argTypes: {
     severity: {
       control: 'select',
@@ -87,9 +89,6 @@ export const Variants: Story = {
   }),
 };
 
-const actionStyle =
-  'all: unset; cursor: pointer; font-weight: 500; text-decoration: underline;';
-
 /**
  * Content shapes. Without a title the alert keeps its compact one-line metrics; with a title and
  * a description the icon and title step up a size so the heading leads the message. `showIcon`
@@ -98,10 +97,9 @@ const actionStyle =
  */
 export const Content: Story = {
   render: () => ({
-    props: { actionStyle },
     template: `<ng-template #richTitle let-severity>Payment failed <span style="font-weight: 400;">({{ severity }})</span></ng-template>
       <ng-template #richDescription>Your card was declined. <strong>No charge was made.</strong></ng-template>
-      <ng-template #retry><button type="button" [style]="actionStyle">Try another card</button></ng-template>
+      <ng-template #retry><andes-button size="sm" variant="outline" danger>Try another card</andes-button></ng-template>
       <div style="display: flex; flex-direction: column; gap: 0.75rem; max-width: 32rem;">
         <andes-alert severity="success">Your changes have been saved (description only, compact).</andes-alert>
         <andes-alert severity="info" closable>
@@ -142,23 +140,22 @@ export const CustomIcon: Story = {
  */
 export const Actions: Story = {
   render: () => ({
-    props: { actionStyle },
     template: `<div style="display: flex; flex-direction: column; gap: 1rem; max-width: 36rem;">
       <andes-alert severity="warning">
         <span slot="title">Your plan expires soon</span>
         Renew before the end of the month to avoid any interruption.
-        <button slot="action" type="button" [style]="actionStyle">Renew now</button>
+        <andes-button slot="action" size="sm" variant="outline">Renew now</andes-button>
       </andes-alert>
       <andes-alert severity="success" actionPlacement="end" closable>
         Invoice F001-000123 was voided.
-        <button slot="action" type="button" [style]="actionStyle">Undo</button>
+        <andes-button slot="action" size="sm" variant="ghost">Undo</andes-button>
       </andes-alert>
       <andes-alert severity="danger" actionPlacement="end" closable title="Sync failed" description="The tax authority service did not answer. Your documents are queued and will be sent again automatically.">
-        <button slot="action" type="button" [style]="actionStyle">Retry now</button>
+        <andes-button slot="action" size="sm" variant="outline" danger>Retry now</andes-button>
       </andes-alert>
       <andes-alert severity="info" actionPlacement="end" [showIcon]="false">
         3 rows selected.
-        <button slot="action" type="button" [style]="actionStyle">Clear selection</button>
+        <andes-button slot="action" size="sm" variant="ghost">Clear selection</andes-button>
       </andes-alert>
     </div>`,
   }),
@@ -283,7 +280,7 @@ export const LoopBanner: Story = {
       </andes-alert>
       <andes-alert banner marquee severity="info" [variant]="variant">
         New: monthly reports can now be exported to PDF from the Reports page.
-        <a href="#" style="color: inherit; font-weight: 500;">See what changed</a>
+        <andes-button variant="link" size="xs">See what changed</andes-button>
       </andes-alert>
     </div>`,
   }),

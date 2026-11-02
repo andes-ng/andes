@@ -7,6 +7,12 @@ import {
   AndesCheckableTagOption,
   AndesCheckableTagValue,
 } from './checkable-tag-group';
+import {
+  AndesCheckableTagGroupClassNames,
+  AndesCheckableTagGroupSemantic,
+  AndesCheckableTagGroupSemanticInfo,
+  AndesCheckableTagGroupStyles,
+} from './tag-semantic';
 
 @Component({
   imports: [AndesCheckableTagGroup],
@@ -173,5 +179,105 @@ describe('AndesCheckableTagGroup option icon and className', () => {
     expect(hosts[0].querySelector('.opt-icon')).toBeTruthy();
     expect(hosts[1].querySelector('.opt-icon')).toBeNull();
     expect(hosts[0].textContent?.trim()).toBe('iAlpha');
+  });
+});
+
+describe('AndesCheckableTagGroup classNames and styles', () => {
+  @Component({
+    imports: [AndesCheckableTagGroup],
+    template: `<andes-checkable-tag-group
+      aria-label="Styled"
+      [options]="options()"
+      [multiple]="multiple()"
+      [classNames]="classNames()"
+      [styles]="styles()"
+    />`,
+  })
+  class StyledHost {
+    readonly options = signal<readonly AndesCheckableTagOption[]>([
+      { value: 'a', label: 'A' },
+      {
+        value: 'b',
+        label: 'B',
+        style: { fontWeight: 700, paddingInline: 10 },
+      },
+    ]);
+    readonly multiple = signal(false);
+    readonly classNames = signal<
+      | AndesCheckableTagGroupSemantic<AndesCheckableTagGroupClassNames>
+      | undefined
+    >(undefined);
+    readonly styles = signal<
+      AndesCheckableTagGroupSemantic<AndesCheckableTagGroupStyles> | undefined
+    >(undefined);
+  }
+
+  function setup(apply: (host: StyledHost) => void = () => undefined) {
+    const fixture = TestBed.createComponent(StyledHost);
+    apply(fixture.componentInstance);
+    fixture.detectChanges();
+    const group = fixture.nativeElement.querySelector(
+      'andes-checkable-tag-group',
+    ) as HTMLElement;
+    const tags = () =>
+      Array.from(group.querySelectorAll('[data-slot="tag"]')) as HTMLElement[];
+    return { fixture, group, tags };
+  }
+
+  it('adds the root class to the group and the item class to every tag', () => {
+    const { group, tags } = setup((host) =>
+      host.classNames.set({ root: 'g-root', item: 'g-item' }),
+    );
+
+    expect(group.classList).toContain('g-root');
+    expect(tags().every((tag) => tag.classList.contains('g-item'))).toBe(true);
+  });
+
+  it('applies root and item styles, with px on numbers', () => {
+    const { group, tags } = setup((host) =>
+      host.styles.set({
+        root: { gap: 12, padding: '8px 12px', backgroundColor: 'rgb(1, 2, 3)' },
+        item: { color: 'rgb(82, 196, 26)' },
+      }),
+    );
+
+    expect(group.style.gap).toBe('12px');
+    expect(group.style.padding).toBe('8px 12px');
+    expect(group.style.backgroundColor).toBe('rgb(1, 2, 3)');
+    expect(tags()[0].style.color).toBe('rgb(82, 196, 26)');
+  });
+
+  it("layers an option's own style over the item style", () => {
+    const { tags } = setup((host) =>
+      host.styles.set({ item: { color: 'rgb(1, 1, 1)', fontWeight: 400 } }),
+    );
+
+    expect(tags()[0].style.fontWeight).toBe('400');
+    expect(tags()[1].style.fontWeight).toBe('700');
+    expect(tags()[1].style.paddingInline).toBe('10px');
+    expect(tags()[1].style.color).toBe('rgb(1, 1, 1)');
+  });
+
+  it('resolves a function against the group props', () => {
+    const fn = (info: AndesCheckableTagGroupSemanticInfo) =>
+      info.props.multiple
+        ? { root: { gap: 16 }, item: { color: 'rgb(143, 135, 241)' } }
+        : {};
+    const { fixture, group, tags } = setup((host) => host.styles.set(fn));
+
+    expect(group.style.gap).toBe('');
+
+    fixture.componentInstance.multiple.set(true);
+    fixture.detectChanges();
+
+    expect(group.style.gap).toBe('16px');
+    expect(tags()[0].style.color).toBe('rgb(143, 135, 241)');
+  });
+
+  it('keeps the plain look without classNames or styles', () => {
+    const { group, tags } = setup();
+
+    expect(group.getAttribute('style')).toBeNull();
+    expect(tags()[0].getAttribute('style')).toBeNull();
   });
 });

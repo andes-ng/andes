@@ -9,6 +9,14 @@ import {
 } from '@angular/core';
 
 import { AndesTag } from './tag';
+import {
+  AndesCheckableTagGroupClassNames,
+  AndesCheckableTagGroupSemantic,
+  AndesCheckableTagGroupStyles,
+  AndesStyleMap,
+  resolveSemantic,
+  toStyleMap,
+} from './tag-semantic';
 
 export type AndesCheckableTagValue = string | number;
 
@@ -20,6 +28,8 @@ export interface AndesCheckableTagOption {
   readonly icon?: TemplateRef<unknown>;
   /** Extra class(es) for this option's `andes-tag` host - a per-option styling hook. */
   readonly className?: string;
+  /** Inline styles for this option's tag (the visible element); numbers get `px`. */
+  readonly style?: AndesStyleMap;
 }
 
 /**
@@ -46,6 +56,8 @@ export type AndesCheckableTagGroupValue =
   host: {
     role: 'group',
     '[attr.aria-disabled]': 'disabled() ? "true" : null',
+    '[class]': 'semanticClasses().root ?? ""',
+    '[style]': 'rootStyle()',
   },
 })
 export class AndesCheckableTagGroup {
@@ -58,6 +70,28 @@ export class AndesCheckableTagGroup {
   /** Disables every tag in the group. */
   readonly disabled = input(false, { transform: booleanAttribute });
   readonly value = model<AndesCheckableTagGroupValue>(null);
+  /** Classes for the group (`root`) and for each option's tag (`item`), as an object or a function. */
+  readonly classNames =
+    input<AndesCheckableTagGroupSemantic<AndesCheckableTagGroupClassNames>>();
+  /** Inline styles for the same parts as `classNames`; numbers get `px`. */
+  readonly styles =
+    input<AndesCheckableTagGroupSemantic<AndesCheckableTagGroupStyles>>();
+
+  private readonly semanticInfo = computed(() => ({
+    props: { multiple: this.multiple(), disabled: this.disabled() },
+  }));
+
+  protected readonly semanticClasses = computed(
+    () => resolveSemantic(this.classNames(), this.semanticInfo()) ?? {},
+  );
+
+  private readonly semanticStyles = computed(
+    () => resolveSemantic(this.styles(), this.semanticInfo()) ?? {},
+  );
+
+  protected readonly rootStyle = computed(() =>
+    toStyleMap(this.semanticStyles().root),
+  );
 
   protected readonly normalizedOptions = computed(() =>
     this.options().map((option): AndesCheckableTagOption =>
@@ -65,6 +99,19 @@ export class AndesCheckableTagGroup {
         ? option
         : { value: option, label: String(option) },
     ),
+  );
+
+  /** The tag-level classes shared by every option (`item`). */
+  protected readonly itemClassNames = computed(() => ({
+    root: this.semanticClasses().item,
+  }));
+
+  /** Each option with the styles of its tag, merged from `item` and the option's own `style`. */
+  protected readonly items = computed(() =>
+    this.normalizedOptions().map((option) => ({
+      option,
+      styles: { root: { ...this.semanticStyles().item, ...option.style } },
+    })),
   );
 
   private readonly selected = computed(() => {

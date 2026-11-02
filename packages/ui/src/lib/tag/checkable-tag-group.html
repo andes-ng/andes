@@ -1,11 +1,13 @@
-@for (option of normalizedOptions(); track option.value) {
+@for (item of items(); track item.option.value) {
 <andes-tag
   checkable
-  [class]="option.className ?? ''"
-  [icon]="option.icon"
-  [checked]="isSelected(option.value)"
-  [disabled]="disabled() || !!option.disabled"
-  (checkedChange)="toggle(option.value, $event)"
-  >{{ option.label }}</andes-tag
+  [class]="item.option.className ?? ''"
+  [icon]="item.option.icon"
+  [classNames]="itemClassNames()"
+  [styles]="item.styles"
+  [checked]="isSelected(item.option.value)"
+  [disabled]="disabled() || !!item.option.disabled"
+  (checkedChange)="toggle(item.option.value, $event)"
+  >{{ item.option.label }}</andes-tag
 >
 }

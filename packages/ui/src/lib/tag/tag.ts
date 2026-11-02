@@ -17,6 +17,13 @@ import {
 import clsx from 'clsx';
 
 import { AndesPaletteColor, resolvePaletteColor } from '../palette/palette';
+import {
+  AndesTagClassNames,
+  AndesTagSemantic,
+  AndesTagStyles,
+  resolveSemantic,
+  toStyleMap,
+} from './tag-semantic';
 
 /**
  * The themed presets, each backed by `--andes-color-*` tokens. `processing` and `error` are
@@ -120,8 +127,14 @@ export class AndesTag {
    * `closed` (or opt into `hideOnClose`).
    */
   readonly closable = input(false, { transform: booleanAttribute });
-  /** Custom close-button content. Setting it implies `closable`. */
-  readonly closeIcon = input<TemplateRef<unknown> | undefined>(undefined);
+  /**
+   * Custom close-button content as a template, or `true` for the default glyph. Setting either
+   * implies `closable`; `false` is the same as leaving it unset. A bare `closeIcon` attribute
+   * reads as `true`.
+   */
+  readonly closeIcon = input<
+    TemplateRef<unknown> | boolean | '' | null | undefined
+  >(undefined);
   /**
    * Uncontrolled mode: the tag hides itself after `closed` fires, unless a handler called
    * `preventDefault()` on the event.
@@ -147,6 +160,15 @@ export class AndesTag {
   readonly checked = model(false);
   /** Plain clickable tag (no pressed state) - also renders as a native `<button>`. */
   readonly clickable = input(false, { transform: booleanAttribute });
+  /** Address of a small round picture shown before the label (decorative - the label names the tag). */
+  readonly avatar = input<string | undefined>(undefined);
+  /**
+   * Classes for the parts of the tag - `root` (the visible tag), `icon` (the icon wrapper) and
+   * `content` (the label wrapper) - as an object, or as a function of the tag's props.
+   */
+  readonly classNames = input<AndesTagSemantic<AndesTagClassNames>>();
+  /** Inline styles for the same parts as `classNames`; numbers get `px`. */
+  readonly styles = input<AndesTagSemantic<AndesTagStyles>>();
 
   readonly closed = output<AndesTagCloseEvent>();
   readonly tagClick = output<MouseEvent>();
@@ -178,8 +200,54 @@ export class AndesTag {
     });
   }
 
-  protected readonly isClosable = computed(
-    () => this.closable() || !!this.closeIcon(),
+  /** The `closeIcon` template, when it is one. */
+  protected readonly closeTemplate = computed(() => {
+    const icon = this.closeIcon();
+    return icon instanceof TemplateRef ? icon : null;
+  });
+
+  protected readonly isClosable = computed(() => {
+    const icon = this.closeIcon();
+    return (
+      this.closable() || icon === true || icon === '' || !!this.closeTemplate()
+    );
+  });
+
+  /** `classNames` / `styles` resolved against the tag's current props. */
+  private readonly semanticInfo = computed(() => ({
+    props: {
+      color: this.color(),
+      variant: this.variant(),
+      bordered: this.bordered(),
+      disabled: this.disabled(),
+      closable: this.isClosable(),
+      checkable: this.checkable(),
+      checked: this.isChecked(),
+    },
+  }));
+
+  private readonly semanticClasses = computed(
+    () => resolveSemantic(this.classNames(), this.semanticInfo()) ?? {},
+  );
+
+  private readonly semanticStyles = computed(
+    () => resolveSemantic(this.styles(), this.semanticInfo()) ?? {},
+  );
+
+  protected readonly rootStyle = computed(() =>
+    toStyleMap(this.semanticStyles().root),
+  );
+  protected readonly iconStyle = computed(() =>
+    toStyleMap(this.semanticStyles().icon),
+  );
+  protected readonly contentStyle = computed(() =>
+    toStyleMap(this.semanticStyles().content),
+  );
+  protected readonly iconClasses = computed(() =>
+    clsx('andes-tag__icon', this.semanticClasses().icon),
+  );
+  protected readonly contentClasses = computed(() =>
+    clsx('andes-tag__content', this.semanticClasses().content),
   );
 
   protected readonly isLink = computed(
@@ -221,6 +289,11 @@ export class AndesTag {
           ? 'andes-tag--color-custom'
           : `andes-tag--color-${this.presetColor()}`),
       !skipColorAndVariant && `andes-tag--${this.variant()}`,
+      // A raw CSS color (not a named palette hue) keeps a full-strength outline - see tag.css.
+      !skipColorAndVariant &&
+        this.customColor() &&
+        !resolvePaletteColor(this.color()) &&
+        'andes-tag--color-raw',
       // Outlined/filled custom colors derive their text from the color itself (tag.css); a
       // separate class, not a `:not(.andes-tag--solid)`, keeps those rules from ever
       // competing on specificity with solid's black/white rule.
@@ -234,6 +307,7 @@ export class AndesTag {
       this.checkable() && 'andes-tag--checkable',
       this.checkable() && this.isChecked() && 'andes-tag--checked',
       this.disabled() && 'andes-tag--disabled',
+      this.semanticClasses().root,
     );
   });
 
@@ -294,14 +368,15 @@ function isTabbable(el: HTMLElement): boolean {
   return typeof el.checkVisibility !== 'function' || el.checkVisibility();
 }
 
-/** The tag's label text, leaving out the close button, the icon slot and hidden decoration. */
+/** The tag's label text, leaving out the close button, the icon and hidden decoration. */
 function labelTextOf(tag: HTMLElement): string {
+  const content = tag.querySelector(':scope > .andes-tag__content');
   // Non-element nodes are kept only if they are text - not the comment anchors Angular leaves
   // around projected content.
-  return Array.from(tag.childNodes)
+  return Array.from(content?.childNodes ?? [])
     .filter((node) =>
       node instanceof Element
-        ? !node.matches('.andes-tag__close, [slot=icon], [aria-hidden="true"]')
+        ? !node.matches('[aria-hidden="true"]')
         : node.nodeType === Node.TEXT_NODE,
     )
     .map((node) => node.textContent ?? '')

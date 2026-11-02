@@ -2,7 +2,6 @@
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: var(--andes-space-1);
   border-radius: var(--andes-radius-sm);
   border: 1px solid transparent;
   /* A 20px line inside the 1px border makes the tag a whole 22px tall - the same height as
@@ -28,16 +27,50 @@
 }
 
 /* Projected icons keep their own encapsulation context - see button.css for why ::ng-deep
-   is the sanctioned way to size content Angular's view encapsulation otherwise blocks. */
-.andes-tag ::ng-deep svg {
+   is the sanctioned way to size content Angular's view encapsulation otherwise blocks. An <svg>
+   that brings its own width or height (a third-party icon sized in px) keeps it: the flex
+   row centres it either way, so it neither rides above the label nor stretches the tag. */
+.andes-tag ::ng-deep svg:not([width]):not([height]) {
   width: 1em;
   height: 1em;
+}
+
+.andes-tag ::ng-deep svg {
   flex-shrink: 0;
 }
 
+/* A disabled tag drops its color for the same quiet grey surface in every color and variant,
+   as Ant Design does, so `!important` is deliberate: it has to beat every color x variant rule
+   (and the dark-theme custom-color one) without a selector longer than they are. */
 .andes-tag--disabled {
   cursor: not-allowed;
-  opacity: 0.6;
+  border-color: color-mix(
+    in srgb,
+    var(--andes-color-foreground) 15%,
+    var(--andes-color-background)
+  ) !important;
+  background-color: color-mix(
+    in srgb,
+    var(--andes-color-foreground) 4%,
+    var(--andes-color-background)
+  ) !important;
+  color: color-mix(
+    in srgb,
+    var(--andes-color-foreground) 38%,
+    var(--andes-color-background)
+  ) !important;
+}
+
+/* The same grey, minus the border, for the variants that have none; and a bare checkable tag
+   stays bare - only a checked one keeps the grey surface. */
+.andes-tag--disabled.andes-tag--filled,
+.andes-tag--disabled.andes-tag--borderless,
+.andes-tag--checkable.andes-tag--disabled:not(.andes-tag--checked) {
+  border-color: transparent !important;
+}
+
+.andes-tag--checkable.andes-tag--disabled:not(.andes-tag--checked) {
+  background-color: transparent !important;
 }
 
 /* Interactive (checkable/clickable) tags render as a native <button>, and link tags as a
@@ -59,7 +92,6 @@ a.andes-tag {
 
 button.andes-tag:disabled {
   cursor: not-allowed;
-  opacity: 0.6;
 }
 
 button.andes-tag:focus-visible,
@@ -79,18 +111,20 @@ a.andes-tag:focus-visible {
   --_andes-tag-hover-brightness: 1.2;
 }
 
-/* Checkable tags ignore `color`/`variant` and only ever show this neutral/checked pair, so the
-   checked state always reads the same regardless of the tag's color. */
+/* Checkable tags ignore `color`/`variant` and only ever show this unchecked/checked pair, so the
+   checked state always reads the same regardless of the tag's color. Unchecked is bare text
+   (no fill, no border), like Ant Design's: it only gets a surface once hovered or checked. */
 .andes-tag--checkable {
-  background-color: var(--andes-color-muted);
-  border-color: var(--andes-color-border);
+  background-color: transparent;
+  border-color: transparent;
   color: var(--andes-color-foreground);
 }
 
-/* An explicit surface step rather than the generic brightness filter above: an unchecked tag
-   sits on the neutral muted fill, which a filter barely moves in either theme. */
+/* An explicit surface step rather than the generic brightness filter above: a bare tag has
+   nothing for a filter to dim. */
 .andes-tag--checkable:not(.andes-tag--checked):hover:not(:disabled) {
-  background-color: var(--andes-color-accent-hover);
+  background-color: var(--andes-color-accent);
+  color: var(--andes-color-primary-text);
   filter: none;
 }
 
@@ -105,10 +139,51 @@ a.andes-tag:focus-visible {
   filter: none;
 }
 
-/* `icon` input - same footprint as a projected slot=icon element. */
+.andes-tag--checkable:active:not(:disabled) {
+  background-color: var(--andes-color-primary-active);
+  border-color: var(--andes-color-primary-active);
+  color: var(--andes-color-primary-foreground);
+  filter: none;
+}
+
+/* `icon` input and slot=icon content share this wrapper. It is only there when it holds
+   something, so a tag without an icon has no leftover gap before its label. */
 .andes-tag__icon {
   display: inline-flex;
   align-items: center;
+  /* 7px from the icon to the label (Ant Design's `paddingXXS` less the border). */
+  margin-inline-end: 0.4375rem;
+}
+
+.andes-tag__icon:empty {
+  display: none;
+}
+
+.andes-tag__content {
+  min-width: 0;
+}
+
+/* A leading picture (the `avatar` input): a 16px circle that sits flush with the tag's edge. */
+.andes-tag__avatar {
+  flex-shrink: 0;
+  inline-size: 1rem;
+  block-size: 1rem;
+  margin-inline: -0.1875rem 0.4375rem;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* A link projected as the label (<a> inside the tag) takes the tag's color and its whole
+   width, so the tag is clickable edge to edge, not only over the words. */
+.andes-tag__content ::ng-deep a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.andes-tag__content ::ng-deep a:only-child {
+  display: inline-block;
+  margin-inline: -0.5rem;
+  padding-inline: 0.5rem;
 }
 
 /*
@@ -164,17 +239,22 @@ a.andes-tag:focus-visible {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* With the 4px gap, 7px between the label and the 10px icon (a 3px icon margin plus the
-     glyph's own side bearing). */
+  /* 3px after the label, 7px after an icon - the two distances Ant Design's close icon sits at. */
   margin-inline-start: 0.1875rem;
   padding: 0;
   border: none;
   background: none;
   color: inherit;
-  opacity: 0.65;
+  opacity: 0.5;
   cursor: pointer;
-  font: inherit;
+  /* A custom close icon (an ng-icon is 1em) comes out at the same 10px as the default glyph. */
+  font-size: 0.625rem;
+  line-height: 1;
   transition: opacity 0.15s ease;
+}
+
+.andes-tag__icon:not(:empty) ~ .andes-tag__close {
+  margin-inline-start: 0.4375rem;
 }
 
 .andes-tag__close:hover:not(:disabled) {
@@ -191,7 +271,7 @@ a.andes-tag:focus-visible {
   cursor: not-allowed;
 }
 
-/* The glyph is only ~9px; an invisible extension grows the pointer target to the tag's full
+/* The glyph is only ~8px; an invisible extension grows the pointer target to the tag's full
    height and a little past the glyph on each side, without changing the tag's layout. */
 .andes-tag__close::before {
   content: '';
@@ -199,24 +279,19 @@ a.andes-tag:focus-visible {
   inset: -0.375rem -0.25rem;
 }
 
-.andes-tag__close svg {
-  width: 0.625rem;
-  height: 0.625rem;
-}
-
 /*
  * Color x variant matrix.
  *
  * `variant` (outlined/filled/solid) and `color` (default/primary/secondary/success/warning/
  * danger/info) are independent axes (the `variant` + `color` inputs) - not a
- * single combined enum. Each color below defines three treatments:
- *   - outlined (default): transparent background, a half-strength border of the color,
- *     colored text.
- *   - filled: the same soft wash + stronger border pair AndesAlert's `tinted` variant uses -
- *     10% of the color mixed into the page background, the border at 35% - and colored text.
- *     The wash stays that light because a couple of colors are otherwise too close to the
- *     4.5:1 floor once tinted.
+ * single combined enum. Each color below defines three treatments, the same three Ant Design
+ * draws:
+ *   - outlined (default): a soft wash of the color with a border of it at 40%, and colored
+ *     text.
+ *   - filled: the same wash with no border, and colored text.
  *   - solid: a fully saturated background with a readable text color on top.
+ * The wash is 10% of the color mixed into the page background. It stays that light because a
+ * couple of colors are otherwise too close to the 4.5:1 floor once tinted.
  *
  * Wash and border are mixed from the same severity accents AndesAlert draws its glyphs in
  * (warning's is its `-hover` shade, since the base amber is too pale to read as a border), so
@@ -241,12 +316,13 @@ a.andes-tag:focus-visible {
  */
 
 .andes-tag--color-default.andes-tag--outlined {
-  background-color: transparent;
+  background-color: var(--andes-color-muted);
   border-color: var(--andes-color-border);
   color: var(--andes-color-foreground);
 }
 
 .andes-tag--color-default.andes-tag--filled {
+  border-color: transparent;
   background-color: var(--andes-color-muted);
   color: var(--andes-color-foreground);
 }
@@ -258,12 +334,13 @@ a.andes-tag:focus-visible {
 }
 
 .andes-tag--color-secondary.andes-tag--outlined {
-  background-color: transparent;
+  background-color: var(--andes-color-secondary);
   border-color: var(--andes-color-secondary-active);
   color: var(--andes-color-secondary-foreground);
 }
 
 .andes-tag--color-secondary.andes-tag--filled {
+  border-color: transparent;
   background-color: var(--andes-color-secondary);
   color: var(--andes-color-secondary-foreground);
 }
@@ -275,21 +352,25 @@ a.andes-tag:focus-visible {
 }
 
 .andes-tag--color-primary.andes-tag--outlined {
-  background-color: transparent;
-  border-color: color-mix(
+  background-color: color-mix(
     in srgb,
-    var(--andes-color-primary) 50%,
+    var(--andes-color-primary) 10%,
     var(--andes-color-background)
   );
-  color: var(--andes-color-primary-text);
+  border-color: color-mix(
+    in srgb,
+    var(--andes-color-primary) 40%,
+    var(--andes-color-background)
+  );
+  color: color-mix(
+    in srgb,
+    var(--andes-color-primary-text) 85%,
+    var(--andes-color-foreground)
+  );
 }
 
 .andes-tag--color-primary.andes-tag--filled {
-  border-color: color-mix(
-    in srgb,
-    var(--andes-color-primary) 35%,
-    var(--andes-color-background)
-  );
+  border-color: transparent;
   background-color: color-mix(
     in srgb,
     var(--andes-color-primary) 10%,
@@ -309,21 +390,25 @@ a.andes-tag:focus-visible {
 }
 
 .andes-tag--color-success.andes-tag--outlined {
-  background-color: transparent;
-  border-color: color-mix(
+  background-color: color-mix(
     in srgb,
-    var(--andes-color-success) 50%,
+    var(--andes-color-success) 10%,
     var(--andes-color-background)
   );
-  color: var(--andes-color-success-text, var(--andes-color-success-active));
+  border-color: color-mix(
+    in srgb,
+    var(--andes-color-success) 40%,
+    var(--andes-color-background)
+  );
+  color: color-mix(
+    in srgb,
+    var(--andes-color-success-text, var(--andes-color-success-active)) 85%,
+    var(--andes-color-foreground)
+  );
 }
 
 .andes-tag--color-success.andes-tag--filled {
-  border-color: color-mix(
-    in srgb,
-    var(--andes-color-success) 35%,
-    var(--andes-color-background)
-  );
+  border-color: transparent;
   background-color: color-mix(
     in srgb,
     var(--andes-color-success) 10%,
@@ -343,21 +428,25 @@ a.andes-tag:focus-visible {
 }
 
 .andes-tag--color-warning.andes-tag--outlined {
-  background-color: transparent;
-  border-color: color-mix(
+  background-color: color-mix(
     in srgb,
-    var(--andes-color-warning-hover) 50%,
+    var(--andes-color-warning-hover) 10%,
     var(--andes-color-background)
   );
-  color: var(--andes-color-warning-text, var(--andes-color-warning-active));
+  border-color: color-mix(
+    in srgb,
+    var(--andes-color-warning-hover) 40%,
+    var(--andes-color-background)
+  );
+  color: color-mix(
+    in srgb,
+    var(--andes-color-warning-text, var(--andes-color-warning-active)) 85%,
+    var(--andes-color-foreground)
+  );
 }
 
 .andes-tag--color-warning.andes-tag--filled {
-  border-color: color-mix(
-    in srgb,
-    var(--andes-color-warning-hover) 35%,
-    var(--andes-color-background)
-  );
+  border-color: transparent;
   background-color: color-mix(
     in srgb,
     var(--andes-color-warning-hover) 10%,
@@ -377,21 +466,25 @@ a.andes-tag:focus-visible {
 }
 
 .andes-tag--color-danger.andes-tag--outlined {
-  background-color: transparent;
-  border-color: color-mix(
+  background-color: color-mix(
     in srgb,
-    var(--andes-color-danger) 50%,
+    var(--andes-color-danger) 10%,
     var(--andes-color-background)
   );
-  color: var(--andes-color-danger-text, var(--andes-color-danger-active));
+  border-color: color-mix(
+    in srgb,
+    var(--andes-color-danger) 40%,
+    var(--andes-color-background)
+  );
+  color: color-mix(
+    in srgb,
+    var(--andes-color-danger-text, var(--andes-color-danger-active)) 85%,
+    var(--andes-color-foreground)
+  );
 }
 
 .andes-tag--color-danger.andes-tag--filled {
-  border-color: color-mix(
-    in srgb,
-    var(--andes-color-danger) 35%,
-    var(--andes-color-background)
-  );
+  border-color: transparent;
   background-color: color-mix(
     in srgb,
     var(--andes-color-danger) 10%,
@@ -411,21 +504,25 @@ a.andes-tag:focus-visible {
 }
 
 .andes-tag--color-info.andes-tag--outlined {
-  background-color: transparent;
-  border-color: color-mix(
+  background-color: color-mix(
     in srgb,
-    var(--andes-color-info) 50%,
+    var(--andes-color-info) 10%,
     var(--andes-color-background)
   );
-  color: var(--andes-color-info-text, var(--andes-color-info-active));
+  border-color: color-mix(
+    in srgb,
+    var(--andes-color-info) 40%,
+    var(--andes-color-background)
+  );
+  color: color-mix(
+    in srgb,
+    var(--andes-color-info-text, var(--andes-color-info-active)) 85%,
+    var(--andes-color-foreground)
+  );
 }
 
 .andes-tag--color-info.andes-tag--filled {
-  border-color: color-mix(
-    in srgb,
-    var(--andes-color-info) 35%,
-    var(--andes-color-background)
-  );
+  border-color: transparent;
   background-color: color-mix(
     in srgb,
     var(--andes-color-info) 10%,
@@ -468,25 +565,31 @@ a.andes-tag:focus-visible {
 /* Same border/wash strengths as the presets above, so a palette hue or a hex color sits beside a
    preset tag with the same visual weight. */
 .andes-tag--color-custom.andes-tag--outlined {
-  background-color: transparent;
-  border-color: color-mix(
-    in srgb,
-    var(--andes-tag-color) 50%,
-    var(--andes-color-background)
-  );
-}
-
-.andes-tag--color-custom.andes-tag--filled {
-  border-color: color-mix(
-    in srgb,
-    var(--andes-tag-color) 35%,
-    var(--andes-color-background)
-  );
   background-color: color-mix(
     in srgb,
     var(--andes-tag-color) 10%,
     var(--andes-color-background)
   );
+  border-color: color-mix(
+    in srgb,
+    var(--andes-tag-color) 40%,
+    var(--andes-color-background)
+  );
+}
+
+.andes-tag--color-custom.andes-tag--filled {
+  border-color: transparent;
+  background-color: color-mix(
+    in srgb,
+    var(--andes-tag-color) 10%,
+    var(--andes-color-background)
+  );
+}
+
+/* A raw CSS color (a hex code, rgb(...)) keeps a full-strength outline, as Ant Design draws
+   one; a palette hue stays on the softer preset-like outline above. */
+.andes-tag--color-raw.andes-tag--outlined {
+  border-color: var(--andes-tag-color);
 }
 
 .andes-tag--color-custom.andes-tag--solid {

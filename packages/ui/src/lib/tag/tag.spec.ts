@@ -10,7 +10,13 @@ import {
   AndesTagColor,
   AndesTagVariant,
 } from './tag';
-import { expectLength } from '../../testing/computed-style';
+import { declaredValue, expectLength } from '../../testing/computed-style';
+import {
+  AndesTagClassNames,
+  AndesTagSemantic,
+  AndesTagSemanticInfo,
+  AndesTagStyles,
+} from './tag-semantic';
 
 @Component({
   imports: [AndesTag],
@@ -849,19 +855,28 @@ describe('AndesTag metrics and tints', () => {
     );
   });
 
-  it('gives a filled tag the tinted border AndesAlert uses, mixed from the warning -hover accent', () => {
-    // jsdom doesn't parse color-mix() border colors, so this reads the declared rule.
+  it('draws filled as a wash with no border, and outlined as the same wash with a 40% border (the two Ant draws)', () => {
+    // jsdom doesn't parse color-mix() colors, so this reads the declared rules.
     const css = readFileSync(
       join(process.cwd(), 'packages/ui/src/lib/tag/tag.css'),
       'utf8',
     );
-    const rule =
+    const rule = (variant: string) =>
       css.match(
-        /\.andes-tag--color-warning\.andes-tag--filled\s*{([^}]*)}/,
+        new RegExp(
+          `\\.andes-tag--color-warning\\.andes-tag--${variant}\\s*{([^}]*)}`,
+        ),
       )?.[1] ?? '';
 
-    expect(rule).toMatch(
-      /border-color:\s*color-mix\([^;]*var\(--andes-color-warning-hover\) 35%/,
+    expect(rule('filled')).toMatch(/border-color:\s*transparent/);
+    expect(rule('filled')).toMatch(
+      /background-color:\s*color-mix\([^;]*var\(--andes-color-warning-hover\) 10%/,
+    );
+    expect(rule('outlined')).toMatch(
+      /border-color:\s*color-mix\([^;]*var\(--andes-color-warning-hover\) 40%/,
+    );
+    expect(rule('outlined')).toMatch(
+      /background-color:\s*color-mix\([^;]*var\(--andes-color-warning-hover\) 10%/,
     );
   });
 });
@@ -990,17 +1005,473 @@ describe('AndesTag motion hooks', () => {
 });
 
 describe('AndesTag custom-color tints', () => {
-  it('gives custom/palette colors the same border and wash strengths as the presets', () => {
-    const css = readFileSync(
+  const css = () =>
+    readFileSync(
       join(process.cwd(), 'packages/ui/src/lib/tag/tag.css'),
       'utf8',
     ).replace(/\s+/g, ' ');
 
-    expect(css).toContain(
-      '.andes-tag--color-custom.andes-tag--outlined { background-color: transparent; border-color: color-mix( in srgb, var(--andes-tag-color) 50%, var(--andes-color-background) );',
+  it('gives custom/palette colors the same wash and border strengths as the presets', () => {
+    expect(css()).toContain(
+      '.andes-tag--color-custom.andes-tag--outlined { background-color: color-mix( in srgb, var(--andes-tag-color) 10%, var(--andes-color-background) ); border-color: color-mix( in srgb, var(--andes-tag-color) 40%, var(--andes-color-background) ); }',
     );
-    expect(css).toContain(
-      '.andes-tag--color-custom.andes-tag--filled { border-color: color-mix( in srgb, var(--andes-tag-color) 35%, var(--andes-color-background) ); background-color: color-mix( in srgb, var(--andes-tag-color) 10%, var(--andes-color-background) );',
+    expect(css()).toContain(
+      '.andes-tag--color-custom.andes-tag--filled { border-color: transparent; background-color: color-mix( in srgb, var(--andes-tag-color) 10%, var(--andes-color-background) ); }',
     );
+  });
+
+  it('keeps a raw CSS color outlined at full strength, as Ant does, and a palette hue soft', () => {
+    expect(css()).toContain(
+      '.andes-tag--color-raw.andes-tag--outlined { border-color: var(--andes-tag-color); }',
+    );
+  });
+});
+
+describe('AndesTag closeIcon as a flag', () => {
+  @Component({
+    imports: [AndesTag],
+    template: `<andes-tag
+      [closeIcon]="flag()"
+      (closed)="closedCount = closedCount + 1"
+      >Beta</andes-tag
+    >`,
+  })
+  class FlagHost {
+    readonly flag = signal<boolean | '' | null | undefined>(true);
+    closedCount = 0;
+  }
+
+  function setup(flag: boolean | '' | null | undefined) {
+    const fixture = TestBed.createComponent(FlagHost);
+    fixture.componentInstance.flag.set(flag);
+    fixture.detectChanges();
+    const tag = fixture.nativeElement.querySelector(
+      '[data-slot="tag"]',
+    ) as HTMLElement;
+    return { fixture, tag, close: tag.querySelector('.andes-tag__close') };
+  }
+
+  it('closeIcon=true makes the tag closable with the default glyph', () => {
+    const { fixture, tag, close } = setup(true);
+
+    expect(tag.classList).toContain('andes-tag--closable');
+    expect(close?.querySelector('svg')).toBeTruthy();
+
+    (close as HTMLButtonElement).click();
+
+    expect(fixture.componentInstance.closedCount).toBe(1);
+  });
+
+  it('reads a bare closeIcon attribute (an empty string) as true', () => {
+    expect(setup('').close).toBeTruthy();
+  });
+
+  it.each([false, null, undefined])(
+    'closeIcon=%s leaves the tag without a close button',
+    (flag) => {
+      expect(setup(flag).close).toBeNull();
+    },
+  );
+
+  it('sizes the default glyph at 10px, as Ant Design does', () => {
+    const svg = setup(true).tag.querySelector('.andes-tag__close svg');
+
+    expect(svg?.getAttribute('width')).toBe('10');
+    expect(svg?.getAttribute('height')).toBe('10');
+  });
+});
+
+describe('AndesTag classNames and styles', () => {
+  @Component({
+    imports: [AndesTag],
+    template: `<andes-tag
+      [variant]="variant()"
+      [classNames]="classNames()"
+      [styles]="styles()"
+      [closable]="closable()"
+      ><span slot="icon">*</span>Beta</andes-tag
+    >`,
+  })
+  class SemanticHost {
+    readonly variant = signal<AndesTagVariant>('outlined');
+    readonly closable = signal(false);
+    readonly classNames = signal<
+      AndesTagSemantic<AndesTagClassNames> | undefined
+    >(undefined);
+    readonly styles = signal<AndesTagSemantic<AndesTagStyles> | undefined>(
+      undefined,
+    );
+  }
+
+  function setup(apply: (host: SemanticHost) => void) {
+    const fixture = TestBed.createComponent(SemanticHost);
+    apply(fixture.componentInstance);
+    fixture.detectChanges();
+    const tag = fixture.nativeElement.querySelector(
+      '[data-slot="tag"]',
+    ) as HTMLElement;
+    return { fixture, tag };
+  }
+
+  it('adds root, icon and content classes from an object', () => {
+    const { tag } = setup((host) =>
+      host.classNames.set({ root: 'r1 r2', icon: 'i1', content: 'c1' }),
+    );
+
+    expect(tag.classList).toContain('andes-tag');
+    expect(tag.classList).toContain('r1');
+    expect(tag.classList).toContain('r2');
+    expect(tag.querySelector('.andes-tag__icon')?.classList).toContain('i1');
+    expect(tag.querySelector('.andes-tag__content')?.classList).toContain('c1');
+  });
+
+  it('applies root, icon and content styles, kebab-casing keys and adding px to numbers', () => {
+    const { tag } = setup((host) =>
+      host.styles.set({
+        root: {
+          backgroundColor: 'rgb(230, 247, 255)',
+          paddingInline: 6,
+          opacity: 0.5,
+        },
+        icon: { color: 'rgb(82, 196, 26)' },
+        content: { '--story-token': '1', fontWeight: 600 },
+      }),
+    );
+    const icon = tag.querySelector('.andes-tag__icon') as HTMLElement;
+    const content = tag.querySelector('.andes-tag__content') as HTMLElement;
+
+    expect(tag.style.backgroundColor).toBe('rgb(230, 247, 255)');
+    expect(tag.style.paddingInline).toBe('6px');
+    expect(tag.style.opacity).toBe('0.5');
+    expect(icon.style.color).toBe('rgb(82, 196, 26)');
+    expect(content.style.getPropertyValue('--story-token')).toBe('1');
+    expect(content.style.fontWeight).toBe('600');
+  });
+
+  it('resolves a function against the tag props, and does nothing when it returns nothing', () => {
+    const seen: unknown[] = [];
+    const fn = (info: AndesTagSemanticInfo) => {
+      seen.push(info.props.variant);
+      return info.props.variant === 'filled'
+        ? { root: { backgroundColor: 'rgb(245, 239, 255)' } }
+        : undefined;
+    };
+    const { fixture, tag } = setup((host) => host.styles.set(fn));
+
+    expect(tag.style.backgroundColor).toBe('');
+
+    fixture.componentInstance.variant.set('filled');
+    fixture.detectChanges();
+
+    expect(seen).toContain('filled');
+    expect(
+      (fixture.nativeElement.querySelector('[data-slot="tag"]') as HTMLElement)
+        .style.backgroundColor,
+    ).toBe('rgb(245, 239, 255)');
+  });
+
+  it('passes closable and the other props to the function', () => {
+    const props: unknown[] = [];
+    setup((host) => {
+      host.closable.set(true);
+      host.classNames.set((info) => {
+        props.push(info.props);
+        return undefined;
+      });
+    });
+
+    expect(props.at(-1)).toMatchObject({
+      closable: true,
+      variant: 'outlined',
+      color: 'default',
+      disabled: false,
+      bordered: true,
+    });
+  });
+
+  it('keeps the inline custom color next to a root style', () => {
+    const fixture = TestBed.createComponent(AndesTag);
+    fixture.componentRef.setInput('color', '#f50');
+    fixture.componentRef.setInput('styles', { root: { opacity: 0.8 } });
+    fixture.detectChanges();
+    const tag = fixture.nativeElement.querySelector(
+      '[data-slot="tag"]',
+    ) as HTMLElement;
+
+    expect(tag.style.getPropertyValue('--andes-tag-color')).toBe('#f50');
+    expect(tag.style.opacity).toBe('0.8');
+  });
+});
+
+describe('AndesTag icon, content and avatar parts', () => {
+  @Component({
+    imports: [AndesTag],
+    template: `<ng-template #tpl><i class="tpl">t</i></ng-template>
+      <andes-tag [icon]="withIcon() ? tpl : undefined" [avatar]="avatar()"
+        >Label</andes-tag
+      >`,
+  })
+  class PartsHost {
+    readonly withIcon = signal(false);
+    readonly avatar = signal<string | undefined>(undefined);
+  }
+
+  function setup(apply: (host: PartsHost) => void = () => undefined) {
+    const fixture = TestBed.createComponent(PartsHost);
+    apply(fixture.componentInstance);
+    fixture.detectChanges();
+    return {
+      fixture,
+      tag: fixture.nativeElement.querySelector(
+        '[data-slot="tag"]',
+      ) as HTMLElement,
+    };
+  }
+
+  it('wraps the label in andes-tag__content and leaves the icon wrapper empty without an icon', () => {
+    const { tag } = setup();
+
+    expect(tag.querySelector('.andes-tag__content')?.textContent?.trim()).toBe(
+      'Label',
+    );
+    expect(tag.querySelector('.andes-tag__icon')?.childElementCount).toBe(0);
+  });
+
+  it('puts the icon template in the icon wrapper', () => {
+    const { tag } = setup((host) => host.withIcon.set(true));
+
+    expect(tag.querySelector('.andes-tag__icon .tpl')).toBeTruthy();
+  });
+
+  it('shows a decorative avatar picture before the label', () => {
+    const { tag } = setup((host) => host.avatar.set('/me.png'));
+    const img = tag.querySelector('.andes-tag__avatar') as HTMLImageElement;
+
+    expect(img.getAttribute('src')).toBe('/me.png');
+    expect(img.getAttribute('alt')).toBe('');
+    expect(tag.firstElementChild).toBe(img);
+  });
+
+  it('renders no avatar by default', () => {
+    expect(setup().tag.querySelector('.andes-tag__avatar')).toBeNull();
+  });
+
+  it('spaces the icon from the label by 7px and hides an empty icon wrapper', () => {
+    const css = readFileSync(
+      join(process.cwd(), 'packages/ui/src/lib/tag/tag.css'),
+      'utf8',
+    );
+
+    expect(declaredValue(css, '.andes-tag__icon', 'margin-inline-end')).toBe(
+      '0.4375rem',
+    );
+    expect(declaredValue(css, '.andes-tag__icon:empty', 'display')).toBe(
+      'none',
+    );
+  });
+
+  it('puts the close button 3px after a label and 7px after an icon', () => {
+    const css = readFileSync(
+      join(process.cwd(), 'packages/ui/src/lib/tag/tag.css'),
+      'utf8',
+    );
+
+    expect(declaredValue(css, '.andes-tag__close', 'margin-inline-start')).toBe(
+      '0.1875rem',
+    );
+    expect(
+      declaredValue(
+        css,
+        '.andes-tag__icon:not(:empty) ~ .andes-tag__close',
+        'margin-inline-start',
+      ),
+    ).toBe('0.4375rem');
+  });
+
+  it('lets an svg with its own size keep it, and sizes the others at 1em', () => {
+    const css = readFileSync(
+      join(process.cwd(), 'packages/ui/src/lib/tag/tag.css'),
+      'utf8',
+    );
+
+    expect(
+      declaredValue(
+        css,
+        '.andes-tag ::ng-deep svg:not([width]):not([height])',
+        'width',
+      ),
+    ).toBe('1em');
+  });
+});
+
+describe('AndesTag adding and removing tags from a list', () => {
+  @Component({
+    imports: [AndesTag],
+    template: `@for (tag of tags(); track tag) {
+      <andes-tag
+        closable
+        animate.enter="andes-tag-enter"
+        animate.leave="andes-tag-leave"
+        (closed)="remove(tag)"
+        >{{ tag }}</andes-tag
+      >
+    }`,
+  })
+  class ListHost {
+    readonly tags = signal(['One', 'Two', 'Three']);
+
+    remove(tag: string): void {
+      this.tags.update((all) => all.filter((t) => t !== tag));
+    }
+  }
+
+  function setup() {
+    const fixture = TestBed.createComponent(ListHost);
+    fixture.detectChanges();
+    const labels = () =>
+      Array.from(
+        fixture.nativeElement.querySelectorAll('[data-slot="tag"]'),
+      ).map((tag) => (tag as HTMLElement).textContent?.trim());
+    return { fixture, labels };
+  }
+
+  it('renders one tag per item and appends a new one', () => {
+    const { fixture, labels } = setup();
+
+    expect(labels()).toEqual(['One', 'Two', 'Three']);
+
+    fixture.componentInstance.tags.update((all) => [...all, 'Four']);
+    fixture.detectChanges();
+
+    expect(labels()).toEqual(['One', 'Two', 'Three', 'Four']);
+  });
+
+  it('removes exactly the tag whose close button was clicked', () => {
+    const { fixture, labels } = setup();
+    const close = fixture.nativeElement.querySelectorAll(
+      '.andes-tag__close',
+    )[1] as HTMLButtonElement;
+
+    close.click();
+    fixture.detectChanges();
+
+    expect(labels()).toEqual(['One', 'Three']);
+  });
+
+  it('names each close button after its own tag', () => {
+    const { fixture } = setup();
+    fixture.detectChanges();
+    const names = Array.from(
+      fixture.nativeElement.querySelectorAll('.andes-tag__close'),
+    ).map((button) => (button as HTMLElement).getAttribute('aria-label'));
+
+    expect(names).toEqual(['Remove One', 'Remove Two', 'Remove Three']);
+  });
+});
+
+describe('AndesTag disabled and checkable surfaces', () => {
+  const css = () =>
+    readFileSync(
+      join(process.cwd(), 'packages/ui/src/lib/tag/tag.css'),
+      'utf8',
+    );
+
+  it('greys a disabled tag out in every color instead of fading it', () => {
+    const rule = css().match(/\.andes-tag--disabled\s*{([^}]*)}/)?.[1] ?? '';
+
+    expect(rule).toContain('cursor: not-allowed');
+    expect(rule).toMatch(/border-color:\s*color-mix\(/);
+    expect(rule).toMatch(/background-color:\s*color-mix\(/);
+    expect(rule).toMatch(/color:\s*color-mix\(/);
+    expect(rule.match(/!important/g)).toHaveLength(3);
+    expect(rule).not.toContain('opacity');
+  });
+
+  it('drops the border of a disabled filled or borderless tag, and the surface of an unchecked checkable one', () => {
+    const css_ = css();
+
+    expect(
+      declaredValue(
+        css_,
+        '.andes-tag--disabled.andes-tag--borderless',
+        'border-color',
+      ),
+    ).toBe('transparent !important');
+    expect(
+      declaredValue(
+        css_,
+        '.andes-tag--checkable.andes-tag--disabled:not(.andes-tag--checked)',
+        'background-color',
+      ),
+    ).toBe('transparent !important');
+  });
+
+  it('leaves an unchecked checkable tag bare until it is hovered or checked', () => {
+    const css_ = css();
+
+    expect(
+      declaredValue(css_, '.andes-tag--checkable', 'background-color'),
+    ).toBe('transparent');
+    expect(declaredValue(css_, '.andes-tag--checkable', 'border-color')).toBe(
+      'transparent',
+    );
+    expect(
+      declaredValue(
+        css_,
+        '.andes-tag--checkable:not(.andes-tag--checked):hover:not(:disabled)',
+        'color',
+      ),
+    ).toBe('var(--andes-color-primary-text)');
+  });
+
+  it('gives a pressed checkable tag the active primary surface', () => {
+    expect(
+      declaredValue(
+        css(),
+        '.andes-tag--checkable:active:not(:disabled)',
+        'background-color',
+      ),
+    ).toBe('var(--andes-color-primary-active)');
+  });
+
+  it('sets the close glyph at 10px and half strength until hovered', () => {
+    expect(declaredValue(css(), '.andes-tag__close', 'font-size')).toBe(
+      '0.625rem',
+    );
+    expect(declaredValue(css(), '.andes-tag__close', 'opacity')).toBe('0.5');
+    expect(
+      declaredValue(css(), '.andes-tag__close:hover:not(:disabled)', 'opacity'),
+    ).toBe('1');
+  });
+});
+
+describe('AndesTag palette hues Ant also names', () => {
+  it.each(['volcano', 'gold', 'geekblue'])(
+    'colors a %s tag from the themed palette hue',
+    (hue) => {
+      const fixture = TestBed.createComponent(AndesTag);
+      fixture.componentRef.setInput('color', hue);
+      fixture.detectChanges();
+      const tag = fixture.nativeElement.querySelector(
+        '[data-slot="tag"]',
+      ) as HTMLElement;
+
+      expect(tag.style.getPropertyValue('--andes-tag-color')).toBe(
+        `var(--_andes-palette-${hue})`,
+      );
+      // A palette hue keeps the soft outline; only a raw CSS color gets the full-strength one.
+      expect(tag.classList).not.toContain('andes-tag--color-raw');
+    },
+  );
+
+  it('marks a raw CSS color so its outline stays full strength', () => {
+    const fixture = TestBed.createComponent(AndesTag);
+    fixture.componentRef.setInput('color', '#f50');
+    fixture.detectChanges();
+
+    expect(
+      (fixture.nativeElement.querySelector('[data-slot="tag"]') as HTMLElement)
+        .classList,
+    ).toContain('andes-tag--color-raw');
   });
 });

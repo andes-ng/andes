@@ -10,13 +10,17 @@
   selector in the whole component, so the ambiguity can't arise.
 -->
 <ng-template #content>
-  @if (icon(); as iconTemplate) {
-  <span class="andes-tag__icon"
-    ><ng-container [ngTemplateOutlet]="iconTemplate"
-  /></span>
+  @if (avatar(); as src) {
+  <img class="andes-tag__avatar" [src]="src" alt="" />
   }
-  <ng-content select="[slot=icon]" />
-  <ng-content />
+  <!-- Empty (and hidden by tag.css) unless `icon` or a slot=icon element fills it. -->
+  <span [class]="iconClasses()" [style]="iconStyle()"
+    >@if (icon(); as iconTemplate) {<ng-container
+      [ngTemplateOutlet]="iconTemplate" />}<ng-content select="[slot=icon]"
+  /></span>
+  <span [class]="contentClasses()" [style]="contentStyle()"
+    ><ng-content
+  /></span>
 </ng-template>
 
 @if (dismissed()) {
@@ -28,6 +32,7 @@
   data-slot="tag"
   [class]="classes()"
   [style.--andes-tag-color]="customColor()"
+  [style]="rootStyle()"
   animate.leave="andes-tag-leave"
 >
   <ng-container [ngTemplateOutlet]="content" />
@@ -38,10 +43,12 @@
     [attr.aria-label]="closeLabel()"
     (click)="onClose($event)"
   >
-    @if (closeIcon(); as icon) {
+    @if (closeTemplate(); as icon) {
     <ng-container [ngTemplateOutlet]="icon" />
     } @else {
     <svg
+      width="10"
+      height="10"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -60,6 +67,7 @@
   data-slot="tag"
   [class]="classes()"
   [style.--andes-tag-color]="customColor()"
+  [style]="rootStyle()"
   [attr.href]="disabled() ? null : href()"
   [attr.target]="target()"
   [attr.aria-disabled]="disabled() ? 'true' : null"
@@ -73,6 +81,7 @@
   data-slot="tag"
   [class]="classes()"
   [style.--andes-tag-color]="customColor()"
+  [style]="rootStyle()"
   [disabled]="disabled()"
   [attr.aria-pressed]="checkable() ? isChecked() : null"
   (click)="onTagClick($event)"
@@ -84,6 +93,7 @@
   data-slot="tag"
   [class]="classes()"
   [style.--andes-tag-color]="customColor()"
+  [style]="rootStyle()"
 >
   <ng-container [ngTemplateOutlet]="content" />
 </span>

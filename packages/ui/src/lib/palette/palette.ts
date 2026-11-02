@@ -18,6 +18,9 @@ export const ANDES_PALETTE_COLORS = [
   'purple',
   'magenta',
   'pink',
+  'volcano',
+  'gold',
+  'geekblue',
 ] as const;
 
 export type AndesPaletteColor = (typeof ANDES_PALETTE_COLORS)[number];

@@ -23,6 +23,9 @@
   --_andes-palette-purple: #9333ea;
   --_andes-palette-magenta: #c026d3;
   --_andes-palette-pink: #db2777;
+  --_andes-palette-volcano: #fa541c;
+  --_andes-palette-gold: #faad14;
+  --_andes-palette-geekblue: #2f54eb;
 }
 
 :host-context([data-andes-theme='dark']) {
@@ -39,4 +42,7 @@
   --_andes-palette-purple: #a855f7;
   --_andes-palette-magenta: #d946ef;
   --_andes-palette-pink: #ec4899;
+  --_andes-palette-volcano: #ff7a45;
+  --_andes-palette-gold: #ffc53d;
+  --_andes-palette-geekblue: #597ef7;
 }

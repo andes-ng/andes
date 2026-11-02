@@ -319,60 +319,6 @@ class StackHost {
   }
 }
 
-@Component({
-  selector: 'andes-notification-progress',
-  imports: [AndesButton, AndesToastViewport],
-  template: `
-    <div [style]="barStyle">
-      <andes-button (click)="open(true)">Pause on hover</andes-button>
-      <andes-button (click)="open(false)">Don't pause on hover</andes-button>
-    </div>
-    <andes-toast-viewport />
-  `,
-})
-class ProgressHost {
-  private readonly toasts = inject(AndesToastService);
-  protected readonly barStyle = BAR_STYLE;
-
-  protected open(pauseOnHover: boolean): void {
-    this.toasts.show({
-      title: 'Notification Title',
-      message: DESCRIPTION,
-      showProgress: true,
-      pauseOnHover,
-    });
-  }
-}
-
-@Component({
-  selector: 'andes-notification-progress-color',
-  imports: [AndesButton, AndesToastViewport],
-  template: `
-    <div [style]="barStyle">
-      <andes-button (click)="open()">Show custom progress color</andes-button>
-    </div>
-    <andes-toast-viewport />
-  `,
-})
-class ProgressColorHost {
-  private readonly toasts = inject(AndesToastService);
-  protected readonly barStyle = BAR_STYLE;
-
-  protected open(): void {
-    this.toasts.show({
-      title: 'Customize progress bar color',
-      message:
-        'Set --andes-toast-progress-bg on the toast, or on any ancestor, to paint the bar.',
-      showProgress: true,
-      duration: 20_000,
-      style: {
-        '--andes-toast-progress-bg':
-          'linear-gradient(135deg, #6253e1, #04befe)',
-      },
-    });
-  }
-}
-
 const SEMANTIC_STYLES: NonNullable<AndesToastConfig['styles']> = {
   root: {
     backgroundColor: '#f6ffed',
@@ -564,24 +510,6 @@ export const Stack: Story = {
   render: () => ({
     moduleMetadata: { imports: [StackHost] },
     template: `<andes-notification-stack />`,
-  }),
-};
-
-/** Show a progress bar for an auto-closing notification, with or without pausing on hover. */
-export const ShowWithProgress: Story = {
-  name: 'Show with progress',
-  render: () => ({
-    moduleMetadata: { imports: [ProgressHost] },
-    template: `<andes-notification-progress />`,
-  }),
-};
-
-/** Customize the progress bar color through the `--andes-toast-progress-bg` custom property. */
-export const CustomizeProgressBarColor: Story = {
-  name: 'Customize progress bar color',
-  render: () => ({
-    moduleMetadata: { imports: [ProgressColorHost] },
-    template: `<andes-notification-progress-color />`,
   }),
 };
 

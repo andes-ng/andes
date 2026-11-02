@@ -8,7 +8,6 @@
   [style.--_toast-offset]="slot.offset"
   [style.--_toast-height]="slot.height"
   [attr.data-front]="slot.depth === 0 ? '' : null"
-  [attr.data-paused]="isPaused(slot.toast) ? '' : null"
   [attr.data-stack-behind]="stacked() && slot.depth > 0 ? '' : null"
   [attr.data-stack-overflow]="
     stacked() && slot.depth >= visibleDepth() ? '' : null

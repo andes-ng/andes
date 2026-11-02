@@ -39,8 +39,7 @@ interface DragState {
 }
 
 /**
- * Renders a single toast's chrome (icon, title, message, buttons, close button, progress
- * bar) and its drag-to-dismiss gesture - with no live-region semantics of its own. Internal to
+ * Renders a single toast's chrome (icon, title, message, buttons, close button) and its drag-to-dismiss gesture - with no live-region semantics of its own. Internal to
  * `@andes-ng/ui` - only `AndesToastRegion` instantiates it, so it stays unexported from the
  * package root; auto-dismiss, hover pause, queueing and the stack layout live elsewhere.
  *
@@ -135,15 +134,6 @@ export class AndesToastItem {
     const { action, cancel } = this.toast();
     return !!action || !!cancel;
   });
-
-  /** Progress only makes sense when there is a countdown to visualise. */
-  protected readonly progressDuration = computed(() => {
-    const { showProgress, duration } = this.toast();
-    return showProgress && duration !== false && duration > 0 ? duration : null;
-  });
-
-  /** One-element list keyed by revision, so a key-based update restarts the bar's animation. */
-  protected readonly progressRevision = computed(() => [this.toast().revision]);
 
   protected readonly closeLabel = computed(() =>
     this.toast().flavor === 'message'

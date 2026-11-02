@@ -70,7 +70,6 @@ class KeyboardHost {
       this.toasts.info(`Build ${i} finished.`, {
         title: `Build ${i}`,
         duration: 30_000,
-        showProgress: true,
       });
     }
   }

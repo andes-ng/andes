@@ -172,13 +172,3 @@
   </button>
   } }
 </div>
-@if (progressDuration(); as progressMs) { @for (revision of progressRevision();
-track revision) {
-<div
-  class="andes-toast__progress"
-  aria-hidden="true"
-  [class]="toast().classNames?.progress"
-  [style.animation-duration.ms]="progressMs"
-  [style]="toast().styles?.progress ?? null"
-></div>
-} }

@@ -1273,146 +1273,6 @@ describe('AndesToastViewport', () => {
       ]);
     });
 
-    describe('countdown progress bar', () => {
-      it('showProgress renders a bar that drains over the duration, only for timed toasts', () => {
-        const { fixture, toasts } = createTemplateHost();
-
-        toasts.show({ message: 'timed', duration: 4000, showProgress: true });
-        toasts.show({ message: 'sticky', duration: false, showProgress: true });
-        toasts.show({ message: 'off', duration: 4000 });
-        fixture.detectChanges();
-
-        const [timed, sticky, off] = Array.from(
-          fixture.nativeElement.querySelectorAll('andes-toast-item'),
-        ) as HTMLElement[];
-        const bar = timed.querySelector<HTMLElement>('.andes-toast__progress');
-        expect(bar?.style.animationDuration).toBe('4000ms');
-        expect(bar?.getAttribute('aria-hidden')).toBe('true');
-        expect(sticky.querySelector('.andes-toast__progress')).toBeNull();
-        expect(off.querySelector('.andes-toast__progress')).toBeNull();
-      });
-
-      it('showProgress can be turned on for every toast in the global config', () => {
-        const { fixture, toasts } = createTemplateHost([
-          provideAndesToastConfig({ showProgress: true }),
-        ]);
-
-        toasts.info('a');
-        toasts.info('b', { showProgress: false });
-        fixture.detectChanges();
-
-        const [a, b] = Array.from(
-          fixture.nativeElement.querySelectorAll('andes-toast-item'),
-        ) as HTMLElement[];
-        expect(a.querySelector('.andes-toast__progress')).not.toBeNull();
-        expect(b.querySelector('.andes-toast__progress')).toBeNull();
-      });
-
-      it('a key-based update restarts the bar', () => {
-        const { fixture, toasts } = createTemplateHost();
-
-        toasts.info('a', { key: 'k', showProgress: true });
-        fixture.detectChanges();
-        const before = fixture.nativeElement.querySelector(
-          '.andes-toast__progress',
-        );
-
-        toasts.info('b', { key: 'k', showProgress: true });
-        fixture.detectChanges();
-        const after = fixture.nativeElement.querySelector(
-          '.andes-toast__progress',
-        );
-
-        expect(after).not.toBeNull();
-        expect(after).not.toBe(before);
-      });
-
-      it('marks the toast paused while it is hovered, in step with its countdown', () => {
-        vi.useFakeTimers();
-        const { fixture, toasts } = createTemplateHost();
-
-        toasts.info('a', { showProgress: true, duration: 3000 });
-        toasts.info('b', {
-          showProgress: true,
-          duration: 3000,
-          pauseOnHover: false,
-        });
-        toasts.config({ stack: false });
-        fixture.detectChanges();
-        const [a, b] = Array.from(
-          fixture.nativeElement.querySelectorAll('andes-toast-item'),
-        ) as HTMLElement[];
-        expect(a.hasAttribute('data-paused')).toBe(false);
-
-        a.dispatchEvent(new MouseEvent('mouseenter'));
-        b.dispatchEvent(new MouseEvent('mouseenter'));
-        fixture.detectChanges();
-        expect(a.hasAttribute('data-paused')).toBe(true);
-        expect(b.hasAttribute('data-paused')).toBe(false);
-
-        a.dispatchEvent(new MouseEvent('mouseleave'));
-        fixture.detectChanges();
-        expect(a.hasAttribute('data-paused')).toBe(false);
-      });
-
-      it('holds the bar of every toast in a hovered deck', () => {
-        const { fixture, toasts } = createTemplateHost();
-
-        toasts.info('a', { showProgress: true });
-        toasts.info('b', { showProgress: true });
-        fixture.detectChanges();
-        const [region] = regions(fixture.nativeElement);
-        const rendered = Array.from(
-          region.querySelectorAll<HTMLElement>('andes-toast-item'),
-        );
-
-        region.dispatchEvent(new MouseEvent('mouseenter'));
-        fixture.detectChanges();
-        expect(rendered.every((i) => i.hasAttribute('data-paused'))).toBe(true);
-
-        region.dispatchEvent(new MouseEvent('mouseleave'));
-        fixture.detectChanges();
-        expect(rendered.some((i) => i.hasAttribute('data-paused'))).toBe(false);
-      });
-
-      it('pauses the bar while focus is inside the toast and while the page is hidden', () => {
-        const css = readFileSync(
-          'packages/ui/src/lib/toast/toast-item.css',
-          'utf8',
-        );
-        for (const selector of [
-          ':host([data-paused]) .andes-toast__progress',
-          ':host([data-pause-on-hover]:hover) .andes-toast__progress',
-          ':host(:focus-within) .andes-toast__progress',
-        ]) {
-          expect(declaredValue(css, selector, 'animation-play-state')).toBe(
-            'paused',
-          );
-        }
-
-        const { fixture, toasts } = createTemplateHost();
-        toasts.info('a', { showProgress: true });
-        fixture.detectChanges();
-        const item = fixture.nativeElement.querySelector(
-          'andes-toast-item',
-        ) as HTMLElement;
-        const hidden = vi
-          .spyOn(document, 'hidden', 'get')
-          .mockReturnValue(true);
-        try {
-          document.dispatchEvent(new Event('visibilitychange'));
-          fixture.detectChanges();
-          expect(item.hasAttribute('data-paused')).toBe(true);
-        } finally {
-          hidden.mockReturnValue(false);
-          document.dispatchEvent(new Event('visibilitychange'));
-          hidden.mockRestore();
-        }
-        fixture.detectChanges();
-        expect(item.hasAttribute('data-paused')).toBe(false);
-      });
-    });
-
     describe('semantic parts', () => {
       it('classNames and styles reach each part of a notification', () => {
         const { fixture, toasts } = createTemplateHost();
@@ -1420,7 +1280,6 @@ describe('AndesToastViewport', () => {
         toasts.success('Body text', {
           title: 'Heading',
           duration: false,
-          showProgress: true,
           actions: [{ label: 'Open', onClick: () => undefined }],
           className: 'legacy-root',
           classNames: {
@@ -1468,24 +1327,6 @@ describe('AndesToastViewport', () => {
         expect(part('.andes-toast__icon').classList).toContain(
           'andes-toast__icon',
         );
-      });
-
-      it('styles the progress bar next to its duration', () => {
-        const { fixture, toasts } = createTemplateHost();
-
-        toasts.info('x', {
-          showProgress: true,
-          classNames: { progress: 'p-bar' },
-          styles: { progress: { height: '4px' } },
-        });
-        fixture.detectChanges();
-
-        const bar = fixture.nativeElement.querySelector(
-          '.andes-toast__progress',
-        ) as HTMLElement;
-        expect(bar.classList).toContain('p-bar');
-        expect(bar.style.height).toBe('4px');
-        expect(bar.style.animationDuration).toBe('5000ms');
       });
 
       it('a message takes classNames.title and styles.title for its text', () => {

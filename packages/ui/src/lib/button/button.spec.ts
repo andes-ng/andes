@@ -4,6 +4,8 @@ import { resolve } from 'node:path';
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
+import { declaredValue } from '../../testing/computed-style';
+import { ANDES_BUTTON_CONTEXT } from './button-context';
 import { AndesButtonGroup } from './button-group';
 import {
   AndesButton,
@@ -665,5 +667,52 @@ describe('AndesButton', () => {
 
       expect(buttons[0].classList).toContain('andes-button--md');
     });
+  });
+});
+
+describe('AndesButton context', () => {
+  @Component({
+    imports: [AndesButton],
+    providers: [
+      { provide: ANDES_BUTTON_CONTEXT, useFactory: () => ({ disabled }) },
+    ],
+    template: `<andes-button>Save</andes-button
+      ><andes-button [disabled]="true">Own</andes-button>`,
+  })
+  class ContextHost {}
+
+  const disabled = signal(false);
+
+  it('is disabled by a control that provides the context, as well as by itself', () => {
+    const fixture = TestBed.createComponent(ContextHost);
+    fixture.detectChanges();
+    const buttons = Array.from(
+      fixture.nativeElement.querySelectorAll('button'),
+    ) as HTMLButtonElement[];
+    expect(buttons.map((b) => b.disabled)).toEqual([false, true]);
+
+    disabled.set(true);
+    fixture.detectChanges();
+    expect(buttons.map((b) => b.disabled)).toEqual([true, true]);
+
+    disabled.set(false);
+    fixture.detectChanges();
+    expect(buttons.map((b) => b.disabled)).toEqual([false, true]);
+  });
+});
+
+describe('AndesButton invalid border', () => {
+  const css = readFileSync(
+    resolve(process.cwd(), 'packages/ui/src/lib/button/button.css'),
+    'utf8',
+  );
+
+  it('outranks the variants, whose border colours are declared with one class', () => {
+    expect(
+      declaredValue(css, '.andes-button.andes-button--invalid', 'border-color'),
+    ).toBe('var(--andes-color-danger)');
+    expect(
+      declaredValue(css, '.andes-button--outline', 'border-color'),
+    ).toBeDefined();
   });
 });

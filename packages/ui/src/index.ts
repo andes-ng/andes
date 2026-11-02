@@ -157,6 +157,6 @@ export * from './lib/tree-select';
 
 // @slot typography
 
-// @slot upload
+export * from './lib/upload';
 
 // @slot watermark

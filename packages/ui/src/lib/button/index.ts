@@ -11,3 +11,5 @@ export type {
   AndesButtonGroupContext,
   AndesButtonGroupOrientation,
 } from './button-group';
+export { ANDES_BUTTON_CONTEXT } from './button-context';
+export type { AndesButtonContext } from './button-context';

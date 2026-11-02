@@ -1,3 +1,4 @@
+import { Directionality } from '@angular/cdk/bidi';
 import { DOCUMENT, type Injector } from '@angular/core';
 import {
   createFlexibleConnectedPositionStrategy,
@@ -43,12 +44,18 @@ const CROSS_SIDES: Readonly<
  *
  * `sideOffset` always pushes the overlay *away* from the anchor, so its sign
  * depends on the side; `alignOffset` shifts along the perpendicular axis.
+ *
+ * `left` and `right` are physical sides, but the CDK names the horizontal edges
+ * `start` and `end`, which swap in a right-to-left layout; `rtl` swaps them back so
+ * the overlay stays on the physical side that was asked for. `align` stays logical:
+ * `start` hugs the leading edge, wherever that is.
  */
 export function andesConnectedPosition(
   side: AndesOverlaySide,
   align: AndesOverlayAlign,
   sideOffset: number,
   alignOffset: number,
+  rtl = false,
 ): ConnectedPosition {
   const alignToX = { start: 'start', center: 'center', end: 'end' } as const;
   const alignToY = { start: 'top', center: 'center', end: 'bottom' } as const;
@@ -74,18 +81,18 @@ export function andesConnectedPosition(
       };
     case 'right':
       return {
-        originX: 'end',
+        originX: rtl ? 'start' : 'end',
         originY: alignToY[align],
-        overlayX: 'start',
+        overlayX: rtl ? 'end' : 'start',
         overlayY: alignToY[align],
         offsetX: sideOffset,
         offsetY: alignOffset,
       };
     case 'left':
       return {
-        originX: 'start',
+        originX: rtl ? 'end' : 'start',
         originY: alignToY[align],
-        overlayX: 'end',
+        overlayX: rtl ? 'start' : 'end',
         overlayY: alignToY[align],
         offsetX: -sideOffset,
         offsetY: alignOffset,
@@ -131,9 +138,10 @@ export function andesConnectedPositions(
   alignOffset: number,
   flip: boolean,
   crossSideFallback = true,
+  rtl = false,
 ): ConnectedPosition[] {
   const build = (candidate: AndesOverlaySide) =>
-    andesConnectedPosition(candidate, align, sideOffset, alignOffset);
+    andesConnectedPosition(candidate, align, sideOffset, alignOffset, rtl);
 
   if (!flip) {
     return [build(side)];
@@ -295,6 +303,7 @@ class AndesAnchoredPositionStrategy implements PositionStrategy {
       alignOffset,
       flip,
       crossSideFallback,
+      injector.get(Directionality, null)?.value === 'rtl',
     );
     // Without push there is nothing to turn off, and a locked position re-applies its
     // first push amount, which already moves with the anchor.

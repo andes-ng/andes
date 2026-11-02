@@ -76,6 +76,7 @@ const CARET_SIZES: Readonly<Record<AndesButtonSize, AndesButtonSize>> = {
       class="andes-dropdown-button__main"
       [variant]="variant()"
       [size]="size()"
+      [danger]="danger()"
       [disabled]="isDisabled()"
       [loading]="loading()"
       [loadingDelay]="loadingDelay()"
@@ -89,7 +90,9 @@ const CARET_SIZES: Readonly<Record<AndesButtonSize, AndesButtonSize>> = {
       class="andes-dropdown-button__caret"
       [variant]="variant()"
       [size]="caretSize()"
+      [danger]="danger()"
       [disabled]="isDisabled()"
+      [loading]="menuLoading()"
       [aria-label]="menuLabel()"
     >
       @if (icon(); as caretIcon) {
@@ -163,6 +166,8 @@ const CARET_SIZES: Readonly<Record<AndesButtonSize, AndesButtonSize>> = {
 export class AndesDropdownButton extends AndesDropdownMenu {
   /** Visual variant of both halves. Default `'outline'`. */
   readonly variant = input<AndesButtonVariant>('outline');
+  /** Destructive styling of both halves, as `AndesButton`'s `danger`. Default `false`. */
+  readonly danger = input(false, { transform: booleanAttribute });
   /** Size of both halves. Default `'md'`. */
   readonly size = input<AndesButtonSize>('md');
   /** Shows the main button's loading state (the caret stays usable). */
@@ -171,6 +176,11 @@ export class AndesDropdownButton extends AndesDropdownMenu {
   readonly loadingDelay = input(0, { transform: numberAttribute });
   /** Replaces the main button's loading spinner. */
   readonly loadingIcon = input<TemplateRef<unknown> | undefined>(undefined);
+  /**
+   * Shows the loading state on the caret half instead of the main one: its icon is replaced
+   * by a spinner and, as with any loading button, it cannot open the menu meanwhile.
+   */
+  readonly menuLoading = input(false, { transform: booleanAttribute });
   /** Replaces the caret's chevron. */
   readonly icon = input<TemplateRef<unknown> | undefined>(undefined);
   /** Accessible name of the icon-only caret button. Default `'More actions'`. */

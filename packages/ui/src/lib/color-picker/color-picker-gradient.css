@@ -1,0 +1,117 @@
+/*
+  The gradient bar: a 12px rail with the gradient over a checkerboard, and a 16px handle per
+  stop riding on it. Like the sliders it is a picture of the gradient line, left to right in
+  every page direction. Only the handles take focus; a focused one gets the focus ring.
+*/
+:host {
+  --_handle: 1rem;
+  --_checker: conic-gradient(
+    color-mix(in srgb, var(--andes-color-foreground, #0f172a) 14%, transparent)
+      25%,
+    transparent 25% 50%,
+    color-mix(in srgb, var(--andes-color-foreground, #0f172a) 14%, transparent)
+      50% 75%,
+    transparent 75% 100%
+  );
+
+  position: relative;
+  display: block;
+  box-sizing: border-box;
+  height: 1.25rem;
+  direction: ltr;
+  touch-action: none;
+  user-select: none;
+}
+
+:host([data-disabled]) {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.andes-color-gradient__rail {
+  position: absolute;
+  inset-block: 0.25rem;
+  inset-inline: 0;
+  border-radius: var(--andes-radius-sm, 0.25rem);
+  background-size:
+    auto,
+    0.5rem 0.5rem;
+  box-shadow: inset 0 0 1px 0
+    color-mix(in srgb, var(--andes-color-foreground, #0f172a) 45%, transparent);
+  cursor: copy;
+}
+
+:host([data-disabled]) .andes-color-gradient__rail,
+:host([data-readonly]) .andes-color-gradient__rail {
+  cursor: default;
+}
+
+/* The handles are laid over the rail without covering it for the pointer. */
+.andes-color-gradient__stops {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.andes-color-gradient__stop {
+  position: absolute;
+  top: 0.125rem;
+  inset-inline-start: calc(
+    var(--andes-color-gradient-position, 0) * (100% - var(--_handle))
+  );
+  box-sizing: border-box;
+  width: var(--_handle);
+  height: var(--_handle);
+  border: 2px solid #fff;
+  border-radius: var(--andes-radius-sm, 0.25rem);
+  background-image:
+    linear-gradient(
+      var(--andes-color-gradient-stop, transparent),
+      var(--andes-color-gradient-stop, transparent)
+    ),
+    var(--_checker);
+  background-size:
+    auto,
+    0.5rem 0.5rem;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, #000 28%, transparent),
+    0 1px 3px color-mix(in srgb, #000 28%, transparent);
+  cursor: grab;
+  outline: none;
+  pointer-events: auto;
+  transition: transform 120ms var(--andes-motion-ease-out, ease-out);
+}
+
+.andes-color-gradient__stop:active {
+  cursor: grabbing;
+}
+
+:host([data-disabled]) .andes-color-gradient__stop,
+:host([data-readonly]) .andes-color-gradient__stop {
+  cursor: default;
+}
+
+/* The selected stop: lifted and ringed in the primary colour. */
+.andes-color-gradient__stop[data-active] {
+  z-index: 1;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, #000 28%, transparent),
+    0 0 0 3px var(--andes-color-primary, #2563eb),
+    0 1px 3px color-mix(in srgb, #000 28%, transparent);
+  transform: translateY(-1px);
+}
+
+.andes-color-gradient__stop:focus-visible {
+  outline: 2px solid var(--andes-color-focus-ring, #2563eb);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .andes-color-gradient__stop {
+    transition: none;
+  }
+
+  .andes-color-gradient__stop[data-active] {
+    transform: none;
+  }
+}

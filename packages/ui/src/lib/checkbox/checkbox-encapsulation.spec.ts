@@ -22,23 +22,27 @@ import { AndesCheckbox } from './checkbox';
  * user actually sees - and it is the only way a test here can fail when the source regresses.
  */
 
-const CSS_PATH = join(
-  process.cwd(),
-  new URL('./checkbox.css', import.meta.url).pathname,
-);
-
+/**
+ * The checkbox's styles: its own sheet, then the shared check motion holding the keyframes
+ * it animates with (own sheet first, so a lookup of its first at-rule still finds its own).
+ */
+const CSS_PATHS = [
+  join(process.cwd(), new URL('./checkbox.css', import.meta.url).pathname),
+  join(process.cwd(), new URL('./check-motion.css', import.meta.url).pathname),
+];
 /** Stand-in for the `%COMP%` placeholder Angular fills with the component's own id. */
 const SCOPE = 'andes-test-scope';
 
 function runtimeScopedCss(): string {
-  const raw = readFileSync(CSS_PATH, 'utf8');
-
-  return encapsulateStyle(raw).split('%COMP%').join(SCOPE);
+  return CSS_PATHS.map((path) => encapsulateStyle(readFileSync(path, 'utf8')))
+    .join('\n')
+    .split('%COMP%')
+    .join(SCOPE);
 }
 
 /** The raw stylesheet source, for the contract tests that read it as text. */
 function rawCss(): string {
-  return readFileSync(CSS_PATH, 'utf8');
+  return CSS_PATHS.map((path) => readFileSync(path, 'utf8')).join('\n');
 }
 
 /**
@@ -255,14 +259,22 @@ describe('AndesCheckbox style encapsulation', () => {
 
   describe('stylesheet contract', () => {
     it('only animates inside the motion-allowed, non-forced-colors query', () => {
-      const css = rawCss();
-      const motion = atRuleBody(css, MOTION_QUERY);
+      // The animations live in the shared check motion, next to the keyframes they play
+      // (Angular scopes keyframe names one stylesheet at a time); the checkbox's own sheet
+      // has none.
+      const [own, shared] = CSS_PATHS.map((path) => readFileSync(path, 'utf8'));
+      expect(indicesOf(own, 'animation:')).toEqual([]);
 
-      expect(motion).not.toBe('');
-      const everywhere = indicesOf(css, 'animation:').length;
-      const inside = indicesOf(motion, 'animation:').length;
+      const blocks = shared.split(`${MOTION_QUERY} {`).slice(1);
+      expect(blocks.length).toBeGreaterThan(0);
+      const inside = blocks
+        .map((block) => atRuleBody(`${MOTION_QUERY} {${block}`, MOTION_QUERY))
+        .reduce(
+          (count, body) => count + indicesOf(body, 'animation:').length,
+          0,
+        );
       expect(inside).toBeGreaterThan(0);
-      expect(inside).toBe(everywhere);
+      expect(inside).toBe(indicesOf(shared, 'animation:').length);
     });
 
     it('keys every animation off the one-shot data-motion hook', () => {
@@ -288,6 +300,39 @@ describe('AndesCheckbox style encapsulation', () => {
       expect(draw).toContain('stroke-dashoffset: 14');
       expect(draw).toContain('stroke-dashoffset: 0');
       expect(pop).toContain('scale(1.1)');
+    });
+
+    it('lightens a checked or mixed box on hover, but never a disabled or read-only one', () => {
+      const css = rawCss();
+      const hover = withoutComments(
+        atRuleBody(css, '@media (forced-colors: none)'),
+      );
+
+      expect(css.split(/\s+/).join(' ')).toContain(
+        '--_andes-checkbox-lift: color-mix( in srgb, var(--andes-color-primary) 82%, white );',
+      );
+      for (const state of ['checked', 'indeterminate']) {
+        const selector = `.andes-checkbox:not(.andes-checkbox--readonly) .andes-checkbox__input:${state}:hover:not(:disabled) ~ .andes-checkbox__box`;
+        expect(hover).toContain(selector);
+      }
+      expect(hover).toContain('background-color: var(--_andes-checkbox-lift);');
+      expect(hover).toContain('border-color: var(--_andes-checkbox-lift);');
+      // Never the darker hover token the old rules would have used.
+      expect(hover).not.toContain('primary-hover');
+    });
+
+    it('keeps the lightened hover out of the forced-colors palette', () => {
+      const forced = atRuleBody(rawCss(), '@media (forced-colors: active)');
+
+      expect(forced).not.toContain('--_andes-checkbox-lift');
+    });
+
+    it('scales the ring with a size-driven spread and keeps it at 20% opacity at most', () => {
+      const ring = atRuleBody(rawCss(), '@keyframes andes-checkbox-ripple');
+
+      expect(ring).toContain('var(--andes-color-primary) 20%');
+      expect(ring).toContain('var(--_andes-checkbox-ring)');
+      expect(ring).toContain('var(--andes-color-primary) 0%');
     });
 
     it('drops every transition under prefers-reduced-motion', () => {

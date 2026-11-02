@@ -1,4 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
+import { Component, ViewEncapsulation } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideBookOpen,
@@ -15,6 +16,7 @@ import {
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
+import { AndesInput } from '../input/input';
 import { AndesDropdownMenu } from './dropdown-menu';
 import { AndesDropdownMenuContent } from './dropdown-menu-content';
 import { AndesDropdownMenuItem } from './dropdown-menu-item';
@@ -48,38 +50,6 @@ const ICONS = provideIcons({
 
 const NOTE =
   'font: 0.75rem var(--andes-font-family), sans-serif; color: var(--andes-color-muted-foreground); margin: 0 0 0.75rem; max-width: 34rem;';
-
-/**
- * Demo search field styled like the library's own fields: one focus indicator (primary
- * border plus a soft 2px ring), never the browser's outline drawn as a second frame.
- */
-const FIELD_STYLES = `
-  <style>
-    .sb-field-input {
-      box-sizing: border-box;
-      width: 100%;
-      height: 2rem;
-      padding: 0 0.6875rem;
-      border: 1px solid var(--andes-color-input);
-      border-radius: var(--andes-radius-md);
-      background-color: var(--andes-color-background);
-      color: var(--andes-color-foreground);
-      font: inherit;
-      line-height: 1.375rem;
-      outline: none;
-      transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
-    }
-    .sb-field-input::placeholder { color: var(--andes-color-muted-foreground); }
-    .sb-field-input:hover {
-      border-color: color-mix(in srgb, var(--andes-color-primary) 65%, var(--andes-color-input));
-    }
-    .sb-field-input:focus {
-      border-color: var(--andes-color-primary);
-      box-shadow: 0 0 0 2px color-mix(in srgb, var(--andes-color-primary) 20%, transparent);
-      outline: none;
-    }
-  </style>
-`;
 
 /**
  * The other two ways to open the menu, side by side. `trigger="hover"` opens after 150ms of
@@ -131,7 +101,7 @@ export const Triggers: Story = {
   }),
 };
 
-/** The six primary `placement`s, with `arrow`. `{ pointAtCenter: true }` shifts the panel so the arrow meets the trigger's center. */
+/** All twelve `placement`s - above, below, left and right of the trigger, each aligned to either end or centered - with `arrow`. `{ pointAtCenter: true }` shifts the panel so the arrow meets the trigger's center. */
 export const PlacementAndArrow: Story = {
   args: { arrow: true },
   argTypes: {
@@ -157,25 +127,49 @@ export const PlacementAndArrow: Story = {
         ['topLeft', 'top', 'topRight'],
         ['bottomLeft', 'bottom', 'bottomRight'],
       ],
+      sides: [
+        ['leftTop', 'left', 'leftBottom'],
+        ['rightTop', 'right', 'rightBottom'],
+      ],
     },
     template: `
-      <div style="display: grid; gap: 7rem 1rem; padding: 7rem 2rem;">
-        @for (row of rows; track $index) {
-          <div style="display: flex; gap: 1rem;">
-            @for (placement of row; track placement) {
-              <andes-dropdown-menu [placement]="placement" [arrow]="arrow">
-                <andes-button andesDropdownMenuTrigger variant="outline">
-                  {{ placement }}
-                </andes-button>
-                <andes-dropdown-menu-content>
-                  <andes-dropdown-menu-item>First action</andes-dropdown-menu-item>
-                  <andes-dropdown-menu-item>Second action</andes-dropdown-menu-item>
-                  <andes-dropdown-menu-item>Third action</andes-dropdown-menu-item>
-                </andes-dropdown-menu-content>
-              </andes-dropdown-menu>
-            }
-          </div>
-        }
+      <div style="display: grid; gap: 7rem; padding: 7rem 2rem;">
+        <div style="display: grid; gap: 7rem 1rem;">
+          @for (row of rows; track $index) {
+            <div style="display: flex; gap: 1rem;">
+              @for (placement of row; track placement) {
+                <andes-dropdown-menu [placement]="placement" [arrow]="arrow">
+                  <andes-button andesDropdownMenuTrigger variant="outline">
+                    {{ placement }}
+                  </andes-button>
+                  <andes-dropdown-menu-content>
+                    <andes-dropdown-menu-item>First action</andes-dropdown-menu-item>
+                    <andes-dropdown-menu-item>Second action</andes-dropdown-menu-item>
+                    <andes-dropdown-menu-item>Third action</andes-dropdown-menu-item>
+                  </andes-dropdown-menu-content>
+                </andes-dropdown-menu>
+              }
+            </div>
+          }
+        </div>
+        <div style="display: flex; gap: 18rem; padding-inline: 12rem;">
+          @for (column of sides; track $index) {
+            <div style="display: grid; gap: 0.5rem; justify-items: start;">
+              @for (placement of column; track placement) {
+                <andes-dropdown-menu [placement]="placement" [arrow]="arrow">
+                  <andes-button andesDropdownMenuTrigger variant="outline">
+                    {{ placement }}
+                  </andes-button>
+                  <andes-dropdown-menu-content>
+                    <andes-dropdown-menu-item>First action</andes-dropdown-menu-item>
+                    <andes-dropdown-menu-item>Second action</andes-dropdown-menu-item>
+                    <andes-dropdown-menu-item>Third action</andes-dropdown-menu-item>
+                  </andes-dropdown-menu-content>
+                </andes-dropdown-menu>
+              }
+            </div>
+          }
+        </div>
       </div>
     `,
   }),
@@ -364,6 +358,7 @@ export const CustomPopup: Story = {
   render: () => ({
     moduleMetadata: {
       imports: [
+        AndesInput,
         NgIcon,
         NgTemplateOutlet,
         AndesButton,
@@ -390,7 +385,7 @@ export const CustomPopup: Story = {
           item.label.toLowerCase().includes(query.trim().toLowerCase()),
         ),
     },
-    template: `${FIELD_STYLES}
+    template: `
       <div>
         <p style="${NOTE}">Last action: <strong>{{ last || '-' }}</strong></p>
         <andes-dropdown-menu
@@ -403,12 +398,11 @@ export const CustomPopup: Story = {
         </andes-dropdown-menu>
         <ng-template #popup let-menu let-close="close">
           <div style="padding: var(--andes-space-2); border-bottom: 1px solid var(--andes-color-border);">
-            <input
+            <andes-input
               aria-label="Filter projects"
               placeholder="Filter projects…"
-              [value]="query"
-              (input)="query = $any($event.target).value"
-              class="sb-field-input"
+              size="sm"
+              [(value)]="query"
             />
           </div>
           <ng-container *ngTemplateOutlet="menu" />
@@ -460,5 +454,117 @@ export const ScrollableMenu: Story = {
         </andes-dropdown-menu>
       </div>
     `,
+  }),
+};
+
+/**
+ * Selection actions: no trigger at all. Select some text and the menu opens beside the
+ * selection through `showAt(x, y)`, which takes viewport coordinates (here the end of the
+ * selection's last line). Escape or a click elsewhere closes it and focus goes back to
+ * where it was.
+ */
+export const SelectionActions: Story = {
+  render: () => ({
+    moduleMetadata: {
+      imports: [NgIcon, AndesDropdownMenu],
+      providers: [ICONS],
+    },
+    props: {
+      last: '',
+      menuItems: [
+        { key: 'copy', label: 'Copy', extra: '⌘C' },
+        { key: 'search', label: 'Search the web' },
+        {
+          key: 'share',
+          label: 'Share',
+          children: [
+            { key: 'email', label: 'Email' },
+            { key: 'link', label: 'Copy link' },
+          ],
+        },
+      ],
+      onSelection: (menu: AndesDropdownMenu) => {
+        const selection = window.getSelection();
+        if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
+          return;
+        }
+        const rects = selection.getRangeAt(0).getClientRects();
+        const last = rects[rects.length - 1];
+        if (last) {
+          menu.showAt(last.right, last.bottom);
+        }
+      },
+    },
+    template: `
+      <div>
+        <p style="${NOTE}">Action: <strong>{{ last || '-' }}</strong></p>
+        <andes-dropdown-menu #menu [items]="menuItems" (itemClick)="last = $event.key">
+        </andes-dropdown-menu>
+        <p
+          style="max-width: 34rem; font: 0.875rem/1.5rem var(--andes-font-family), sans-serif;"
+          (mouseup)="onSelection(menu)"
+        >
+          Select any part of this paragraph. The menu opens at the end of the selection
+          without a trigger element: the page only needs to know where to put it.
+        </p>
+      </div>
+    `,
+  }),
+};
+
+@Component({
+  selector: 'andes-dropdown-menu-styling-demo',
+  imports: [AndesButton, AndesDropdownMenu, AndesDropdownMenuTrigger],
+  encapsulation: ViewEncapsulation.None,
+  // Not scoped: the panel renders in the overlay container under <body>, outside this host.
+  styles: `
+    .styling-demo-panel .andes-dropdown-menu__content {
+      --andes-dropdown-menu-max-height: 14rem;
+      min-width: 12rem;
+    }
+    .styling-demo-panel .styling-demo-item {
+      font-weight: var(--andes-font-weight-medium);
+      letter-spacing: 0.02em;
+    }
+    .styling-demo-panel .styling-demo-pro {
+      color: var(--andes-color-primary-text);
+    }
+  `,
+  template: `
+    <andes-dropdown-menu
+      panelClass="styling-demo-panel"
+      [items]="[
+        { key: 'a', label: 'Bold row', class: 'styling-demo-item' },
+        { key: 'b', label: 'Highlighted row', class: 'styling-demo-pro' },
+        { key: 'c', label: 'Plain row' },
+        {
+          key: 'd',
+          label: 'Styled submenu',
+          class: 'styling-demo-pro',
+          children: [
+            { key: 'e', label: 'Nested row', class: 'styling-demo-item' },
+          ],
+        },
+      ]"
+    >
+      <andes-button andesDropdownMenuTrigger variant="outline"
+        >Styled from outside</andes-button
+      >
+    </andes-dropdown-menu>
+  `,
+})
+class StylingDemo {}
+
+/**
+ * Semantic styling hooks, the equivalent of Ant's `classNames`: `panelClass` adds a class to
+ * the overlay pane that holds the panel (so `.my-panel .andes-dropdown-menu__content` and
+ * custom properties such as `--andes-dropdown-menu-max-height` reach it), and an `items`
+ * entry's `class` adds one to its own row. The panel and rows keep their `andes-dropdown-menu__*`
+ * classes for anything finer.
+ */
+export const StylingHooks: Story = {
+  render: () => ({
+    moduleMetadata: { imports: [StylingDemo] },
+    template: `<andes-dropdown-menu-styling-demo />`,
   }),
 };

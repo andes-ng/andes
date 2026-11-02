@@ -14,7 +14,7 @@
   [class.andes-checkbox--segment]="segment() === 'horizontal'"
   [class.andes-checkbox--segment-vertical]="segment() === 'vertical'"
   [attr.data-motion]="motion()"
-  (animationend)="onMotionEnd()"
+  (animationend)="onMotionEnd($event)"
 >
   <span class="andes-checkbox__control">
     <input

@@ -20,6 +20,7 @@ import {
   createNoopScrollStrategy,
   createOverlayRef,
   createRepositionScrollStrategy,
+  type ConnectedPosition,
   type OverlayConfig,
   type OverlayRef,
   type ScrollStrategy,
@@ -34,10 +35,12 @@ import {
   ANDES_OVERLAY_DEFAULT_CONFIG,
   ANDES_OVERLAY_EXIT_TIMEOUT_MS,
   ANDES_OVERLAY_PANE_CLASS,
+  ANDES_OVERLAY_PLACED_SIDE_ATTRIBUTE,
   ANDES_OVERLAY_SCRIM,
   type AndesOverlayCloseReason,
   type AndesOverlayConfig,
   type AndesOverlayContent,
+  type AndesOverlaySide,
 } from './overlay-config';
 import {
   AndesOverlayInertRegistry,
@@ -45,6 +48,7 @@ import {
 } from './overlay-inert';
 import {
   andesImpliedSize,
+  andesPlacedSide,
   createAndesPositionStrategy,
 } from './overlay-positioning';
 
@@ -198,6 +202,7 @@ export class AndesOverlayPrimitive {
   private readonly _backdropElement = signal<HTMLElement | null>(null);
   private readonly _contentElement = signal<HTMLElement | null>(null);
   private readonly _isBackgroundInert = signal(false);
+  private readonly _placedSide = signal<AndesOverlaySide | null>(null);
 
   /** The resolved behavior configuration. */
   readonly config = this._config.asReadonly();
@@ -220,6 +225,13 @@ export class AndesOverlayPrimitive {
    * overlay still keeps the background inert for its own sake.
    */
   readonly isBackgroundInert = this._isBackgroundInert.asReadonly();
+  /**
+   * The side of the anchor an anchored overlay was actually placed on, after any flip, while
+   * it is attached; `null` before the first placement and for centered or edge overlays. The
+   * pane and its direct element children also carry it as
+   * {@link ANDES_OVERLAY_PLACED_SIDE_ATTRIBUTE}.
+   */
+  readonly placedSide = this._placedSide.asReadonly();
 
   /**
    * Stable id shared by the trigger's `aria-controls`/`aria-describedby` and the
@@ -259,6 +271,7 @@ export class AndesOverlayPrimitive {
   private pendingExit: AndesOverlayPendingExit | null = null;
   private attachedContent: AndesOverlayContent<unknown> | null = null;
   private attachedContext: unknown = undefined;
+  private placement = new Subscription();
 
   constructor() {
     inject(DestroyRef).onDestroy(() => {
@@ -295,13 +308,13 @@ export class AndesOverlayPrimitive {
     const config = this._config();
     this.applyLayerStyles(ref, config);
     ref.updateSize({ ...andesImpliedSize(config.positioning), ...config.size });
-    ref.updatePositionStrategy(
-      createAndesPositionStrategy(
-        this.injector,
-        config.positioning,
-        this._anchor(),
-      ),
+    const strategy = createAndesPositionStrategy(
+      this.injector,
+      config.positioning,
+      this._anchor(),
     );
+    this.watchPlacement(ref, strategy);
+    ref.updatePositionStrategy(strategy);
   }
 
   /**
@@ -352,11 +365,10 @@ export class AndesOverlayPrimitive {
     this.focusOrigin = this.activeElement();
     this.explicitRestoreTarget = toElement(options.restoreFocusTo);
 
-    const ref = createOverlayRef(
-      this.injector,
-      this.buildOverlayConfig(config),
-    );
+    const overlayConfig = this.buildOverlayConfig(config);
+    const ref = createOverlayRef(this.injector, overlayConfig);
     this.overlayRef = ref;
+    this.watchPlacement(ref, overlayConfig.positionStrategy);
     this.applyLayerStyles(ref, config);
 
     if (content instanceof TemplateRef) {
@@ -590,6 +602,8 @@ export class AndesOverlayPrimitive {
     }
     exit.subscription.unsubscribe();
 
+    this.placement.unsubscribe();
+    this._placedSide.set(null);
     this.overlayRef?.dispose();
     this.overlayRef = null;
     this.attachedContent = null;
@@ -624,6 +638,40 @@ export class AndesOverlayPrimitive {
       return false;
     }
     return !ref.overlayElement.contains(active);
+  }
+
+  /**
+   * Follows where a connected strategy actually places the pane, publishing the side as
+   * {@link placedSide} and as an attribute on the pane and its direct element children.
+   */
+  private watchPlacement(ref: OverlayRef, strategy: unknown): void {
+    this.placement.unsubscribe();
+    this.placement = new Subscription();
+    this._placedSide.set(null);
+    // A strategy that wraps a connected one (the anchored strategy) forwards its changes,
+    // so it is recognised by what it exposes rather than by its class.
+    const changes = (
+      strategy as {
+        positionChanges?: Observable<{ connectionPair: ConnectedPosition }>;
+      }
+    ).positionChanges;
+    if (!changes) {
+      return;
+    }
+    this.placement.add(
+      changes.subscribe(({ connectionPair }) => {
+        const side = andesPlacedSide(connectionPair);
+        this._placedSide.set(side);
+        const pane = ref.overlayElement;
+        for (const element of [pane, ...Array.from(pane.children)]) {
+          if (side) {
+            element.setAttribute(ANDES_OVERLAY_PLACED_SIDE_ATTRIBUTE, side);
+          } else {
+            element.removeAttribute(ANDES_OVERLAY_PLACED_SIDE_ATTRIBUTE);
+          }
+        }
+      }),
+    );
   }
 
   private prefersReducedMotion(): boolean {
@@ -714,26 +762,46 @@ export class AndesOverlayPrimitive {
       }),
     );
 
+    const handleOutside = (event: MouseEvent): void => {
+      this._outsidePointer.next(event);
+      if (!this._config().closeOnOutsideClick) {
+        return;
+      }
+      const target = event.target as Node | null;
+      // A click on the trigger is the trigger's own business — closing here as
+      // well would fight its toggle and leave the overlay flickering.
+      const anchor = this._anchor();
+      if (anchor && target && anchor.contains(target)) {
+        return;
+      }
+      // The backdrop is technically "outside" the pane, but it has its own,
+      // more precise close reason.
+      if (target && ref.backdropElement?.contains(target)) {
+        return;
+      }
+      this.close('outside-click');
+    };
+
     this.openSubscriptions.add(
-      ref.outsidePointerEvents().subscribe((event) => {
-        this._outsidePointer.next(event);
-        if (!this._config().closeOnOutsideClick) {
-          return;
-        }
-        const target = event.target as Node | null;
-        // A click on the trigger is the trigger's own business — closing here as
-        // well would fight its toggle and leave the overlay flickering.
-        const anchor = this._anchor();
-        if (anchor && target && anchor.contains(target)) {
-          return;
-        }
-        // The backdrop is technically "outside" the pane, but it has its own,
-        // more precise close reason.
-        if (target && ref.backdropElement?.contains(target)) {
-          return;
-        }
-        this.close('outside-click');
-      }),
+      ref.outsidePointerEvents().subscribe(handleOutside),
+    );
+
+    // The CDK listens on `body`, so a click on the page's root element, which is
+    // all there is below a body shorter than the window, never reaches it. Only
+    // the topmost overlay answers, as it does for body clicks.
+    const doc = ref.hostElement.ownerDocument;
+    const onRootClick = (event: MouseEvent): void => {
+      const container = ref.hostElement.parentElement;
+      if (
+        event.target === doc.documentElement &&
+        container?.lastElementChild === ref.hostElement
+      ) {
+        handleOutside(event);
+      }
+    };
+    doc.addEventListener('click', onRootClick, true);
+    this.openSubscriptions.add(() =>
+      doc.removeEventListener('click', onRootClick, true),
     );
 
     this.openSubscriptions.add(

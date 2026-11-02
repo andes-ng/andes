@@ -25,7 +25,7 @@ overrides:
   js-yaml@>=5.0.0 <5.4.1: '>=5.4.1'
   fast-uri@>=3.0.0 <3.1.8: '>=3.1.8'
   serialize-javascript@>=7.1.1 <7.1.2: '>=7.1.2'
-  follow-redirects@>=1.16.0 <1.16.1: '>=1.16.1'
+  follow-redirects@>=1.16.0 <1.16.2: '>=1.16.2'
   vite@>=8.0.0 <8.1.6: '>=8.1.6'
   body-parser@<1.20.9: 1.20.9
   body-parser@>=2.0.0 <2.4.0: 2.4.0
@@ -5833,8 +5833,8 @@ packages:
     resolution: {integrity: sha512-kWyh8ADvHBFz6ua5xYOPnUroZTT/bwWfrCeL0Wj1dzG4/YOmOcfJ99W8dOVyyynJN35rZ9aCOtHChqQovV7yog==}
     engines: {node: '>=6'}
 
-  follow-redirects@1.16.1:
-    resolution: {integrity: sha512-FNvFGzoMLWmE6Yj9spb/zjd7yiNCHiAW9/Tg9CXrQ8wuu32HtlJOwWO11OJafl5FfY3DxTdQ0vj42zU1kvv5jg==}
+  follow-redirects@1.16.2:
+    resolution: {integrity: sha512-/kVP2U8z596Ia0gwFrwyIeo74ta5aVmSeU1FfAUMAmcEP5EP7zydmag3SLiN64NaRKef3lxsq7i/g7ltJQDGow==}
     engines: {node: '>=4.0'}
     peerDependencies:
       debug: '*'
@@ -13503,9 +13503,9 @@ snapshots:
       domhandler: 5.0.3
       htmlparser2: 10.1.0
       picocolors: 1.1.1
-      postcss: 8.5.25
+      postcss: 8.5.30
       postcss-media-query-parser: 0.2.3
-      postcss-safe-parser: 7.1.0(postcss@8.5.25)
+      postcss-safe-parser: 7.1.0(postcss@8.5.30)
 
   beasties@0.5.4:
     dependencies:
@@ -13875,12 +13875,12 @@ snapshots:
 
   css-loader@7.1.4(webpack@5.109.2(@swc/core@1.16.18(@swc/helpers@0.5.23))(esbuild@0.28.2)(postcss@8.5.25)):
     dependencies:
-      icss-utils: 5.1.0(postcss@8.5.25)
-      postcss: 8.5.25
-      postcss-modules-extract-imports: 3.1.0(postcss@8.5.25)
-      postcss-modules-local-by-default: 4.2.0(postcss@8.5.25)
-      postcss-modules-scope: 3.2.1(postcss@8.5.25)
-      postcss-modules-values: 4.0.0(postcss@8.5.25)
+      icss-utils: 5.1.0(postcss@8.5.30)
+      postcss: 8.5.30
+      postcss-modules-extract-imports: 3.1.0(postcss@8.5.30)
+      postcss-modules-local-by-default: 4.2.0(postcss@8.5.30)
+      postcss-modules-scope: 3.2.1(postcss@8.5.30)
+      postcss-modules-values: 4.0.0(postcss@8.5.30)
       postcss-value-parser: 4.2.0
       semver: 7.8.5
     optionalDependencies:
@@ -14480,7 +14480,7 @@ snapshots:
 
   flru@1.0.2: {}
 
-  follow-redirects@1.16.1: {}
+  follow-redirects@1.16.2: {}
 
   forever-agent@0.6.1: {}
 
@@ -14766,7 +14766,7 @@ snapshots:
   http-proxy@1.18.1:
     dependencies:
       eventemitter3: 4.0.7
-      follow-redirects: 1.16.1
+      follow-redirects: 1.16.2
       requires-port: 1.0.0
     transitivePeerDependencies:
       - debug
@@ -14834,10 +14834,6 @@ snapshots:
   iconv-lite@0.7.3:
     dependencies:
       safer-buffer: 2.1.2
-
-  icss-utils@5.1.0(postcss@8.5.25):
-    dependencies:
-      postcss: 8.5.25
 
   icss-utils@5.1.0(postcss@8.5.30):
     dependencies:
@@ -16124,20 +16120,9 @@ snapshots:
 
   postcss-media-query-parser@0.2.3: {}
 
-  postcss-modules-extract-imports@3.1.0(postcss@8.5.25):
-    dependencies:
-      postcss: 8.5.25
-
   postcss-modules-extract-imports@3.1.0(postcss@8.5.30):
     dependencies:
       postcss: 8.5.30
-
-  postcss-modules-local-by-default@4.2.0(postcss@8.5.25):
-    dependencies:
-      icss-utils: 5.1.0(postcss@8.5.25)
-      postcss: 8.5.25
-      postcss-selector-parser: 7.1.6
-      postcss-value-parser: 4.2.0
 
   postcss-modules-local-by-default@4.2.0(postcss@8.5.30):
     dependencies:
@@ -16146,29 +16131,15 @@ snapshots:
       postcss-selector-parser: 7.1.6
       postcss-value-parser: 4.2.0
 
-  postcss-modules-scope@3.2.1(postcss@8.5.25):
-    dependencies:
-      postcss: 8.5.25
-      postcss-selector-parser: 7.1.6
-
   postcss-modules-scope@3.2.1(postcss@8.5.30):
     dependencies:
       postcss: 8.5.30
       postcss-selector-parser: 7.1.6
 
-  postcss-modules-values@4.0.0(postcss@8.5.25):
-    dependencies:
-      icss-utils: 5.1.0(postcss@8.5.25)
-      postcss: 8.5.25
-
   postcss-modules-values@4.0.0(postcss@8.5.30):
     dependencies:
       icss-utils: 5.1.0(postcss@8.5.30)
       postcss: 8.5.30
-
-  postcss-safe-parser@7.1.0(postcss@8.5.25):
-    dependencies:
-      postcss: 8.5.25
 
   postcss-safe-parser@7.1.0(postcss@8.5.30):
     dependencies:
@@ -16385,7 +16356,7 @@ snapshots:
       adjust-sourcemap-loader: 4.0.0
       convert-source-map: 1.9.0
       loader-utils: 2.0.4
-      postcss: 8.5.25
+      postcss: 8.5.30
       source-map: 0.6.1
 
   resolve.exports@2.0.3: {}

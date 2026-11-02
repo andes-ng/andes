@@ -109,6 +109,8 @@ export interface AndesDropdownMenuItemOption {
   readonly extra?: AndesDropdownMenuLabelValue;
   readonly danger?: boolean;
   readonly disabled?: boolean;
+  /** Extra class(es) on the item's row, for styling a single entry from the outside. */
+  readonly class?: string;
   /** Typeahead text, for a `TemplateRef` label. Defaults to the rendered text. */
   readonly title?: string;
   /** Turns the item into a link: activating it follows `href` like a native anchor. */
@@ -131,6 +133,8 @@ export interface AndesDropdownMenuSubmenuOption {
   readonly label: AndesDropdownMenuLabelValue;
   readonly icon?: TemplateRef<unknown>;
   readonly disabled?: boolean;
+  /** Extra class(es) on the submenu's trigger row. */
+  readonly class?: string;
   readonly title?: string;
   /** Extra class(es) for the submenu's panel. */
   readonly popupClass?: string;

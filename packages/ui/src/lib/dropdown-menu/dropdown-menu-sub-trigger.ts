@@ -47,6 +47,7 @@ import { AndesDropdownMenuLevel } from './dropdown-menu-types';
         />
       } @else {
         <svg
+          class="andes-dropdown-menu__chevron"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"

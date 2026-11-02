@@ -1,0 +1,217 @@
+/*
+  The check motion: the checkbox's own language - the box pops while the tick draws itself,
+  the indeterminate dash scales in, and a soft ring leaves the box on every change - as one
+  block that every check box in the library shares instead of copying.
+
+  It holds the keyframes and every rule that plays them - `AndesCheckbox`'s own (keyed off
+  its label's `data-motion`) and the generic `.andes-check-motion` box, for the presentational
+  check boxes drawn inside other components (a tree row, a cascader option). They have to stay
+  together: Angular scopes a stylesheet's keyframe names, and the animations that name them,
+  one file at a time. Each component lists this file in its `styleUrls`, so the rules are
+  scoped to that component like the rest of its CSS.
+
+  The generic box: put `andes-check-motion` on the box, `andes-check-motion__tick` on the
+  tick's `<svg>` (a 16-unit viewBox path no longer than 14 units, the checkbox's own) and
+  `andes-check-motion__dash` on the dash's `<svg>`, and set `data-motion` on the box to
+  `check`, `uncheck` or `indeterminate` only when the state changes after the first render
+  (never for a box that is born checked), clearing it once the ring has played (1s).
+*/
+
+@keyframes andes-checkbox-pop {
+  0% {
+    transform: scale(1);
+  }
+
+  45% {
+    transform: scale(1.1);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes andes-checkbox-draw {
+  from {
+    stroke-dashoffset: 14;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes andes-checkbox-dash {
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* The click ring: a soft halo that leaves the box on every change (checking, unchecking and
+   the indeterminate state), so a click always answers back, like a pressed physical control.
+   It reaches `--_andes-checkbox-ring` (4 / 6 / 8px with the box) in the first 0.1s, then
+   lingers and fades over a second at a low opacity - a ring that vanished as fast as it grew
+   was all but invisible, most of all around the larger box. Every keyframe is linear; the
+   points trace a fast-out growth and a slow fade. The `-alt` copy is the same ring under
+   another name, so a change that follows another within the second restarts it instead of
+   continuing the one still running. */
+
+@keyframes andes-checkbox-ripple {
+  0% {
+    box-shadow: 0 0 0 0
+      color-mix(in srgb, var(--andes-color-primary) 20%, transparent);
+  }
+
+  6% {
+    box-shadow: 0 0 0 calc(var(--_andes-checkbox-ring) * 0.7)
+      color-mix(in srgb, var(--andes-color-primary) 16%, transparent);
+  }
+
+  16% {
+    box-shadow: 0 0 0 calc(var(--_andes-checkbox-ring) * 0.93)
+      color-mix(in srgb, var(--andes-color-primary) 11%, transparent);
+  }
+
+  41% {
+    box-shadow: 0 0 0 var(--_andes-checkbox-ring)
+      color-mix(in srgb, var(--andes-color-primary) 6%, transparent);
+  }
+
+  100% {
+    box-shadow: 0 0 0 var(--_andes-checkbox-ring)
+      color-mix(in srgb, var(--andes-color-primary) 0%, transparent);
+  }
+}
+
+@keyframes andes-checkbox-ripple-alt {
+  0% {
+    box-shadow: 0 0 0 0
+      color-mix(in srgb, var(--andes-color-primary) 20%, transparent);
+  }
+
+  6% {
+    box-shadow: 0 0 0 calc(var(--_andes-checkbox-ring) * 0.7)
+      color-mix(in srgb, var(--andes-color-primary) 16%, transparent);
+  }
+
+  16% {
+    box-shadow: 0 0 0 calc(var(--_andes-checkbox-ring) * 0.93)
+      color-mix(in srgb, var(--andes-color-primary) 11%, transparent);
+  }
+
+  41% {
+    box-shadow: 0 0 0 var(--_andes-checkbox-ring)
+      color-mix(in srgb, var(--andes-color-primary) 6%, transparent);
+  }
+
+  100% {
+    box-shadow: 0 0 0 var(--_andes-checkbox-ring)
+      color-mix(in srgb, var(--andes-color-primary) 0%, transparent);
+  }
+}
+
+/* The checkbox (AndesCheckbox). */
+
+/* Motion: a one-shot animation keyed off `data-motion`, which the component sets only when the
+   rendered state CHANGES after the first render - so a box that starts out checked never
+   animates. Checking draws the tick (stroke-dashoffset over its 14-unit length) while the
+   box pops; the indeterminate dash scales in; unchecking fades the mark out without shrinking
+   it. Only with motion allowed, and not in forced-colors mode, where the system palette
+   already redraws the box and an animated stroke can strand a half-drawn mark. */
+
+@media (prefers-reduced-motion: no-preference) and (forced-colors: none) {
+  .andes-checkbox[data-motion='check'] .andes-checkbox__box {
+    animation:
+      andes-checkbox-pop var(--andes-motion-duration-mid, 0.2s)
+        var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1)),
+      andes-checkbox-ripple 1s linear;
+  }
+
+  /* prettier-ignore */
+  .andes-checkbox[data-motion='uncheck'] .andes-checkbox__box, .andes-checkbox[data-motion='indeterminate'] .andes-checkbox__box {
+    animation: andes-checkbox-ripple-alt 1s linear;
+  }
+
+  /* Without a drawn box (a button, or a card with `[indicator]="false"`) the ring leaves the
+     whole face instead, raised above the neighbouring segments while it lasts. */
+  /* prettier-ignore */
+  .andes-checkbox--no-indicator[data-motion='check'] {
+    z-index: 2;
+    animation: andes-checkbox-ripple 1s linear;
+  }
+
+  /* prettier-ignore */
+  .andes-checkbox--no-indicator[data-motion='uncheck'], .andes-checkbox--no-indicator[data-motion='indeterminate'] {
+    z-index: 2;
+    animation: andes-checkbox-ripple-alt 1s linear;
+  }
+
+  /* prettier-ignore */
+  .andes-checkbox[data-motion='check'] .andes-checkbox__icon--check {
+    transform: none;
+    transition: opacity var(--andes-motion-duration-fast, 0.1s) var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1));
+  }
+
+  /* prettier-ignore */
+  .andes-checkbox[data-motion='check'] .andes-checkbox__icon--check path {
+    stroke-dasharray: 14;
+    animation: andes-checkbox-draw var(--andes-motion-duration-mid, 0.2s) var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1)) both;
+  }
+
+  /* A custom glyph has no known stroke to draw, so it scales in with the box instead. */
+  /* prettier-ignore */
+  .andes-checkbox[data-motion='check'] .andes-checkbox__icon--custom.andes-checkbox__icon--check {
+    animation: andes-checkbox-dash var(--andes-motion-duration-mid, 0.2s) var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1));
+  }
+
+  /* prettier-ignore */
+  .andes-checkbox[data-motion='indeterminate'] .andes-checkbox__icon--indeterminate {
+    transform: none;
+    transition: opacity var(--andes-motion-duration-fast, 0.1s) var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1));
+    animation: andes-checkbox-dash var(--andes-motion-duration-mid, 0.2s) var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1));
+  }
+
+  /* prettier-ignore */
+  .andes-checkbox[data-motion='uncheck'] .andes-checkbox__icon {
+    transform: none;
+    transition: opacity var(--andes-motion-duration-fast, 0.1s) var(--andes-motion-ease-in, cubic-bezier(0.55, 0.055, 0.675, 0.19));
+  }
+}
+
+/* The generic box. */
+
+/* The 16px box of a tree row or a cascader option rings like the checkbox's own md box. */
+.andes-check-motion {
+  --_andes-checkbox-ring: 0.375rem;
+}
+
+/* Only with motion allowed, and not in forced-colors mode, where the system palette redraws
+   the box and an animated stroke could strand a half-drawn mark. */
+@media (prefers-reduced-motion: no-preference) and (forced-colors: none) {
+  .andes-check-motion[data-motion='check'] {
+    animation:
+      andes-checkbox-pop var(--andes-motion-duration-mid, 0.2s)
+        var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1)),
+      andes-checkbox-ripple 1s linear;
+  }
+
+  /* prettier-ignore */
+  .andes-check-motion[data-motion='uncheck'], .andes-check-motion[data-motion='indeterminate'] {
+    animation: andes-checkbox-ripple-alt 1s linear;
+  }
+
+  /* prettier-ignore */
+  .andes-check-motion[data-motion='check'] .andes-check-motion__tick path {
+    stroke-dasharray: 14;
+    animation: andes-checkbox-draw var(--andes-motion-duration-mid, 0.2s) var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1)) both;
+  }
+
+  /* prettier-ignore */
+  .andes-check-motion[data-motion='indeterminate'] .andes-check-motion__dash {
+    animation: andes-checkbox-dash var(--andes-motion-duration-mid, 0.2s) var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1));
+  }
+}

@@ -45,7 +45,10 @@ const ICONS = provideIcons({
 const NOTE =
   'font: 0.75rem var(--andes-font-family), sans-serif; color: var(--andes-color-muted-foreground); margin: 0 0 0.75rem; max-width: 34rem;';
 
-/** `AndesDropdownButton`: a main action plus a caret that opens the menu, aligned `bottomRight` under the caret. */
+/**
+ * `AndesDropdownButton`: a main action plus a caret that opens the menu, aligned `bottomRight` under
+ * the caret. `variant`, `danger`, a custom caret `icon` (the `...` split) and `disabled` shown.
+ */
 export const DropdownButton: Story = {
   render: () => ({
     moduleMetadata: {
@@ -61,6 +64,7 @@ export const DropdownButton: Story = {
     },
     props: { last: '' },
     template: `
+      <ng-template #dots><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" style="display: block; width: 1em; height: 1em;"><circle cx="5" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="19" cy="12" r="1.5" /></svg></ng-template>
       <div>
         <p style="${NOTE}">Last action: <strong>{{ last || '-' }}</strong></p>
         <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
@@ -85,6 +89,14 @@ export const DropdownButton: Story = {
           <andes-dropdown-button variant="danger" (buttonClick)="last = 'delete'" (itemClick)="last = $event.key"
             [items]="[{ key: 'delete-all', label: 'Delete all versions', danger: true }]">
             Delete
+          </andes-dropdown-button>
+          <andes-dropdown-button danger (buttonClick)="last = 'remove'" (itemClick)="last = $event.key"
+            [items]="[{ key: 'remove-all', label: 'Remove everywhere', danger: true }]">
+            Remove
+          </andes-dropdown-button>
+          <andes-dropdown-button [icon]="dots" (buttonClick)="last = 'open'" (itemClick)="last = $event.key"
+            [items]="[{ key: 'rename', label: 'Rename' }, { key: 'move', label: 'Move to…' }]">
+            Open
           </andes-dropdown-button>
           <andes-dropdown-button disabled>Disabled</andes-dropdown-button>
         </div>

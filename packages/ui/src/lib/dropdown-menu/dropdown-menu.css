@@ -8,6 +8,47 @@
  * directly - `::ng-deep` would be noise, not a requirement.
  */
 
+/*
+ * The surface shadow and the row tints are the dropdown's own, so a row's hover, a
+ * divider and the shadow read like Ant Design's in both themes: Ant tints hover and the
+ * divider with a few percent of the text color (4% / 6% light, 8% / 12% dark) and lifts
+ * the panel with three soft layers. Declared on the two surfaces (not on `:root`) so the
+ * custom properties can be overridden per menu.
+ */
+.andes-dropdown-menu__content,
+.andes-dropdown-menu__popup {
+  --andes-dropdown-menu-shadow:
+    0 6px 16px 0 rgb(0 0 0 / 8%), 0 3px 6px -4px rgb(0 0 0 / 12%),
+    0 9px 28px 8px rgb(0 0 0 / 5%);
+  --andes-dropdown-menu-hover: color-mix(
+    in srgb,
+    var(--andes-color-foreground) 4%,
+    transparent
+  );
+  --andes-dropdown-menu-divider: color-mix(
+    in srgb,
+    var(--andes-color-foreground) 6%,
+    transparent
+  );
+}
+
+[data-andes-theme='dark'] .andes-dropdown-menu__content,
+[data-andes-theme='dark'] .andes-dropdown-menu__popup {
+  --andes-dropdown-menu-shadow:
+    0 6px 16px 0 rgb(0 0 0 / 40%), 0 3px 6px -4px rgb(0 0 0 / 48%),
+    0 9px 28px 8px rgb(0 0 0 / 20%);
+  --andes-dropdown-menu-hover: color-mix(
+    in srgb,
+    var(--andes-color-foreground) 8%,
+    transparent
+  );
+  --andes-dropdown-menu-divider: color-mix(
+    in srgb,
+    var(--andes-color-foreground) 12%,
+    transparent
+  );
+}
+
 /* A menu opened with the pointer takes focus on its pane (see `FocusOnOpen`), with no item
    highlighted. That focus is only there so the keys work, so it draws no ring. */
 .andes-overlay-pane:has(> .andes-dropdown-menu__content):focus {
@@ -18,7 +59,13 @@
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  min-width: 8rem;
+  /*
+   * As wide as the content, but never narrower than the trigger (the root sets the
+   * overlay pane's `min-width` to the trigger's width - Ant Design's
+   * `minOverlayWidthMatchTrigger`). `--andes-dropdown-menu-min-width` adds a floor of
+   * its own, e.g. `8rem` for a menu opened from a narrow icon button.
+   */
+  min-width: var(--andes-dropdown-menu-min-width, 0);
   /* Never wider or taller than the viewport, so a phone-width screen scrolls inside. */
   max-width: min(20rem, 100vw - 2 * var(--andes-space-4));
   max-height: min(
@@ -30,17 +77,13 @@
   padding: var(--andes-space-1);
   /*
    * Concentric with the rows: 4px of padding around `radius-sm` (4px) rows makes the
-   * outer radius 8px.
+   * outer radius 8px. The surface is lifted by its shadow alone, with no border, the way
+   * Ant Design draws a dropdown: a border would add 2px to every size below.
    */
   border-radius: var(--andes-radius-lg);
-  border: 1px solid var(--andes-color-border);
   background-color: var(--andes-color-popover);
   color: var(--andes-color-popover-foreground);
-  box-shadow: var(
-    --andes-shadow-md,
-    0 4px 6px -1px rgb(0 0 0 / 10%),
-    0 2px 4px -2px rgb(0 0 0 / 10%)
-  );
+  box-shadow: var(--andes-dropdown-menu-shadow);
   /*
    * The panel renders in the overlay container under <body>, outside the host, so
    * anything projected into it would otherwise pick up the page's 16px body text.
@@ -161,15 +204,16 @@
   padding-inline-start: var(--andes-space-2);
 }
 
+/* Hover and keyboard focus only tint the row; the text keeps its color, as in Ant Design. */
 .andes-dropdown-menu__item:hover:not([data-disabled]),
 .andes-dropdown-menu__item[data-active]:not([data-disabled]) {
-  background-color: var(--andes-color-accent-hover);
-  color: var(--andes-color-accent-foreground);
+  background-color: var(--andes-dropdown-menu-hover);
 }
 
+/* Ant Design dims a disabled row to 25% of the text color. */
 .andes-dropdown-menu__item[data-disabled] {
   cursor: not-allowed;
-  opacity: 0.5;
+  opacity: 0.3;
 }
 
 .andes-dropdown-menu__item[data-variant='destructive'] {
@@ -222,11 +266,9 @@
 }
 
 /*
- * A muted icon on an accent-filled or red row loses contrast against the row it now
- * sits on, so in those states the icon simply follows the item's own color.
+ * A muted icon on a red-filled row loses contrast against it, so a destructive row's
+ * icon simply follows the item's own color.
  */
-.andes-dropdown-menu__item:hover:not([data-disabled]) ng-icon,
-.andes-dropdown-menu__item[data-active]:not([data-disabled]) ng-icon,
 .andes-dropdown-menu__item[data-variant='destructive'] ng-icon {
   color: inherit;
 }
@@ -255,18 +297,22 @@
 .andes-dropdown-menu__separator {
   flex-shrink: 0;
   height: 1px;
-  margin: var(--andes-space-1) calc(var(--andes-space-1) * -1);
-  background-color: var(--andes-color-border);
+  /* 4px above and below, inside the panel's own padding: 9px of rhythm in all. */
+  margin: var(--andes-space-1) 0;
+  background-color: var(--andes-dropdown-menu-divider);
 }
 
-/* Same 32px rhythm as a row: 6px of block padding around the 12/20 caption line. */
+/*
+ * A group title is a row of the same 32px rhythm (5px of block padding around the 14/22
+ * line) in the muted foreground, as Ant Design draws it; the group's own rows are set 8px
+ * in from either side of it (see `.andes-dropdown-menu__group` below).
+ */
 .andes-dropdown-menu__label {
   display: block;
-  padding: 0.375rem var(--andes-space-3);
+  padding: 0.3125rem var(--andes-space-3);
   font-family: var(--andes-font-family), sans-serif;
-  font-size: 0.75rem;
-  line-height: 1.25rem;
-  font-weight: var(--andes-font-weight-medium);
+  font-size: var(--andes-text-font-size, 0.875rem);
+  line-height: var(--andes-text-line-height, 1.375rem);
   color: var(--andes-color-muted-foreground);
 }
 
@@ -289,34 +335,43 @@
 .andes-dropdown-menu__shortcut {
   flex-shrink: 0;
   white-space: nowrap;
-  margin-left: auto;
-  padding-left: var(--andes-space-4);
+  margin-inline-start: auto;
+  padding-inline-start: var(--andes-space-4);
   font-size: 0.75rem;
   letter-spacing: 0.05em;
   color: var(--andes-color-muted-foreground);
 }
 
 /*
- * Selection (`selectable` menus). The row keeps a faint tint while not hovered, so
- * the current choice is findable at a glance. A foreground mix rather than
- * `--andes-color-accent`, which equals the popover surface in dark mode (no tint at
- * all there); 5% matches accent in light and stays below the hover/focus row. The theme-aware primary text color and
- * the heavier weight must survive hover and keyboard focus too - otherwise a selected
- * row that is also the focused one (the usual case right after opening) looks exactly
- * like any other focused row - hence the `:not([data-disabled])` rule, which ties the
- * hover/active rules on specificity and wins by coming later.
+ * Selection (`selectable` menus). The row keeps a light primary tint while not hovered, so
+ * the current choice is findable at a glance, the way Ant Design tints it: blue text on a
+ * light blue row. A mix of the primary fill rather than a fixed hex so it follows the theme
+ * (a translucent tint reads on the dark popover surface too); 8% keeps the primary text above
+ * 4.5:1 on it (4.6:1 light). The theme-aware primary text
+ * color and the heavier weight must survive hover and keyboard focus too - otherwise a
+ * selected row that is also the focused one (the usual case right after opening) looks
+ * exactly like any other focused row - hence the `:not([data-disabled])` rule, which ties
+ * the hover/active rules on specificity and wins by coming later.
  */
 .andes-dropdown-menu__item[data-selected] {
   background-color: color-mix(
     in srgb,
-    var(--andes-color-popover-foreground) 5%,
+    var(--andes-color-primary) 8%,
+    transparent
+  );
+}
+
+/* Ant Design's dark tint is a stronger one (about 30% of the primary), or it would vanish. */
+[data-andes-theme='dark'] .andes-dropdown-menu__item[data-selected] {
+  background-color: color-mix(
+    in srgb,
+    var(--andes-color-primary) 24%,
     transparent
   );
 }
 
 .andes-dropdown-menu__item[data-selected]:not([data-disabled]) {
   color: var(--andes-color-primary-text);
-  font-weight: var(--andes-font-weight-medium);
 }
 
 /*
@@ -338,6 +393,10 @@
   flex-direction: column;
 }
 
+.andes-dropdown-menu__group .andes-dropdown-menu__item {
+  margin-inline: var(--andes-space-2);
+}
+
 .andes-dropdown-menu__separator[data-dashed] {
   height: 0;
   background-color: transparent;
@@ -350,9 +409,10 @@
 .andes-dropdown-menu__extra {
   flex-shrink: 0;
   white-space: nowrap;
-  margin-left: auto;
-  padding-left: var(--andes-space-4);
+  margin-inline-start: auto;
+  padding-inline-start: var(--andes-space-4);
   font-size: 0.75rem;
+  line-height: 1.25rem;
   color: var(--andes-color-muted-foreground);
 }
 
@@ -364,20 +424,9 @@
 
 /*
  * Same reason as the ng-icon rule above, and the muted shortcut/extra hints hit it too:
- * on the accent-hover fill they drop to ~3.8:1 (light) / ~4:1 (dark).
+ * on the red hover fill they would be unreadable. On the plain hover tint they keep their
+ * muted color, as in Ant Design.
  */
-.andes-dropdown-menu__item:hover:not([data-disabled])
-  :is(
-    .andes-dropdown-menu__item-icon,
-    .andes-dropdown-menu__shortcut,
-    .andes-dropdown-menu__extra
-  ),
-.andes-dropdown-menu__item[data-active]:not([data-disabled])
-  :is(
-    .andes-dropdown-menu__item-icon,
-    .andes-dropdown-menu__shortcut,
-    .andes-dropdown-menu__extra
-  ),
 .andes-dropdown-menu__item[data-variant='destructive']
   :is(
     .andes-dropdown-menu__item-icon,
@@ -393,69 +442,76 @@
  * visible after the pointer has moved into it.
  */
 .andes-dropdown-menu__sub-trigger[data-state='open']:not([data-disabled]) {
-  background-color: var(--andes-color-accent-hover);
-  color: var(--andes-color-accent-foreground);
+  background-color: var(--andes-dropdown-menu-hover);
 }
 
+/*
+ * The chevron is 12px, in the row's own text color, and sits 8px from the row's end (the
+ * 4px of the row's padding it overhangs): Ant Design's `RightOutlined`.
+ */
 .andes-dropdown-menu__expand-icon {
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
-  margin-left: auto;
-  padding-left: var(--andes-space-2);
-  color: var(--andes-color-muted-foreground);
+  margin-inline-start: auto;
+  margin-inline-end: calc(var(--andes-space-1) * -1);
+  padding-inline-start: var(--andes-space-2);
+  font-size: 0.75rem;
 }
 
-.andes-dropdown-menu__sub-trigger[data-state='open']
-  .andes-dropdown-menu__expand-icon,
-.andes-dropdown-menu__sub-trigger:hover .andes-dropdown-menu__expand-icon,
-.andes-dropdown-menu__sub-trigger[data-active]
-  .andes-dropdown-menu__expand-icon {
-  color: inherit;
+.andes-dropdown-menu__expand-icon svg {
+  width: 1em;
+  height: 1em;
+}
+
+/* The default chevron points at the inline end, so a right-to-left menu mirrors it. */
+.andes-dropdown-menu__chevron:dir(rtl) {
+  transform: scaleX(-1);
 }
 
 /*
- * The arrow is a rotated square rendered as the panel's sibling inside the overlay
- * pane (the panel itself scrolls, so it would clip anything outside its own box).
- * Only its outer half is painted (`clip-path` along the diagonal), sitting 1px into
- * the panel so that diagonal covers the panel's border where they meet - which is what
- * makes the two read as one shape - without the inner half poking into the first item's
- * highlight. `data-side` and the offset custom property are set from the rendered
- * geometry by `AndesDropdownMenu`, so the arrow follows a collision flip.
+ * The arrow is the panel's sibling inside the overlay pane (the panel itself scrolls, so
+ * it would clip anything outside its own box), drawn as Ant Design's: a 16px-wide, 9px-tall
+ * box clipped to a triangle with a rounded tip, painted in the panel's own surface. Its
+ * base sits 1px inside the panel's edge so the two read as one shape, leaving a 5.5px tip
+ * outside. It is authored pointing up (the `bottom` side: the panel is below the anchor)
+ * and rotated for the others. `data-side` and the offset custom property - the arrow
+ * center's distance from the panel's start edge - are set from the rendered geometry by
+ * `AndesDropdownMenu`, so the arrow follows a collision flip.
  */
 .andes-dropdown-menu__arrow {
   position: absolute;
-  width: 10px;
-  height: 10px;
-  box-sizing: border-box;
+  width: 16px;
+  height: 9px;
   background-color: var(--andes-color-popover);
-  border: 1px solid var(--andes-color-border);
+  clip-path: path(
+    'M 0 9 A 4 4 0 0 0 2.83 7.83 L 6.59 4.07 A 2 2 0 0 1 9.41 4.07 L 13.17 7.83 A 4 4 0 0 0 16 9 Z'
+  );
   pointer-events: none;
-  transform: rotate(45deg);
 }
 
 .andes-dropdown-menu__arrow[data-side='bottom'] {
-  top: -4px;
-  left: calc(var(--andes-dropdown-menu-arrow-offset, 14px) - 5px);
-  clip-path: polygon(0 0, 100% 0, 0 100%);
+  top: -8px;
+  left: calc(var(--andes-dropdown-menu-arrow-offset, 20px) - 8px);
 }
 
 .andes-dropdown-menu__arrow[data-side='top'] {
-  bottom: -4px;
-  left: calc(var(--andes-dropdown-menu-arrow-offset, 14px) - 5px);
-  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  bottom: -8px;
+  left: calc(var(--andes-dropdown-menu-arrow-offset, 20px) - 8px);
+  transform: rotate(180deg);
 }
 
+/* Turned a quarter, the 16 x 9 box covers 9 x 16 around its own center. */
 .andes-dropdown-menu__arrow[data-side='right'] {
-  left: -4px;
-  top: calc(var(--andes-dropdown-menu-arrow-offset, 14px) - 5px);
-  clip-path: polygon(0 0, 100% 100%, 0 100%);
+  left: -11.5px;
+  top: calc(var(--andes-dropdown-menu-arrow-offset, 20px) - 4.5px);
+  transform: rotate(-90deg);
 }
 
 .andes-dropdown-menu__arrow[data-side='left'] {
-  right: -4px;
-  top: calc(var(--andes-dropdown-menu-arrow-offset, 14px) - 5px);
-  clip-path: polygon(0 0, 100% 0, 100% 100%);
+  right: -11.5px;
+  top: calc(var(--andes-dropdown-menu-arrow-offset, 20px) - 4.5px);
+  transform: rotate(90deg);
 }
 
 /* Before its side is measured (one frame), keep it out of sight rather than misplaced. */
@@ -476,25 +532,20 @@
 
 /*
  * `popupTemplate`: one surface around the menu and the consumer's extra content. The
- * wrapper takes over everything that makes the panel read as a popup (surface, border,
+ * wrapper takes over everything that makes the panel read as a popup (surface,
  * shadow, type), and the menu inside it drops its own so the two read as one card.
  */
 .andes-dropdown-menu__popup {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  min-width: 8rem;
+  min-width: var(--andes-dropdown-menu-min-width, 0);
   max-width: calc(100vw - 2 * var(--andes-space-4));
   overflow: hidden;
   border-radius: var(--andes-radius-lg);
-  border: 1px solid var(--andes-color-border);
   background-color: var(--andes-color-popover);
   color: var(--andes-color-popover-foreground);
-  box-shadow: var(
-    --andes-shadow-md,
-    0 4px 6px -1px rgb(0 0 0 / 10%),
-    0 2px 4px -2px rgb(0 0 0 / 10%)
-  );
+  box-shadow: var(--andes-dropdown-menu-shadow);
   font-family: var(--andes-font-family), sans-serif;
   font-size: 0.875rem;
   line-height: 1.375rem;

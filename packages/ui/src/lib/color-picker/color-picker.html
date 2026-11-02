@@ -1,0 +1,111 @@
+<!--
+  The trigger is the overlay's anchor and ARIA owner (`aria-haspopup="dialog"`,
+  `aria-expanded`, `aria-controls`) and the one focusable element of the closed picker. Its
+  accessible name is built from the label and the current value, so a screen reader hears
+  "Brand color, #1677ff"; the visible text repeats that and is hidden from it.
+-->
+<button
+  #triggerButton
+  type="button"
+  andesOverlayTrigger
+  class="andes-color-picker__trigger"
+  data-slot="color-picker-trigger"
+  [attr.id]="id() ?? null"
+  [attr.data-size]="size()"
+  [attr.data-status]="status() ?? null"
+  [attr.data-empty]="isEmpty() ? '' : null"
+  [attr.data-custom]="hasCustomTrigger() ? '' : null"
+  [attr.data-with-text]="textVisible() && !hasCustomTrigger() ? '' : null"
+  [attr.data-invalid]="invalid() ? '' : null"
+  [attr.data-readonly]="readOnly() ? '' : null"
+  [attr.data-trigger]="trigger() === 'hover' ? 'hover' : null"
+  [disabled]="isDisabled()"
+  [attr.aria-label]="triggerLabel()"
+  [attr.aria-labelledby]="triggerLabelledby()"
+  [attr.aria-describedby]="ariaDescribedby() ?? null"
+  [attr.aria-invalid]="invalid() || null"
+  (click)="onTriggerClick()"
+  (keydown)="onTriggerKeydown($event)"
+  (pointerdown)="onTriggerPointerDown($event)"
+  (pointerenter)="onTriggerPointerEnter($event)"
+  (pointerleave)="onTriggerPointerLeave($event)"
+  (blur)="onTriggerBlur()"
+>
+  @if (!hasCustomTrigger()) {
+  <span
+    class="andes-color-picker__swatch"
+    data-slot="color-picker-swatch"
+    [attr.data-empty]="isEmpty() ? '' : null"
+    aria-hidden="true"
+  >
+    <span
+      class="andes-color-picker__swatch-fill"
+      [style.background-color]="swatchColor()"
+      [style.background-image]="swatchGradient()"
+    ></span>
+  </span>
+  @if (textVisible()) {
+  <span class="andes-color-picker__text" aria-hidden="true">
+    @if (textTemplate(); as template) { @if (ctl.textContext(); as context) {
+    <ng-container
+      [ngTemplateOutlet]="template"
+      [ngTemplateOutletContext]="context"
+    />
+    } @else { {{ triggerText() }} } } @else { {{ triggerText() }} }
+  </span>
+  } }
+  <span class="andes-color-picker__custom" [hidden]="!hasCustomTrigger()"
+    ><ng-content select="[andesColorPickerTrigger]"
+  /></span>
+  <span class="andes-color-picker__sr" [id]="valueId">{{ spokenValue() }}</span>
+</button>
+
+@if (name()) {
+<input
+  type="hidden"
+  data-slot="color-picker-hidden-input"
+  [attr.name]="name()"
+  [value]="ctl.committedText()"
+  [disabled]="isDisabled()"
+/>
+}
+
+<!--
+  The popup surface (border, shadow, arrow, the hover bridges) around the panel, which is
+  `AndesColorPickerPanel` itself, driven by this picker's state.
+-->
+<ng-template #panel>
+  <div
+    andesOverlayContent
+    class="andes-color-picker__panel"
+    data-slot="color-picker-panel"
+    [attr.dir]="direction()"
+    [attr.data-side]="resolvedSide()"
+    [attr.data-arrow]="arrow() ? '' : null"
+    [attr.data-trigger]="trigger() === 'hover' ? 'hover' : null"
+    [attr.aria-label]="ctl.text().panel"
+    (pointerenter)="onPanelPointerEnter($event)"
+    (pointerleave)="onPanelPointerLeave($event)"
+    (pointerdown)="onPanelPointerDown()"
+    (focusin)="onPanelFocusIn()"
+    (focusout)="onPanelFocusOut($event)"
+  >
+    @if (arrow()) {
+    <span
+      class="andes-color-picker__arrow"
+      data-slot="color-picker-arrow"
+      aria-hidden="true"
+      [attr.data-side]="resolvedSide()"
+      [style.left.px]="arrowOffset()"
+    ></span>
+    }
+    <andes-color-picker-panel>
+      <ng-container ngProjectAs="[slot=panel-header]"
+        ><ng-content select="[slot=panel-header]"
+      /></ng-container>
+      <ng-container ngProjectAs="[slot=panel-footer]"
+        ><ng-content select="[slot=panel-footer]"
+      /></ng-container>
+    </andes-color-picker-panel>
+  </div>
+</ng-template>

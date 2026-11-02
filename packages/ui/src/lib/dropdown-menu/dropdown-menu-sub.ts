@@ -28,12 +28,12 @@ import {
 } from './dropdown-menu-types';
 
 /**
- * Overlap the parent panel's padding so the submenu reads as attached to its row, and
- * pull it up by the panel's padding + border so the first item lines up with the
- * trigger item.
+ * The submenu starts where its trigger row ends - inside the parent panel's padding, so it
+ * reads as attached to the row - and is pulled up by the panel's padding so the first item
+ * lines up with the trigger item.
  */
-const SIDE_OFFSET = 2;
-const ALIGN_OFFSET = -5;
+const SIDE_OFFSET = 0;
+const ALIGN_OFFSET = -4;
 
 function submenuPositioning(
   offset: readonly [number, number] | null | undefined,

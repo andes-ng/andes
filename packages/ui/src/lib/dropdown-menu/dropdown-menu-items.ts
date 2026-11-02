@@ -78,6 +78,7 @@ type Kind = 'divider' | 'group' | 'submenu' | 'item';
             [popupOffset]="submenu.popupOffset"
           >
             <andes-dropdown-menu-sub-trigger
+              [class]="submenu.class ?? ''"
               [disabled]="submenu.disabled ?? false"
               [typeaheadLabel]="submenu.title ?? textOf(submenu.label)"
             >
@@ -101,6 +102,7 @@ type Kind = 'divider' | 'group' | 'submenu' | 'item';
         @default {
           @let item = asItem(def);
           <andes-dropdown-menu-item
+            [class]="item.class ?? ''"
             [key]="item.key"
             [disabled]="item.disabled ?? false"
             [variant]="item.danger ? 'destructive' : 'default'"

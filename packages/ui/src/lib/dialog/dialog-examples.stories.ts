@@ -3,13 +3,21 @@ import { NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  inject,
   signal,
+  type TemplateRef,
+  viewChild,
   ViewEncapsulation,
 } from '@angular/core';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
 import { ANDES_DIALOG_IMPORTS } from './dialog';
+import type { AndesDialogFooterContext } from './dialog-base';
+import {
+  type AndesDialogMethodRef,
+  AndesDialogService,
+} from './dialog.service';
 
 /**
  * One story per example on Ant Design's Modal page (https://ant.design/components/modal),
@@ -26,6 +34,9 @@ const meta: Meta = {
 export default meta;
 
 type Story = StoryObj;
+
+/** What a service dialog hands the template it renders as its content. */
+type MethodContext = { $implicit: AndesDialogMethodRef };
 
 /** A row of buttons, the way Ant's `Space` lays them out. */
 const ROW_STYLES = `
@@ -209,6 +220,48 @@ export const CustomizedFooter: Story = {
   }),
 };
 
+/* -------------------------------------------------------------------- mask */
+
+@Component({
+  selector: 'andes-dialog-example-mask',
+  imports: [AndesButton],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <div class="row">
+      <andes-button variant="secondary" (click)="show({ maskBlur: true })"
+        >blur</andes-button
+      >
+      <andes-button variant="secondary" (click)="show({})"
+        >Dimmed mask</andes-button
+      >
+      <andes-button variant="secondary" (click)="show({ mask: false })"
+        >No mask</andes-button
+      >
+    </div>
+  `,
+  styles: ROW_STYLES,
+})
+class MaskExample {
+  private readonly dialogs = inject(AndesDialogService);
+
+  protected show(mask: { mask?: boolean; maskBlur?: boolean }): void {
+    this.dialogs.confirm({
+      title: 'Title',
+      content: 'Some contents...',
+      ...mask,
+    });
+  }
+}
+
+/** The mask can be dimmed (default), blurred as well, or left out altogether. */
+export const Mask: Story = {
+  name: 'mask',
+  render: () => ({
+    moduleMetadata: { imports: [MaskExample] },
+    template: '<andes-dialog-example-mask />',
+  }),
+};
+
 /* ----------------------------------------------------------------- Loading */
 
 @Component({
@@ -264,7 +317,10 @@ export const Loading: Story = {
   imports: [ANDES_DIALOG_IMPORTS, AndesButton, NgTemplateOutlet],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <andes-button (click)="open.set(true)">Open Modal</andes-button>
+    <div class="row">
+      <andes-button (click)="open.set(true)">Open Modal</andes-button>
+      <andes-button (click)="confirm()">Open Modal Confirm</andes-button>
+    </div>
 
     <andes-dialog [(open)]="open" [footer]="footer" (ok)="open.set(false)">
       <andes-dialog-content *andesDialogContent>
@@ -286,10 +342,21 @@ export const Loading: Story = {
       <ng-container *ngTemplateOutlet="buttons" />
     </ng-template>
   `,
-  styles: BODY_STYLES,
+  styles: ROW_STYLES + BODY_STYLES,
 })
 class FooterRenderExample {
+  private readonly dialogs = inject(AndesDialogService);
+  private readonly footerTemplate =
+    viewChild.required<TemplateRef<AndesDialogFooterContext>>('footer');
   protected readonly open = signal(false);
+
+  protected confirm(): void {
+    this.dialogs.confirm({
+      title: 'Confirm',
+      content: 'Bla bla ...',
+      footer: this.footerTemplate(),
+    });
+  }
 }
 
 /**
@@ -304,6 +371,70 @@ export const CustomizedFooterRenderFunction: Story = {
   }),
 };
 
+/* ---------------------------------------------- Use hooks to get context */
+
+@Component({
+  selector: 'andes-dialog-example-hooks',
+  imports: [AndesButton],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <div class="row">
+      <andes-button variant="secondary" (click)="confirm()"
+        >Confirm</andes-button
+      >
+      <andes-button variant="secondary" (click)="dialogs.warning(config())"
+        >Warning</andes-button
+      >
+      <andes-button variant="secondary" (click)="dialogs.info(config())"
+        >Info</andes-button
+      >
+      <andes-button variant="secondary" (click)="dialogs.error(config())"
+        >Error</andes-button
+      >
+    </div>
+    <p class="log">Confirmed: {{ confirmed() }}</p>
+
+    <ng-template #content>Reachable: {{ name }}!</ng-template>
+  `,
+  styles:
+    ROW_STYLES +
+    `
+    .log {
+      margin: var(--andes-space-3) 0 0;
+      font-size: 0.875rem;
+    }
+  `,
+})
+class HooksExample {
+  protected readonly dialogs = inject(AndesDialogService);
+  private readonly content =
+    viewChild.required<TemplateRef<MethodContext>>('content');
+  /** Lives in this component, and the content template reads it from here. */
+  protected readonly name = 'Light';
+  protected readonly confirmed = signal('-');
+
+  protected config() {
+    return { title: 'Use Hook!', content: this.content() };
+  }
+
+  protected async confirm(): Promise<void> {
+    const confirmed = await this.dialogs.confirm(this.config()).result;
+    this.confirmed.set(String(confirmed));
+  }
+}
+
+/**
+ * `AndesDialogService` is an injectable, so its dialogs already see the injector tree and
+ * the template they are given keeps its own context, and `result` is the awaitable.
+ */
+export const UseHooksToGetContext: Story = {
+  name: 'Use hooks to get context',
+  render: () => ({
+    moduleMetadata: { imports: [HooksExample] },
+    template: '<andes-dialog-example-hooks />',
+  }),
+};
+
 /* --------------------------------------------------------- Internationalization */
 
 @Component({
@@ -311,7 +442,12 @@ export const CustomizedFooterRenderFunction: Story = {
   imports: [ANDES_DIALOG_IMPORTS, AndesButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <andes-button (click)="open.set(true)">Modal</andes-button>
+    <div class="row">
+      <andes-button (click)="open.set(true)">Modal</andes-button>
+      <andes-button variant="secondary" (click)="confirm()"
+        >Confirm</andes-button
+      >
+    </div>
 
     <andes-dialog
       [(open)]="open"
@@ -332,10 +468,20 @@ export const CustomizedFooterRenderFunction: Story = {
       </andes-dialog-content>
     </andes-dialog>
   `,
-  styles: BODY_STYLES,
+  styles: ROW_STYLES + BODY_STYLES,
 })
 class LocaleExample {
+  private readonly dialogs = inject(AndesDialogService);
   protected readonly open = signal(false);
+
+  protected confirm(): void {
+    this.dialogs.confirm({
+      title: 'Confirm',
+      content: 'Bla bla ...',
+      okText: '确认',
+      cancelText: '取消',
+    });
+  }
 }
 
 /** The button labels are plain strings (`okText`, `cancelText`), so they translate freely. */
@@ -343,6 +489,52 @@ export const Internationalization: Story = {
   render: () => ({
     moduleMetadata: { imports: [LocaleExample] },
     template: '<andes-dialog-example-locale />',
+  }),
+};
+
+/* ---------------------------------------------- Manual to update destroy */
+
+@Component({
+  selector: 'andes-dialog-example-manual',
+  imports: [AndesButton],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <andes-button variant="secondary" (click)="countDown()"
+      >Open modal to close in 5s</andes-button
+    >
+  `,
+})
+class ManualExample {
+  private readonly dialogs = inject(AndesDialogService);
+
+  protected countDown(): void {
+    let secondsToGo = 5;
+
+    const instance = this.dialogs.success({
+      title: 'This is a notification message',
+      content: `This modal will be destroyed after ${secondsToGo} second.`,
+    });
+
+    const timer = setInterval(() => {
+      secondsToGo -= 1;
+      instance.update({
+        content: `This modal will be destroyed after ${secondsToGo} second.`,
+      });
+    }, 1000);
+
+    setTimeout(() => {
+      clearInterval(timer);
+      instance.destroy();
+    }, secondsToGo * 1000);
+  }
+}
+
+/** The ref a service call returns can `update()` the open dialog and `destroy()` it. */
+export const ManualToUpdateDestroy: Story = {
+  name: 'Manual to update destroy',
+  render: () => ({
+    moduleMetadata: { imports: [ManualExample] },
+    template: '<andes-dialog-example-manual />',
   }),
 };
 
@@ -607,6 +799,138 @@ export const ToCustomizeTheWidthOfModal: Story = {
   render: () => ({
     moduleMetadata: { imports: [WidthExample] },
     template: '<andes-dialog-example-width />',
+  }),
+};
+
+/* -------------------------------------------------- Static confirmation */
+
+@Component({
+  selector: 'andes-dialog-example-confirm',
+  imports: [AndesButton],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <div class="row">
+      <andes-button variant="secondary" (click)="showConfirm()"
+        >Confirm</andes-button
+      >
+      <andes-button variant="secondary" (click)="showPromiseConfirm()"
+        >With promise</andes-button
+      >
+      <andes-button variant="dashed" (click)="showDeleteConfirm()"
+        >Delete</andes-button
+      >
+      <andes-button variant="dashed" (click)="showPropsConfirm()"
+        >With extra props</andes-button
+      >
+    </div>
+  `,
+  styles: ROW_STYLES,
+})
+class ConfirmExample {
+  private readonly dialogs = inject(AndesDialogService);
+
+  protected showConfirm(): void {
+    this.dialogs.confirm({
+      title: 'Do you want to delete these items?',
+      content: 'Some descriptions',
+      onOk: () => console.log('OK'),
+      onCancel: () => console.log('Cancel'),
+    });
+  }
+
+  protected showPromiseConfirm(): void {
+    this.dialogs.confirm({
+      title: 'Do you want to delete these items?',
+      content:
+        'When clicked the OK button, this dialog will be closed after 1 second',
+      onOk: () =>
+        new Promise((resolve, reject) => {
+          setTimeout(Math.random() > 0.5 ? resolve : reject, 1000);
+        }).catch(() => console.log('Oops errors!')),
+      onCancel: () => undefined,
+    });
+  }
+
+  protected showDeleteConfirm(): void {
+    this.dialogs.confirm({
+      title: 'Are you sure delete this task?',
+      content: 'Some descriptions',
+      okText: 'Yes',
+      okType: 'danger',
+      cancelText: 'No',
+      onOk: () => console.log('OK'),
+      onCancel: () => console.log('Cancel'),
+    });
+  }
+
+  protected showPropsConfirm(): void {
+    this.dialogs.confirm({
+      title: 'Are you sure delete this task?',
+      content: 'Some descriptions',
+      okText: 'Yes',
+      okType: 'danger',
+      okButtonProps: { disabled: true },
+      cancelText: 'No',
+      onOk: () => console.log('OK'),
+      onCancel: () => console.log('Cancel'),
+    });
+  }
+}
+
+/**
+ * `AndesDialogService.confirm()` opens a confirmation, and an `onOk` that returns a
+ * promise keeps the dialog open, with OK spinning, until it settles.
+ */
+export const StaticConfirmation: Story = {
+  name: 'Static confirmation',
+  render: () => ({
+    moduleMetadata: { imports: [ConfirmExample] },
+    template: '<andes-dialog-example-confirm />',
+  }),
+};
+
+/* ------------------------------ destroy confirmation modal dialog */
+
+@Component({
+  selector: 'andes-dialog-example-confirm-router',
+  imports: [AndesButton],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <andes-button variant="secondary" (click)="showConfirm()"
+      >Confirm</andes-button
+    >
+
+    <ng-template #content>
+      <andes-button variant="secondary" (click)="dialogs.destroyAll()"
+        >Click to destroy all</andes-button
+      >
+    </ng-template>
+  `,
+})
+class ConfirmRouterExample {
+  protected readonly dialogs = inject(AndesDialogService);
+  private readonly content =
+    viewChild.required<TemplateRef<MethodContext>>('content');
+
+  protected showConfirm(): void {
+    for (let i = 0; i < 3; i += 1) {
+      setTimeout(() => {
+        this.dialogs.confirm({
+          content: this.content(),
+          onOk: () => console.log('OK'),
+          onCancel: () => console.log('Cancel'),
+        });
+      }, i * 500);
+    }
+  }
+}
+
+/** `destroyAll()` closes every dialog the service has open, say on a route change. */
+export const DestroyConfirmationModalDialog: Story = {
+  name: 'destroy confirmation modal dialog',
+  render: () => ({
+    moduleMetadata: { imports: [ConfirmRouterExample] },
+    template: '<andes-dialog-example-confirm-router />',
   }),
 };
 

@@ -4,6 +4,7 @@ import { Component, Directive, signal, viewChild } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
 import type { AndesButtonVariant } from '../button/button';
+import { ANDES_ALERT_DIALOG_IMPORTS } from './alert-dialog';
 import { ANDES_DIALOG_IMPORTS, AndesDialog } from './dialog';
 import type {
   AndesDialogAutoFocusButton,
@@ -678,6 +679,111 @@ describe('AndesDialog - extended behavior', () => {
 
       expect(host.openChanges).toEqual([false]);
     });
+  });
+});
+
+@Component({
+  imports: [ANDES_ALERT_DIALOG_IMPORTS],
+  template: `
+    <andes-alert-dialog
+      [(open)]="open"
+      footer="default"
+      okText="Delete"
+      okType="danger"
+      autoFocusButton="cancel"
+      [confirmLoading]="deleting()"
+      [loading]="loading()"
+      (ok)="deleting.set(true)"
+      (cancelled)="cancelled = cancelled + 1"
+    >
+      <andes-alert-dialog-content *andesAlertDialogContent>
+        <div andesAlertDialogHeader>
+          <h2 andesAlertDialogTitle>Delete this project?</h2>
+        </div>
+      </andes-alert-dialog-content>
+    </andes-alert-dialog>
+  `,
+})
+class AlertParityHost {
+  readonly open = signal(true);
+  readonly deleting = signal(false);
+  readonly loading = signal(false);
+  cancelled = 0;
+}
+
+describe('AndesAlertDialog - extended behavior', () => {
+  withElementGeometry();
+
+  async function createHost() {
+    const fixture = TestBed.createComponent(AlertParityHost);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const surface = () =>
+      document.querySelector(
+        '[data-slot="alert-dialog-content"]',
+      ) as HTMLElement;
+    const action = (which: 'ok' | 'cancel') =>
+      surface()?.querySelector(
+        `[data-slot="dialog-${which}"] button`,
+      ) as HTMLButtonElement;
+    return { fixture, host: fixture.componentInstance, surface, action };
+  }
+
+  it('renders the built-in footer with its own slot name', async () => {
+    const { surface, action } = await createHost();
+
+    expect(
+      surface().querySelector('[data-slot="alert-dialog-footer"]'),
+    ).toBeTruthy();
+    expect(action('ok').textContent?.trim()).toBe('Delete');
+    expect(action('ok').dataset['variant']).toBe('danger');
+  });
+
+  it('focuses Cancel first when asked to', async () => {
+    const { action } = await createHost();
+    await nextTask();
+
+    expect(document.activeElement).toBe(action('cancel'));
+  });
+
+  it('holds OK in its loading state while the consumer works, then closes on their say-so', async () => {
+    const { fixture, host, surface, action } = await createHost();
+
+    action('ok').click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(host.deleting()).toBe(true);
+    expect(action('ok').disabled).toBe(true);
+    expect(surface()).toBeTruthy();
+
+    host.open.set(false);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(surface()).toBeNull();
+    expect(host.cancelled).toBe(0);
+  });
+
+  it('closes from the built-in Cancel as a cancel', async () => {
+    const { fixture, host, surface, action } = await createHost();
+
+    action('cancel').click();
+    fixture.detectChanges();
+
+    expect(surface()).toBeNull();
+    expect(host.cancelled).toBe(1);
+  });
+
+  it('supports the loading skeleton', async () => {
+    const { fixture, host, surface } = await createHost();
+    host.loading.set(true);
+    fixture.detectChanges();
+
+    expect(
+      surface().querySelector('[data-slot="alert-dialog-skeleton"]'),
+    ).toBeTruthy();
+    expect(surface().querySelector('andes-dialog-actions')).toBeNull();
   });
 });
 

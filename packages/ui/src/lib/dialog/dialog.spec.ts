@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { readFileSync } from 'node:fs';
 
 import { declaredValue, expectLength } from '../../testing/computed-style';
+import { ANDES_ALERT_DIALOG_IMPORTS, AndesAlertDialog } from './alert-dialog';
 import { ANDES_DIALOG_IMPORTS, AndesDialog } from './dialog';
 import type { AndesDialogSize } from './dialog-base';
 
@@ -175,6 +176,53 @@ class DialogHost {
   readonly showTrigger = signal(true);
   readonly reasons: AndesOverlayCloseReason[] = [];
   openedCount = 0;
+}
+
+@Component({
+  imports: [ANDES_ALERT_DIALOG_IMPORTS],
+  template: `
+    <button type="button" id="outside">Outside</button>
+
+    <andes-alert-dialog
+      [(open)]="open"
+      [closeOnEscape]="closeOnEscape()"
+      (closed)="reasons.push($event)"
+      (cancelled)="cancelReasons.push($event)"
+    >
+      <button type="button" id="trigger" andesAlertDialogTrigger>Delete</button>
+
+      <andes-alert-dialog-content *andesAlertDialogContent>
+        <div andesAlertDialogHeader>
+          <h2 andesAlertDialogTitle id="title">Delete this project?</h2>
+          <p andesAlertDialogDescription id="description">
+            This cannot be undone.
+          </p>
+        </div>
+
+        <div andesAlertDialogFooter>
+          <button type="button" id="cancel" andesAlertDialogCancel>
+            Cancel
+          </button>
+          <button
+            type="button"
+            id="action"
+            andesAlertDialogAction
+            (click)="confirmed = true"
+          >
+            Delete
+          </button>
+        </div>
+      </andes-alert-dialog-content>
+    </andes-alert-dialog>
+  `,
+})
+class AlertDialogHost {
+  readonly dialog = viewChild.required(AndesAlertDialog);
+  readonly open = signal(false);
+  readonly closeOnEscape = signal(true);
+  readonly reasons: AndesOverlayCloseReason[] = [];
+  readonly cancelReasons: AndesOverlayCloseReason[] = [];
+  confirmed = false;
 }
 
 describe('AndesDialog', () => {
@@ -591,6 +639,238 @@ describe('AndesDialog', () => {
   });
 });
 
+describe('AndesAlertDialog', () => {
+  withElementGeometry();
+
+  function createHost() {
+    const fixture = TestBed.createComponent(AlertDialogHost);
+    fixture.detectChanges();
+    const host = fixture.componentInstance;
+
+    const inPage = (id: string) =>
+      (fixture.nativeElement as HTMLElement).querySelector(
+        `#${id}`,
+      ) as HTMLElement;
+    const surface = () =>
+      document.querySelector(
+        '[data-slot="alert-dialog-content"]',
+      ) as HTMLElement;
+    const inDialog = (id: string) =>
+      surface()?.querySelector(`#${id}`) as HTMLElement;
+
+    return {
+      fixture,
+      host,
+      surface,
+      inDialog,
+      trigger: () => inPage('trigger'),
+      outside: () => inPage('outside'),
+      pane: () => document.querySelector('.andes-overlay-pane') as HTMLElement,
+      backdrop: () =>
+        document.querySelector('.andes-overlay-backdrop') as HTMLElement,
+      async openViaTrigger() {
+        clickOn(inPage('trigger'));
+        fixture.detectChanges();
+        await fixture.whenStable();
+      },
+    };
+  }
+
+  it('opens when the trigger is clicked', async () => {
+    const { surface, openViaTrigger } = createHost();
+    await openViaTrigger();
+
+    expect(surface()).toBeTruthy();
+  });
+
+  it('renders role="alertdialog" with aria-modal="true"', async () => {
+    const { surface, openViaTrigger } = createHost();
+    await openViaTrigger();
+
+    expect(surface().getAttribute('role')).toBe('alertdialog');
+    expect(surface().getAttribute('aria-modal')).toBe('true');
+  });
+
+  it('advertises a dialog popup on the trigger, since alertdialog is not a valid aria-haspopup token', async () => {
+    const { trigger, openViaTrigger } = createHost();
+    await openViaTrigger();
+
+    expect(trigger().getAttribute('aria-haspopup')).toBe('dialog');
+  });
+
+  it('labels and describes the surface from its title and description parts', async () => {
+    const { surface, inDialog, openViaTrigger } = createHost();
+    await openViaTrigger();
+
+    expect(surface().getAttribute('aria-labelledby')).toBe(
+      inDialog('title').id,
+    );
+    expect(surface().getAttribute('aria-describedby')).toBe(
+      inDialog('description').id,
+    );
+  });
+
+  it('does NOT close on a backdrop click', async () => {
+    const { fixture, host, surface, backdrop, openViaTrigger } = createHost();
+    await openViaTrigger();
+
+    clickOn(backdrop());
+    fixture.detectChanges();
+
+    expect(surface()).toBeTruthy();
+    expect(host.open()).toBe(true);
+    expect(host.reasons).toEqual([]);
+  });
+
+  it('does NOT close on a pointer event elsewhere outside the surface', async () => {
+    const { fixture, surface, outside, openViaTrigger } = createHost();
+    await openViaTrigger();
+
+    clickOn(outside());
+    fixture.detectChanges();
+
+    expect(surface()).toBeTruthy();
+  });
+
+  it('renders no built-in close button - the dismiss path is the labelled Cancel action', async () => {
+    const { surface, openViaTrigger } = createHost();
+    await openViaTrigger();
+
+    expect(surface().querySelector('[data-slot="dialog-close-button"]')).toBe(
+      null,
+    );
+  });
+
+  it('closes on Escape', async () => {
+    const { fixture, host, surface, openViaTrigger } = createHost();
+    await openViaTrigger();
+
+    pressEscape();
+    fixture.detectChanges();
+
+    expect(surface()).toBeNull();
+    expect(host.reasons).toEqual(['escape-key']);
+  });
+
+  it('can refuse Escape too, for a confirmation that must be answered', async () => {
+    const { fixture, host, surface, openViaTrigger } = createHost();
+    host.closeOnEscape.set(false);
+    fixture.detectChanges();
+    await openViaTrigger();
+
+    pressEscape();
+    fixture.detectChanges();
+
+    expect(surface()).toBeTruthy();
+  });
+
+  it('closes from the Cancel action', async () => {
+    const { fixture, host, surface, inDialog, openViaTrigger } = createHost();
+    await openViaTrigger();
+
+    clickOn(inDialog('cancel'));
+    fixture.detectChanges();
+
+    expect(surface()).toBeNull();
+    expect(host.reasons).toEqual(['close-button']);
+    expect(host.confirmed).toBe(false);
+  });
+
+  it('emits cancelled from the Cancel action, like the built-in footer Cancel', async () => {
+    const { fixture, host, inDialog, openViaTrigger } = createHost();
+    await openViaTrigger();
+
+    clickOn(inDialog('cancel'));
+    fixture.detectChanges();
+
+    expect(host.cancelReasons).toEqual(['close-button']);
+  });
+
+  it('does not emit cancelled from the affirmative action', async () => {
+    const { fixture, host, inDialog, openViaTrigger } = createHost();
+    await openViaTrigger();
+
+    clickOn(inDialog('action'));
+    fixture.detectChanges();
+
+    expect(host.cancelReasons).toEqual([]);
+  });
+
+  it('closes from the affirmative action, after running the consumer handler', async () => {
+    const { fixture, host, surface, inDialog, openViaTrigger } = createHost();
+    await openViaTrigger();
+
+    clickOn(inDialog('action'));
+    fixture.detectChanges();
+
+    expect(host.confirmed).toBe(true);
+    expect(surface()).toBeNull();
+    expect(host.reasons).toEqual(['close-button']);
+  });
+
+  it('puts initial focus on Cancel, the safe choice, from DOM order alone', async () => {
+    const { inDialog, openViaTrigger } = createHost();
+    await openViaTrigger();
+
+    expect(document.activeElement).toBe(inDialog('cancel'));
+  });
+
+  it('traps focus inside while open', async () => {
+    const { pane, outside, openViaTrigger } = createHost();
+    await openViaTrigger();
+
+    outside().focus();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(pane().contains(document.activeElement)).toBe(true);
+  });
+
+  it('returns focus to the trigger on close', async () => {
+    const { fixture, trigger, inDialog, openViaTrigger } = createHost();
+    trigger().focus();
+    await openViaTrigger();
+
+    clickOn(inDialog('cancel'));
+    fixture.detectChanges();
+
+    expect(document.activeElement).toBe(trigger());
+  });
+
+  it('stacks on the modal z-index layer, above a drawer', async () => {
+    const { pane, openViaTrigger } = createHost();
+    await openViaTrigger();
+
+    expect(pane().parentElement?.style.getPropertyValue('z-index')).toBe(
+      'var(--andes-z-index-modal, 1050)',
+    );
+  });
+
+  it('marks the surface as the alert variant', async () => {
+    const { surface, openViaTrigger } = createHost();
+    await openViaTrigger();
+
+    expect(surface().classList).toContain('andes-dialog--alert');
+  });
+
+  describe('background scroll', () => {
+    withScrollableDocument();
+
+    it('locks document scroll while open and releases it on close', async () => {
+      const { fixture, openViaTrigger } = createHost();
+      await openViaTrigger();
+
+      expect(document.documentElement.classList).toContain(SCROLL_BLOCK_CLASS);
+
+      pressEscape();
+      fixture.detectChanges();
+
+      expect(document.documentElement.classList).not.toContain(
+        SCROLL_BLOCK_CLASS,
+      );
+    });
+  });
+});
+
 describe('closing while the exit animation is pending', () => {
   withElementGeometry();
   const exit = withPendingExitAnimation();
@@ -662,6 +942,53 @@ describe('closing while the exit animation is pending', () => {
       clickOn(
         surface().querySelector('[data-slot="dialog-close-button"]') as Element,
       );
+
+      await expectStaysClosing(
+        fixture,
+        host,
+        pane,
+        host.reasons,
+        'close-button',
+      );
+    });
+
+    it('does not reopen after Escape', async () => {
+      const { fixture, host, pane, open } = createHost();
+      await open();
+
+      pressEscape();
+
+      await expectStaysClosing(fixture, host, pane, host.reasons, 'escape-key');
+    });
+  });
+
+  describe('AndesAlertDialog', () => {
+    function createHost() {
+      const fixture = TestBed.createComponent(AlertDialogHost);
+      fixture.detectChanges();
+      return {
+        fixture,
+        host: fixture.componentInstance,
+        pane: () =>
+          document.querySelector('.andes-overlay-pane') as HTMLElement,
+        surface: () =>
+          document.querySelector(
+            '[data-slot="alert-dialog-content"]',
+          ) as HTMLElement,
+        async open() {
+          fixture.componentInstance.open.set(true);
+          fixture.detectChanges();
+          await fixture.whenStable();
+          await flushMicrotasks();
+        },
+      };
+    }
+
+    it('does not reopen after the Cancel control', async () => {
+      const { fixture, host, pane, surface, open } = createHost();
+      await open();
+
+      clickOn(surface().querySelector('#cancel') as HTMLElement);
 
       await expectStaysClosing(
         fixture,

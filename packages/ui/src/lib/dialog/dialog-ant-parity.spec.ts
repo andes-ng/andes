@@ -1,10 +1,11 @@
-import { Component, signal } from '@angular/core';
+import { ApplicationRef, Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { readFileSync } from 'node:fs';
 
 import { declaredValue, toPx } from '../../testing/computed-style';
 import { ANDES_DIALOG_IMPORTS } from './dialog';
 import type { AndesDialogWidth } from './dialog-base';
+import { AndesDialogService } from './dialog.service';
 
 /**
  * The dialog's measurements against Ant Design's Modal, measured live on
@@ -80,10 +81,19 @@ const dialogVar = (name: string) => {
 };
 
 describe('dialog geometry matches Ant Design', () => {
-  it('is 520px wide by default', () => {
+  it('is 520px wide by default and 416px for a confirmation', () => {
     expect(
       toPx(declaredValue(css, '.andes-dialog--md', 'max-width') ?? ''),
     ).toBe(520);
+    expect(
+      toPx(
+        declaredValue(
+          css,
+          '.andes-dialog--alert.andes-dialog--md',
+          'max-width',
+        ) ?? '',
+      ),
+    ).toBe(416);
   });
 
   it('pads the surface 20px above and below and 24px at the sides', () => {
@@ -214,6 +224,22 @@ describe('dialog geometry matches Ant Design', () => {
     ).toBe('61%');
     expect(declaredValue(css, '.andes-dialog__skeleton', 'margin-block')).toBe(
       'var(--andes-dialog-gap) var(--andes-space-4)',
+    );
+  });
+
+  it('sets a confirmation icon of 22px, 12px before the text, 8px between title and content', () => {
+    expect(declaredValue(css, '.andes-dialog__method-icon', 'width')).toBe(
+      '1.375rem',
+    );
+    expect(toPx('1.375rem')).toBe(22);
+    expect(
+      declaredValue(css, '.andes-dialog__method-icon', 'margin-block-start'),
+    ).toBe('1px');
+    expect(declaredValue(css, '.andes-dialog__method', 'gap')).toBe(
+      'var(--andes-space-3)',
+    );
+    expect(declaredValue(css, '.andes-dialog__method-text', 'gap')).toBe(
+      'var(--andes-space-2)',
     );
   });
 });
@@ -486,5 +512,65 @@ describe('dialog fullscreen, maximize and mask class', () => {
     expect(
       surface().querySelectorAll('.andes-dialog__skeleton-line'),
     ).toHaveLength(4);
+  });
+});
+
+describe('service dialogs: Ant Design status icons', () => {
+  /** The cut-out glyph path each kind draws on its disc. */
+  const GLYPHS = {
+    confirm: 'M12 6.75v6.5M12 17.25h.01',
+    warning: 'M12 6.75v6.5M12 17.25h.01',
+    error: 'M8.6 8.6l6.8 6.8M15.4 8.6l-6.8 6.8',
+    info: 'M12 11v6.25M12 7.25h.01',
+    success: 'M7.7 12.7l2.6 3 6.1-7',
+  } as const;
+
+  beforeAll(() => {
+    for (const prop of ['offsetWidth', 'offsetHeight'] as const) {
+      Object.defineProperty(HTMLElement.prototype, prop, {
+        configurable: true,
+        get: () => 1,
+      });
+    }
+  });
+
+  afterAll(() => {
+    delete (HTMLElement.prototype as unknown as Record<string, unknown>)[
+      'offsetWidth'
+    ];
+    delete (HTMLElement.prototype as unknown as Record<string, unknown>)[
+      'offsetHeight'
+    ];
+  });
+
+  it.each(Object.keys(GLYPHS) as (keyof typeof GLYPHS)[])(
+    'draws %s as a full-size disc with its glyph cut out',
+    async (kind) => {
+      const service = TestBed.inject(AndesDialogService);
+      service[kind]({ title: 'Title' });
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      const svg = document.querySelector(
+        '[data-slot="dialog-method-icon"] > svg',
+      );
+      expect(svg?.classList).toContain('andes-dialog__method-glyph');
+      expect(svg?.querySelector('circle')?.getAttribute('r')).toBe('12');
+      expect(svg?.querySelector('path')?.getAttribute('d')).toBe(GLYPHS[kind]);
+
+      service.destroyAll();
+    },
+  );
+
+  it('fills the disc with the status colour and cuts the glyph out in the surface colour', () => {
+    expect(
+      declaredValue(
+        css,
+        '.andes-dialog__method-icon > svg.andes-dialog__method-glyph',
+        'fill',
+      ),
+    ).toBe('currentcolor');
+    expect(
+      declaredValue(css, '.andes-dialog__method-glyph > path', 'stroke'),
+    ).toBe('var(--andes-color-popover)');
   });
 });

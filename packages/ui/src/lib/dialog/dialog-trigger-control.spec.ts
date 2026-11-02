@@ -2,12 +2,13 @@ import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
 import { AndesButton } from '../button/button';
+import { ANDES_ALERT_DIALOG_IMPORTS } from './alert-dialog';
 import { ANDES_DIALOG_IMPORTS } from './dialog';
 
 const TRIGGER_ARIA = ['aria-haspopup', 'aria-expanded', 'aria-controls'];
 
 @Component({
-  imports: [ANDES_DIALOG_IMPORTS, AndesButton],
+  imports: [ANDES_DIALOG_IMPORTS, ANDES_ALERT_DIALOG_IMPORTS, AndesButton],
   template: `
     <andes-dialog>
       <andes-button id="dialog-trigger" andesDialogTrigger [disabled]="off()">
@@ -22,6 +23,20 @@ const TRIGGER_ARIA = ['aria-haspopup', 'aria-expanded', 'aria-controls'];
         </div>
       </andes-dialog-content>
     </andes-dialog>
+
+    <andes-alert-dialog>
+      <andes-button id="alert-trigger" andesAlertDialogTrigger>
+        Delete
+      </andes-button>
+      <andes-alert-dialog-content *andesAlertDialogContent>
+        <div andesAlertDialogHeader>
+          <h2 andesAlertDialogTitle>Delete this project?</h2>
+        </div>
+        <div andesAlertDialogFooter>
+          <andes-button andesAlertDialogCancel>Cancel</andes-button>
+        </div>
+      </andes-alert-dialog-content>
+    </andes-alert-dialog>
   `,
 })
 class WrapperTriggerHost {
@@ -69,7 +84,7 @@ describe('dialog triggers on an andes-button', () => {
     fixture.detectChanges();
   }
 
-  it.each(['dialog-trigger'])(
+  it.each(['dialog-trigger', 'alert-trigger'])(
     'puts the popup state on the real button of %s, not on the wrapper',
     async (id) => {
       const { fixture, host, control, surface } = setup();
@@ -93,7 +108,7 @@ describe('dialog triggers on an andes-button', () => {
     },
   );
 
-  it.each(['dialog-trigger'])(
+  it.each(['dialog-trigger', 'alert-trigger'])(
     'opens from a click on %s and gives focus back to the real button on close',
     async (id) => {
       const { fixture, control, surface } = setup();

@@ -267,7 +267,7 @@ class UpdateHost {
   template: `
     <div [style]="barStyle">
       <andes-checkbox [(checked)]="enabled">Enabled</andes-checkbox>
-      <label [style]="labelStyle">
+      <span [style]="labelStyle">
         Threshold:
         <andes-input-number
           aria-label="Stack threshold"
@@ -278,7 +278,7 @@ class UpdateHost {
           [disabled]="!enabled()"
           [(value)]="threshold"
         />
-      </label>
+      </span>
     </div>
     <div [style]="barStyle">
       <andes-button (click)="open()">Open the notification box</andes-button>

@@ -97,7 +97,7 @@ class DurationHost {
   template: `
     <div [style]="barStyle">
       <andes-checkbox [(checked)]="enabled">Enabled</andes-checkbox>
-      <label [style]="labelStyle">
+      <span [style]="labelStyle">
         Threshold:
         <andes-input-number
           aria-label="Stack threshold"
@@ -108,7 +108,7 @@ class DurationHost {
           [disabled]="!enabled()"
           [(value)]="threshold"
         />
-      </label>
+      </span>
     </div>
     <div [style]="barStyle">
       <andes-button (click)="open()">Open the message box</andes-button>

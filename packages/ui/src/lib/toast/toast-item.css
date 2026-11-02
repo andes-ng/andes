@@ -67,6 +67,16 @@
   --_toast-info: var(--andes-color-info);
 }
 
+/* The countdown line's tones: the icon's accents on the light card, and on the dark card the
+   -text shades (the tokens' own tints for dark surfaces), because the darker -hover shades
+   used above sit too close to the card colour for a 2px line to read. */
+:host {
+  --_toast-line-success: var(--_toast-success);
+  --_toast-line-danger: var(--_toast-danger);
+  --_toast-line-warning: var(--_toast-warning);
+  --_toast-line-info: var(--_toast-info);
+}
+
 /* On the dark card the base green, red and blue drop under 3:1; their -hover shades are the
    brighter ones on that theme. */
 :host-context([data-andes-theme='dark']) {
@@ -75,20 +85,48 @@
   --_toast-info: var(--andes-color-info-hover);
 }
 
+/* (the dark values of the line tones, after the light ones above) */
+:host-context([data-andes-theme='dark']) {
+  --_toast-line-success: var(--andes-color-success-text);
+  --_toast-line-danger: var(--andes-color-danger-text);
+  --_toast-line-warning: var(--andes-color-warning-text);
+  --_toast-line-info: var(--andes-color-info-text);
+}
+
 :host([data-severity='success']) {
   --_toast-accent: var(--_toast-success);
+  --_toast-progress: color-mix(
+    in srgb,
+    var(--_toast-line-success) 70%,
+    transparent
+  );
 }
 
 :host([data-severity='error']) {
   --_toast-accent: var(--_toast-danger);
+  --_toast-progress: color-mix(
+    in srgb,
+    var(--_toast-line-danger) 70%,
+    transparent
+  );
 }
 
 :host([data-severity='warning']) {
   --_toast-accent: var(--_toast-warning);
+  --_toast-progress: color-mix(
+    in srgb,
+    var(--_toast-line-warning) 70%,
+    transparent
+  );
 }
 
 :host([data-severity='info']) {
   --_toast-accent: var(--_toast-info);
+  --_toast-progress: color-mix(
+    in srgb,
+    var(--_toast-line-info) 70%,
+    transparent
+  );
 }
 
 /* Rich colours: the Alert's tinted recipe - a 9% wash of the accent mixed into the card, a 35%
@@ -373,28 +411,43 @@
   margin-inline-start: var(--andes-space-1);
 }
 
-/* The countdown: a 2px bar along the bottom edge, inset by the corner radius, draining over the
-   auto-dismiss duration. It pauses exactly when the queue's timer does: while the toast (or,
-   in a deck, the whole stack) is hovered, whenever focus is inside it, and while the page is
-   hidden - the region marks the first and last with data-paused. */
+/* The countdown: a flat 2px line drawn on the card's bottom edge, full width and square-ended,
+   with no track behind it. It shrinks towards the inline start over the auto-dismiss duration
+   and pauses exactly when the queue's timer does: while the toast (or, in a deck, the whole
+   stack) is hovered, whenever focus is inside it, and while the page is hidden - the region
+   marks the first and last with data-paused. The clip covers the card's border box so the
+   line is cut by the card's own bottom corners; the line is scaled, never resized, so it
+   animates on the compositor. Its colour is the severity accent at 70%, or the card ink at
+   30% for the plain and loading kinds; --andes-toast-progress-bg overrides it. */
+.andes-toast__progress-clip {
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+}
+
 .andes-toast__progress {
   position: absolute;
+  inset-inline: 0;
   bottom: 0;
-  inset-inline-start: 0.5rem;
   block-size: 2px;
-  border-radius: 0.5rem;
   background: var(
     --andes-toast-progress-bg,
-    linear-gradient(
-      90deg,
-      color-mix(in srgb, var(--andes-color-primary) 55%, var(--_toast-surface)),
-      var(--andes-color-primary)
+    var(
+      --_toast-progress,
+      color-mix(in srgb, var(--andes-color-card-foreground) 30%, transparent)
     )
   );
-  /* The track is the card; only the bar drains, towards the inline start. */
-  inline-size: calc(100% - 1rem);
+  transform-origin: 0 50%;
   animation: andes-toast-progress linear forwards;
   pointer-events: none;
+}
+
+/* The inline start is the right edge when the text runs right-to-left (the toast's own dir
+   attribute, or the page's). */
+:host(:dir(rtl)) .andes-toast__progress {
+  transform-origin: 100% 50%;
 }
 
 :host([data-paused]) .andes-toast__progress,
@@ -405,11 +458,11 @@
 
 @keyframes andes-toast-progress {
   from {
-    inline-size: calc(100% - 1rem);
+    transform: scaleX(1);
   }
 
   to {
-    inline-size: 0;
+    transform: scaleX(0);
   }
 }
 
@@ -426,5 +479,11 @@
 
   .andes-toast__spinner {
     animation-duration: 2.4s;
+  }
+
+  /* A countdown is motion by nature: a static full-width line would claim time that is not
+     being counted, so the line is hidden. The toast still closes on its timer. */
+  .andes-toast__progress-clip {
+    display: none;
   }
 }

@@ -1287,7 +1287,7 @@ describe('AndesToastViewport', () => {
         ) as HTMLElement[];
         const bar = timed.querySelector<HTMLElement>('.andes-toast__progress');
         expect(bar?.style.animationDuration).toBe('4000ms');
-        expect(bar?.getAttribute('aria-hidden')).toBe('true');
+        expect(bar?.closest('[aria-hidden="true"]')).not.toBeNull();
         expect(sticky.querySelector('.andes-toast__progress')).toBeNull();
         expect(off.querySelector('.andes-toast__progress')).toBeNull();
       });
@@ -1373,6 +1373,128 @@ describe('AndesToastViewport', () => {
         region.dispatchEvent(new MouseEvent('mouseleave'));
         fixture.detectChanges();
         expect(rendered.some((i) => i.hasAttribute('data-paused'))).toBe(false);
+      });
+
+      it('draws the bar as a flat 2px line on the card edge, clipped by the card corners', () => {
+        const css = readFileSync(
+          'packages/ui/src/lib/toast/toast-item.css',
+          'utf8',
+        );
+        const bar = '.andes-toast__progress';
+        expect(declaredValue(css, bar, 'position')).toBe('absolute');
+        expect(declaredValue(css, bar, 'inset-inline')).toBe('0');
+        expect(declaredValue(css, bar, 'bottom')).toBe('0');
+        expect(declaredValue(css, bar, 'block-size')).toBe('2px');
+        // Square ends, no track, no glow: nothing but a flat fill.
+        for (const property of [
+          'border-radius',
+          'box-shadow',
+          'filter',
+          'inline-size',
+        ]) {
+          expect(declaredValue(css, bar, property)).toBeUndefined();
+        }
+        expect(declaredValue(css, bar, 'background')).not.toContain('gradient');
+        expect(declaredValue(css, bar, 'background')).toContain(
+          '--andes-toast-progress-bg',
+        );
+
+        // The clip is the card's border box with the card's own radius.
+        const clip = '.andes-toast__progress-clip';
+        expect(declaredValue(css, clip, 'inset')).toBe('-1px');
+        expect(declaredValue(css, clip, 'border-radius')).toBe('inherit');
+        expect(declaredValue(css, clip, 'overflow')).toBe('hidden');
+      });
+
+      it('shrinks the bar with a linear scaleX towards the inline start', () => {
+        const css = readFileSync(
+          'packages/ui/src/lib/toast/toast-item.css',
+          'utf8',
+        );
+        const bar = '.andes-toast__progress';
+        expect(declaredValue(css, bar, 'transform-origin')).toBe('0 50%');
+        expect(
+          declaredValue(
+            css,
+            ':host(:dir(rtl)) .andes-toast__progress',
+            'transform-origin',
+          ),
+        ).toBe('100% 50%');
+        expect(declaredValue(css, bar, 'animation')).toBe(
+          'andes-toast-progress linear forwards',
+        );
+        expect(css).toMatch(
+          /@keyframes andes-toast-progress \{\s*from \{\s*transform: scaleX\(1\);\s*\}\s*to \{\s*transform: scaleX\(0\);\s*\}\s*\}/,
+        );
+      });
+
+      it('colours the bar with the severity tone at 70%, or the card ink at 30% when plain', () => {
+        const css = readFileSync(
+          'packages/ui/src/lib/toast/toast-item.css',
+          'utf8',
+        );
+        // Prettier wraps long values, which leaves spaces inside the brackets.
+        const tight = (value: string | undefined) =>
+          value?.replace(/\(\s+/g, '(').replace(/\s+\)/g, ')');
+        for (const [severity, tone] of [
+          ['success', 'success'],
+          ['error', 'danger'],
+          ['warning', 'warning'],
+          ['info', 'info'],
+        ]) {
+          expect(
+            tight(
+              declaredValue(
+                css,
+                `:host([data-severity='${severity}'])`,
+                '--_toast-progress',
+              ),
+            ),
+          ).toBe(
+            `color-mix(in srgb, var(--_toast-line-${tone}) 70%, transparent)`,
+          );
+        }
+        // Dark card: the -text tints, which stay legible there.
+        expect(
+          declaredValue(
+            css,
+            ":host-context([data-andes-theme='dark'])",
+            '--_toast-line-danger',
+          ),
+        ).toBe('var(--andes-color-danger-text)');
+        // The override wins, then the severity tone, then the neutral ink.
+        expect(
+          tight(declaredValue(css, '.andes-toast__progress', 'background')),
+        ).toBe(
+          'var(--andes-toast-progress-bg, var(--_toast-progress, color-mix(in srgb, var(--andes-color-card-foreground) 30%, transparent)))',
+        );
+      });
+
+      it('hides the bar under reduced motion instead of showing a static one', () => {
+        const css = readFileSync(
+          'packages/ui/src/lib/toast/toast-item.css',
+          'utf8',
+        );
+        const block =
+          /@media \(prefers-reduced-motion: reduce\) \{([\s\S]*)\}\s*$/.exec(
+            css,
+          )?.[1] ?? '';
+        expect(block).toMatch(
+          /\.andes-toast__progress-clip \{\s*display: none;\s*\}/,
+        );
+      });
+
+      it('renders the bar inside the clip, which is hidden from assistive tech', () => {
+        const { fixture, toasts } = createTemplateHost();
+
+        toasts.warning('x', { showProgress: true });
+        fixture.detectChanges();
+
+        const clip = fixture.nativeElement.querySelector(
+          '.andes-toast__progress-clip',
+        ) as HTMLElement;
+        expect(clip.getAttribute('aria-hidden')).toBe('true');
+        expect(clip.querySelector('.andes-toast__progress')).not.toBeNull();
       });
 
       it('pauses the bar while focus is inside the toast and while the page is hidden', () => {

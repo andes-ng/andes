@@ -362,12 +362,11 @@ class ProgressColorHost {
     this.toasts.show({
       title: 'Customize progress bar color',
       message:
-        'Set --andes-toast-progress-bg on the toast, or on any ancestor, to paint the bar.',
+        'Set --andes-toast-progress-bg on the toast, or on any ancestor, to colour the line on the card edge.',
       showProgress: true,
       duration: 20_000,
       style: {
-        '--andes-toast-progress-bg':
-          'linear-gradient(135deg, #6253e1, #04befe)',
+        '--andes-toast-progress-bg': '#6253e1',
       },
     });
   }

@@ -67,7 +67,7 @@ export * from './lib/dropdown-menu';
 
 // @slot hover-card
 
-// @slot image
+export * from './lib/image';
 
 export * from './lib/input';
 

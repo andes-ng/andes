@@ -3,7 +3,14 @@ import {
   _CdkPrivateStyleLoader,
   _VisuallyHiddenLoader,
 } from '@angular/cdk/private';
-import { computed, DestroyRef, DOCUMENT, inject, signal } from '@angular/core';
+import {
+  computed,
+  DestroyRef,
+  DOCUMENT,
+  inject,
+  signal,
+  type Signal,
+} from '@angular/core';
 
 import { ANDES_TOAST_BUILTIN_DEFAULTS } from './toast.config';
 import type {
@@ -51,6 +58,8 @@ interface AndesToastEntry<TConfig> {
  * Internal to `@andes-ng/ui`.
  */
 export interface AndesToastController {
+  /** Whether the page is in a hidden tab - every countdown holds still meanwhile. */
+  readonly pageHidden: Signal<boolean>;
   pause(id: string): void;
   resume(id: string): void;
   closeWithReason(id: string, reason: AndesToastCloseReason): void;
@@ -95,7 +104,7 @@ export abstract class AndesToastQueue<TConfig> implements AndesToastController {
   private readonly entries = new Map<string, AndesToastEntry<TConfig>>();
   /** Ids whose countdown this queue paused because the tab went to the background. */
   private readonly hiddenPaused = new Set<string>();
-  private pageHidden = false;
+  private readonly _pageHidden = signal(false);
 
   /** Every queued + visible toast, oldest first. */
   readonly toasts = this._toasts.asReadonly();
@@ -113,6 +122,8 @@ export abstract class AndesToastQueue<TConfig> implements AndesToastController {
   readonly queuedCount = computed(() =>
     Math.max(0, this._toasts().length - this.maxVisible()),
   );
+  /** Whether the page is in a hidden tab: every countdown is held until it is visible again. */
+  readonly pageHidden = this._pageHidden.asReadonly();
 
   protected constructor(
     private readonly flavor: AndesToastFlavor,
@@ -132,7 +143,7 @@ export abstract class AndesToastQueue<TConfig> implements AndesToastController {
     inject(DestroyRef).onDestroy(() =>
       document.removeEventListener('visibilitychange', onVisibilityChange),
     );
-    this.pageHidden = document.hidden;
+    this._pageHidden.set(document.hidden);
   }
 
   /** Maps the flavor's public config onto the shared internal shape. */
@@ -262,10 +273,10 @@ export abstract class AndesToastQueue<TConfig> implements AndesToastController {
   }
 
   private setPageHidden(hidden: boolean): void {
-    if (hidden === this.pageHidden) {
+    if (hidden === this._pageHidden()) {
       return;
     }
-    this.pageHidden = hidden;
+    this._pageHidden.set(hidden);
     if (hidden) {
       for (const id of this.timers.keys()) {
         this.pauseForHidden(id);
@@ -335,7 +346,7 @@ export abstract class AndesToastQueue<TConfig> implements AndesToastController {
     };
     this.entries.set(id, { raw, ref, resolveClosed });
 
-    const toast = this.resolve(id, raw, Date.now());
+    const toast = this.resolve(id, raw, Date.now(), 0);
     this._toasts.update((current) => [...current, toast]);
     this.announce(toast);
     this.enforceOverflow();
@@ -350,7 +361,12 @@ export abstract class AndesToastQueue<TConfig> implements AndesToastController {
       return;
     }
     entry.raw = raw;
-    const next = this.resolve(id, raw, previous.createdAt);
+    const next = this.resolve(
+      id,
+      raw,
+      previous.createdAt,
+      previous.revision + 1,
+    );
     this._toasts.update((current) =>
       current.map((toast) => (toast.id === id ? next : toast)),
     );
@@ -373,7 +389,12 @@ export abstract class AndesToastQueue<TConfig> implements AndesToastController {
     this.syncTimers();
   }
 
-  private resolve(id: string, raw: TConfig, createdAt: number): AndesToast {
+  private resolve(
+    id: string,
+    raw: TConfig,
+    createdAt: number,
+    revision: number,
+  ): AndesToast {
     const config = this.toToastConfig(raw);
     const defaults = this._defaults();
     const severity = config.severity ?? 'neutral';
@@ -402,6 +423,7 @@ export abstract class AndesToastQueue<TConfig> implements AndesToastController {
       icon: config.icon,
       closeIcon: config.closeIcon ?? defaults.closeIcon,
       pauseOnHover: config.pauseOnHover ?? defaults.pauseOnHover,
+      showProgress: config.showProgress ?? defaults.showProgress ?? false,
       richColors: config.richColors ?? defaults.richColors,
       swipeToDismiss: config.swipeToDismiss ?? defaults.swipeToDismiss,
       swipeDirections: config.swipeDirections ?? defaults.swipeDirections,
@@ -414,6 +436,7 @@ export abstract class AndesToastQueue<TConfig> implements AndesToastController {
       onClick: config.onClick,
       onClose: config.onClose,
       createdAt,
+      revision,
     };
   }
 
@@ -492,7 +515,7 @@ export abstract class AndesToastQueue<TConfig> implements AndesToastController {
         pauseCount: 0,
       };
       this.timers.set(toast.id, state);
-      if (this.pageHidden) {
+      if (this._pageHidden()) {
         this.pauseForHidden(toast.id);
       } else {
         this.startTimer(toast.id, state);

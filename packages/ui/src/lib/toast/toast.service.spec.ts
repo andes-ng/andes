@@ -582,11 +582,13 @@ describe('AndesToastService', () => {
         service.show({ message: 'a', duration: 3000 });
         vi.advanceTimersByTime(1000);
         setHidden(true);
+        expect(service.pageHidden()).toBe(true);
 
         vi.advanceTimersByTime(60_000);
         expect(service.toasts()).toHaveLength(1);
 
         setHidden(false);
+        expect(service.pageHidden()).toBe(false);
         vi.advanceTimersByTime(1999);
         expect(service.toasts()).toHaveLength(1);
         vi.advanceTimersByTime(1);
@@ -636,20 +638,43 @@ describe('AndesToastService', () => {
       });
     });
 
-    it('resolves classNames and styles onto the toast', () => {
-      const service = createService();
+    it('resolves showProgress, classNames, styles and the templates onto the toast', () => {
+      const service = createService([
+        provideAndesToastConfig({ showProgress: true }),
+      ]);
       const classNames = { icon: 'x' };
       const styles = { title: { color: 'red' } };
 
       service.show({ message: 'defaults' });
-      service.show({ message: 'custom', classNames, styles });
+      service.show({
+        message: 'custom',
+        showProgress: false,
+        classNames,
+        styles,
+      });
 
       expect(service.toasts()[0]).toEqual(
-        expect.objectContaining({ classNames: undefined, styles: undefined }),
+        expect.objectContaining({
+          showProgress: true,
+          classNames: undefined,
+          styles: undefined,
+          revision: 0,
+        }),
       );
       expect(service.toasts()[1]).toEqual(
-        expect.objectContaining({ classNames, styles }),
+        expect.objectContaining({ showProgress: false, classNames, styles }),
       );
+    });
+
+    it('counts key-based updates in revision', () => {
+      const service = createService();
+
+      service.show({ message: 'a', key: 'k' });
+      service.show({ message: 'b', key: 'k' });
+      service.update('k', { message: 'c' });
+
+      expect(service.toasts()).toHaveLength(1);
+      expect(service.toasts()[0].revision).toBe(2);
     });
 
     it('provideAndesToastConfig() sets app-wide defaults', () => {

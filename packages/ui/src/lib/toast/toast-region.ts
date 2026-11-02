@@ -333,6 +333,11 @@ export class AndesToastRegion {
     this.escaped.emit();
   }
 
+  /** Whether the toast's countdown is held by the pointer or a hidden page, for the progress bar. */
+  protected isPaused(toast: AndesToast): boolean {
+    return this.hoverPaused().has(toast.id) || this.controller().pageHidden();
+  }
+
   /** Whether any toast is open here. */
   hasToasts(): boolean {
     return this.toasts().length > 0;

@@ -73,7 +73,8 @@ export type AndesToastPart =
   | 'title'
   | 'description'
   | 'actions'
-  | 'close';
+  | 'close'
+  | 'progress';
 
 /** Extra CSS class(es) per toast part. */
 export type AndesToastClassNames = Readonly<
@@ -171,6 +172,12 @@ export interface AndesToastConfig {
    * `true`.
    */
   readonly pauseOnHover?: boolean;
+  /**
+   * Draws a thin bar along the bottom edge that drains over the auto-dismiss countdown and
+   * pauses with it. Only for toasts that auto-dismiss. Default: the flavor's global
+   * `showProgress` (built-in `false`).
+   */
+  readonly showProgress?: boolean;
   /**
    * Tints the whole toast with its severity colour (background and border), instead of the
    * default neutral card where only the icon carries the colour. No effect on `neutral` and
@@ -278,6 +285,7 @@ export interface AndesToast {
   readonly icon?: TemplateRef<AndesToastTemplateContext> | null;
   readonly closeIcon?: TemplateRef<AndesToastTemplateContext>;
   readonly pauseOnHover: boolean;
+  readonly showProgress: boolean;
   readonly richColors: boolean;
   /** `false` turns the default swiping off; an explicit `swipeDirections` still opts in. */
   readonly swipeToDismiss?: boolean;
@@ -293,6 +301,8 @@ export interface AndesToast {
   readonly onClick?: (ref: AndesToastRef<never>) => void;
   readonly onClose?: (reason: AndesToastCloseReason) => void;
   readonly createdAt: number;
+  /** Counts key-based updates, so the progress bar can restart with the fresh countdown. */
+  readonly revision: number;
 }
 
 /**
@@ -335,6 +345,8 @@ export interface AndesToastGlobalConfig {
    */
   readonly overflow: AndesToastOverflow;
   readonly pauseOnHover: boolean;
+  /** Default `showProgress` for every toast of this flavor (see `AndesToastConfig`). */
+  readonly showProgress?: boolean;
   readonly dismissible: boolean;
   readonly closeIcon?: TemplateRef<AndesToastTemplateContext>;
   /**

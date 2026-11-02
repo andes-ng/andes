@@ -312,6 +312,17 @@ export function isNavigableUrl(
   }
 }
 
+/**
+ * Whether a picture can be drawn from this address in an `<img>`: what `isNavigableUrl`
+ * allows, plus inline `data:image/...` pictures (an image element never runs a script).
+ */
+export function isImageSource(
+  url: string | undefined,
+  base = 'http://localhost/',
+): boolean {
+  return /^data:image\//i.test(url ?? '') || isNavigableUrl(url, base);
+}
+
 /* ------------------------------------------------------------------------ text */
 
 /**

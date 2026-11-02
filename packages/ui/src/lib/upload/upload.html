@@ -1,8 +1,11 @@
 <div
   [class]="rootClass()"
   data-slot="upload-root"
+  [style]="rootStyle()"
   [attr.data-animate]="animateReady() ? '' : null"
   (paste)="onPaste($event)"
+  (pointerenter)="onPointerEnter()"
+  (pointerleave)="onPointerLeave()"
 >
   @if (isField()) {
   <ng-container *ngTemplateOutlet="field" />
@@ -24,12 +27,28 @@
   >
 </div>
 
+@if (viewerOn()) {
+<!-- The image viewer for the list's pictures. It draws nothing here: it opens in the overlay. -->
+<andes-image-preview
+  [items]="viewerItems()"
+  [current]="viewerIndex()"
+  [config]="previewConfig()"
+  [labels]="previewLabels()"
+  [origin]="viewerOrigin()"
+  [(open)]="viewerOpen"
+  (currentChange)="onViewerCurrent($event)"
+  (closed)="onViewerClosed()"
+/>
+}
+
 <ng-template #trigger>
   <!-- The file input inside is the keyboard stop; the click only forwards pointer users to it. -->
   <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
   <div
     class="andes-upload__select"
     data-slot="upload-trigger"
+    [class]="parts().classNames.trigger ?? ''"
+    [style]="parts().styles.trigger ?? null"
     [class.andes-upload__select--drag]="dragMode"
     [class.andes-upload__select--card]="isCardList()"
     [class.andes-upload__select--invalid]="ariaInvalid()"
@@ -51,7 +70,7 @@
         @if (dropIcon(); as icon) {
         <ng-container *ngTemplateOutlet="icon" />
         } @else {
-        <andes-upload-icon name="cloud-upload" />
+        <andes-upload-icon name="inbox" />
         }
       </span>
       <p class="andes-upload__drag-title">
@@ -63,7 +82,13 @@
     </div>
     }
     <div class="andes-upload__projected" #projected><ng-content /></div>
-    @if (!dragMode && !hasContent()) {
+    @if (!dragMode && !hasContent()) { @if (isCardList()) {
+    <!-- A card or circle with nothing projected: a plus over "Upload", as the reference draws it. -->
+    <span class="andes-upload__card-default" data-slot="upload-card-default">
+      <andes-upload-icon class="andes-upload__card-default-icon" name="plus" />
+      <span>{{ text().upload }}</span>
+    </span>
+    } @else {
     <andes-button
       #defaultTrigger
       class="andes-upload__default"
@@ -75,7 +100,7 @@
       <andes-upload-icon slot="icon-start" name="upload" />
       {{ text().selectFiles }}
     </andes-button>
-    }
+    } }
   </div>
 </ng-template>
 
@@ -85,6 +110,8 @@
     class="andes-upload__list"
     role="list"
     data-slot="upload-list"
+    [class]="parts().classNames.list ?? ''"
+    [style]="parts().styles.list ?? null"
     [attr.aria-label]="text().fileList"
     [attr.data-list-type]="listType()"
   >
@@ -93,10 +120,13 @@
       class="andes-upload__item"
       role="listitem"
       data-slot="upload-item"
+      [class]="parts().classNames.item ?? ''"
+      [style]="parts().styles.item ?? null"
       animate.enter="andes-upload__item--enter"
       animate.leave="andes-upload__item--leave"
       [attr.data-status]="item.status"
       [attr.data-uid]="item.uid"
+      [attr.title]="item.status === 'error' && isCardList() ? item.errorText : null"
     >
       <div class="andes-upload__item-inner">
         @if (itemRender(); as render) {
@@ -118,33 +148,50 @@
     class="andes-upload__row"
     [class.andes-upload__row--boxed]="listType() !== 'text'"
   >
+    <!-- The thumbnail of a picture row opens the preview with a click; the name is the keyboard stop. -->
+    <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
     <span
       class="andes-upload__thumb"
       data-slot="upload-item-icon"
-      [class.andes-upload__thumb--picture]="!!item.thumb"
+      [class.andes-upload__thumb--picture]="
+        !!item.thumb &&
+        item.status !== 'uploading' &&
+        !(item.status === 'error' && isCardList())
+      "
+      [class.andes-upload__thumb--link]="
+        listType() === 'picture' && item.previewable
+      "
+      (click)="onThumbClick(item, $event)"
     >
       @if (iconRender(); as render) {
       <ng-container *ngTemplateOutlet="render; context: item.iconCtx" />
-      } @else if (item.thumb) {
+      } @else if (item.status === 'uploading' && isCardList()) {
+      <span class="andes-upload__uploading" data-slot="upload-uploading"
+        >{{ text().uploadingText }}</span
+      >
+      } @else if (item.thumb && item.status !== 'uploading' && !(item.status ===
+      'error' && isCardList())) {
       <img
         class="andes-upload__img"
         animate.enter="andes-upload__img--enter"
         [src]="item.thumb"
         alt=""
       />
-      @if (item.status === 'error' && isCardList()) {
-      <andes-upload-icon class="andes-upload__thumb-alert" name="alert" />
-      } } @else {
-      <andes-upload-icon [name]="item.icon" />
+      } @else if (item.status === 'uploading') {
+      <andes-upload-icon name="loading" class="andes-upload__spinner" />
+      } @else {
+      <andes-upload-icon
+        animate.enter="andes-upload__swap--enter"
+        [name]="item.icon"
+      />
       }
     </span>
     <span
       class="andes-upload__meta"
       [class.andes-upload__meta--sr]="
-        isCardList() && !!item.thumb && item.status !== 'error'
-      "
-      [class.andes-upload__meta--over]="
-        isCardList() && !!item.thumb && item.status === 'error'
+        isCardList() &&
+        (item.status === 'uploading' ||
+          (!!item.thumb && item.status !== 'error'))
       "
     >
       @if (item.file.url && item.status === 'done') {
@@ -154,8 +201,19 @@
         rel="noopener noreferrer"
         [attr.href]="item.file.url"
         [attr.title]="item.file.name"
+        (click)="onNameClick(item.file, $event)"
         >{{ item.file.name }}</a
       >
+      } @else if (item.previewable && !isCardList()) {
+      <!-- A file just chosen has no address to link to: its name is a button that looks like the link. -->
+      <button
+        type="button"
+        class="andes-upload__name andes-upload__name--link andes-upload__name--button"
+        [attr.title]="item.file.name"
+        (click)="onPreviewClick(item.file, $event)"
+      >
+        {{ item.file.name }}
+      </button>
       } @else {
       <span class="andes-upload__name" [attr.title]="item.file.name"
         >{{ item.file.name }}</span
@@ -164,8 +222,16 @@
       <span class="andes-upload__error" [attr.title]="item.errorText"
         >{{ item.errorText }}</span
       >
-      } @else if (item.caption) {
+      } @else if (item.caption && item.status === 'uploading') {
       <span class="andes-upload__caption">{{ item.caption }}</span>
+      } @else if (item.caption) {
+      <span
+        class="andes-upload__caption"
+        animate.enter="andes-upload__swap--enter"
+        >{{ item.caption }}</span
+      >
+      } @if (item.extra) {
+      <span class="andes-upload__extra">{{ item.extra }}</span>
       }
     </span>
     <span
@@ -177,16 +243,22 @@
         type="button"
         class="andes-upload__action"
         data-action="preview"
+        [class.andes-upload__action--custom]="!!listConfig().previewIcon"
         [attr.aria-label]="item.labels.preview"
         [attr.title]="item.labels.preview"
         (click)="onPreviewClick(item.file, $event)"
       >
+        @if (listConfig().previewIcon; as icon) {
+        <ng-container *ngTemplateOutlet="icon; context: item.iconCtx" />
+        } @else {
         <andes-upload-icon name="eye" />
+        }
       </button>
       } @if (item.canDownload) {
       <a
         class="andes-upload__action"
         data-action="download"
+        [class.andes-upload__action--custom]="!!listConfig().downloadIcon"
         download
         target="_blank"
         rel="noopener noreferrer"
@@ -195,7 +267,11 @@
         [attr.title]="item.labels.download"
         (click)="onDownloadClick(item.file, $event)"
       >
+        @if (listConfig().downloadIcon; as icon) {
+        <ng-container *ngTemplateOutlet="icon; context: item.iconCtx" />
+        } @else {
         <andes-upload-icon name="download" />
+        }
       </a>
       } @if (item.canRetry) {
       <button
@@ -213,11 +289,16 @@
         type="button"
         class="andes-upload__action"
         data-action="remove"
+        [class.andes-upload__action--custom]="!!listConfig().removeIcon"
         [attr.aria-label]="item.labels.remove"
         [attr.title]="item.labels.remove"
         (click)="onRemoveClick(item.file)"
       >
-        <andes-upload-icon [name]="isCardList() ? 'trash' : 'x'" />
+        @if (listConfig().removeIcon; as icon) {
+        <ng-container *ngTemplateOutlet="icon; context: item.iconCtx" />
+        } @else {
+        <andes-upload-icon name="trash" />
+        }
       </button>
       }
     </span>
@@ -231,6 +312,7 @@
     aria-valuemax="100"
     [attr.aria-valuenow]="item.percent"
     [attr.aria-label]="item.labels.uploading"
+    [attr.data-indeterminate]="item.percent <= 0 ? '' : null"
   >
     <span
       class="andes-upload__progress-bar"
@@ -247,6 +329,8 @@
   <div
     class="andes-upload__field"
     data-slot="upload-field"
+    [class]="parts().classNames.trigger ?? ''"
+    [style]="parts().styles.trigger ?? null"
     [class.andes-upload__field--invalid]="ariaInvalid()"
     [attr.data-status]="fieldView().status"
     [attr.data-empty]="fieldView().empty ? '' : null"
@@ -282,7 +366,7 @@
       >
       @if (fieldView().status === 'uploading') {
       <span class="andes-upload__field-percent"
-        >{{ fieldView().percent }}%</span
+        >{{ fieldView().percentText }}</span
       >
       } @else if (fieldView().errorText) {
       <span class="andes-upload__sr">{{ fieldView().errorText }}</span>
@@ -308,6 +392,7 @@
       aria-valuemax="100"
       [attr.aria-valuenow]="fieldView().percent"
       [attr.aria-label]="fieldView().uploadingLabel"
+      [attr.data-indeterminate]="fieldView().percent <= 0 ? '' : null"
     >
       <span
         class="andes-upload__field-progress-bar"
@@ -325,7 +410,7 @@
     type="file"
     [attr.id]="id()"
     [attr.name]="name()"
-    [attr.accept]="accept() || null"
+    [attr.accept]="acceptFormat() || null"
     [multiple]="multiple() || directory()"
     [disabled]="triggerBlocked()"
     [attr.webkitdirectory]="directory() ? '' : null"

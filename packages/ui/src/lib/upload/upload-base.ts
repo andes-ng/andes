@@ -21,11 +21,17 @@ import { ControlValueAccessor } from '@angular/forms';
 import clsx from 'clsx';
 
 import type { AndesButtonContext } from '../button/button-context';
+import type {
+  AndesImageLabels,
+  AndesImagePreviewConfig,
+  AndesImagePreviewItem,
+} from '../image/image-types';
 import type { AndesUploadIconName } from './upload-icon';
 import {
   formatFileSize,
   formatMessage,
   isImageFile,
+  isImageSource,
   isNavigableUrl,
   readDroppedFiles,
   toUploadFile,
@@ -36,17 +42,22 @@ import {
   AndesUploadCancelledError,
   AndesUploadHttpError,
   AndesUploadItemEvent,
+  type AndesUploadAcceptObject,
   type AndesUploadAction,
   type AndesUploadBeforeRemove,
   type AndesUploadBeforeUpload,
   type AndesUploadChangeEvent,
+  type AndesUploadClassNames,
   type AndesUploadData,
   type AndesUploadFile,
+  type AndesUploadFileFlag,
   type AndesUploadIconContext,
   type AndesUploadItemContext,
   type AndesUploadListOptions,
   type AndesUploadListType,
   type AndesUploadMessages,
+  type AndesUploadPasteScope,
+  type AndesUploadProgressOptions,
   type AndesUploadRejection,
   type AndesUploadRequest,
   type AndesUploadRequestHandle,
@@ -54,6 +65,7 @@ import {
   type AndesUploadSize,
   type AndesUploadSource,
   type AndesUploadStatus,
+  type AndesUploadStyles,
   type AndesUploadVariant,
 } from './upload-types';
 
@@ -81,6 +93,8 @@ export const DEFAULT_UPLOAD_MESSAGES: AndesUploadMessages = {
   remove: 'Remove {name}',
   retry: 'Retry uploading {name}',
   dropTitle: 'Click or drag files to this area to upload',
+  upload: 'Upload',
+  uploadingText: 'Uploading...',
   noFileChosen: 'No file chosen',
   filesChosen: ({ count }) => `${count} ${count === 1 ? 'file' : 'files'}`,
   announceAdded: '{name} added',
@@ -98,6 +112,8 @@ export interface AndesUploadFieldView {
   readonly status: AndesUploadStatus | null;
   /** The average percent of the files being sent. */
   readonly percent: number;
+  /** `percent` as the row shows it (`progress.format`, default `{percent}%`). */
+  readonly percentText: string;
   /** The failure text of the first failed file. */
   readonly errorText: string | undefined;
   readonly uploadingLabel: string;
@@ -124,7 +140,14 @@ export interface AndesUploadItemView {
   readonly thumb: string | undefined;
   readonly icon: AndesUploadIconName;
   readonly caption: string;
+  /** `showUploadList.extra` for this file. */
+  readonly extra: string;
   readonly errorText: string | undefined;
+  /** What the image viewer shows for this file; set only for pictures it can draw. */
+  readonly viewSrc: string | undefined;
+  /** The file can be previewed: the name (and a picture row's thumbnail) is then a click target. */
+  readonly previewable: boolean;
+  /** The eye action is drawn (`previewable` and `showUploadList.showPreviewIcon`). */
   readonly canPreview: boolean;
   readonly canDownload: boolean;
   readonly canRetry: boolean;
@@ -163,9 +186,64 @@ function hasProjectedContent(slot: HTMLElement): boolean {
   );
 }
 
+/** A show-this-action flag, which may answer per file. */
+function flagged(flag: AndesUploadFileFlag, file: AndesUploadFile): boolean {
+  return typeof flag === 'function' ? flag(file) : flag;
+}
+
 function hasFiles(event: DragEvent): boolean {
   return Array.from(event.dataTransfer?.types ?? []).includes('Files');
 }
+
+/** Input types that hold no text, so a paste into them is not a paste of text. */
+const NON_TEXT_INPUTS = new Set([
+  'button',
+  'checkbox',
+  'color',
+  'file',
+  'hidden',
+  'image',
+  'radio',
+  'range',
+  'reset',
+  'submit',
+]);
+
+/** Whether the paste lands where text is typed: a text input, a textarea or editable content. */
+function isTextEditing(target: EventTarget | null): boolean {
+  const element = target as Element | null;
+  if (typeof element?.closest !== 'function') {
+    return false;
+  }
+  if (element.closest('textarea')) {
+    return true;
+  }
+  const input = element.closest('input');
+  if (input) {
+    return !NON_TEXT_INPUTS.has(input.type);
+  }
+  const editable = element.closest('[contenteditable]');
+  return !!editable && editable.getAttribute('contenteditable') !== 'false';
+}
+
+/**
+ * The uploads that take pastes anywhere on a page, per document. Every one of them hears a
+ * paste; only the first eligible one in document order takes the files.
+ */
+const pageUploads = new WeakMap<Document, Set<AndesUploadBase>>();
+
+/**
+ * The `control`-scope uploads that have the pointer over them, per document: a paste made while
+ * one of them is hovered goes to it, ahead of any page-wide upload.
+ */
+const hoveredUploads = new WeakMap<Document, Set<AndesUploadBase>>();
+
+/**
+ * What a chosen file can be opened as in a new tab. Pages that could run scripts under the
+ * application's origin (HTML, SVG, XML) are left out on purpose.
+ */
+const BLOB_OPENABLE =
+  /^(image\/(png|jpe?g|gif|webp|avif|bmp)|application\/pdf|text\/plain|audio\/|video\/)/i;
 
 /**
  * Everything `andes-upload` and `andes-upload-dragger` share: the two components render the
@@ -231,8 +309,13 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
   /** Start sending as soon as files are added. Off: files wait as `ready` for `submit()`. */
   readonly autoUpload = input(true, { transform: booleanAttribute });
 
-  /** File types, as a file input's `accept` (`.pdf,image/*`). */
-  readonly accept = input<string | undefined>(undefined);
+  /**
+   * File types, as a file input's `accept` (`.pdf,image/*`), or an object with that list as
+   * `format` and a `filter` (`native`, or your own function) that decides who checks the files.
+   */
+  readonly accept = input<string | AndesUploadAcceptObject | undefined>(
+    undefined,
+  );
   readonly multiple = input(false, { transform: booleanAttribute });
   /** Pick (or drop) whole folders; every file inside is added. */
   readonly directory = input(false, { transform: booleanAttribute });
@@ -251,8 +334,17 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
         : numberAttribute(value),
   });
   readonly disabled = input(false, { transform: booleanAttribute });
-  /** Accept files pasted while focus is inside the control. */
+  /** Accept pasted files (see `pasteScope` for where). Off: no paste is taken at all. */
   readonly allowPaste = input(true, { transform: booleanAttribute });
+  /**
+   * `control` (default) takes files pasted while the focus is inside the control or while the
+   * pointer is over it (hover it and press Ctrl/Cmd+V; no focus needed). `page` takes them
+   * anywhere on the page, except a paste that carries text into a text field (it pastes as
+   * usual) or one inside another upload. A hovered control wins over page-wide ones; with
+   * several page-wide uploads on a page, the first one in document order that is enabled and
+   * has room takes the files.
+   */
+  readonly pasteScope = input<AndesUploadPasteScope>('control');
   /** Off: only `open()` (or a drop) starts a selection. */
   readonly openFileDialogOnClick = input(true, { transform: booleanAttribute });
 
@@ -290,7 +382,11 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
   readonly iconRender = input<TemplateRef<AndesUploadIconContext> | undefined>(
     undefined,
   );
-  /** Turns a file into a thumbnail URL; default is an object URL for pictures. */
+  /**
+   * Turns a chosen file into a thumbnail URL for the picture list types. The default makes an
+   * object URL for pictures; a function given here is asked for every file (a video can get a
+   * frame, a PDF its first page), and an empty answer keeps the file's icon.
+   */
   readonly previewFile = input<
     ((file: File | Blob) => Promise<string>) | undefined
   >(undefined);
@@ -298,6 +394,22 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
   readonly isImage = input<((file: AndesUploadFile) => boolean) | undefined>(
     undefined,
   );
+  /**
+   * The preview of a picture opens the library's image viewer (`andes-image-preview`) over
+   * every picture of the list, with zoom, rotation and previous / next. Off, or for any other
+   * file, the preview opens the file's `http(s)` or `blob:` address in a new tab.
+   */
+  readonly imagePreview = input(true, { transform: booleanAttribute });
+  /** Behaviour of the image viewer: zoom limits, toolbar actions, loop, scrim... */
+  readonly previewConfig = input<AndesImagePreviewConfig | null>(null);
+  /** Localised texts of the image viewer. */
+  readonly previewLabels = input<AndesImageLabels | null>(null);
+  /** The colour, thickness and text of the progress of a file being sent. */
+  readonly progress = input<AndesUploadProgressOptions | null>(null);
+  /** Classes for the control's parts (`root`, `trigger`, `list`, `item`). */
+  readonly classNames = input<AndesUploadClassNames | null>(null);
+  /** Inline styles for the same parts. */
+  readonly styles = input<AndesUploadStyles | null>(null);
   readonly messages = input<Partial<AndesUploadMessages> | undefined>(
     undefined,
   );
@@ -329,8 +441,11 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
   /** A file was added, progressed, finished, failed or left the list. Not named `change`: a file input's native `change` bubbles to the host. */
   readonly changed = output<AndesUploadChangeEvent>();
   /**
-   * The preview action, shown for files with an `http(s)` or `blob:` `url`; by default it opens
-   * that URL in a new tab, and `preventDefault()` replaces that (e.g. with your own viewer).
+   * The preview action, or a click on the name (or, in a `picture` list, the thumbnail) of a
+   * file that can be previewed. By default a picture opens in the image viewer (see
+   * `imagePreview`) and another file's `http(s)` or `blob:` `url` (or, for a file just chosen,
+   * the file itself, when a browser can show it) opens in a new tab; `preventDefault()`
+   * replaces that (e.g. with your own viewer).
    */
   readonly preview = output<AndesUploadItemEvent>();
   /** The download action; `preventDefault()` replaces following the link. */
@@ -346,6 +461,8 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
 
   private readonly disabledByForm = signal(false);
   protected readonly dragging = signal(false);
+  /** The pointer is over the control (`pasteScope="control"` takes a paste then). */
+  private readonly hovered = signal(false);
   /**
    * Off while the first render's rows are entering, on after it: rows that are there from the
    * start (an initial value) are not animated in, rows added later are.
@@ -355,8 +472,23 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
   /** Assumed true until the slot is measured, so an empty one is the exception. */
   protected readonly hasContent = signal(true);
   private readonly thumbs = signal<Readonly<Record<string, string>>>({});
+  /** Object URLs of chosen files themselves (not of a `previewFile` thumbnail), by uid. */
+  private readonly originals = signal<Readonly<Record<string, string>>>({});
+  /** Whether the image viewer is open (`[(open)]` of the rendered `andes-image-preview`). */
+  protected readonly viewerOpen = signal(false);
+  /** The file the viewer shows, by uid, so it stays on it when other files come or go. */
+  private readonly viewerUid = signal<string | null>(null);
+  /** The file whose preview opened the viewer; focus returns there by itself. */
+  private viewerOpener: string | null = null;
 
   private readonly thumbEntries = new Map<string, ThumbEntry>();
+  /** Object URLs made to open a chosen file in a new tab; revoked with the control. */
+  private readonly openedUrls = new Set<string>();
+  /**
+   * Object URLs made when the viewer opens, for chosen pictures that have none yet (a text
+   * list, or thumbnails from `previewFile`); dropped like thumbnails.
+   */
+  private readonly viewerSources = new Map<string, ThumbEntry>();
   /** uid -> marker of the running attempt; a callback with a stale marker is ignored. */
   private readonly attempts = new Map<string, object>();
   private readonly handles = new Map<string, AndesUploadRequestHandle>();
@@ -397,8 +529,81 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
         this.listType() === 'picture-circle' &&
         'andes-upload--circle',
       this.isDisabled() && 'andes-upload--disabled',
+      this.classNames()?.root,
     ),
   );
+
+  /** Consumer classes and styles per part. */
+  protected readonly parts = computed(() => ({
+    classNames: this.classNames() ?? {},
+    styles: this.styles() ?? {},
+  }));
+
+  /** The root's inline style: the `progress` options as custom properties, then `styles.root`. */
+  protected readonly rootStyle = computed(() => {
+    const progress = this.progress();
+    const vars: Record<string, string | number> = {};
+    const stroke = progress?.strokeColor;
+    if (typeof stroke === 'string') {
+      vars['--andes-upload-progress-color'] = stroke;
+    } else if (stroke) {
+      vars['--andes-upload-progress-fill'] =
+        `linear-gradient(to right, ${stroke.from}, ${stroke.to})`;
+      vars['--andes-upload-progress-fill-rtl'] =
+        `linear-gradient(to left, ${stroke.from}, ${stroke.to})`;
+    }
+    const width = progress?.strokeWidth;
+    if (width !== undefined && Number.isFinite(width) && width > 0) {
+      vars['--andes-upload-progress-size'] = `${width}px`;
+    }
+    const style = { ...vars, ...this.parts().styles.root };
+    return Object.keys(style).length > 0 ? style : null;
+  });
+
+  /** The viewer is rendered for the list layouts (the field row has no preview). */
+  protected readonly viewerOn = computed(
+    () => this.imagePreview() && !this.isField(),
+  );
+
+  /** The rows the viewer browses: pictures that offer a preview and have a source. */
+  private readonly viewerFiles = computed(() =>
+    this.items().filter((item) => item.previewable && !!item.viewSrc),
+  );
+
+  /** If the full picture cannot be loaded, the viewer falls back to the thumbnail. */
+  protected readonly viewerItems = computed<AndesImagePreviewItem[]>(() =>
+    this.viewerFiles().map((item) => {
+      const src = item.viewSrc as string;
+      const thumb = item.file.thumbUrl ?? this.thumbs()[item.uid];
+      return {
+        src,
+        alt: item.file.name,
+        name: item.file.name,
+        ...(thumb !== src && this.isDrawable(thumb) ? { fallback: thumb } : {}),
+      };
+    }),
+  );
+
+  protected readonly viewerIndex = computed(() =>
+    Math.max(
+      0,
+      this.viewerFiles().findIndex((item) => item.uid === this.viewerUid()),
+    ),
+  );
+
+  /** The thumbnail (or, in a text list, the row) of the shown file: the viewer grows from it. */
+  protected readonly viewerOrigin = computed<HTMLElement | null>(() => {
+    const uid = this.viewerUid();
+    this.viewerFiles();
+    const row = uid ? this.itemElement(uid) : undefined;
+    if (!row) {
+      return null;
+    }
+    return this.listType() === 'text'
+      ? row
+      : (row.querySelector<HTMLElement>('[data-slot="upload-item-icon"]') ??
+          row);
+  });
 
   protected readonly msg = computed<AndesUploadMessages>(() => ({
     ...DEFAULT_UPLOAD_MESSAGES,
@@ -412,7 +617,15 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
       selectFiles: formatMessage(messages.selectFiles),
       fileList: formatMessage(messages.fileList),
       dropTitle: formatMessage(messages.dropTitle),
+      upload: formatMessage(messages.upload),
+      uploadingText: formatMessage(messages.uploadingText ?? 'Uploading...'),
     };
+  });
+
+  /** The `accept` list the file input gets. */
+  protected readonly acceptFormat = computed(() => {
+    const accept = this.accept();
+    return typeof accept === 'object' && accept ? accept.format : accept;
   });
 
   protected readonly isCardList = computed(
@@ -428,11 +641,17 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
     const options = typeof value === 'object' ? value : {};
     return {
       show: value !== false,
-      preview: options.showPreviewIcon ?? true,
+      // The eye lives on the hover mask of a card or circle; a row opens the preview from its
+      // name (and a picture row from its thumbnail) instead.
+      preview: options.showPreviewIcon ?? this.isCardList(),
       remove: options.showRemoveIcon ?? true,
       download: options.showDownloadIcon ?? false,
       retry: options.showRetryIcon ?? true,
       fileSize: options.showFileSize ?? true,
+      previewIcon: options.previewIcon ?? null,
+      downloadIcon: options.downloadIcon ?? null,
+      removeIcon: options.removeIcon ?? null,
+      extra: options.extra,
     };
   });
 
@@ -495,11 +714,16 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
         : list.length === 1
           ? list[0].name
           : formatMessage(messages.filesChosen, { count: list.length });
+    const format = this.progress()?.format;
     return {
       text,
       empty: list.length === 0,
       status,
       percent,
+      percentText:
+        format && sending.length > 0
+          ? format(percent, sending[0])
+          : `${percent}%`,
       errorText: failed ? this.errorTextOf(failed) : undefined,
       uploadingLabel: formatMessage(messages.uploading, { name: text }),
       clearLabel: formatMessage(messages.remove, { name: text }),
@@ -581,8 +805,61 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
       }
     });
 
+    // A page-wide paste is heard on the document; the listener goes with the scope or the control.
+    effect((onCleanup) => {
+      if (this.pasteScope() !== 'page' || !this.allowPaste()) {
+        return;
+      }
+      const doc = this.document;
+      let registry = pageUploads.get(doc);
+      if (!registry) {
+        registry = new Set();
+        pageUploads.set(doc, registry);
+      }
+      const uploads = registry;
+      const listener = (event: Event) =>
+        this.onPagePaste(event as ClipboardEvent, uploads);
+      uploads.add(this);
+      doc.addEventListener('paste', listener);
+      onCleanup(() => {
+        doc.removeEventListener('paste', listener);
+        uploads.delete(this);
+      });
+    });
+
+    // With the `control` scope, a paste is also taken while the pointer is over the control, with
+    // no focus in it: the document listener exists only while it is hovered.
+    effect((onCleanup) => {
+      if (
+        this.pasteScope() !== 'control' ||
+        !this.allowPaste() ||
+        !this.hovered()
+      ) {
+        return;
+      }
+      const doc = this.document;
+      let registry = hoveredUploads.get(doc);
+      if (!registry) {
+        registry = new Set();
+        hoveredUploads.set(doc, registry);
+      }
+      const hovering = registry;
+      const listener = (event: Event) =>
+        this.onHoverPaste(event as ClipboardEvent);
+      hovering.add(this);
+      doc.addEventListener('paste', listener);
+      onCleanup(() => {
+        doc.removeEventListener('paste', listener);
+        hovering.delete(this);
+      });
+    });
+
     this.destroyRef.onDestroy(() => {
       this.destroyed = true;
+      for (const url of this.openedUrls) {
+        URL.revokeObjectURL(url);
+      }
+      this.openedUrls.clear();
       for (const handle of this.handles.values()) {
         handle.abort();
       }
@@ -590,6 +867,9 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
       this.attempts.clear();
       for (const uid of [...this.thumbEntries.keys()]) {
         this.dropThumb(uid);
+      }
+      for (const uid of [...this.viewerSources.keys()]) {
+        this.dropViewerSource(uid);
       }
     });
   }
@@ -640,10 +920,15 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
     const rejections: AndesUploadRejection[] = [];
     let candidates: File[] = [];
     for (const file of files) {
-      const reason = validateUploadFile(file, {
-        accept: this.accept(),
-        maxSize: this.maxSize(),
-      });
+      const accept = this.accept();
+      const filter =
+        typeof accept === 'object' && accept ? accept.filter : undefined;
+      // With a `filter`, the control's own check of the list gives way to it.
+      const reason =
+        validateUploadFile(file, {
+          accept: filter ? undefined : this.acceptFormat(),
+          maxSize: this.maxSize(),
+        }) ?? (typeof filter === 'function' && !filter(file) ? 'accept' : null);
       if (reason) {
         rejections.push({ file, reason });
       } else {
@@ -949,6 +1234,100 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
     }
   }
 
+  protected onPointerEnter(): void {
+    this.hovered.set(true);
+  }
+
+  protected onPointerLeave(): void {
+    this.hovered.set(false);
+  }
+
+  /**
+   * The files of a paste that reached the document, or `null` when it is not ours to take: when
+   * something already handled it (an upload that holds the focus took it first), when it carries
+   * no files, when it brings text into a text field, or when it happened inside an upload.
+   */
+  private documentPasteFiles(event: ClipboardEvent): File[] | null {
+    const data = event.clipboardData;
+    const files = Array.from(data?.files ?? []);
+    if (event.defaultPrevented || files.length === 0) {
+      return null;
+    }
+    const target = event.target as Element | null;
+    const carriesText = Array.from(data?.types ?? []).some((type) =>
+      type.startsWith('text/'),
+    );
+    if (carriesText && isTextEditing(target)) {
+      return null;
+    }
+    if (target?.closest?.('[data-slot="upload"]')) {
+      return null;
+    }
+    return files;
+  }
+
+  /**
+   * A paste made while the pointer is over the control (`pasteScope="control"`), whatever holds
+   * the focus. The same guards as a page-wide paste apply.
+   */
+  private onHoverPaste(event: ClipboardEvent): void {
+    const files = this.documentPasteFiles(event);
+    if (!files || !this.canTakePaste('control')) {
+      return;
+    }
+    event.preventDefault();
+    void this.addFiles(files, 'paste');
+  }
+
+  /**
+   * A paste anywhere on the page (`pasteScope="page"`): the first eligible page-wide upload in
+   * document order takes the files, unless a hovered control is eligible, which takes them.
+   */
+  private onPagePaste(
+    event: ClipboardEvent,
+    uploads: ReadonlySet<AndesUploadBase>,
+  ): void {
+    const files = this.documentPasteFiles(event);
+    if (!files) {
+      return;
+    }
+    const hovered = hoveredUploads.get(this.document);
+    if (
+      hovered &&
+      [...hovered].some((upload) => upload.canTakePaste('control'))
+    ) {
+      return;
+    }
+    const first = [...uploads]
+      .filter((upload) => upload.canTakePaste('page'))
+      .sort((a, b) =>
+        // 4 is Node.DOCUMENT_POSITION_FOLLOWING, spelled out for servers without `Node`.
+        a.host.nativeElement.compareDocumentPosition(b.host.nativeElement) & 4
+          ? -1
+          : 1,
+      )[0];
+    if (first !== this) {
+      return;
+    }
+    event.preventDefault();
+    void this.addFiles(files, 'paste');
+  }
+
+  /** Whether this control can take a paste of that scope from the document now. */
+  private canTakePaste(scope: AndesUploadPasteScope): boolean {
+    const host = this.host.nativeElement;
+    return (
+      !this.destroyed &&
+      this.allowPaste() &&
+      this.pasteScope() === scope &&
+      (scope === 'page' || this.hovered()) &&
+      !this.triggerBlocked() &&
+      host.isConnected &&
+      // Behind a modal (a dialog, the image viewer) the page is inert and takes no files.
+      !host.closest('[inert]')
+    );
+  }
+
   protected onFocusOut(event: FocusEvent): void {
     const host = event.currentTarget as HTMLElement;
     if (!host.contains(event.relatedTarget as Node | null)) {
@@ -959,10 +1338,67 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
   protected onPreviewClick(file: AndesUploadFile, event: Event | null): void {
     const preview = new AndesUploadItemEvent(file, event);
     this.preview.emit(preview);
-    const url = file.url;
-    if (!preview.defaultPrevented && url && this.isOpenable(url)) {
-      globalThis.open?.(url, '_blank', 'noopener,noreferrer');
+    if (preview.defaultPrevented || this.openViewer(file)) {
+      return;
     }
+    const url = file.url;
+    if (url && this.isOpenable(url)) {
+      globalThis.open?.(url, '_blank', 'noopener,noreferrer');
+    } else {
+      this.openLocal(file);
+    }
+  }
+
+  /**
+   * The thumbnail of a `picture` row opens the preview like its name does (the name is the
+   * keyboard way in; the thumbnail is the bigger target for a pointer).
+   */
+  protected onThumbClick(item: AndesUploadItemView, event: MouseEvent): void {
+    if (this.listType() === 'picture' && item.previewable) {
+      this.onPreviewClick(item.file, event);
+    }
+  }
+
+  /**
+   * The linked name of an uploaded file. A plain click is a preview: it emits `preview` and
+   * opens a picture in the viewer; otherwise (or with `preventDefault()`) the link is followed
+   * or not. A click with a modifier key or another button is left to the browser.
+   */
+  protected onNameClick(file: AndesUploadFile, event: MouseEvent): void {
+    if (
+      event.button !== 0 ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+    const preview = new AndesUploadItemEvent(file, event);
+    this.preview.emit(preview);
+    if (preview.defaultPrevented || this.openViewer(file)) {
+      event.preventDefault();
+    }
+  }
+
+  /** The viewer moved to another picture. */
+  protected onViewerCurrent(index: number): void {
+    this.viewerUid.set(this.viewerFiles()[index]?.uid ?? null);
+  }
+
+  /**
+   * Focus went back to the preview action that opened the viewer; if the user paged to another
+   * picture since, that one's action is the better place to land.
+   */
+  protected onViewerClosed(): void {
+    const shown = this.viewerUid();
+    const opener = this.viewerOpener;
+    this.viewerOpener = null;
+    const row = shown && shown !== opener ? this.itemElement(shown) : undefined;
+    (
+      row?.querySelector<HTMLElement>('[data-action="preview"]') ??
+      row?.querySelector<HTMLElement>('.andes-upload__name--link')
+    )?.focus();
   }
 
   protected onDownloadClick(file: AndesUploadFile, event: Event | null): void {
@@ -1012,6 +1448,106 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
   /** A URL the default preview may open: a web address or a blob, never `data:` or a script. */
   private isOpenable(url: string | undefined): boolean {
     return isNavigableUrl(url, this.document.baseURI || undefined);
+  }
+
+  /** Whether a browser can show this chosen file in a tab (and nothing in it can run). */
+  private isBlobOpenable(file: AndesUploadFile): boolean {
+    const source = file.originFileObj;
+    return !!source && BLOB_OPENABLE.test(source.type || file.type || '');
+  }
+
+  /** Opens a file that was just chosen (it has no address yet) in a new tab, from the file. */
+  private openLocal(file: AndesUploadFile): void {
+    const source = file.originFileObj;
+    if (
+      !source ||
+      !this.isBlobOpenable(file) ||
+      typeof URL === 'undefined' ||
+      !URL.createObjectURL
+    ) {
+      return;
+    }
+    const url = URL.createObjectURL(source);
+    this.openedUrls.add(url);
+    globalThis.open?.(url, '_blank', 'noopener,noreferrer');
+  }
+
+  /** A URL the image viewer may draw: a web, blob or `data:image` address. */
+  private isDrawable(url: string | undefined): url is string {
+    return isImageSource(url, this.document.baseURI || undefined);
+  }
+
+  /**
+   * Opens the viewer on a picture of the list, over every picture it can show. `false` when
+   * the viewer is off or cannot show this file, so the caller falls back to the new tab.
+   */
+  private openViewer(file: AndesUploadFile): boolean {
+    if (!this.viewerOn() || !this.isPicture(file)) {
+      return false;
+    }
+    this.ensureViewerSources();
+    if (!this.viewerFiles().some((item) => item.uid === file.uid)) {
+      return false;
+    }
+    this.viewerOpener = file.uid;
+    this.viewerUid.set(file.uid);
+    this.viewerOpen.set(true);
+    return true;
+  }
+
+  /**
+   * What the viewer shows for a picture: its address, else the chosen file itself, else its
+   * thumbnail. The file comes before the thumbnail, which `previewFile` may have shrunk.
+   */
+  private viewSourceOf(file: AndesUploadFile): string | undefined {
+    if (this.isDrawable(file.url)) {
+      return file.url;
+    }
+    const original = this.originals()[file.uid];
+    if (original) {
+      return original;
+    }
+    const thumb = file.thumbUrl ?? this.thumbs()[file.uid];
+    return this.isDrawable(thumb) ? thumb : undefined;
+  }
+
+  /** Gives every chosen picture without an address an object URL the viewer can show. */
+  private ensureViewerSources(): void {
+    if (typeof URL === 'undefined' || !URL.createObjectURL) {
+      return;
+    }
+    let changed = false;
+    for (const file of this.fileList()) {
+      const source = file.originFileObj;
+      if (!source || this.isDrawable(file.url) || !this.isPicture(file)) {
+        continue;
+      }
+      const thumb = this.thumbEntries.get(file.uid);
+      if (
+        (thumb?.owned && thumb.source === source) ||
+        this.viewerSources.get(file.uid)?.source === source
+      ) {
+        continue;
+      }
+      this.dropViewerSource(file.uid);
+      this.viewerSources.set(file.uid, {
+        url: URL.createObjectURL(source),
+        source,
+        owned: true,
+      });
+      changed = true;
+    }
+    if (changed) {
+      this.publishThumbs();
+    }
+  }
+
+  private dropViewerSource(uid: string): void {
+    const entry = this.viewerSources.get(uid);
+    this.viewerSources.delete(uid);
+    if (entry?.url) {
+      URL.revokeObjectURL(entry.url);
+    }
   }
 
   /** The row of one file, if it is rendered. */
@@ -1317,10 +1853,12 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
   ): void {
     const wanted = new Set<string>();
     let changed = false;
+    const custom = this.previewFile();
     if (listType !== 'text') {
       for (const file of list) {
         const source = file.originFileObj;
-        if (file.thumbUrl || !source || !this.isPicture(file)) {
+        // A custom `previewFile` is asked for every file; the default only draws pictures.
+        if (file.thumbUrl || !source || (!custom && !this.isPicture(file))) {
           continue;
         }
         wanted.add(file.uid);
@@ -1332,7 +1870,6 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
           this.dropThumb(file.uid);
         }
         changed = true;
-        const custom = this.previewFile();
         if (custom) {
           const entry: ThumbEntry = { url: undefined, source, owned: false };
           this.thumbEntries.set(file.uid, entry);
@@ -1363,6 +1900,14 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
         changed = true;
       }
     }
+    // The viewer's object URLs go with their file, or when it was replaced by another blob.
+    const sources = new Map(list.map((file) => [file.uid, file.originFileObj]));
+    for (const [uid, entry] of [...this.viewerSources]) {
+      if (sources.get(uid) !== entry.source) {
+        this.dropViewerSource(uid);
+        changed = true;
+      }
+    }
     if (changed) {
       this.publishThumbs();
     }
@@ -1378,12 +1923,22 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
 
   private publishThumbs(): void {
     const record: Record<string, string> = {};
+    const originals: Record<string, string> = {};
     for (const [uid, entry] of this.thumbEntries) {
       if (entry.url) {
         record[uid] = entry.url;
+        if (entry.owned) {
+          originals[uid] = entry.url;
+        }
+      }
+    }
+    for (const [uid, entry] of this.viewerSources) {
+      if (entry.url) {
+        originals[uid] = entry.url;
       }
     }
     this.thumbs.set(record);
+    this.originals.set(originals);
   }
 
   /* ------------------------------------------------------------------- views */
@@ -1407,18 +1962,34 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
 
     let caption = '';
     if (status === 'uploading') {
-      caption = `${percent}%`;
+      const progress = this.progress();
+      if (progress?.showInfo !== false) {
+        caption = progress?.format
+          ? progress.format(percent, file)
+          : `${percent}%`;
+      }
     } else if (status === 'ready') {
       caption = formatMessage(messages.ready);
     } else if (status !== 'error' && config.fileSize && file.size != null) {
       caption = formatFileSize(file.size);
     }
     const errorText = status === 'error' ? this.errorTextOf(file) : undefined;
+    const viewer = this.viewerOn() && picture;
+    const viewSrc = viewer ? this.viewSourceOf(file) : undefined;
+    // A chosen picture has no address yet; the viewer makes one for it when it opens.
+    const viewable = viewer && (!!viewSrc || !!file.originFileObj);
+
+    // A picture opens in the viewer, which can draw a thumbnail or the chosen file too. Any
+    // other file needs a web or blob address to open, or to be a chosen file a browser shows.
+    const previewable =
+      status !== 'uploading' &&
+      (viewable || this.isOpenable(file.url) || this.isBlobOpenable(file));
 
     const disabled = this.isDisabled();
+    // A failed file keeps its icon and turns red, like Ant's; the message is the tooltip.
     const icon: AndesUploadIconName =
-      status === 'error'
-        ? 'alert'
+      status === 'uploading'
+        ? 'loading'
         : this.listType() === 'text'
           ? 'paperclip'
           : picture
@@ -1446,16 +2017,16 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
       thumb,
       icon,
       caption,
+      extra: config.extra?.(file) ?? '',
       errorText,
-      // Without an address the default preview has nothing to open, so there is no button; a
-      // thumbnail alone does not count. To preview local pictures, give the file a `blob:` or
-      // web `url`, or draw the row with `itemRender`.
-      canPreview:
-        config.preview && this.isOpenable(file.url) && status !== 'uploading',
-      canDownload: config.download && !!file.url && status === 'done',
+      viewSrc,
+      previewable,
+      canPreview: flagged(config.preview, file) && previewable,
+      canDownload:
+        flagged(config.download, file) && !!file.url && status === 'done',
       canRetry:
         config.retry && status === 'error' && !!file.originFileObj && !disabled,
-      canRemove: config.remove && !disabled,
+      canRemove: flagged(config.remove, file) && !disabled,
       labels: {
         preview: formatMessage(messages.preview, name),
         download: formatMessage(messages.download, name),

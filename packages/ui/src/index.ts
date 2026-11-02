@@ -17,7 +17,7 @@ export * from './lib/accordion';
 
 export * from './lib/avatar';
 
-// @slot badge
+export * from './lib/badge';
 
 export * from './lib/breadcrumb';
 
@@ -91,7 +91,7 @@ export * from './lib/mentions';
 
 // @slot pagination
 
-// @slot palette
+export * from './lib/palette';
 
 // @slot popconfirm
 
@@ -135,7 +135,7 @@ export * from './lib/switch';
 
 // @slot tabs
 
-// @slot tag
+export * from './lib/tag';
 
 export * from './lib/textarea';
 

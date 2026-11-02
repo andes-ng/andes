@@ -16,6 +16,7 @@ import {
 } from '@angular/core';
 import clsx from 'clsx';
 
+import { ANDES_BUTTON_CONTEXT } from './button-context';
 import { ANDES_BUTTON_GROUP } from './button-group';
 
 export type AndesButtonVariant =
@@ -62,6 +63,7 @@ export class AndesButton {
   private readonly renderer = inject(Renderer2);
   private readonly document = inject(DOCUMENT);
   private readonly group = inject(ANDES_BUTTON_GROUP, { optional: true });
+  private readonly context = inject(ANDES_BUTTON_CONTEXT, { optional: true });
 
   readonly variant = input<AndesButtonVariant>('primary');
   /**
@@ -101,8 +103,12 @@ export class AndesButton {
   protected readonly visibleLoading = signal(false);
   private loadingTimeoutId: ReturnType<typeof setTimeout> | undefined;
 
+  /** Own `disabled`, the disabled state of a control that hosts this button, or loading. */
   protected readonly isDisabled = computed(
-    () => this.disabled() || this.visibleLoading(),
+    () =>
+      this.disabled() ||
+      (this.context?.disabled() ?? false) ||
+      this.visibleLoading(),
   );
 
   protected readonly resolvedSize = computed<AndesButtonSize>(

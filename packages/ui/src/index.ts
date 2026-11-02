@@ -19,23 +19,23 @@ export * from './lib/avatar';
 
 // @slot badge
 
-// @slot breadcrumb
+export * from './lib/breadcrumb';
 
 export * from './lib/button';
 
-// @slot calendar
+export * from './lib/calendar';
 
 // @slot card
 
 // @slot carousel
 
-// @slot cascader
+export * from './lib/cascader';
 
 export * from './lib/checkbox';
 
 // @slot collapsible
 
-// @slot color-picker
+export * from './lib/color-picker';
 
 export * from './lib/combobox';
 
@@ -43,17 +43,17 @@ export * from './lib/combobox';
 
 // @slot context-menu
 
-// @slot date-picker
+export * from './lib/date-picker';
 
 // @slot descriptions
 
-// @slot dialog
+export * from './lib/dialog';
 
 // @slot divider
 
 // @slot drawer
 
-// @slot dropdown-menu
+export * from './lib/dropdown-menu';
 
 // @slot empty
 
@@ -67,7 +67,7 @@ export * from './lib/combobox';
 
 // @slot hover-card
 
-// @slot image
+export * from './lib/image';
 
 export * from './lib/input';
 
@@ -81,7 +81,7 @@ export * from './lib/input-number';
 
 // @slot masonry
 
-// @slot mentions
+export * from './lib/mentions';
 
 // @slot menu
 
@@ -101,7 +101,7 @@ export * from './lib/input-number';
 
 // @slot qr-code
 
-// @slot radio-group
+export * from './lib/radio-group';
 
 export * from './lib/rate';
 
@@ -109,7 +109,7 @@ export * from './lib/rate';
 
 // @slot scroll-area
 
-// @slot segmented
+export * from './lib/segmented';
 
 export * from './lib/select';
 
@@ -117,7 +117,7 @@ export * from './lib/select';
 
 // @slot skeleton
 
-// @slot slider
+export * from './lib/slider';
 
 // @slot space
 
@@ -129,7 +129,7 @@ export * from './lib/select';
 
 // @slot steps
 
-// @slot switch
+export * from './lib/switch';
 
 // @slot table
 
@@ -143,7 +143,7 @@ export * from './lib/textarea';
 
 // @slot toast
 
-// @slot toggle
+export * from './lib/toggle';
 
 export * from './lib/tooltip';
 
@@ -151,12 +151,12 @@ export * from './lib/tooltip';
 
 // @slot transfer
 
-// @slot tree
+export * from './lib/tree';
 
-// @slot tree-select
+export * from './lib/tree-select';
 
 // @slot typography
 
-// @slot upload
+export * from './lib/upload';
 
 // @slot watermark

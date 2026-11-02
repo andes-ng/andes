@@ -66,6 +66,7 @@ import {
 import { AndesSelectTrigger } from './select-trigger';
 import { AndesSelectValue } from './select-value';
 import { andesSelectScrolledOutOfView } from './select-visibility';
+import { AndesTagOverflowHost } from './tag-overflow';
 
 let nextUniqueId = 0;
 
@@ -157,6 +158,10 @@ const PLACEMENTS: Readonly<
     AndesListNavigation,
     { provide: AndesSelectState, useExisting: forwardRef(() => AndesSelect) },
     {
+      provide: AndesTagOverflowHost,
+      useExisting: forwardRef(() => AndesSelect),
+    },
+    {
       provide: NG_VALUE_ACCESSOR,
       useExisting: forwardRef(() => AndesSelect),
       multi: true,
@@ -178,7 +183,7 @@ const PLACEMENTS: Readonly<
 })
 export class AndesSelect
   extends AndesSelectState
-  implements ControlValueAccessor
+  implements ControlValueAccessor, AndesTagOverflowHost<AndesSelectTag>
 {
   readonly overlay = inject(AndesOverlayPrimitive);
   readonly navigation = inject(AndesListNavigation);
@@ -1377,6 +1382,16 @@ export class AndesSelect
 
   override setResponsiveTagCount(count: number | null): void {
     this._responsiveTagCount.set(count);
+  }
+
+  /** {@link AndesTagOverflowHost}: a hidden tag is removable when its own would be. */
+  canRemoveTag(tag: AndesSelectTag): boolean {
+    return tag.closable;
+  }
+
+  /** {@link AndesTagOverflowHost}: removes a hidden tag's value. */
+  removeTag(tag: AndesSelectTag): void {
+    this.removeValue(tag.value);
   }
 
   /**

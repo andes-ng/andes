@@ -65,7 +65,9 @@ export interface AndesCheckboxChange {
   selector: 'andes-checkbox',
   imports: [NgTemplateOutlet],
   templateUrl: './checkbox.html',
-  styleUrl: './checkbox.css',
+  // The motion last, where its rules sat at the end of checkbox.css: with its keyframes, in
+  // the sheet the tree and the cascader share.
+  styleUrls: ['./checkbox.css', './check-motion.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     // Forwarded to the native input in the template instead - a screen reader never sees
@@ -522,9 +524,15 @@ export class AndesCheckbox implements ControlValueAccessor {
     }
   }
 
-  /** The one-shot animation finished: drop the hook so a re-shown box does not replay it. */
-  protected onMotionEnd(): void {
-    this.motion.set(null);
+  /**
+   * The one-shot animation finished: drop the hook so a re-shown box does not replay it. The
+   * ripple is the longest of the animations a change starts (the tick and the pop end sooner),
+   * so only its end counts; an earlier one would cut the ring short.
+   */
+  protected onMotionEnd(event: AnimationEvent): void {
+    if (event.animationName.includes('andes-checkbox-ripple')) {
+      this.motion.set(null);
+    }
   }
 
   protected onNativeChange(event: Event): void {

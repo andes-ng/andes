@@ -13,12 +13,15 @@ jsdom also refuses `focus()` on a `hidden` element, as browsers do.
 Internal to the specs (excluded in `tsconfig.lib.json`, never published). Rem resolves at 16px.
 `px(value)`, `toRem(px)`, `toPx(length, { fontSize })`, `isZeroLength(value)`,
 `expectLength(actual, expected, { fontSize })`, `expectInherited(el, props)`,
-`declaredValue(css, selector, property)`.
+`declaredValue(css, selector, property)`, `atRuleBody(css, prelude)`.
 
 ```ts
 expectLength(style.minBlockSize, '2.375rem'); // compared as 38px
 expectLength(style.width, '0.75em', { fontSize: 14 }); // 10.5px
 expect(declaredValue(css, '.a > .b', 'border-width')).toBe('0 0 1px');
+// jsdom evaluates no media or container query: read the rules declared inside one.
+const reduced = atRuleBody(css, '@media (prefers-reduced-motion: reduce)');
+expect(declaredValue(reduced, '.a', 'animation')).toBe('none');
 ```
 
 ## Checklist to migrate a spec

@@ -33,6 +33,42 @@ export type AndesAlertVariant = 'tinted' | 'filled' | 'outlined';
  */
 export type AndesAlertActionPlacement = 'bottom' | 'end';
 
+/** The visible parts of an alert that `classNames` and `styles` can address. */
+export type AndesAlertPart =
+  'root' | 'icon' | 'section' | 'title' | 'description' | 'actions' | 'close';
+
+/** Extra class names per part, e.g. `{ root: 'my-alert', title: 'my-alert-title' }`. */
+export type AndesAlertClassNames = Partial<Record<AndesAlertPart, string>>;
+
+/**
+ * Inline styles for one part. Keys may be camelCase (`backgroundColor`), dash-case
+ * (`background-color`) or custom properties (`--andes-alert-success-bg`).
+ */
+export type AndesAlertPartStyle = Record<string, string | number | null>;
+
+/** Inline styles per part, e.g. `{ root: { borderWidth: '2px' }, icon: { marginTop: '4px' } }`. */
+export type AndesAlertStyles = Partial<
+  Record<AndesAlertPart, AndesAlertPartStyle>
+>;
+
+/** What a `classNames` / `styles` function is told about the alert it styles. */
+export interface AndesAlertSemanticInfo {
+  props: {
+    /** The resolved severity - i.e. after `banner`'s `warning` default has been applied. */
+    severity: AndesAlertSeverity;
+    variant: AndesAlertVariant;
+    banner: boolean;
+    closable: boolean;
+    showIcon: boolean;
+    marquee: boolean;
+    actionPlacement: AndesAlertActionPlacement;
+  };
+}
+
+/** A value for `classNames` / `styles`: a plain object, or a function of the alert's props. */
+export type AndesAlertSemanticValue<T> =
+  T | ((info: AndesAlertSemanticInfo) => T) | null | undefined;
+
 /** Context handed to every template input (`icon`, `title`, `description`, `action`, `closeIcon`). */
 export interface AndesAlertTemplateContext {
   /** The resolved severity - i.e. after `banner`'s `warning` default has been applied. */
@@ -67,11 +103,12 @@ export class AndesAlertCloseEvent {
 }
 
 /**
- * Collapse duration. There is no motion token in `@andes-ng/tokens` yet, so this lives here
- * rather than in the stylesheet; it is short enough to read as a response to the click rather
- * than as a transition the user has to wait out.
+ * Collapse duration and easing, the same 0.3s ease-in-out-circ that Ant Design uses to unmount
+ * an alert. There is no motion token for them in `@andes-ng/tokens` yet, so they live here
+ * rather than in the stylesheet.
  */
-const COLLAPSE_DURATION_MS = 200;
+const COLLAPSE_DURATION_MS = 300;
+const COLLAPSE_EASING = 'cubic-bezier(0.78, 0.14, 0.15, 0.86)';
 
 /**
  * Used until the marquee track has been measured, and wherever it can't be (SSR, jsdom). Slow
@@ -160,6 +197,18 @@ export class AndesAlert {
   readonly closeDisabled = input(false, { transform: booleanAttribute });
   readonly actionPlacement = input<AndesAlertActionPlacement>('bottom');
 
+  /**
+   * Extra class names for the alert's parts (`root`, `icon`, `section`, `title`, `description`,
+   * `actions`, `close`), as an object or as a function of the alert's props - so a consumer can
+   * style one part without reaching into the component's encapsulated stylesheet. The
+   * component's own rules are scoped to it, so a consumer rule made of one class loses to
+   * them: repeat the class (`.mine.mine`) to out-weigh it, or use `styles`, which always wins.
+   */
+  readonly classNames =
+    input<AndesAlertSemanticValue<AndesAlertClassNames>>(undefined);
+  /** Inline styles for the same parts as `classNames`; takes an object or a function too. */
+  readonly styles = input<AndesAlertSemanticValue<AndesAlertStyles>>(undefined);
+
   /** Replaces the built-in severity glyph. Still gated by `showIcon`, still severity-tinted. */
   readonly icon = input<TemplateRef<AndesAlertTemplateContext> | null>(null);
   /** Replaces the built-in close (x) glyph. The button keeps `closeLabel` as its name. */
@@ -184,6 +233,7 @@ export class AndesAlert {
   protected readonly visible = signal(true);
   private readonly leaving = signal(false);
 
+  private readonly card = viewChild<ElementRef<HTMLElement>>('card');
   private readonly marqueeTrack =
     viewChild<ElementRef<HTMLElement>>('marqueeTrack');
   /** Width of the marquee track - its own content plus the one-column run-in before it. */
@@ -281,7 +331,28 @@ export class AndesAlert {
         'andes-alert--marquee': this.marquee(),
         'andes-alert--action-end': this.actionPlacement() === 'end',
       },
+      this.partClassNames().root,
     ),
+  );
+
+  private readonly semanticInfo = computed<AndesAlertSemanticInfo>(() => ({
+    props: {
+      severity: this.resolvedSeverity(),
+      variant: this.variant(),
+      banner: this.banner(),
+      closable: this.closable(),
+      showIcon: this.showIcon(),
+      marquee: this.marquee(),
+      actionPlacement: this.actionPlacement(),
+    },
+  }));
+
+  protected readonly partClassNames = computed<AndesAlertClassNames>(() =>
+    resolveSemantic(this.classNames(), this.semanticInfo()),
+  );
+
+  protected readonly partStyles = computed<AndesAlertStyles>(() =>
+    resolveSemantic(this.styles(), this.semanticInfo()),
   );
 
   protected dismiss(event: MouseEvent): void {
@@ -306,30 +377,37 @@ export class AndesAlert {
   }
 
   /**
-   * Collapses the host's height and fades it out, so content below slides up instead of
-   * jumping. Returns null - hide instantly - when the user asked for reduced motion, or where
-   * the Web Animations API isn't available (SSR, jsdom).
+   * Squeezes the card - its height and vertical padding shrink to nothing while it fades out -
+   * so content below slides up instead of jumping. Returns null - hide instantly - when the
+   * user asked for reduced motion, or where the Web Animations API isn't available (SSR,
+   * jsdom).
    */
   private collapse(): Animation | null {
-    const host = this.host.nativeElement;
+    const card = this.card()?.nativeElement;
     const view = this.document.defaultView;
-    if (typeof host.animate !== 'function') return null;
+    if (!card || typeof card.animate !== 'function') return null;
     if (view?.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
       return null;
     }
 
-    host.style.overflow = 'hidden';
-    // The content fades out over the first part of the collapse, so the text is gone before
-    // the card is short enough to squash it, and the height eases in and out - no snap shut.
-    return host.animate(
+    const style = view?.getComputedStyle(card);
+    const height = style?.height.endsWith('px')
+      ? style.height
+      : `${card.offsetHeight}px`;
+    card.style.overflow = 'hidden';
+    // Height, padding and opacity run together over the whole duration, as in Ant Design.
+    return card.animate(
       [
-        { height: `${host.offsetHeight}px`, opacity: 1 },
-        { opacity: 0, offset: 0.6 },
-        { height: '0px', opacity: 0 },
+        {
+          height,
+          paddingBlock: style?.paddingBlock || '0px',
+          opacity: 1,
+        },
+        { height: '0px', paddingBlock: '0px', opacity: 0 },
       ],
       {
         duration: COLLAPSE_DURATION_MS,
-        easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+        easing: COLLAPSE_EASING,
         // Hold the collapsed frame until `display: none` has actually been rendered, so the
         // card can't flash back to full height for one frame in between.
         fill: 'forwards',
@@ -343,7 +421,7 @@ export class AndesAlert {
     afterNextRender(
       () => {
         animation?.cancel();
-        this.host.nativeElement.style.removeProperty('overflow');
+        this.card()?.nativeElement.style.removeProperty('overflow');
         this.afterClose.emit();
       },
       { injector: this.injector },
@@ -383,6 +461,14 @@ function isTabbable(el: HTMLElement): boolean {
   if (el.tabIndex < 0 || el.closest('[hidden], [inert]')) return false;
   // Catches `display: none` / `visibility: hidden` where layout exists (not in SSR or jsdom).
   return typeof el.checkVisibility !== 'function' || el.checkVisibility();
+}
+
+function resolveSemantic<T extends object>(
+  value: AndesAlertSemanticValue<T>,
+  info: AndesAlertSemanticInfo,
+): T {
+  const resolved = typeof value === 'function' ? value(info) : value;
+  return resolved ?? ({} as T);
 }
 
 function asTemplate(

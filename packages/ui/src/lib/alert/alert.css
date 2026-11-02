@@ -1,11 +1,12 @@
 /*
- * Layout: a bordered card with the icon in a leading column and the stacked title and
- * description beside it. The icon is nudged down a fraction so it seats against the title's cap height rather than
- * centering against the whole block. The row is a flex line rather than a grid so the optional
- * trailing parts (an inline-end action, the close button) take room only when rendered, at any
- * width - a text close button included - without a column template per combination. Every value
- * here comes from Andes' own token set. The severity treatment lives at the end of the file, per
- * variant.
+ * Layout: a bordered card with the icon in a leading column, the stacked title and description
+ * beside it, and the optional action and close button at the inline-end edge. The metrics are
+ * Ant Design's: a title-only alert is a compact 8px x 12px strip with a 14px icon whose parts
+ * are centred on the row as a group; an alert with a title and a description steps up to
+ * 20px x 24px, a 24px icon and a 16px title, and its parts hang from the top edge instead. The
+ * row is a flex line rather than a grid so the optional trailing parts take room only when
+ * rendered, at any width - a text close button included - without a column template per
+ * combination. The severity treatment lives at the end of the file, per variant.
  */
 
 :host {
@@ -13,32 +14,30 @@
 }
 
 .andes-alert {
-  /* Compact metrics for a one-line notice. The title + description layout further down
+  /* Compact metrics for a title-only notice. The title + description layout further down
      overrides these, so the rules below only ever read them. */
-  --andes-alert-column-gap: var(--andes-space-2);
-  /* Tighter than any spacing token on purpose: the title and description are one unit of text,
-     so the gap between them has to read as leading, not as separation. */
-  --andes-alert-row-gap: 0.125rem;
-  /* 8px x 12px single-line box, the same box as a Toast message. */
   --andes-alert-padding-block: var(--andes-space-2);
   --andes-alert-padding-inline: var(--andes-space-3);
-  --andes-alert-icon-size: 1rem;
-  /* Optical, not geometric: seats the glyph against the title's cap height rather than the top
-     of its line box, which otherwise leaves the icon looking a hair high. */
-  --andes-alert-icon-offset: 0.1875rem;
+  --andes-alert-icon-size: 0.875rem;
+  /* Space after the icon. */
+  --andes-alert-icon-gap: var(--andes-space-2);
+  /* Space before the action and before the close button. */
+  --andes-alert-trailing-gap: var(--andes-space-2);
+  /* The title and description are separate blocks only when both exist; then this is the
+     margin below the title. */
+  --andes-alert-row-gap: 0;
   --andes-alert-title-size: 0.875rem;
   --andes-alert-title-leading: 1.375rem;
-  /* How far the close button sits from the card's inline-end edge - closer than the padding, so
-     it reads as belonging to the corner rather than to the text. */
-  --andes-alert-close-inset: var(--andes-space-2);
-  /* Height of the trailing controls (close button, an inline-end action sized `sm`): the
-     margin below centres them on the first line of text, whatever its leading. */
+  --andes-alert-title-weight: var(--andes-font-weight-regular);
+  /* Size of the close glyph, and of the target around it. */
+  --andes-alert-close-glyph: 0.75rem;
   --andes-alert-control-size: 1.5rem;
+  /* What the mark of a severity glyph is cut out in: the color behind the icon. */
+  --andes-alert-surface: var(--andes-color-card);
 
   position: relative;
   display: flex;
-  align-items: flex-start;
-  column-gap: var(--andes-alert-column-gap);
+  align-items: center;
   border: 1px solid var(--andes-color-border);
   border-radius: var(--andes-radius-lg);
   background-color: var(--andes-color-card);
@@ -59,11 +58,11 @@
   display: block;
   width: var(--andes-alert-icon-size);
   height: var(--andes-alert-icon-size);
+  margin-inline-end: var(--andes-alert-icon-gap);
   /* A custom `icon` template may be a font glyph rather than an SVG; sizing its em box to the
      same square keeps it in the slot the built-in glyphs occupy. */
   font-size: var(--andes-alert-icon-size);
   line-height: 1;
-  transform: translateY(var(--andes-alert-icon-offset));
 }
 
 /* A custom `icon` / `closeIcon` template keeps its declaring component's encapsulation
@@ -74,6 +73,14 @@
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.andes-alert__mark {
+  fill: none;
+  stroke: var(--andes-alert-surface);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /* `min-width: 0` lets the text column shrink below its content's width, which the marquee's
@@ -89,7 +96,7 @@
 .andes-alert__title {
   font-size: var(--andes-alert-title-size);
   line-height: var(--andes-alert-title-leading);
-  font-weight: var(--andes-font-weight-medium);
+  font-weight: var(--andes-alert-title-weight);
   color: var(--andes-color-foreground);
 }
 
@@ -114,57 +121,52 @@
   display: none;
 }
 
-/* Beside the text instead of under it: centred on the first line, so a one-line notice keeps
-   its height when the action is a small control. `margin-block` overrides the stacked
-   placement's top margin. */
+/* Beside the text instead of under it, at the inline-end edge. It takes the row's alignment:
+   centred next to a title-only alert, at the top edge next to a title and description. */
 .andes-alert__action--end {
   flex: none;
   display: flex;
   align-items: center;
   gap: var(--andes-space-2);
-  /* A text-link action is shorter than a control; the minimum height keeps it centred on the
-     first line all the same. */
-  min-height: var(--andes-alert-control-size);
-  margin-block: calc(
-    (var(--andes-alert-title-leading) - var(--andes-alert-control-size)) / 2
-  );
+  margin-top: 0;
+  margin-inline-start: var(--andes-alert-trailing-gap);
 }
 
-/* The close button closes the row. It is centred on the first line of text (so it stays put
-   however far a long title wraps) and pulled towards the corner by the difference between the
-   card's padding and the close inset. */
+/* The close button closes the row. Its box is the glyph's (12px, as in Ant Design), so it lines
+   up with the other parts exactly as that library's does; the 24x24 minimum target size
+   (WCAG 2.2 SC 2.5.8) comes from an invisible hit area that reaches past the box. */
 .andes-alert__close {
+  position: relative;
   flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* 1.5rem rather than the glyph's own 0.875rem so the control clears the 24x24 minimum
-     target size (WCAG 2.2 SC 2.5.8) without drawing a visibly larger button. */
-  min-width: var(--andes-alert-control-size);
-  height: var(--andes-alert-control-size);
-  /* Symmetric, so a control taller than the line doesn't make a one-line alert taller. */
-  margin-block: calc(
-    (var(--andes-alert-title-leading) - var(--andes-alert-control-size)) / 2
-  );
-  margin-inline-end: calc(
-    var(--andes-alert-close-inset) - var(--andes-alert-padding-inline)
-  );
+  width: var(--andes-alert-close-glyph);
+  height: var(--andes-alert-close-glyph);
+  margin-inline-start: var(--andes-alert-trailing-gap);
   padding: 0;
   border: none;
   border-radius: var(--andes-radius-sm);
   background-color: transparent;
-  color: var(--andes-color-muted-foreground);
+  /* Ant Design's weak action color is 45% of the text color, which reaches only ~2.9:1 on the
+     tints; 50% clears the 3:1 a control's glyph needs and is hard to tell apart. */
+  color: color-mix(in srgb, var(--andes-color-foreground) 50%, transparent);
   font-family: inherit;
   font-size: inherit;
   cursor: pointer;
-  transition:
-    color 0.15s ease,
-    background-color 0.15s ease;
+  transition: color var(--andes-motion-duration-mid) ease;
+}
+
+.andes-alert__close::after {
+  content: '';
+  position: absolute;
+  inset: calc(
+    (var(--andes-alert-close-glyph) - var(--andes-alert-control-size)) / 2
+  );
 }
 
 .andes-alert__close:hover:not(:disabled) {
-  color: var(--andes-color-foreground);
-  background-color: var(--andes-color-accent-hover);
+  color: color-mix(in srgb, var(--andes-color-foreground) 88%, transparent);
 }
 
 .andes-alert__close:disabled {
@@ -173,13 +175,22 @@
 }
 
 /* `closeText`: a word instead of the glyph, so the button grows to fit it and reads in the
-   same weight as the title it sits next to. */
+   same weight as the title it sits next to. Its text, not a glyph, ends at the content box. */
 .andes-alert__close--text {
+  width: auto;
+  min-width: var(--andes-alert-control-size);
+  height: var(--andes-alert-control-size);
+  margin-block: -1px;
+  margin-inline-end: calc(-1 * var(--andes-space-2));
   padding-inline: var(--andes-space-2);
   color: var(--andes-color-foreground);
   font-weight: var(--andes-font-weight-medium);
   line-height: 1;
   white-space: nowrap;
+}
+
+.andes-alert__close--text::after {
+  display: none;
 }
 
 .andes-alert__close:focus-visible {
@@ -189,8 +200,8 @@
 
 .andes-alert__close ::ng-deep svg {
   display: block;
-  width: 0.875rem;
-  height: 0.875rem;
+  width: var(--andes-alert-close-glyph);
+  height: var(--andes-alert-close-glyph);
 }
 
 /* Custom `closeIcon` content gets the same box as the built-in (x). */
@@ -198,7 +209,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.875rem;
+  font-size: var(--andes-alert-close-glyph);
   line-height: 1;
 }
 
@@ -220,21 +231,21 @@
 
 /*
  * Title + description together: the alert is carrying a real message rather than a one-line
- * notice, so the icon steps up a size and the card gets a little more room. The metrics match
- * a Toast notification (12px x 16px box, 20px icon, 14px medium title) so the two read as one
- * family; the title's weight and color, not a bigger size, give it precedence over the body.
+ * notice, so the card gets more room, the icon and title step up a size, and everything hangs
+ * from the top edge instead of being centred on the row. The metrics are Ant Design's.
  */
 .andes-alert:has(
   .andes-alert__title:not(:empty) + .andes-alert__description:not(:empty)
 ) {
-  --andes-alert-column-gap: var(--andes-space-3);
-  --andes-alert-row-gap: var(--andes-space-1);
-  --andes-alert-padding-block: var(--andes-space-3);
-  --andes-alert-padding-inline: var(--andes-space-4);
-  --andes-alert-icon-size: 1.25rem;
-  /* (1.375rem line - 1.25rem glyph) / 2: centers the icon on the title line. */
-  --andes-alert-icon-offset: 0.0625rem;
-  --andes-alert-close-inset: var(--andes-space-3);
+  --andes-alert-padding-block: var(--andes-space-5);
+  --andes-alert-padding-inline: 1.5rem;
+  --andes-alert-icon-size: 1.5rem;
+  --andes-alert-icon-gap: var(--andes-space-3);
+  --andes-alert-row-gap: var(--andes-space-2);
+  --andes-alert-title-size: 1rem;
+  --andes-alert-title-leading: 1.5714285714285714;
+
+  align-items: flex-start;
 }
 
 /*
@@ -259,6 +270,11 @@
   animation: andes-alert-marquee 15s linear infinite;
 }
 
+/* Right to left, the text enters from the left edge and travels to the right. */
+.andes-alert--marquee:dir(rtl) .andes-alert__marquee {
+  animation-name: andes-alert-marquee-rtl;
+}
+
 .andes-alert--marquee:hover .andes-alert__marquee,
 .andes-alert--marquee:focus-within .andes-alert__marquee {
   animation-play-state: paused;
@@ -270,6 +286,15 @@
   }
   to {
     transform: translateX(-100%);
+  }
+}
+
+@keyframes andes-alert-marquee-rtl {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
   }
 }
 
@@ -286,52 +311,67 @@
 }
 
 /*
- * Severity colors. Each severity sets one private property, its accent - the glyph color and the
- * source of every tint - and each variant decides how far to carry it:
+ * Severity colors. Each severity sets three private properties - its accent (the glyph), a
+ * tint (the wash behind the card) and a tint border - and each variant decides how far to carry
+ * them. The defaults are Ant Design's palette, light and dark, so an alert looks the same next
+ * to one from that library; a theme re-colors a severity by setting
+ * `--andes-alert-<severity>-icon`, `-bg` and `-border` on the alert or any ancestor, e.g.
+ * `--andes-alert-success-bg`.
  *
- * - `tinted` (default) washes the card with a light mix of the accent and draws the border in
- *   a stronger mix, so the severity reads at a glance from across the page. Both are mixed
- *   into the card surface rather than hard-coded, so the same rule produces a pale wash in
- *   light mode and a deep one in dark mode. Title and description stay on the regular
- *   foreground, which clears 4.5:1 on every wash.
+ * - `tinted` (default) washes the card with the tint and draws the border in the tint border.
  * - `filled` is the same wash with the border dropped (kept transparent, so switching variants
  *   never shifts the layout by a pixel).
  * - `outlined` keeps the neutral card surface and carries the severity only in the glyph and a
  *   faint tint on the border, for pages where several alerts would otherwise get loud.
- *
- * Warning's accent is its `-hover` shade: the base amber only reaches ~2:1 against the pale
- * wash, under the 3:1 a meaningful graphic needs.
  */
 
 .andes-alert--success {
-  --andes-alert-accent: var(--andes-color-success);
+  --andes-alert-accent: var(--andes-alert-success-icon, #52c41a);
+  --andes-alert-tint: var(--andes-alert-success-bg, #f6ffed);
+  --andes-alert-tint-border: var(--andes-alert-success-border, #b7eb8f);
 }
 
 .andes-alert--info {
-  --andes-alert-accent: var(--andes-color-info);
+  --andes-alert-accent: var(--andes-alert-info-icon, #1677ff);
+  --andes-alert-tint: var(--andes-alert-info-bg, #e6f4ff);
+  --andes-alert-tint-border: var(--andes-alert-info-border, #91caff);
 }
 
 .andes-alert--warning {
-  --andes-alert-accent: var(--andes-color-warning-hover);
+  --andes-alert-accent: var(--andes-alert-warning-icon, #faad14);
+  --andes-alert-tint: var(--andes-alert-warning-bg, #fffbe6);
+  --andes-alert-tint-border: var(--andes-alert-warning-border, #ffe58f);
 }
 
 .andes-alert--danger {
-  --andes-alert-accent: var(--andes-color-danger);
+  --andes-alert-accent: var(--andes-alert-danger-icon, #ff4d4f);
+  --andes-alert-tint: var(--andes-alert-danger-bg, #fff2f0);
+  --andes-alert-tint-border: var(--andes-alert-danger-border, #ffccc7);
 }
 
-/* On the dark theme the wash is mixed into a dark card, and the base danger red then reaches
-   only ~2.9:1 against it (info ~3.2:1). Each severity's `-hover` shade is the brighter one on
-   that theme, so the accent steps up to it there and every glyph clears 3:1 again. */
+/* The same four on the dark theme: a deep wash of the hue, a darker border, a duller glyph. */
 :host-context([data-andes-theme='dark']) .andes-alert--success {
-  --andes-alert-accent: var(--andes-color-success-hover);
+  --andes-alert-accent: var(--andes-alert-success-icon, #49aa19);
+  --andes-alert-tint: var(--andes-alert-success-bg, #162312);
+  --andes-alert-tint-border: var(--andes-alert-success-border, #274916);
 }
 
 :host-context([data-andes-theme='dark']) .andes-alert--info {
-  --andes-alert-accent: var(--andes-color-info-hover);
+  --andes-alert-accent: var(--andes-alert-info-icon, #1668dc);
+  --andes-alert-tint: var(--andes-alert-info-bg, #111a2c);
+  --andes-alert-tint-border: var(--andes-alert-info-border, #15325b);
+}
+
+:host-context([data-andes-theme='dark']) .andes-alert--warning {
+  --andes-alert-accent: var(--andes-alert-warning-icon, #d89614);
+  --andes-alert-tint: var(--andes-alert-warning-bg, #2b2111);
+  --andes-alert-tint-border: var(--andes-alert-warning-border, #594214);
 }
 
 :host-context([data-andes-theme='dark']) .andes-alert--danger {
-  --andes-alert-accent: var(--andes-color-danger-hover);
+  --andes-alert-accent: var(--andes-alert-danger-icon, #dc4446);
+  --andes-alert-tint: var(--andes-alert-danger-bg, #2c1618);
+  --andes-alert-tint-border: var(--andes-alert-danger-border, #5b2526);
 }
 
 .andes-alert__icon {
@@ -340,19 +380,13 @@
 
 .andes-alert--tinted,
 .andes-alert--filled {
-  background-color: color-mix(
-    in srgb,
-    var(--andes-alert-accent) 9%,
-    var(--andes-color-card)
-  );
+  --andes-alert-surface: var(--andes-alert-tint);
+
+  background-color: var(--andes-alert-tint);
 }
 
 .andes-alert--tinted {
-  border-color: color-mix(
-    in srgb,
-    var(--andes-alert-accent) 35%,
-    var(--andes-color-card)
-  );
+  border-color: var(--andes-alert-tint-border);
 }
 
 .andes-alert--filled {
@@ -364,19 +398,32 @@
   color: var(--andes-color-foreground);
 }
 
-.andes-alert--tinted .andes-alert__close:hover:not(:disabled),
-.andes-alert--filled .andes-alert__close:hover:not(:disabled) {
-  background-color: color-mix(
-    in srgb,
-    var(--andes-alert-accent) 14%,
-    transparent
-  );
-}
-
 .andes-alert--outlined {
   border-color: color-mix(
     in srgb,
     var(--andes-alert-accent) 30%,
     var(--andes-color-border)
   );
+}
+
+/* Forced colors drop every authored color: the tint, a transparent border and the cut-out of
+   the glyph. Spell out the ones that carry meaning with system colors, so the card keeps its
+   outline and the glyph keeps its mark. */
+@media (forced-colors: active) {
+  .andes-alert {
+    border-color: CanvasText;
+  }
+
+  .andes-alert--banner.andes-alert--tinted,
+  .andes-alert--banner.andes-alert--filled {
+    border-width: 1px 0;
+  }
+
+  .andes-alert__mark {
+    stroke: Canvas;
+  }
+
+  .andes-alert__close:disabled {
+    color: GrayText;
+  }
 }

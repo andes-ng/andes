@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import {
   Component,
@@ -11,15 +12,52 @@ import {
 } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
+import { declaredValue, toPx } from '../../testing/computed-style';
+
 import {
   AndesAlert,
   AndesAlertActionPlacement,
+  AndesAlertClassNames,
   AndesAlertCloseEvent,
+  AndesAlertPart,
   AndesAlertRole,
+  AndesAlertSemanticValue,
   AndesAlertSeverity,
+  AndesAlertStyles,
   AndesAlertTemplateContext,
   AndesAlertVariant,
 } from './alert';
+
+const alertCss = () =>
+  readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), 'alert.css'),
+    'utf-8',
+  );
+
+const themeCss = () =>
+  readFileSync(
+    join(
+      dirname(fileURLToPath(import.meta.url)),
+      '../../../../tokens/src/theme.css',
+    ),
+    'utf-8',
+  );
+
+/** A declared length in pixels, looking a lone `var(--andes-...)` up in the token sheet. */
+function lengthOf(declared: string | undefined): number {
+  const name = /^var\((--[\w-]+)\)$/.exec(declared ?? '')?.[1];
+  return toPx(
+    name ? (declaredValue(themeCss(), ':root', name) ?? '') : (declared ?? ''),
+  );
+}
+
+/** The literal a `var(--name, literal)` falls back to. */
+function fallbackOf(declared: string | undefined): string | undefined {
+  const comma = declared?.indexOf(',') ?? -1;
+  return declared && comma > 0
+    ? declared.slice(comma + 1, declared.lastIndexOf(')')).trim()
+    : undefined;
+}
 
 @Component({
   imports: [AndesAlert],
@@ -184,38 +222,36 @@ describe('AndesAlert', () => {
       return iconShape(alert);
     }
 
-    it('draws a check inside a circle for success', () => {
+    it('draws a check inside a disc for success', () => {
       const shape = shapeFor('success');
 
       expect(shape?.circles).toBe(1);
       // A single polyline stroke: down-right into the corner, then up-right - a check mark.
-      expect(shape?.paths).toEqual(['m8.25 12.25 2.5 2.5 5-5.5']);
+      expect(shape?.paths).toEqual(['m7.7 12.7 2.6 3 6.1-7']);
     });
 
-    it('draws an "i" inside a circle for info', () => {
+    it('draws an "i" inside a disc for info', () => {
       const shape = shapeFor('info');
 
       expect(shape?.circles).toBe(1);
       // The stem, then the tittle above it (a zero-length stroke with a round cap = a dot).
-      expect(shape?.paths).toEqual(['M12 11.25v5', 'M12 7.75h.01']);
+      expect(shape?.paths).toEqual(['M12 11v6.25', 'M12 7.25h.01']);
     });
 
-    it('draws an exclamation mark inside a triangle for warning', () => {
+    it('draws an exclamation mark inside a disc for warning', () => {
       const shape = shapeFor('warning');
 
-      // The triangle is a path, not a circle - warning is the one severity that isn't round.
-      expect(shape?.circles).toBe(0);
-      expect(shape?.paths).toHaveLength(3);
-      expect(shape?.paths[0]).toContain('a2 2 0 0 1 3.4 0');
-      expect(shape?.paths.slice(1)).toEqual(['M12 10v3.5', 'M12 16.75h.01']);
+      // Round like the others, as in Ant Design: the "!" and the amber tell it from info.
+      expect(shape?.circles).toBe(1);
+      expect(shape?.paths).toEqual(['M12 6.75v6.5', 'M12 17.25h.01']);
     });
 
-    it('draws an X inside a circle for danger', () => {
+    it('draws an X inside a disc for danger', () => {
       const shape = shapeFor('danger');
 
       expect(shape?.circles).toBe(1);
-      // Two strokes crossing at the circle's centre.
-      expect(shape?.paths).toEqual(['m14.5 9.5-5 5', 'm9.5 9.5 5 5']);
+      // Two strokes crossing at the disc's centre.
+      expect(shape?.paths).toEqual(['m8.6 8.6 6.8 6.8', 'm15.4 8.6-6.8 6.8']);
     });
 
     it('draws a distinct glyph for every severity', () => {
@@ -229,20 +265,31 @@ describe('AndesAlert', () => {
     });
 
     it.each(['success', 'info', 'warning', 'danger'] as const)(
-      'strokes the %s glyph instead of filling it',
+      'fills the %s disc and cuts the mark out in the surface color',
       (severity) => {
-        // Regression guard for the design decision, not just the markup: a filled disc with a
-        // knocked-out mark collapses into an unreadable colored dot at this icon's 1rem size.
         const { fixture, alert } = createHost();
         fixture.componentInstance.severity.set(severity);
         fixture.detectChanges();
         const svg = alert.querySelector(
           '.andes-alert__icon svg',
         ) as SVGSVGElement;
+        const disc = svg.querySelector('circle') as SVGCircleElement;
+        const mark = svg.querySelector('.andes-alert__mark') as SVGGElement;
 
-        expect(svg.getAttribute('fill')).toBe('none');
-        expect(svg.getAttribute('stroke')).toBe('currentColor');
+        // The disc is the glyph's own color; every path is inside the group that the
+        // stylesheet strokes with the surface color, so no mark is left in `currentColor`.
+        expect(svg.getAttribute('fill')).toBe('currentColor');
         expect(svg.getAttribute('viewBox')).toBe('0 0 24 24');
+        expect(disc.getAttribute('r')).toBe('12');
+        expect(svg.querySelectorAll('path')).toHaveLength(
+          mark.querySelectorAll('path').length,
+        );
+        expect(declaredValue(alertCss(), '.andes-alert__mark', 'stroke')).toBe(
+          'var(--andes-alert-surface)',
+        );
+        expect(declaredValue(alertCss(), '.andes-alert__mark', 'fill')).toBe(
+          'none',
+        );
       },
     );
 
@@ -267,8 +314,8 @@ describe('AndesAlert', () => {
       fixture.detectChanges();
 
       expect(iconShape(alert)?.paths).toEqual([
-        'm14.5 9.5-5 5',
-        'm9.5 9.5 5 5',
+        'm8.6 8.6 6.8 6.8',
+        'm15.4 8.6-6.8 6.8',
       ]);
     });
   });
@@ -479,12 +526,21 @@ describe('AndesAlert', () => {
 
         expect(animate).toHaveBeenCalledTimes(1);
         const [keyframes, options] = animate.mock.calls[0];
-        expect(keyframes.at(-1)).toEqual({ height: '0px', opacity: 0 });
+        expect(keyframes.at(-1)).toEqual({
+          height: '0px',
+          paddingBlock: '0px',
+          opacity: 0,
+        });
         expect(options.fill).toBe('forwards');
-        // A gentle collapse: within 150-200ms, eased at both ends, text faded out early.
-        expect(options.duration).toBe(200);
-        expect(options.easing).toBe('cubic-bezier(0.4, 0, 0.2, 1)');
-        expect(keyframes[1]).toEqual({ opacity: 0, offset: 0.6 });
+        // Ant Design's unmount: 0.3s on its ease-in-out-circ curve, with the height and the
+        // opacity running together from the first frame to the last.
+        expect(options.duration).toBe(300);
+        expect(options.easing).toBe('cubic-bezier(0.78, 0.14, 0.15, 0.86)');
+        expect(keyframes).toHaveLength(2);
+        expect(keyframes[0].opacity).toBe(1);
+        expect(keyframes[0].height).toMatch(/px$/);
+        // The card itself is what shrinks, so its border and corners stay whole to the end.
+        expect(animate.mock.contexts[0]).toBe(alert);
         // Mid-collapse: still visible, afterClose not yet fired.
         expect(alert.hidden).toBe(false);
         expect(fixture.componentInstance.afterCloseCount).toBe(0);
@@ -1246,39 +1302,482 @@ describe('AndesAlert close button options', () => {
   });
 });
 
-describe('AndesAlert dark-theme accents', () => {
-  // On the dark theme the base danger red reaches only ~2.9:1 against its own tinted wash, under
-  // the 3:1 the severity glyph needs. jsdom can't evaluate :host-context, so this reads the rule.
-  it.each(['success', 'info', 'danger'] as const)(
-    'steps the %s accent up to its -hover shade on the dark theme',
-    (severity) => {
-      const css = readFileSync(
-        join(process.cwd(), 'packages/ui/src/lib/alert/alert.css'),
-        'utf8',
-      );
-      const rule = ruleBody(
-        css,
-        `:host-context([data-andes-theme='dark']) .andes-alert--${severity}`,
-      );
+describe('AndesAlert metrics', () => {
+  // The numbers are Ant Design's, measured on its live Alert page. The unit tests cannot lay
+  // anything out, so they pin the declarations the layout comes from.
+  const css = alertCss();
+  const base = (property: string) =>
+    declaredValue(css, '.andes-alert', property);
+  const withDescription = (property: string) =>
+    declaredValue(
+      css,
+      '.andes-alert:has( .andes-alert__title:not(:empty) + .andes-alert__description:not(:empty) )',
+      property,
+    );
 
-      expect(rule).toContain(`var(--andes-color-${severity}-hover)`);
-    },
-  );
+  it('is a compact 8px x 12px strip with a 14px icon, 14px/22px text and an 8px radius', () => {
+    expect(lengthOf(base('--andes-alert-padding-block'))).toBe(8);
+    expect(lengthOf(base('--andes-alert-padding-inline'))).toBe(12);
+    expect(lengthOf(base('--andes-alert-icon-size'))).toBe(14);
+    expect(lengthOf(base('--andes-alert-icon-gap'))).toBe(8);
+    expect(lengthOf(base('--andes-alert-trailing-gap'))).toBe(8);
+    expect(lengthOf(base('--andes-alert-title-size'))).toBe(14);
+    expect(lengthOf(base('--andes-alert-title-leading'))).toBe(22);
+    expect(lengthOf(base('border-radius'))).toBe(8);
+    expect(base('border')).toBe('1px solid var(--andes-color-border)');
+  });
+
+  it('centres the icon, text, action and close button on the row as a group', () => {
+    expect(base('align-items')).toBe('center');
+    expect(base('display')).toBe('flex');
+  });
+
+  it('steps up to 20px x 24px, a 24px icon and a 16px title with a description', () => {
+    expect(lengthOf(withDescription('--andes-alert-padding-block'))).toBe(20);
+    expect(lengthOf(withDescription('--andes-alert-padding-inline'))).toBe(24);
+    expect(lengthOf(withDescription('--andes-alert-icon-size'))).toBe(24);
+    expect(lengthOf(withDescription('--andes-alert-icon-gap'))).toBe(12);
+    expect(lengthOf(withDescription('--andes-alert-title-size'))).toBe(16);
+    expect(lengthOf(withDescription('--andes-alert-row-gap'))).toBe(8);
+    // 16px x 1.5714285714285714 = 25.14px, the line Ant's title sits on.
+    expect(withDescription('--andes-alert-title-leading')).toBe(
+      '1.5714285714285714',
+    );
+  });
+
+  it('hangs the parts from the top edge with a description', () => {
+    expect(withDescription('align-items')).toBe('flex-start');
+  });
+
+  it('sets the title in regular weight, as Ant Design does', () => {
+    expect(base('--andes-alert-title-weight')).toBe(
+      'var(--andes-font-weight-regular)',
+    );
+    expect(declaredValue(css, '.andes-alert__title', 'font-weight')).toBe(
+      'var(--andes-alert-title-weight)',
+    );
+    expect(
+      declaredValue(themeCss(), ':root', '--andes-font-weight-regular'),
+    ).toBe('400');
+  });
+
+  it('draws the close glyph at 12px inside a 24px target', () => {
+    expect(lengthOf(base('--andes-alert-close-glyph'))).toBe(12);
+    expect(lengthOf(base('--andes-alert-control-size'))).toBe(24);
+    const close = (property: string) =>
+      declaredValue(css, '.andes-alert__close', property);
+    // The box is the glyph's, so the close button lines up like Ant's 12px one...
+    expect(close('width')).toBe('var(--andes-alert-close-glyph)');
+    expect(close('height')).toBe('var(--andes-alert-close-glyph)');
+    expect(close('margin-inline-start')).toBe(
+      'var(--andes-alert-trailing-gap)',
+    );
+    // ...and an invisible hit area reaches 6px past it on every side.
+    expect(declaredValue(css, '.andes-alert__close::after', 'inset')).toBe(
+      'calc( (var(--andes-alert-close-glyph) - var(--andes-alert-control-size)) / 2 )',
+    );
+  });
+
+  it('draws the close glyph on a 12-unit grid', () => {
+    const { alert } = createClosableAlert();
+    const svg = alert.querySelector('.andes-alert__close svg') as SVGSVGElement;
+
+    expect(svg.getAttribute('viewBox')).toBe('0 0 12 12');
+  });
+
+  it('puts the action 8px before the close button, at the inline-end edge', () => {
+    expect(
+      declaredValue(css, '.andes-alert__action--end', 'margin-inline-start'),
+    ).toBe('var(--andes-alert-trailing-gap)');
+  });
+
+  it('runs a banner edge to edge: square, and without side borders', () => {
+    expect(declaredValue(css, '.andes-alert--banner', 'border-radius')).toBe(
+      '0',
+    );
+    expect(
+      declaredValue(css, '.andes-alert--banner', 'border-inline-width'),
+    ).toBe('0');
+    expect(
+      declaredValue(
+        css,
+        '.andes-alert--banner.andes-alert--tinted',
+        'border-width',
+      ),
+    ).toBe('0');
+    expect(declaredValue(css, ':host', 'display')).toBe('block');
+  });
+
+  function createClosableAlert() {
+    @Component({
+      imports: [AndesAlert],
+      template: `<andes-alert closable>Saved.</andes-alert>`,
+    })
+    class ClosableHost {}
+
+    const fixture = TestBed.createComponent(ClosableHost);
+    fixture.detectChanges();
+    const alert = fixture.nativeElement.querySelector(
+      '[data-slot="alert"]',
+    ) as HTMLElement;
+    return { fixture, alert };
+  }
 });
 
-/** The declarations between the braces of the rule whose selector is exactly `selector`. */
-function ruleBody(css: string, selector: string): string {
-  let from = 0;
-  for (;;) {
-    const at = css.indexOf(selector, from);
-    if (at < 0) {
-      return '';
+describe('AndesAlert palette', () => {
+  // Ant Design's colors for each type, in light and dark, read off its live Alert page.
+  const css = alertCss();
+  const palette = {
+    success: {
+      light: ['#52c41a', '#f6ffed', '#b7eb8f'],
+      dark: ['#49aa19', '#162312', '#274916'],
+    },
+    info: {
+      light: ['#1677ff', '#e6f4ff', '#91caff'],
+      dark: ['#1668dc', '#111a2c', '#15325b'],
+    },
+    warning: {
+      light: ['#faad14', '#fffbe6', '#ffe58f'],
+      dark: ['#d89614', '#2b2111', '#594214'],
+    },
+    danger: {
+      light: ['#ff4d4f', '#fff2f0', '#ffccc7'],
+      dark: ['#dc4446', '#2c1618', '#5b2526'],
+    },
+  } as const;
+
+  describe.each(['light', 'dark'] as const)('on the %s theme', (theme) => {
+    it.each(Object.keys(palette) as (keyof typeof palette)[])(
+      'colors the %s glyph, wash and border',
+      (severity) => {
+        const selector =
+          theme === 'dark'
+            ? `:host-context([data-andes-theme='dark']) .andes-alert--${severity}`
+            : `.andes-alert--${severity}`;
+        const [accent, tint, border] = palette[severity][theme];
+
+        expect(
+          fallbackOf(declaredValue(css, selector, '--andes-alert-accent')),
+        ).toBe(accent);
+        expect(
+          fallbackOf(declaredValue(css, selector, '--andes-alert-tint')),
+        ).toBe(tint);
+        expect(
+          fallbackOf(declaredValue(css, selector, '--andes-alert-tint-border')),
+        ).toBe(border);
+      },
+    );
+  });
+
+  it.each(Object.keys(palette))(
+    'lets a theme override the %s colors with --andes-alert-%s-*',
+    (severity) => {
+      const light = declaredValue(
+        css,
+        `.andes-alert--${severity}`,
+        '--andes-alert-accent',
+      );
+      const dark = declaredValue(
+        css,
+        `:host-context([data-andes-theme='dark']) .andes-alert--${severity}`,
+        '--andes-alert-accent',
+      );
+
+      // The same hook on both themes, so one override re-colors the severity everywhere.
+      expect(light).toContain(`var(--andes-alert-${severity}-icon,`);
+      expect(dark).toContain(`var(--andes-alert-${severity}-icon,`);
+    },
+  );
+
+  it('washes a tinted alert and borders it in the tint border', () => {
+    expect(declaredValue(css, '.andes-alert--tinted', 'border-color')).toBe(
+      'var(--andes-alert-tint-border)',
+    );
+    expect(declaredValue(css, '.andes-alert--tinted', 'background-color')).toBe(
+      'var(--andes-alert-tint)',
+    );
+  });
+
+  it('keeps the wash of a filled alert and drops only its border', () => {
+    expect(declaredValue(css, '.andes-alert--filled', 'border-color')).toBe(
+      'transparent',
+    );
+    // A transparent border, not none: switching variants never shifts the layout.
+    expect(declaredValue(css, '.andes-alert', 'border')).toContain('1px solid');
+  });
+
+  it('cuts the glyph mark out in the color behind the icon', () => {
+    expect(
+      declaredValue(css, '.andes-alert--filled', '--andes-alert-surface'),
+    ).toBe('var(--andes-alert-tint)');
+    expect(declaredValue(css, '.andes-alert', '--andes-alert-surface')).toBe(
+      'var(--andes-color-card)',
+    );
+  });
+
+  it('colors the close glyph at half the text color, which clears 3:1 on every wash', () => {
+    expect(declaredValue(css, '.andes-alert__close', 'color')).toBe(
+      'color-mix(in srgb, var(--andes-color-foreground) 50%, transparent)',
+    );
+  });
+});
+
+describe('AndesAlert accessibility styles', () => {
+  const css = alertCss();
+
+  it('spells out the outline and the glyph mark in system colors under forced colors', () => {
+    const at = css.indexOf('@media (forced-colors: active)');
+
+    expect(at).toBeGreaterThan(0);
+    const block = css.slice(at);
+    expect(block).toContain('border-color: CanvasText');
+    expect(block).toContain('stroke: Canvas');
+  });
+
+  it('runs the marquee the other way round in a right-to-left context', () => {
+    expect(
+      declaredValue(
+        css,
+        '.andes-alert--marquee:dir(rtl) .andes-alert__marquee',
+        'animation-name',
+      ),
+    ).toBe('andes-alert-marquee-rtl');
+    expect(css).toContain('@keyframes andes-alert-marquee-rtl');
+  });
+
+  it('uses logical properties only, so the layout mirrors in a right-to-left context', () => {
+    const rules = css.replace(/\/\*[\s\S]*?\*\//g, '');
+
+    for (const physical of [
+      'margin-left',
+      'margin-right',
+      'padding-left',
+      'padding-right',
+      'border-left',
+      'border-right',
+    ]) {
+      expect(rules).not.toContain(`${physical}:`);
     }
-    const end = at + selector.length;
-    const open = css.indexOf('{', end);
-    if (open >= 0 && css.slice(end, open).trim() === '') {
-      return css.slice(open + 1, css.indexOf('}', open));
-    }
-    from = at + 1;
+  });
+
+  it('stops the marquee under prefers-reduced-motion', () => {
+    const at = css.indexOf('@media (prefers-reduced-motion: reduce)');
+
+    expect(at).toBeGreaterThan(0);
+    expect(css.slice(at)).toContain('animation: none');
+  });
+});
+
+describe('AndesAlert live region', () => {
+  @Component({
+    imports: [AndesAlert],
+    template: `<andes-alert [severity]="severity()" [title]="title()" />`,
+  })
+  class LiveHost {
+    readonly severity = signal<AndesAlertSeverity>('info');
+    readonly title = signal('Saving...');
   }
-}
+
+  it('updates the text inside the same live region, so a change is announced', () => {
+    const fixture = TestBed.createComponent(LiveHost);
+    fixture.detectChanges();
+    const region = fixture.nativeElement.querySelector('[role]') as HTMLElement;
+
+    fixture.componentInstance.title.set('Saved.');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[role]')).toBe(region);
+    expect(region.getAttribute('role')).toBe('status');
+    expect(region.textContent).toContain('Saved.');
+  });
+
+  it('keeps exactly one live region on the page', () => {
+    const fixture = TestBed.createComponent(LiveHost);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelectorAll('[role]')).toHaveLength(1);
+  });
+
+  it('leaves the close button a native button, so Enter and Space activate it', () => {
+    @Component({
+      imports: [AndesAlert],
+      template: `<andes-alert closable title="Saved." />`,
+    })
+    class KeyboardHost {}
+
+    const fixture = TestBed.createComponent(KeyboardHost);
+    fixture.detectChanges();
+    const close = fixture.nativeElement.querySelector(
+      '.andes-alert__close',
+    ) as HTMLButtonElement;
+
+    expect(close.tagName).toBe('BUTTON');
+    expect(close.type).toBe('button');
+    expect(close.tabIndex).toBe(0);
+  });
+});
+
+describe('AndesAlert classNames and styles', () => {
+  @Component({
+    imports: [AndesAlert],
+    template: `<andes-alert
+      [severity]="severity()"
+      title="Heads up"
+      description="Details."
+      actionPlacement="end"
+      closable
+      [classNames]="classNames()"
+      [styles]="styles()"
+    >
+      <span slot="action">Undo</span>
+    </andes-alert>`,
+  })
+  class SemanticHost {
+    readonly severity = signal<AndesAlertSeverity>('info');
+    readonly classNames =
+      signal<AndesAlertSemanticValue<AndesAlertClassNames>>(undefined);
+    readonly styles =
+      signal<AndesAlertSemanticValue<AndesAlertStyles>>(undefined);
+  }
+
+  const PARTS: Record<AndesAlertPart, string> = {
+    root: '.andes-alert',
+    icon: '.andes-alert__icon',
+    section: '.andes-alert__content',
+    title: '.andes-alert__title',
+    description: '.andes-alert__description',
+    actions: '.andes-alert__action',
+    close: '.andes-alert__close',
+  };
+
+  function create() {
+    const fixture = TestBed.createComponent(SemanticHost);
+    fixture.detectChanges();
+    const part = (name: AndesAlertPart) =>
+      fixture.nativeElement.querySelector(PARTS[name]) as HTMLElement;
+    return { fixture, part, host: fixture.componentInstance };
+  }
+
+  it('adds nothing when neither input is set', () => {
+    const { part } = create();
+
+    expect(Array.from(part('root').classList).sort()).toEqual([
+      'andes-alert',
+      'andes-alert--action-end',
+      'andes-alert--closable',
+      'andes-alert--info',
+      'andes-alert--tinted',
+    ]);
+    expect(part('root').getAttribute('style')).toBeNull();
+  });
+
+  it.each(Object.keys(PARTS) as AndesAlertPart[])(
+    "adds a class to the %s part, after the component's own",
+    (name) => {
+      const { fixture, part, host } = create();
+      host.classNames.set({ [name]: 'mine' });
+      fixture.detectChanges();
+
+      expect(part(name).classList).toContain('mine');
+      expect(part(name).classList.length).toBeGreaterThan(1);
+      // Only that part.
+      for (const other of Object.keys(PARTS) as AndesAlertPart[]) {
+        if (other !== name) {
+          expect(part(other).classList).not.toContain('mine');
+        }
+      }
+    },
+  );
+
+  it.each(Object.keys(PARTS) as AndesAlertPart[])(
+    'styles the %s part inline',
+    (name) => {
+      const { fixture, part, host } = create();
+      host.styles.set({ [name]: { color: 'rgb(1, 2, 3)' } });
+      fixture.detectChanges();
+
+      expect(part(name).style.color).toBe('rgb(1, 2, 3)');
+      for (const other of Object.keys(PARTS) as AndesAlertPart[]) {
+        if (other !== name) {
+          expect(part(other).style.color).toBe('');
+        }
+      }
+    },
+  );
+
+  it('takes camelCase, dash-case and custom-property keys', () => {
+    const { fixture, part, host } = create();
+    host.styles.set({
+      root: {
+        borderWidth: '2px',
+        'background-color': 'rgb(4, 5, 6)',
+        '--andes-alert-padding-block': '12px',
+      },
+    });
+    fixture.detectChanges();
+
+    expect(part('root').style.borderWidth).toBe('2px');
+    expect(part('root').style.backgroundColor).toBe('rgb(4, 5, 6)');
+    expect(
+      part('root').style.getPropertyValue('--andes-alert-padding-block'),
+    ).toBe('12px');
+  });
+
+  it("calls a function with the alert's resolved props, again when they change", () => {
+    const { fixture, part, host } = create();
+    const seen: string[] = [];
+    host.styles.set(({ props }) => {
+      seen.push(props.severity);
+      return props.severity === 'success'
+        ? { icon: { color: 'rgb(7, 8, 9)' } }
+        : {};
+    });
+    fixture.detectChanges();
+
+    expect(part('icon').style.color).toBe('');
+
+    host.severity.set('success');
+    fixture.detectChanges();
+
+    expect(part('icon').style.color).toBe('rgb(7, 8, 9)');
+    expect(seen).toContain('info');
+    expect(seen.at(-1)).toBe('success');
+  });
+
+  it('hands a classNames function the whole props object', () => {
+    const { fixture, host } = create();
+    let received: unknown;
+    host.classNames.set((info) => {
+      received = info;
+      return {};
+    });
+    fixture.detectChanges();
+
+    expect(received).toEqual({
+      props: {
+        severity: 'info',
+        variant: 'tinted',
+        banner: false,
+        closable: true,
+        showIcon: true,
+        marquee: false,
+        actionPlacement: 'end',
+      },
+    });
+  });
+
+  it('drops the classes and styles again when the inputs are cleared', () => {
+    const { fixture, part, host } = create();
+    host.classNames.set({ root: 'mine', icon: 'mine' });
+    host.styles.set({ root: { color: 'rgb(1, 2, 3)' } });
+    fixture.detectChanges();
+
+    host.classNames.set(null);
+    host.styles.set(null);
+    fixture.detectChanges();
+
+    expect(part('root').classList).not.toContain('mine');
+    expect(part('icon').classList).not.toContain('mine');
+    expect(part('root').style.color).toBe('');
+  });
+});

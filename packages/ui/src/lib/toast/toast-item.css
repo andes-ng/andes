@@ -380,7 +380,7 @@
 .andes-toast__progress {
   position: absolute;
   bottom: 0;
-  inset-inline: 0.5rem;
+  inset-inline-start: 0.5rem;
   block-size: 2px;
   border-radius: 0.5rem;
   background: var(
@@ -392,7 +392,7 @@
     )
   );
   /* The track is the card; only the bar drains, towards the inline start. */
-  inline-size: 100%;
+  inline-size: calc(100% - 1rem);
   animation: andes-toast-progress linear forwards;
   pointer-events: none;
 }
@@ -405,7 +405,7 @@
 
 @keyframes andes-toast-progress {
   from {
-    inline-size: 100%;
+    inline-size: calc(100% - 1rem);
   }
 
   to {

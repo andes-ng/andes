@@ -20,7 +20,10 @@ import {
   AndesOverlayPrimitive,
   provideAndesOverlay,
 } from './overlay-primitive';
-import { andesConnectedPositions } from './overlay-positioning';
+import {
+  andesConnectedPosition,
+  andesConnectedPositions,
+} from './overlay-positioning';
 import { AndesOverlayTriggerPrimitive } from './overlay-trigger-primitive';
 
 /**
@@ -1449,6 +1452,23 @@ describe('AndesOverlayPrimitive', () => {
         'bottom/top/start/start',
         'top/bottom/start/start',
       ]);
+    });
+
+    it('keeps left and right physical in a right-to-left layout', () => {
+      const edges = (side: 'left' | 'right', rtl: boolean) => {
+        const position = andesConnectedPosition(side, 'center', 8, 0, rtl);
+        return `${position.originX}/${position.overlayX}/${position.offsetX}`;
+      };
+
+      // The CDK's `start` is the left edge in LTR and the right edge in RTL.
+      expect(edges('right', false)).toBe('end/start/8');
+      expect(edges('right', true)).toBe('start/end/8');
+      expect(edges('left', false)).toBe('start/end/-8');
+      expect(edges('left', true)).toBe('end/start/-8');
+      // The vertical sides and the alignment stay logical.
+      expect(andesConnectedPosition('top', 'start', 8, 0, true).originX).toBe(
+        'start',
+      );
     });
 
     it('lets an explicit size win over the positioning-implied one', () => {

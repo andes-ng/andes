@@ -4,6 +4,7 @@ import {
   AndesOverlayPrimitive,
   provideAndesOverlay,
   type AndesOverlayAlign,
+  type AndesOverlayCloseReason,
   type AndesOverlayConfig,
   type AndesOverlaySide,
 } from '@andes-ng/primitives';
@@ -21,6 +22,7 @@ import {
   inject,
   input,
   model,
+  output,
   signal,
   TemplateRef,
   untracked,
@@ -30,9 +32,12 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import clsx from 'clsx';
 
+import { ANDES_TOOLTIP_CONFIG } from './tooltip-config';
 import { AndesTooltipContent } from './tooltip-content';
+import { AndesTooltipGroup } from './tooltip-group';
 import {
   AndesTooltipHoverIntent,
+  type AndesTooltipChangeSource,
   type AndesTooltipTriggerAction,
 } from './tooltip-hover-intent';
 import {
@@ -46,6 +51,12 @@ import {
   type AndesTooltipArrowInput,
   type AndesTooltipPlacement,
 } from './tooltip-placement';
+import {
+  andesTooltipStyleObject,
+  type AndesTooltipClassNamesInput,
+  type AndesTooltipSemanticInfo,
+  type AndesTooltipStylesInput,
+} from './tooltip-semantic';
 
 /**
  * Default open delay, in ms: long enough that a pointer sweeping across the page
@@ -79,7 +90,7 @@ export const ANDES_TOOLTIP_DEFAULT_TRIGGERS: readonly AndesTooltipTriggerAction[
 /**
  * Semantic color presets, each backed by an existing `--andes-color-*` /
  * `--andes-color-*-foreground` token pair. For a hue with no andes-ng token,
- * pass any CSS color instead.
+ * pass any CSS color instead - or one of {@link ANDES_TOOLTIP_HUE_COLORS}.
  */
 export const ANDES_TOOLTIP_PRESET_COLORS = [
   'primary',
@@ -90,19 +101,83 @@ export const ANDES_TOOLTIP_PRESET_COLORS = [
   'info',
 ] as const;
 
-/** One of {@link ANDES_TOOLTIP_PRESET_COLORS}. */
+/**
+ * Named hues, with the names and the fills of Ant Design's preset colours, for a
+ * tooltip that labels rather than themes. A hue is the same in both themes.
+ */
+export const ANDES_TOOLTIP_HUE_COLORS = [
+  'pink',
+  'red',
+  'yellow',
+  'orange',
+  'cyan',
+  'green',
+  'blue',
+  'purple',
+  'geekblue',
+  'magenta',
+  'volcano',
+  'gold',
+  'lime',
+] as const;
+
+/** One of {@link ANDES_TOOLTIP_HUE_COLORS}. */
+export type AndesTooltipHueColor = (typeof ANDES_TOOLTIP_HUE_COLORS)[number];
+
+/** One of {@link ANDES_TOOLTIP_PRESET_COLORS} or {@link ANDES_TOOLTIP_HUE_COLORS}. */
 export type AndesTooltipPresetColor =
-  (typeof ANDES_TOOLTIP_PRESET_COLORS)[number];
+  (typeof ANDES_TOOLTIP_PRESET_COLORS)[number] | AndesTooltipHueColor;
 
 /**
- * The tooltip's surface: `default` follows the theme's popover surface (light on a
- * light page, dark on a dark one); `inverse` is always a dark surface with light
- * text, for a hint that should stand apart from the surface it sits on.
+ * The tooltip's surface: `default` is a near-black one with white text (a lifted grey on
+ * a dark page), as in Ant Design; `light` follows the theme's popover surface instead
+ * (light on a light page, dark on a dark one); `inverse` is always a dark slate surface
+ * with light text.
  */
-export type AndesTooltipVariant = 'default' | 'inverse';
+export type AndesTooltipVariant = 'default' | 'light' | 'inverse';
+
+/** What the `content` input accepts: text, a template, or a function returning either. */
+export type AndesTooltipContentInput =
+  | string
+  | TemplateRef<unknown>
+  | null
+  | undefined
+  | (() => string | TemplateRef<unknown> | null | undefined);
+
+/** What `openChangeDetail` emits: the new state, and what caused it. */
+export interface AndesTooltipOpenChange {
+  readonly open: boolean;
+  readonly source: AndesTooltipChangeSource;
+}
 
 function isPresetColor(value: string): value is AndesTooltipPresetColor {
-  return (ANDES_TOOLTIP_PRESET_COLORS as readonly string[]).includes(value);
+  return (
+    (ANDES_TOOLTIP_PRESET_COLORS as readonly string[]).includes(value) ||
+    isHueColor(value)
+  );
+}
+
+function isHueColor(value: string): value is AndesTooltipHueColor {
+  return (ANDES_TOOLTIP_HUE_COLORS as readonly string[]).includes(value);
+}
+
+/** How long, in ms, a `unique` group's tooltip takes to glide to the next trigger. */
+export const ANDES_TOOLTIP_HANDOFF_DURATION = 200;
+
+/** Why the overlay closed, as a tooltip change source, when no interaction said otherwise. */
+function closeSourceOf(
+  reason: AndesOverlayCloseReason,
+): AndesTooltipChangeSource {
+  return reason === 'escape-key' || reason === 'outside-click'
+    ? reason
+    : 'imperative';
+}
+
+function prefersReducedMotion(): boolean {
+  return (
+    typeof matchMedia === 'function' &&
+    matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
 }
 
 /**
@@ -144,11 +219,18 @@ function isPresetColor(value: string): value is AndesTooltipPresetColor {
  * ## Styling
  *
  * The tooltip is portalled into the CDK overlay container, outside the
- * trigger's DOM, so it is styled through inputs (`color`, `maxWidth`,
- * `tooltipClass`) and four CSS custom properties that can be set on `:root`
- * or on a `tooltipClass` selector: `--andes-tooltip-background`,
+ * trigger's DOM, so it is styled through inputs (`color`, `variant`, `maxWidth`,
+ * `tooltipClass`, `classNames`, `styles`) and four CSS custom properties that can
+ * be set on `:root` or on a `tooltipClass` selector: `--andes-tooltip-background`,
  * `--andes-tooltip-foreground`, `--andes-tooltip-border-color` and
- * `--andes-tooltip-max-width`.
+ * `--andes-tooltip-max-width`. `classNames` and `styles` reach the tooltip's three
+ * parts one by one - `root`, `container` and `arrow` - as objects or as functions
+ * of the tooltip's props.
+ *
+ * ## Smooth transition
+ *
+ * A `unique` group (`andesTooltipProvider`, `provideAndesTooltipConfig`) shows one
+ * tooltip at a time and glides it from trigger to trigger.
  */
 @Component({
   selector: 'andes-tooltip',
@@ -178,11 +260,11 @@ export class AndesTooltip {
    * Tooltip content: plain text, or a `TemplateRef` for rich content. It is not
    * named `title` because a static `title` attribute would also give the host a
    * native browser tooltip. A projected `<ng-template andesTooltipContent>`
-   * takes precedence. With no content at all the tooltip does not open.
+   * takes precedence. With no content at all - `null`, `undefined` or an empty string -
+   * the tooltip does not open. A function is called while the tooltip renders, so a
+   * signal it reads keeps the content up to date.
    */
-  readonly content = input<string | TemplateRef<unknown> | null | undefined>(
-    '',
-  );
+  readonly content = input<AndesTooltipContentInput>('');
 
   /**
    * Named placement shorthand (`top`, `topLeft`, `rightBottom`, ... - all 12). When set, it overrides `side` and `align`.
@@ -213,7 +295,8 @@ export class AndesTooltip {
 
   /**
    * Flip to the opposite side, and shift along the trigger, when the tooltip
-   * would otherwise overflow the viewport. Default `true`.
+   * would otherwise overflow the viewport. It never moves to the sides
+   * perpendicular to the one asked for. Default `true`.
    */
   readonly autoAdjustOverflow = input(true, { transform: booleanAttribute });
 
@@ -231,14 +314,21 @@ export class AndesTooltip {
    */
   readonly disabled = input(false, { transform: booleanAttribute });
 
-  /** Hover/focus delay, in ms, before the tooltip opens. */
-  readonly openDelay = input(ANDES_TOOLTIP_DEFAULT_OPEN_DELAY);
-  /** Delay, in ms, before the tooltip closes after mouse-leave/blur. */
-  readonly closeDelay = input(ANDES_TOOLTIP_DEFAULT_CLOSE_DELAY);
-  /** Grouping window, in ms, for the cross-tooltip "instant reopen" pattern. */
-  readonly instantReopenWindow = input(
-    ANDES_TOOLTIP_DEFAULT_INSTANT_REOPEN_WINDOW,
-  );
+  /**
+   * Hover/focus delay, in ms, before the tooltip opens. Default: the tooltip
+   * provider's, else `600`.
+   */
+  readonly openDelay = input<number | undefined>(undefined);
+  /**
+   * Delay, in ms, before the tooltip closes after mouse-leave/blur. Default:
+   * the tooltip provider's, else `0`.
+   */
+  readonly closeDelay = input<number | undefined>(undefined);
+  /**
+   * Grouping window, in ms, for the cross-tooltip "instant reopen" pattern.
+   * Default: the tooltip provider's, else `400`.
+   */
+  readonly instantReopenWindow = input<number | undefined>(undefined);
 
   /**
    * By default the pointer can move from the trigger onto the tooltip - to
@@ -267,6 +357,19 @@ export class AndesTooltip {
   readonly open = model(false);
 
   /**
+   * Whether the tooltip starts open, for one that is not controlled with `open`. Read once,
+   * when the tooltip first renders.
+   */
+  readonly defaultOpen = input(false, { transform: booleanAttribute });
+
+  /**
+   * Fires with the new state and what caused it whenever user interaction opens or closes
+   * the tooltip - the counterpart of `openChange`, which only carries the state. Not
+   * fired for a change made through `open`.
+   */
+  readonly openChangeDetail = output<AndesTooltipOpenChange>();
+
+  /**
    * Background color: a semantic preset (`primary`, `success`, `danger`, ...)
    * or any CSS color. The text color follows automatically - the preset's
    * `-foreground` token, or black/white by lightness for a custom color - and
@@ -275,17 +378,42 @@ export class AndesTooltip {
   readonly color = input<AndesTooltipPresetColor | (string & {}) | null>(null);
 
   /**
-   * `'inverse'` renders a dark surface with light text in both themes (lifted a step
-   * off a dark page so it still reads as a layer); `'default'` follows the theme's
-   * popover surface. A `color` takes precedence over either. Default `'default'`.
+   * The surface: `'default'` is a near-black one with white text (a lifted grey on a dark
+   * page); `'light'` follows the theme's popover surface; `'inverse'` renders a dark slate
+   * surface with light text in both themes (lifted a step off a dark page so it still reads
+   * as a layer). A `color` takes precedence over all of them. Default `'default'`.
    */
   readonly variant = input<AndesTooltipVariant>('default');
 
-  /** Max width of the tooltip: px as a number, or any CSS length. Default `20rem`. */
+  /** Max width of the tooltip: px as a number, or any CSS length. Default `250px`. */
   readonly maxWidth = input<number | string | null>(null);
 
   /** Extra classes on the tooltip element, a scoping hook for the CSS custom properties. */
   readonly tooltipClass = input<string | readonly string[] | null>(null);
+
+  /**
+   * Extra classes for the tooltip's parts (`root`, `container`, `arrow`), as an object or
+   * as a function of the tooltip's props. `root` adds to `tooltipClass`.
+   *
+   * ```ts
+   * classNames = { container: 'my-tooltip-box' };
+   * classNames = ({ props }) => ({ container: props.arrow ? 'with-arrow' : 'plain' });
+   * ```
+   */
+  readonly classNames = input<AndesTooltipClassNamesInput | null | undefined>(
+    null,
+  );
+
+  /**
+   * Inline styles for the tooltip's parts (`root`, `container`, `arrow`), as an object or
+   * as a function of the tooltip's props. Properties are spelled the CSS way or in
+   * camelCase, and a number means pixels.
+   *
+   * ```ts
+   * styles = { container: { borderRadius: 12, boxShadow: 'inset 0 0 8px #ccc' } };
+   * ```
+   */
+  readonly styles = input<AndesTooltipStylesInput | null | undefined>(null);
 
   /**
    * Explicit `z-index` for the tooltip's overlay, overriding the
@@ -317,18 +445,24 @@ export class AndesTooltip {
     read: ViewContainerRef,
   });
 
+  /** The `content` input with a function resolved to what it returns. */
+  private readonly resolvedContent = computed(() => {
+    const content = this.content();
+    return typeof content === 'function' ? content() : content;
+  });
+
   /** The rich-content template, when the caller provided one. */
   protected readonly richContent = computed(() => {
     const projected = this.projectedContent()?.templateRef;
     if (projected) {
       return projected;
     }
-    const content = this.content();
+    const content = this.resolvedContent();
     return content instanceof TemplateRef ? content : null;
   });
 
   protected readonly textContent = computed(() => {
-    const content = this.content();
+    const content = this.resolvedContent();
     return typeof content === 'string' ? content : '';
   });
 
@@ -337,6 +471,18 @@ export class AndesTooltip {
   );
 
   private readonly openState = computed(() => booleanAttribute(this.open()));
+
+  private readonly group = inject(AndesTooltipGroup);
+  private readonly shared = inject(ANDES_TOOLTIP_CONFIG, { optional: true });
+  /** The defaults of the tooltip provider above, or none. */
+  private readonly sharedConfig = computed(() => this.shared?.config() ?? {});
+  private readonly unique = computed(() => !!this.sharedConfig().unique);
+  private readonly resolvedInstantReopenWindow = computed(
+    () =>
+      this.instantReopenWindow() ??
+      this.sharedConfig().instantReopenWindow ??
+      ANDES_TOOLTIP_DEFAULT_INSTANT_REOPEN_WINDOW,
+  );
 
   private readonly sideAlign = computed(() => {
     const placement = this.placement();
@@ -379,21 +525,78 @@ export class AndesTooltip {
           this.sideOffset() + (arrow ? ANDES_TOOLTIP_ARROW_HEIGHT : 0),
         alignOffset: this.alignOffset() + pointAtCenterShift,
         flip: adjust,
+        // Like Ant Design: move along the trigger to stay on screen, never to its other sides.
+        crossSideFallback: false,
         shift: adjust,
       };
     },
   );
 
-  protected readonly panelClasses = computed(() => {
-    const color = this.color();
-    return clsx(
-      'andes-tooltip',
-      this.variant() === 'inverse' && 'andes-tooltip--inverse',
-      color && isPresetColor(color) && `andes-tooltip--${color}`,
-      color && !isPresetColor(color) && 'andes-tooltip--custom-color',
-      this.tooltipClass(),
+  /** What the function forms of `classNames` and `styles` are given. */
+  private readonly semanticInfo = computed<AndesTooltipSemanticInfo>(() => {
+    const { side, align } = this.sideAlign();
+    const arrow = this.arrow();
+    return {
+      props: {
+        placement: this.placement() ?? null,
+        side,
+        align,
+        arrow: !!arrow,
+        pointAtCenter: !!arrow && arrow.pointAtCenter,
+        color: this.color(),
+        variant: this.variant(),
+        open: this.openState(),
+      },
+    };
+  });
+
+  private readonly semanticClassNames = computed(() => {
+    const classNames = this.classNames();
+    return (
+      (typeof classNames === 'function'
+        ? classNames(this.semanticInfo())
+        : classNames) ?? {}
     );
   });
+
+  private readonly semanticStyles = computed(() => {
+    const styles = this.styles();
+    return (
+      (typeof styles === 'function' ? styles(this.semanticInfo()) : styles) ??
+      {}
+    );
+  });
+
+  protected readonly panelClasses = computed(() => {
+    const color = this.color();
+    const variant = this.variant();
+    return clsx(
+      'andes-tooltip',
+      variant === 'inverse' && 'andes-tooltip--inverse',
+      variant === 'light' && 'andes-tooltip--light',
+      color && isPresetColor(color) && `andes-tooltip--${color}`,
+      color && isHueColor(color) && 'andes-tooltip--hue',
+      color && !isPresetColor(color) && 'andes-tooltip--custom-color',
+      this.tooltipClass(),
+      this.semanticClassNames().root,
+    );
+  });
+
+  protected readonly containerClasses = computed(() =>
+    clsx(this.semanticClassNames().container),
+  );
+  protected readonly arrowClasses = computed(() =>
+    clsx(this.semanticClassNames().arrow),
+  );
+  protected readonly rootStyle = computed(() =>
+    andesTooltipStyleObject(this.semanticStyles().root),
+  );
+  protected readonly containerStyle = computed(() =>
+    andesTooltipStyleObject(this.semanticStyles().container),
+  );
+  protected readonly arrowStyle = computed(() =>
+    andesTooltipStyleObject(this.semanticStyles().arrow),
+  );
 
   protected readonly customColor = computed(() => {
     const color = this.color();
@@ -417,12 +620,24 @@ export class AndesTooltip {
   private positionObserver: MutationObserver | null = null;
   private layoutObserver: ResizeObserver | null = null;
 
+  /** What asked for the open in flight, and for the close in flight. */
+  private openSource: AndesTooltipChangeSource = 'imperative';
+  private closeSource: AndesTooltipChangeSource | null = null;
+  /** Where the previous tooltip of a `unique` group stood, to glide in from. */
+  private handoffFrom: DOMRect | null = null;
+  private defaultOpenApplied = false;
+
+  private readonly groupMember = { dismiss: () => this.dismissNow() };
+
   constructor() {
     this.overlay.configure(andesOverlayPreset('tooltip'));
 
     this.intent.bind({
-      open: () => this.show(),
-      close: () => this.overlay.close('imperative'),
+      open: (source) => this.show(source),
+      close: (source) => {
+        this.closeSource = source;
+        this.overlay.close('imperative');
+      },
     });
 
     this.overlay.opened
@@ -430,9 +645,10 @@ export class AndesTooltip {
       .subscribe(() => this.onOpened());
     this.overlay.closed
       .pipe(takeUntilDestroyed())
-      .subscribe(() => this.onClosed());
+      .subscribe((reason) => this.onClosed(reason));
 
     inject(DestroyRef).onDestroy(() => {
+      this.group.release(this.groupMember);
       this.positionObserver?.disconnect();
       this.layoutObserver?.disconnect();
       this.bodyView?.destroy();
@@ -445,14 +661,22 @@ export class AndesTooltip {
     });
 
     effect(() => {
+      const shared = this.sharedConfig();
       this.intent.configure({
-        openDelay: this.openDelay(),
-        closeDelay: this.closeDelay(),
-        instantReopenWindow: this.instantReopenWindow(),
+        openDelay:
+          this.openDelay() ??
+          shared.openDelay ??
+          ANDES_TOOLTIP_DEFAULT_OPEN_DELAY,
+        closeDelay:
+          this.closeDelay() ??
+          shared.closeDelay ??
+          ANDES_TOOLTIP_DEFAULT_CLOSE_DELAY,
+        instantReopenWindow: this.resolvedInstantReopenWindow(),
         disabled: this.disabled(),
         triggers: this.triggers(),
         hoverable: !this.disableHoverablePopup(),
         closeOnClick: this.closeOnClick(),
+        unique: this.unique(),
       });
     });
 
@@ -476,11 +700,25 @@ export class AndesTooltip {
       const template = this.overlayTemplate();
       untracked(() => {
         if (wanted && template && !this.overlay.isOpen()) {
-          this.show();
+          this.show('imperative');
         } else if (!wanted && this.overlay.isOpen()) {
           this.overlay.close('imperative');
         }
       });
+    });
+
+    // `defaultOpen`: the tooltip's first render, once its template is there. After that
+    // the tooltip is the user's (or `open`'s) to open and close.
+    effect(() => {
+      const template = this.overlayTemplate();
+      const wanted = this.defaultOpen();
+      if (this.defaultOpenApplied || !template) {
+        return;
+      }
+      this.defaultOpenApplied = true;
+      if (wanted) {
+        untracked(() => this.show('imperative'));
+      }
     });
 
     effect(() => {
@@ -536,7 +774,7 @@ export class AndesTooltip {
   }
 
   /** Measures the trigger, then opens the overlay against it. */
-  private show(): void {
+  private show(source: AndesTooltipChangeSource): void {
     const template = this.overlayTemplate();
     if (
       !template ||
@@ -546,6 +784,7 @@ export class AndesTooltip {
     ) {
       return;
     }
+    this.openSource = source;
 
     // A disabled trigger is `pointer-events: none` inside the host, which
     // has turned `inline-block` around it - anchor to that wrapper, so the
@@ -561,7 +800,20 @@ export class AndesTooltip {
     this.renderedSide.set(this.sideAlign().side);
     this.arrowOffset.set(null);
     this.configureOverlay({ positioning: this.positioning() });
+    if (this.unique()) {
+      this.handoffFrom = this.group.claim(
+        this.groupMember,
+        this.resolvedInstantReopenWindow(),
+      );
+    }
     this.overlay.open(template);
+  }
+
+  /** Closes at once, without the exit motion: the next tooltip of a `unique` group takes over. */
+  private dismissNow(): void {
+    this.overlay.contentElement()?.setAttribute('data-instant', '');
+    this.closeSource = 'imperative';
+    this.overlay.close('imperative');
   }
 
   /**
@@ -588,16 +840,21 @@ export class AndesTooltip {
   }
 
   private onOpened(): void {
+    // An exit cut short by this open keeps its element: it is a normal tooltip again.
+    this.overlay.contentElement()?.removeAttribute('data-instant');
     this.attachBody();
     this.configureOverlay({});
+    this.playHandoff();
     this.observePosition();
     this.observeLayout();
     if (!this.openState()) {
       this.open.set(true);
+      this.openChangeDetail.emit({ open: true, source: this.openSource });
     }
   }
 
-  private onClosed(): void {
+  private onClosed(reason: AndesOverlayCloseReason): void {
+    this.group.release(this.groupMember);
     this.positionObserver?.disconnect();
     this.positionObserver = null;
     this.layoutObserver?.disconnect();
@@ -613,9 +870,54 @@ export class AndesTooltip {
       }
     }
 
+    const source = this.closeSource ?? closeSourceOf(reason);
+    this.closeSource = null;
     if (this.openState()) {
       this.open.set(false);
+      this.openChangeDetail.emit({ open: false, source });
     }
+  }
+
+  /**
+   * In a `unique` group, starts the tooltip where the previous one stood and glides it
+   * to its own place, so the two read as one tooltip moving between triggers.
+   */
+  private playHandoff(): void {
+    const from = this.handoffFrom;
+    this.handoffFrom = null;
+    const root = this.overlay.contentElement();
+    const pane = this.overlay.panelElement();
+    if (
+      !from ||
+      !root ||
+      !pane ||
+      typeof root.animate !== 'function' ||
+      prefersReducedMotion()
+    ) {
+      return;
+    }
+    // The CDK places the pane once the tooltip is stable; the glide needs the final spot.
+    this.overlay.updatePosition();
+    const to = pane.getBoundingClientRect();
+    const dx = from.left - to.left;
+    const dy = from.top - to.top;
+    if (
+      (to.width === 0 && to.height === 0) ||
+      (Math.abs(dx) < 1 && Math.abs(dy) < 1)
+    ) {
+      return;
+    }
+    root.setAttribute('data-handoff', '');
+    const glide = root.animate(
+      [{ translate: `${dx}px ${dy}px` }, { translate: '0 0' }],
+      {
+        duration: ANDES_TOOLTIP_HANDOFF_DURATION,
+        easing: 'cubic-bezier(0.645, 0.045, 0.355, 1)',
+      },
+    );
+    const done = () => root.removeAttribute('data-handoff');
+    glide.addEventListener('finish', done);
+    glide.addEventListener('cancel', done);
   }
 
   /**
@@ -701,6 +1003,9 @@ export class AndesTooltip {
     const panelRect = pane.getBoundingClientRect();
     const rendered = andesTooltipResolveSide(anchorRect, panelRect, side);
     this.renderedSide.set(rendered);
+    if (this.unique()) {
+      this.group.update(this.groupMember, panelRect);
+    }
 
     const arrow = this.arrow();
     if (!arrow || (panelRect.width === 0 && panelRect.height === 0)) {

@@ -20,6 +20,29 @@ export type AndesTooltipTriggerAction =
   'hover' | 'focus' | 'click' | 'contextMenu';
 
 /**
+ * What opened or closed a tooltip, as reported by `openChangeSource`.
+ *
+ * - `hover`, `focus`, `click`, `contextMenu`: the matching trigger (leaving or
+ *   blurring closes it again, so those two close with `hover` / `focus`).
+ * - `touch`: the long-press that stands in for hover, and the timer that hides it.
+ * - `press`: a mouse or pen press on the trigger (`closeOnClick`).
+ * - `escape-key`, `outside-click`: dismissed by the page.
+ * - `disabled`: the tooltip was disabled while open.
+ * - `imperative`: closed by something else, e.g. the host being destroyed.
+ */
+export type AndesTooltipChangeSource =
+  | 'hover'
+  | 'focus'
+  | 'click'
+  | 'contextMenu'
+  | 'touch'
+  | 'press'
+  | 'escape-key'
+  | 'outside-click'
+  | 'disabled'
+  | 'imperative';
+
+/**
  * Where a pointer event was heard. Normally on the trigger itself; when the
  * trigger is a disabled form control - which browsers do not reliably
  * dispatch pointer events to - on the `<andes-tooltip>` host wrapping it
@@ -43,12 +66,17 @@ export interface AndesTooltipHoverIntentConfig {
   readonly hoverable: boolean;
   /** Whether pressing the trigger closes a hover/focus tooltip. */
   readonly closeOnClick: boolean;
+  /**
+   * Whether the tooltip belongs to a `unique` group: while another tooltip of the group is
+   * showing, this one opens at once instead of waiting out `openDelay`.
+   */
+  readonly unique: boolean;
 }
 
 /** The actual open/close actions, bound once by `AndesTooltip` in its constructor. */
 export interface AndesTooltipHoverIntentHandlers {
-  readonly open: () => void;
-  readonly close: () => void;
+  readonly open: (source: AndesTooltipChangeSource) => void;
+  readonly close: (source: AndesTooltipChangeSource) => void;
 }
 
 /** What `AndesTooltipTrigger` registers so `AndesTooltip` can find the element to anchor to. */
@@ -89,6 +117,7 @@ const DEFAULT_CONFIG: AndesTooltipHoverIntentConfig = {
   triggers: ['hover', 'focus'],
   hoverable: true,
   closeOnClick: true,
+  unique: false,
 };
 
 /**
@@ -162,7 +191,7 @@ export class AndesTooltipHoverIntent {
     this.config = config;
     if (config.disabled && this.overlay.isOpen()) {
       this.clearTimers();
-      this.handlers?.close();
+      this.handlers?.close('disabled');
     }
   }
 
@@ -191,7 +220,7 @@ export class AndesTooltipHoverIntent {
       return;
     }
     if (!this.pressDismissed) {
-      this.requestOpen();
+      this.requestOpen('hover');
     }
   }
 
@@ -202,7 +231,7 @@ export class AndesTooltipHoverIntent {
     }
     this.pressDismissed = false;
     if (this.has('hover')) {
-      this.requestClose(this.pointerCloseDelay());
+      this.requestClose(this.pointerCloseDelay(), 'hover');
     }
   }
 
@@ -220,7 +249,7 @@ export class AndesTooltipHoverIntent {
   /** `pointerleave` on the tooltip itself - closes it, as leaving the trigger does. */
   contentPointerLeave(event: PointerEvent): void {
     if (this.hoversContent(event)) {
-      this.requestClose(this.pointerCloseDelay());
+      this.requestClose(this.pointerCloseDelay(), 'hover');
     }
   }
 
@@ -244,7 +273,7 @@ export class AndesTooltipHoverIntent {
     this.longPressTimeoutId = setTimeout(() => {
       this.longPressTimeoutId = undefined;
       this.longPressOpened = true;
-      this.openNow();
+      this.openNow('touch');
     }, ANDES_TOOLTIP_LONG_PRESS_DELAY);
   }
 
@@ -265,7 +294,7 @@ export class AndesTooltipHoverIntent {
     this.longPressOpened = false;
     this.clearCloseTimer();
     this.closeTimeoutId = setTimeout(
-      () => this.handlers?.close(),
+      () => this.handlers?.close('touch'),
       ANDES_TOOLTIP_TOUCH_HIDE_DELAY,
     );
   }
@@ -281,7 +310,7 @@ export class AndesTooltipHoverIntent {
       return;
     }
     if (this.has('focus') && !this.pressDismissed) {
-      this.requestOpen();
+      this.requestOpen('focus');
     }
   }
 
@@ -289,7 +318,7 @@ export class AndesTooltipHoverIntent {
   focusOut(): void {
     this.pressDismissed = false;
     if (this.has('focus')) {
-      this.requestClose();
+      this.requestClose(undefined, 'focus');
     }
   }
 
@@ -300,9 +329,9 @@ export class AndesTooltipHoverIntent {
     }
     if (this.overlay.isOpen()) {
       this.clearTimers();
-      this.handlers?.close();
+      this.handlers?.close('click');
     } else {
-      this.openNow();
+      this.openNow('click');
     }
   }
 
@@ -316,7 +345,7 @@ export class AndesTooltipHoverIntent {
       return;
     }
     event.preventDefault();
-    this.openNow();
+    this.openNow('contextMenu');
   }
 
   /**
@@ -324,7 +353,7 @@ export class AndesTooltipHoverIntent {
    * grouping window is still active. Called on mouse-hover (not touch) and on
    * focus.
    */
-  requestOpen(): void {
+  requestOpen(source: AndesTooltipChangeSource = 'hover'): void {
     if (this.config.disabled || this.overlay.isOpen()) {
       // Already open (or never allowed to be): a pending close - e.g. from a
       // blur immediately followed by a re-focus - is no longer wanted.
@@ -333,24 +362,30 @@ export class AndesTooltipHoverIntent {
     }
     this.clearTimers();
 
-    if (this.group.wasRecentlyClosed(this.config.instantReopenWindow)) {
-      this.handlers?.open();
+    if (
+      this.group.wasRecentlyClosed(this.config.instantReopenWindow) ||
+      (this.config.unique && this.group.hasOpen())
+    ) {
+      this.handlers?.open(source);
       return;
     }
 
     const delay = this.config.openDelay;
     if (delay <= 0) {
-      this.handlers?.open();
+      this.handlers?.open(source);
       return;
     }
-    this.openTimeoutId = setTimeout(() => this.handlers?.open(), delay);
+    this.openTimeoutId = setTimeout(() => this.handlers?.open(source), delay);
   }
 
   /**
    * Requests the tooltip close: after `delay` - `closeDelay` unless given,
    * immediately by default. Called on mouse-leave (not touch) and on blur.
    */
-  requestClose(delay = this.config.closeDelay): void {
+  requestClose(
+    delay = this.config.closeDelay,
+    source: AndesTooltipChangeSource = 'hover',
+  ): void {
     // A close always cancels a still-pending open, whether or not the
     // tooltip ever actually opened.
     this.clearOpenTimer();
@@ -360,20 +395,20 @@ export class AndesTooltipHoverIntent {
 
     this.clearCloseTimer();
     if (delay <= 0) {
-      this.handlers?.close();
+      this.handlers?.close(source);
       return;
     }
-    this.closeTimeoutId = setTimeout(() => this.handlers?.close(), delay);
+    this.closeTimeoutId = setTimeout(() => this.handlers?.close(source), delay);
   }
 
   /** Opens right away - click, context menu and long-press have no delay. */
-  private openNow(): void {
+  private openNow(source: AndesTooltipChangeSource): void {
     this.clearOpenTimer();
     this.clearCloseTimer();
     if (this.config.disabled || this.overlay.isOpen()) {
       return;
     }
-    this.handlers?.open();
+    this.handlers?.open(source);
   }
 
   /**
@@ -398,7 +433,7 @@ export class AndesTooltipHoverIntent {
     this.pressDismissed = true;
     this.clearTimers();
     if (this.overlay.isOpen()) {
-      this.handlers?.close();
+      this.handlers?.close('press');
     }
   }
 

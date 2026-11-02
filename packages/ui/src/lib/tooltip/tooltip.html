@@ -4,6 +4,7 @@
   <div
     andesOverlayContent
     [class]="panelClasses()"
+    [style]="rootStyle()"
     [attr.data-side]="renderedSide()"
     [attr.data-hoverable]="disableHoverablePopup() ? null : ''"
     (pointerenter)="intent.contentPointerEnter($event)"
@@ -13,7 +14,12 @@
     [style.--andes-tooltip-arrow-offset]="arrowOffsetValue()"
   >
     @if (arrow()) {
-    <span class="andes-tooltip__arrow" aria-hidden="true"></span>
+    <span
+      class="andes-tooltip__arrow"
+      aria-hidden="true"
+      [class]="arrowClasses()"
+      [style]="arrowStyle()"
+    ></span>
     }
   </div>
 </ng-template>
@@ -21,7 +27,11 @@
 <!-- The content itself: rendered into #bodyCache's view, then moved into the
      overlay element above on every open (see AndesTooltip.attachBody). -->
 <ng-template #bodyTemplate>
-  <div class="andes-tooltip__body">
+  <div
+    class="andes-tooltip__container"
+    [class]="containerClasses()"
+    [style]="containerStyle()"
+  >
     @if (richContent(); as tpl) {
     <ng-container *ngTemplateOutlet="tpl" />
     } @else { {{ textContent() }} }

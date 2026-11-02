@@ -86,15 +86,21 @@ export function andesTooltipArrowAttribute(
 }
 
 /**
- * Arrow geometry, in px. The arrow is a `ARROW_WIDTH` x `ARROW_HEIGHT`
- * triangle; `ARROW_INSET` is how far from an edge-aligned tooltip's edge its
- * center sits, so a `topLeft` arrow sits "just inside" the corner;
- * `ARROW_EDGE_MIN` keeps it clear of the rounded corner when clamping.
+ * Arrow geometry, in px. The arrow is a `ARROW_WIDTH` x `ARROW_THICKNESS` badge
+ * with a rounded tip, attached to the tooltip's edge; its tip stands about
+ * `ARROW_HEIGHT` clear of that edge, which is the room `sideOffset` leaves for it.
+ * `ARROW_INSET` and `ARROW_INSET_VERTICAL` are how far from an edge-aligned
+ * tooltip's edge the arrow's center sits - along a top/bottom edge and along a
+ * left/right edge - so a `topLeft` arrow sits "just inside" the corner.
+ * `ARROW_EDGE_MIN` keeps the arrow's base on the straight part of the edge when
+ * clamping: the corner radius plus half the arrow.
  */
 export const ANDES_TOOLTIP_ARROW_HEIGHT = 6;
-export const ANDES_TOOLTIP_ARROW_WIDTH = 12;
-export const ANDES_TOOLTIP_ARROW_INSET = 12;
-const ARROW_EDGE_MIN = 10;
+export const ANDES_TOOLTIP_ARROW_WIDTH = 16;
+export const ANDES_TOOLTIP_ARROW_THICKNESS = 8;
+export const ANDES_TOOLTIP_ARROW_INSET = 20;
+export const ANDES_TOOLTIP_ARROW_INSET_VERTICAL = 16;
+const ARROW_EDGE_MIN = 14;
 
 /** The subset of `DOMRect` the geometry helpers need - easy to fake in tests. */
 export interface AndesTooltipRect {
@@ -108,9 +114,16 @@ function isHorizontalSide(side: AndesOverlaySide): boolean {
   return side === 'top' || side === 'bottom';
 }
 
+/** The arrow's usual distance from an edge-aligned tooltip's edge, for a side. */
+function arrowInset(side: AndesOverlaySide): number {
+  return isHorizontalSide(side)
+    ? ANDES_TOOLTIP_ARROW_INSET
+    : ANDES_TOOLTIP_ARROW_INSET_VERTICAL;
+}
+
 /**
  * Extra `alignOffset` that makes a `pointAtCenter` arrow land on the trigger's
- * center for an edge-aligned placement. The arrow sits `ARROW_INSET` from the
+ * center for an edge-aligned placement. The arrow sits its inset from the
  * tooltip's aligned edge, so the tooltip has to move by the distance between
  * that point and the trigger's center - towards the center for `start`, away
  * from it (negative) for `end`. Zero for centered placements, where the arrow
@@ -125,7 +138,7 @@ export function andesTooltipPointAtCenterOffset(
     return 0;
   }
   const size = isHorizontalSide(side) ? anchor.width : anchor.height;
-  const shift = size / 2 - ANDES_TOOLTIP_ARROW_INSET;
+  const shift = size / 2 - arrowInset(side);
   return align === 'start' ? shift : -shift;
 }
 
@@ -181,7 +194,7 @@ export function andesTooltipArrowOffset(
   const panelStart = horizontal ? panel.left : panel.top;
   const panelSize = horizontal ? panel.width : panel.height;
 
-  const inset = Math.min(ANDES_TOOLTIP_ARROW_INSET, anchorSize / 2);
+  const inset = Math.min(arrowInset(side), anchorSize / 2);
   let target = anchorStart + anchorSize / 2;
   if (!pointAtCenter && align !== 'center') {
     // Physical edge the panel is lined up with - robust to RTL, where the

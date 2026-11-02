@@ -532,29 +532,36 @@ export abstract class AndesDialogRootBase implements AndesDialogRoot {
     effect(() => {
       const shouldOpen = this.open();
       const template = this.surfaceTemplate();
-
-      if (!shouldOpen) {
-        this.overlay.close();
-        return;
-      }
-      // A `show()` that lands before the content query has resolved is not lost:
-      // this effect re-runs when the template arrives.
-      if (!template) {
-        return;
-      }
+      // Only `open`, the template, `restoreFocusTo` and keep-alive may re-run this.
+      // The overlay primitive reads its own open state on `open()`/`close()`, and
+      // tracking that would re-open a dialog whose exit animation is still playing
+      // (`open` only turns false once `closed` fires, after the animation).
       const restoreFocusTo = this.restoreFocusTo();
-      if (this.keepsAlive()) {
-        const view = untracked(() => this.ensureKeptView(template));
-        this.overlay.open(AndesDialogKeepAlive, {
-          restoreFocusTo,
-          injector: Injector.create({
-            providers: [{ provide: KEEP_ALIVE_VIEW, useValue: view }],
-            parent: this.injector,
-          }),
-        });
-      } else {
-        this.overlay.open(template, { restoreFocusTo });
-      }
+      const keepsAlive = this.keepsAlive();
+
+      untracked(() => {
+        if (!shouldOpen) {
+          this.overlay.close();
+          return;
+        }
+        // A `show()` that lands before the content query has resolved is not lost:
+        // this effect re-runs when the template arrives.
+        if (!template) {
+          return;
+        }
+        if (keepsAlive) {
+          const view = this.ensureKeptView(template);
+          this.overlay.open(AndesDialogKeepAlive, {
+            restoreFocusTo,
+            injector: Injector.create({
+              providers: [{ provide: KEEP_ALIVE_VIEW, useValue: view }],
+              parent: this.injector,
+            }),
+          });
+        } else {
+          this.overlay.open(template, { restoreFocusTo });
+        }
+      });
     });
 
     // The primitive re-applies the layer's z-index whenever it is reconfigured, so

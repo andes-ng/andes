@@ -86,6 +86,46 @@ function clickOn(element: Element) {
 
 const SCROLL_BLOCK_CLASS = 'cdk-global-scrollblock';
 
+/**
+ * jsdom has no Web Animations, so an overlay closes synchronously there and the
+ * window between "close requested" and "closed emitted" never exists. This stubs
+ * `getAnimations` so a pane that is closing reports one still-running animation,
+ * the way a browser does mid exit animation; `finishExit()` then ends it.
+ */
+function withPendingExitAnimation() {
+  const state = { finishExit: () => undefined as void };
+
+  beforeEach(() => {
+    let finish!: () => void;
+    const finished = new Promise<void>((resolve) => (finish = resolve));
+    state.finishExit = () => finish();
+    const animation = {
+      playState: 'running',
+      effect: { getComputedTiming: () => ({ endTime: 150 }) },
+      finished,
+    };
+    Object.defineProperty(Element.prototype, 'getAnimations', {
+      configurable: true,
+      writable: true,
+      value(this: Element) {
+        return this.hasAttribute('data-andes-closing') ? [animation] : [];
+      },
+    });
+  });
+
+  afterEach(() => {
+    delete (Element.prototype as unknown as Record<string, unknown>)[
+      'getAnimations'
+    ];
+  });
+
+  return state;
+}
+
+/** Lets promise continuations (and the zero-delay timers behind them) run. */
+const flushMicrotasks = () =>
+  new Promise<void>((resolve) => setTimeout(resolve));
+
 @Component({
   imports: [ANDES_DIALOG_IMPORTS],
   template: `
@@ -827,6 +867,145 @@ describe('AndesAlertDialog', () => {
       expect(document.documentElement.classList).not.toContain(
         SCROLL_BLOCK_CLASS,
       );
+    });
+  });
+});
+
+describe('closing while the exit animation is pending', () => {
+  withElementGeometry();
+  const exit = withPendingExitAnimation();
+
+  // The two-way `open` only turns false once `closed` fires, after the animation,
+  // so a close request must not be undone by the open-sync effect in between.
+  async function expectStaysClosing(
+    fixture: { detectChanges(): void },
+    host: { open: { (): boolean } },
+    pane: () => HTMLElement,
+    reasons: AndesOverlayCloseReason[],
+    expectedReason: AndesOverlayCloseReason,
+  ) {
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    expect(pane().hasAttribute('data-andes-closing')).toBe(true);
+    expect(reasons).toEqual([]);
+
+    exit.finishExit();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    expect(document.querySelector('.andes-overlay-pane')).toBeNull();
+    expect(host.open()).toBe(false);
+    expect(reasons).toEqual([expectedReason]);
+  }
+
+  describe('AndesDialog', () => {
+    function createHost() {
+      const fixture = TestBed.createComponent(DialogHost);
+      fixture.detectChanges();
+      return {
+        fixture,
+        host: fixture.componentInstance,
+        pane: () =>
+          document.querySelector('.andes-overlay-pane') as HTMLElement,
+        surface: () =>
+          document.querySelector('[data-slot="dialog-content"]') as HTMLElement,
+        async open() {
+          fixture.componentInstance.open.set(true);
+          fixture.detectChanges();
+          await fixture.whenStable();
+          await flushMicrotasks();
+        },
+      };
+    }
+
+    it('does not reopen after the Cancel control', async () => {
+      const { fixture, host, pane, surface, open } = createHost();
+      await open();
+
+      clickOn(surface().querySelector('#cancel') as HTMLElement);
+
+      await expectStaysClosing(
+        fixture,
+        host,
+        pane,
+        host.reasons,
+        'close-button',
+      );
+    });
+
+    it('does not reopen after the built-in close button', async () => {
+      const { fixture, host, pane, surface, open } = createHost();
+      await open();
+
+      clickOn(
+        surface().querySelector('[data-slot="dialog-close-button"]') as Element,
+      );
+
+      await expectStaysClosing(
+        fixture,
+        host,
+        pane,
+        host.reasons,
+        'close-button',
+      );
+    });
+
+    it('does not reopen after Escape', async () => {
+      const { fixture, host, pane, open } = createHost();
+      await open();
+
+      pressEscape();
+
+      await expectStaysClosing(fixture, host, pane, host.reasons, 'escape-key');
+    });
+  });
+
+  describe('AndesAlertDialog', () => {
+    function createHost() {
+      const fixture = TestBed.createComponent(AlertDialogHost);
+      fixture.detectChanges();
+      return {
+        fixture,
+        host: fixture.componentInstance,
+        pane: () =>
+          document.querySelector('.andes-overlay-pane') as HTMLElement,
+        surface: () =>
+          document.querySelector(
+            '[data-slot="alert-dialog-content"]',
+          ) as HTMLElement,
+        async open() {
+          fixture.componentInstance.open.set(true);
+          fixture.detectChanges();
+          await fixture.whenStable();
+          await flushMicrotasks();
+        },
+      };
+    }
+
+    it('does not reopen after the Cancel control', async () => {
+      const { fixture, host, pane, surface, open } = createHost();
+      await open();
+
+      clickOn(surface().querySelector('#cancel') as HTMLElement);
+
+      await expectStaysClosing(
+        fixture,
+        host,
+        pane,
+        host.reasons,
+        'close-button',
+      );
+    });
+
+    it('does not reopen after Escape', async () => {
+      const { fixture, host, pane, open } = createHost();
+      await open();
+
+      pressEscape();
+
+      await expectStaysClosing(fixture, host, pane, host.reasons, 'escape-key');
     });
   });
 });

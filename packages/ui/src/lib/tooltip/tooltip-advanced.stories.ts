@@ -1,6 +1,13 @@
 import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideClipboardPaste,
+  lucideCopy,
+  lucideScissors,
+} from '@ng-icons/lucide';
 import type { Meta, StoryObj } from '@storybook/angular';
 
+import { AndesButton } from '../button/button';
 import { AndesTooltip } from './tooltip';
 import { AndesTooltipContent } from './tooltip-content';
 import { AndesTooltipTrigger } from './tooltip-trigger';
@@ -14,10 +21,16 @@ class StoryRenderStamp {
   readonly renderedAt = new Date().toLocaleTimeString();
 }
 
+const toolbarIcons = provideIcons({
+  lucideClipboardPaste,
+  lucideCopy,
+  lucideScissors,
+});
+
 /** A trigger that keeps resizing, to show an open tooltip re-aligning. */
 @Component({
   selector: 'andes-story-growing-trigger',
-  imports: [AndesTooltip, AndesTooltipTrigger],
+  imports: [AndesTooltip, AndesTooltipTrigger, AndesButton],
   template: `
     <div style="padding: 6rem; width: 32rem;">
       <andes-tooltip
@@ -25,13 +38,15 @@ class StoryRenderStamp {
         placement="bottom"
         [open]="true"
       >
-        <span
+        <andes-button
           andesTooltipTrigger
-          style="display: inline-block; padding: 0.5rem; border: 1px dashed var(--andes-color-border); transition: width 300ms;"
+          variant="dashed"
+          fullWidth
+          style="display: inline-block; transition: width 300ms;"
           [style.width.px]="width()"
         >
           Growing trigger
-        </span>
+        </andes-button>
       </andes-tooltip>
     </div>
   `,
@@ -63,7 +78,7 @@ type Story = StoryObj<AndesTooltip>;
  */
 export const Controlled: Story = {
   render: () => ({
-    moduleMetadata: { imports: [AndesTooltipTrigger] },
+    moduleMetadata: { imports: [AndesTooltipTrigger, AndesButton] },
     props: { isOpen: true, log: [] as string[] },
     template: `
       <div style="display: flex; flex-direction: column; align-items: center; gap: 1.5rem; padding: 5rem 2rem; font-family: var(--andes-font-family), sans-serif; color: var(--andes-color-foreground);">
@@ -72,11 +87,11 @@ export const Controlled: Story = {
           [(open)]="isOpen"
           (openChange)="log = [...log, 'openChange: ' + $event]"
         >
-          <button type="button" andesTooltipTrigger>Trigger</button>
+          <andes-button andesTooltipTrigger variant="outline">Trigger</andes-button>
         </andes-tooltip>
-        <button type="button" (click)="isOpen = !isOpen">
+        <andes-button variant="secondary" (click)="isOpen = !isOpen">
           {{ isOpen ? 'Close' : 'Open' }} programmatically
-        </button>
+        </andes-button>
         <code>open = {{ isOpen }}</code>
         <code>{{ log.join(', ') || 'no openChange yet' }}</code>
       </div>
@@ -91,21 +106,24 @@ export const Controlled: Story = {
  */
 export const Timing: Story = {
   render: () => ({
-    moduleMetadata: { imports: [AndesTooltipTrigger] },
+    moduleMetadata: {
+      imports: [AndesTooltipTrigger, AndesButton, NgIcon],
+      providers: [toolbarIcons],
+    },
     template: `
       <div style="display: flex; align-items: center; gap: 3rem; padding: 6rem;">
         <andes-tooltip content="No open delay, closes after 300ms" [openDelay]="0" [closeDelay]="300">
-          <button type="button" andesTooltipTrigger>Custom timing</button>
+          <andes-button andesTooltipTrigger variant="outline">Custom timing</andes-button>
         </andes-tooltip>
         <div style="display: flex; gap: 0.5rem;">
           <andes-tooltip content="Cut">
-            <button type="button" andesTooltipTrigger aria-label="Cut">✂️</button>
+            <andes-button andesTooltipTrigger variant="outline" size="icon" aria-label="Cut"><ng-icon name="lucideScissors" /></andes-button>
           </andes-tooltip>
           <andes-tooltip content="Copy">
-            <button type="button" andesTooltipTrigger aria-label="Copy">📋</button>
+            <andes-button andesTooltipTrigger variant="outline" size="icon" aria-label="Copy"><ng-icon name="lucideCopy" /></andes-button>
           </andes-tooltip>
           <andes-tooltip content="Paste">
-            <button type="button" andesTooltipTrigger aria-label="Paste">📌</button>
+            <andes-button andesTooltipTrigger variant="outline" size="icon" aria-label="Paste"><ng-icon name="lucideClipboardPaste" /></andes-button>
           </andes-tooltip>
         </div>
       </div>
@@ -123,7 +141,7 @@ export const Timing: Story = {
 export const AutoAdjustOverflow: Story = {
   parameters: { layout: 'fullscreen' },
   render: () => ({
-    moduleMetadata: { imports: [AndesTooltipTrigger] },
+    moduleMetadata: { imports: [AndesTooltipTrigger, AndesButton] },
     template: `
       <div style="position: relative; height: 18rem;">
         <andes-tooltip
@@ -132,7 +150,7 @@ export const AutoAdjustOverflow: Story = {
           placement="top"
           [open]="true"
         >
-          <button type="button" andesTooltipTrigger>Top edge</button>
+          <andes-button andesTooltipTrigger variant="outline">Top edge</andes-button>
         </andes-tooltip>
         <andes-tooltip
           style="position: absolute; top: 0.5rem; right: 0.5rem;"
@@ -141,7 +159,7 @@ export const AutoAdjustOverflow: Story = {
           [autoAdjustOverflow]="false"
           [open]="true"
         >
-          <button type="button" andesTooltipTrigger>No adjust</button>
+          <andes-button andesTooltipTrigger variant="outline">No adjust</andes-button>
         </andes-tooltip>
         <andes-tooltip
           style="position: absolute; top: 8rem; left: 0.5rem;"
@@ -149,7 +167,7 @@ export const AutoAdjustOverflow: Story = {
           placement="left"
           [open]="true"
         >
-          <button type="button" andesTooltipTrigger>Left edge</button>
+          <andes-button andesTooltipTrigger variant="outline">Left edge</andes-button>
         </andes-tooltip>
         <andes-tooltip
           style="position: absolute; bottom: 0.5rem; right: 0.5rem;"
@@ -157,7 +175,7 @@ export const AutoAdjustOverflow: Story = {
           placement="bottomLeft"
           [open]="true"
         >
-          <button type="button" andesTooltipTrigger>Corner</button>
+          <andes-button andesTooltipTrigger variant="outline">Corner</andes-button>
         </andes-tooltip>
       </div>
     `,
@@ -173,16 +191,21 @@ export const AutoAdjustOverflow: Story = {
 export const ContentLifecycle: Story = {
   render: () => ({
     moduleMetadata: {
-      imports: [AndesTooltipTrigger, AndesTooltipContent, StoryRenderStamp],
+      imports: [
+        AndesTooltipTrigger,
+        AndesTooltipContent,
+        AndesButton,
+        StoryRenderStamp,
+      ],
     },
     template: `
       <div style="display: flex; gap: 2rem; padding: 6rem;">
         <andes-tooltip [openDelay]="0">
-          <button type="button" andesTooltipTrigger>Kept (default)</button>
+          <andes-button andesTooltipTrigger variant="outline">Kept (default)</andes-button>
           <ng-template andesTooltipContent><andes-story-render-stamp /></ng-template>
         </andes-tooltip>
         <andes-tooltip [openDelay]="0" destroyOnHidden>
-          <button type="button" andesTooltipTrigger>destroyOnHidden</button>
+          <andes-button andesTooltipTrigger variant="outline">destroyOnHidden</andes-button>
           <ng-template andesTooltipContent><andes-story-render-stamp /></ng-template>
         </andes-tooltip>
       </div>
@@ -209,7 +232,7 @@ export const FollowsLayoutChanges: Story = {
  */
 export const Styling: Story = {
   render: () => ({
-    moduleMetadata: { imports: [AndesTooltipTrigger] },
+    moduleMetadata: { imports: [AndesTooltipTrigger, AndesButton] },
     // The tooltip is portalled out of the story, so the rule has to be global.
     styles: [
       `::ng-deep .story-tooltip-inverse {
@@ -226,21 +249,21 @@ export const Styling: Story = {
           [maxWidth]="140"
           [open]="true"
         >
-          <button type="button" andesTooltipTrigger>maxWidth</button>
+          <andes-button andesTooltipTrigger variant="outline">maxWidth</andes-button>
         </andes-tooltip>
         <andes-tooltip
           content="Styled through tooltipClass and the --andes-tooltip-* custom properties."
           tooltipClass="story-tooltip-inverse"
           [open]="true"
         >
-          <button type="button" andesTooltipTrigger>tooltipClass</button>
+          <andes-button andesTooltipTrigger variant="outline">tooltipClass</andes-button>
         </andes-tooltip>
         <div style="display: flex; gap: 0.5rem;">
           <andes-tooltip content="Default layer: on top" placement="bottomLeft" [open]="true">
-            <button type="button" andesTooltipTrigger>Default layer</button>
+            <andes-button andesTooltipTrigger variant="outline">Default layer</andes-button>
           </andes-tooltip>
           <andes-tooltip content="zIndex=1: drawn underneath the other tooltip" placement="bottom" [zIndex]="1" [open]="true" color="info">
-            <button type="button" andesTooltipTrigger>zIndex=1</button>
+            <andes-button andesTooltipTrigger variant="outline">zIndex=1</andes-button>
           </andes-tooltip>
         </div>
       </div>

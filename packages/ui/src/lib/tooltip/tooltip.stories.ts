@@ -1,3 +1,4 @@
+import { afterNextRender, Directive, ElementRef, inject } from '@angular/core';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
@@ -5,6 +6,23 @@ import { AndesTooltip, ANDES_TOOLTIP_PRESET_COLORS } from './tooltip';
 import { AndesTooltipContent } from './tooltip-content';
 import { ANDES_TOOLTIP_PLACEMENTS } from './tooltip-placement';
 import { AndesTooltipTrigger } from './tooltip-trigger';
+
+/**
+ * Story-only: marks the real `<button>` inside an `<andes-button>` `aria-disabled` (the button
+ * has no input for it) and dims it, to show a trigger that stays focusable.
+ */
+@Directive({ selector: 'andes-button[andesStoryAriaDisabled]' })
+class StoryAriaDisabled {
+  constructor() {
+    const host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+    afterNextRender(() => {
+      const control = host.querySelector<HTMLElement>('button');
+      control?.setAttribute('aria-disabled', 'true');
+      control?.style.setProperty('opacity', '0.5');
+      control?.style.setProperty('cursor', 'not-allowed');
+    });
+  }
+}
 
 const meta: Meta<AndesTooltip> = {
   title: 'Data Display/Tooltip/Basics/Tooltip',
@@ -66,7 +84,7 @@ const meta: Meta<AndesTooltip> = {
     closeOnClick: true,
   },
   render: (args) => ({
-    moduleMetadata: { imports: [AndesTooltipTrigger] },
+    moduleMetadata: { imports: [AndesTooltipTrigger, AndesButton] },
     props: args,
     template: `
       <div style="padding: 6rem;">
@@ -93,7 +111,7 @@ const meta: Meta<AndesTooltip> = {
           [disableHoverablePopup]="disableHoverablePopup"
           [closeOnClick]="closeOnClick"
         >
-          <button type="button" andesTooltipTrigger>Hover or focus me</button>
+          <andes-button andesTooltipTrigger variant="outline">Hover or focus me</andes-button>
         </andes-tooltip>
       </div>
     `,
@@ -112,60 +130,60 @@ export const Default: Story = {};
  */
 export const Placements: Story = {
   render: () => ({
-    moduleMetadata: { imports: [AndesTooltipTrigger] },
+    moduleMetadata: { imports: [AndesTooltipTrigger, AndesButton] },
     template: `
       <div style="display: flex; gap: 4rem; padding: 5rem 8rem 0;">
         <andes-tooltip content="Top" side="top" [openDelay]="0">
-          <button type="button" andesTooltipTrigger>side=top</button>
+          <andes-button andesTooltipTrigger variant="outline">side=top</andes-button>
         </andes-tooltip>
         <andes-tooltip content="Right" side="right" [openDelay]="0">
-          <button type="button" andesTooltipTrigger>side=right</button>
+          <andes-button andesTooltipTrigger variant="outline">side=right</andes-button>
         </andes-tooltip>
         <andes-tooltip content="Bottom" side="bottom" [openDelay]="0">
-          <button type="button" andesTooltipTrigger>side=bottom</button>
+          <andes-button andesTooltipTrigger variant="outline">side=bottom</andes-button>
         </andes-tooltip>
         <andes-tooltip content="Left" side="left" [openDelay]="0">
-          <button type="button" andesTooltipTrigger>side=left</button>
+          <andes-button andesTooltipTrigger variant="outline">side=left</andes-button>
         </andes-tooltip>
       </div>
       <div
         style="display: grid; grid-template-columns: repeat(5, 5.5rem); grid-template-rows: repeat(5, 2.5rem); gap: 0.5rem; padding: 5rem 8rem; place-items: stretch;"
       >
         <andes-tooltip style="grid-area: 1 / 2" content="topLeft" placement="topLeft" [openDelay]="0">
-          <button type="button" style="width: 100%; height: 100%" andesTooltipTrigger>TL</button>
+          <andes-button andesTooltipTrigger variant="outline" fullWidth>TL</andes-button>
         </andes-tooltip>
         <andes-tooltip style="grid-area: 1 / 3" content="top" placement="top" [openDelay]="0">
-          <button type="button" style="width: 100%; height: 100%" andesTooltipTrigger>Top</button>
+          <andes-button andesTooltipTrigger variant="outline" fullWidth>Top</andes-button>
         </andes-tooltip>
         <andes-tooltip style="grid-area: 1 / 4" content="topRight" placement="topRight" [openDelay]="0">
-          <button type="button" style="width: 100%; height: 100%" andesTooltipTrigger>TR</button>
+          <andes-button andesTooltipTrigger variant="outline" fullWidth>TR</andes-button>
         </andes-tooltip>
         <andes-tooltip style="grid-area: 2 / 1" content="leftTop" placement="leftTop" [openDelay]="0">
-          <button type="button" style="width: 100%; height: 100%" andesTooltipTrigger>LT</button>
+          <andes-button andesTooltipTrigger variant="outline" fullWidth>LT</andes-button>
         </andes-tooltip>
         <andes-tooltip style="grid-area: 3 / 1" content="left" placement="left" [openDelay]="0">
-          <button type="button" style="width: 100%; height: 100%" andesTooltipTrigger>Left</button>
+          <andes-button andesTooltipTrigger variant="outline" fullWidth>Left</andes-button>
         </andes-tooltip>
         <andes-tooltip style="grid-area: 4 / 1" content="leftBottom" placement="leftBottom" [openDelay]="0">
-          <button type="button" style="width: 100%; height: 100%" andesTooltipTrigger>LB</button>
+          <andes-button andesTooltipTrigger variant="outline" fullWidth>LB</andes-button>
         </andes-tooltip>
         <andes-tooltip style="grid-area: 2 / 5" content="rightTop" placement="rightTop" [openDelay]="0">
-          <button type="button" style="width: 100%; height: 100%" andesTooltipTrigger>RT</button>
+          <andes-button andesTooltipTrigger variant="outline" fullWidth>RT</andes-button>
         </andes-tooltip>
         <andes-tooltip style="grid-area: 3 / 5" content="right" placement="right" [openDelay]="0">
-          <button type="button" style="width: 100%; height: 100%" andesTooltipTrigger>Right</button>
+          <andes-button andesTooltipTrigger variant="outline" fullWidth>Right</andes-button>
         </andes-tooltip>
         <andes-tooltip style="grid-area: 4 / 5" content="rightBottom" placement="rightBottom" [openDelay]="0">
-          <button type="button" style="width: 100%; height: 100%" andesTooltipTrigger>RB</button>
+          <andes-button andesTooltipTrigger variant="outline" fullWidth>RB</andes-button>
         </andes-tooltip>
         <andes-tooltip style="grid-area: 5 / 2" content="bottomLeft" placement="bottomLeft" [openDelay]="0">
-          <button type="button" style="width: 100%; height: 100%" andesTooltipTrigger>BL</button>
+          <andes-button andesTooltipTrigger variant="outline" fullWidth>BL</andes-button>
         </andes-tooltip>
         <andes-tooltip style="grid-area: 5 / 3" content="bottom" placement="bottom" [openDelay]="0">
-          <button type="button" style="width: 100%; height: 100%" andesTooltipTrigger>Bottom</button>
+          <andes-button andesTooltipTrigger variant="outline" fullWidth>Bottom</andes-button>
         </andes-tooltip>
         <andes-tooltip style="grid-area: 5 / 4" content="bottomRight" placement="bottomRight" [openDelay]="0">
-          <button type="button" style="width: 100%; height: 100%" andesTooltipTrigger>BR</button>
+          <andes-button andesTooltipTrigger variant="outline" fullWidth>BR</andes-button>
         </andes-tooltip>
       </div>
     `,
@@ -178,18 +196,18 @@ export const Placements: Story = {
  */
 export const Arrow: Story = {
   render: () => ({
-    moduleMetadata: { imports: [AndesTooltipTrigger] },
+    moduleMetadata: { imports: [AndesTooltipTrigger, AndesButton] },
     props: { pointAtCenter: { pointAtCenter: true } },
     template: `
       <div style="display: flex; gap: 2rem; padding: 5rem 2rem;">
         <andes-tooltip content="Default arrow" placement="topLeft" [open]="true">
-          <button type="button" style="width: 11rem" andesTooltipTrigger>topLeft</button>
+          <andes-button andesTooltipTrigger variant="outline" fullWidth style="display: inline-block; width: 11rem">topLeft</andes-button>
         </andes-tooltip>
         <andes-tooltip content="Points at the center" placement="topLeft" [arrow]="pointAtCenter" [open]="true">
-          <button type="button" style="width: 11rem" andesTooltipTrigger>topLeft + pointAtCenter</button>
+          <andes-button andesTooltipTrigger variant="outline" fullWidth style="display: inline-block; width: 11rem">topLeft + pointAtCenter</andes-button>
         </andes-tooltip>
         <andes-tooltip content="No arrow" placement="top" [arrow]="false" [open]="true">
-          <button type="button" style="width: 11rem" andesTooltipTrigger>arrow=false</button>
+          <andes-button andesTooltipTrigger variant="outline" fullWidth style="display: inline-block; width: 11rem">arrow=false</andes-button>
         </andes-tooltip>
       </div>
     `,
@@ -199,24 +217,24 @@ export const Arrow: Story = {
 /** `trigger`: hover, focus, click, contextMenu - alone or combined. */
 export const Triggers: Story = {
   render: () => ({
-    moduleMetadata: { imports: [AndesTooltipTrigger] },
+    moduleMetadata: { imports: [AndesTooltipTrigger, AndesButton] },
     props: { hoverClick: ['hover', 'click'] },
     template: `
       <div style="display: flex; flex-wrap: wrap; gap: 1rem; padding: 6rem 2rem;">
         <andes-tooltip content="Opened by hover" trigger="hover" [openDelay]="0">
-          <button type="button" andesTooltipTrigger>Hover</button>
+          <andes-button andesTooltipTrigger variant="outline">Hover</andes-button>
         </andes-tooltip>
         <andes-tooltip content="Opened by focus" trigger="focus" [openDelay]="0">
-          <button type="button" andesTooltipTrigger>Focus (Tab here)</button>
+          <andes-button andesTooltipTrigger variant="outline">Focus (Tab here)</andes-button>
         </andes-tooltip>
         <andes-tooltip content="Opened by click - click again or outside" trigger="click">
-          <button type="button" andesTooltipTrigger>Click</button>
+          <andes-button andesTooltipTrigger variant="outline">Click</andes-button>
         </andes-tooltip>
         <andes-tooltip content="Opened by right-click" trigger="contextMenu">
-          <button type="button" andesTooltipTrigger>Right-click</button>
+          <andes-button andesTooltipTrigger variant="outline">Right-click</andes-button>
         </andes-tooltip>
         <andes-tooltip content="Hover or click" [trigger]="hoverClick" [openDelay]="0">
-          <button type="button" andesTooltipTrigger>Hover + click</button>
+          <andes-button andesTooltipTrigger variant="outline">Hover + click</andes-button>
         </andes-tooltip>
       </div>
       <p style="max-width: 32rem; padding-inline: 2rem; color: var(--andes-color-muted-foreground); font-family: var(--andes-font-family), sans-serif;">
@@ -244,12 +262,12 @@ export const Colors: Story = {
       <div style="display: flex; flex-wrap: wrap; gap: 2.5rem 1rem; padding: 4rem 2rem; max-width: 60rem;">
         @for (preset of presets; track preset) {
           <andes-tooltip [content]="preset" [color]="preset" [open]="true">
-            <button type="button" andesTooltipTrigger>{{ preset }}</button>
+            <andes-button andesTooltipTrigger variant="outline">{{ preset }}</andes-button>
           </andes-tooltip>
         }
         @for (custom of customs; track custom) {
           <andes-tooltip [content]="custom" [color]="custom" [open]="true">
-            <button type="button" andesTooltipTrigger>{{ custom }}</button>
+            <andes-button andesTooltipTrigger variant="outline">{{ custom }}</andes-button>
           </andes-tooltip>
         }
         <andes-tooltip content="Light: the theme's popover surface" variant="light" [open]="true">
@@ -279,11 +297,11 @@ export const Content: Story = {
     template: `
       <div style="display: flex; gap: 8rem; padding: 6rem;">
         <andes-tooltip [content]="hint" [open]="true">
-          <button type="button" andesTooltipTrigger>Shortcut</button>
+          <andes-button andesTooltipTrigger variant="outline">Shortcut</andes-button>
         </andes-tooltip>
         <ng-template #hint>Press <kbd>Ctrl</kbd> + <kbd>K</kbd></ng-template>
         <andes-tooltip>
-          <button type="button" andesTooltipTrigger>Sync status</button>
+          <andes-button andesTooltipTrigger variant="outline">Sync status</andes-button>
           <ng-template andesTooltipContent>
             Last synced <strong>2 minutes ago</strong>
           </ng-template>
@@ -313,40 +331,31 @@ export const Content: Story = {
  */
 export const Disabled: Story = {
   render: () => ({
-    moduleMetadata: { imports: [AndesTooltipTrigger, AndesButton] },
+    moduleMetadata: {
+      imports: [AndesTooltipTrigger, AndesButton, StoryAriaDisabled],
+    },
     template: `
       <style>
         .sb-tooltip-wrapper { display: inline-block; border-radius: var(--andes-radius-md); }
         .sb-tooltip-wrapper:focus-visible { outline: 2px solid var(--andes-color-focus-ring); outline-offset: 2px; }
-        .sb-aria-disabled {
-          box-sizing: border-box; height: 2rem; padding: 0 0.9375rem;
-          border: 1px solid var(--andes-color-input); border-radius: var(--andes-radius-md);
-          background: var(--andes-color-muted); color: var(--andes-color-muted-foreground);
-          font: inherit; font-size: 0.875rem; line-height: 1.375rem; cursor: not-allowed;
-        }
-        .sb-aria-disabled:focus-visible { outline: 2px solid var(--andes-color-focus-ring); outline-offset: 2px; }
       </style>
       <div style="display: flex; gap: 1.5rem; padding: 6rem 2rem 0;">
         <andes-tooltip content="Never shown" [disabled]="true" [openDelay]="0">
-          <button type="button" andesTooltipTrigger>Tooltip disabled</button>
-        </andes-tooltip>
-        <andes-tooltip content="You need edit rights to save" [openDelay]="0">
-          <button type="button" disabled andesTooltipTrigger>Native disabled</button>
+          <andes-button andesTooltipTrigger variant="outline">Tooltip disabled</andes-button>
         </andes-tooltip>
         <andes-tooltip content="Nothing to publish yet" [openDelay]="0">
-          <andes-button disabled andesTooltipTrigger>andes-button disabled</andes-button>
+          <andes-button disabled andesTooltipTrigger variant="outline">Publish (disabled)</andes-button>
         </andes-tooltip>
       </div>
       <div style="display: flex; gap: 1.5rem; padding: 2rem 2rem 4rem; font-family: var(--andes-font-family), sans-serif;">
         <andes-tooltip content="You need edit rights to save" [openDelay]="0">
+          <!-- The focusable span is the trigger and the documented way to tooltip a disabled control. -->
           <span class="sb-tooltip-wrapper" tabindex="0" andesTooltipTrigger>
-            <andes-button disabled>Save (wrapper)</andes-button>
+            <andes-button disabled variant="outline">Save (wrapper)</andes-button>
           </span>
         </andes-tooltip>
         <andes-tooltip content="Nothing to publish yet" [openDelay]="0">
-          <button type="button" class="sb-aria-disabled" aria-disabled="true" andesTooltipTrigger>
-            Publish (aria-disabled)
-          </button>
+          <andes-button andesStoryAriaDisabled andesTooltipTrigger variant="outline">Publish (aria-disabled)</andes-button>
         </andes-tooltip>
       </div>
     `,

@@ -23,12 +23,25 @@ const buttonCss = read('packages/ui/src/lib/button/button.css');
 const inputCss = read('packages/ui/src/lib/input/input.css');
 const tokens = read('packages/tokens/src/theme.css');
 
+/** The text between the braces of the first rule written as `selector { ... }`. */
+function ruleBody(source: string, selector: string): string | undefined {
+  for (
+    let from = source.indexOf(selector);
+    from !== -1;
+    from = source.indexOf(selector, from + 1)
+  ) {
+    const rest = source.slice(from + selector.length).trimStart();
+    if (rest.startsWith('{')) {
+      return rest.slice(1, rest.indexOf('}'));
+    }
+  }
+  return undefined;
+}
+
 /** `--name: value;` declarations of a rule, as written. */
 function declarations(source: string, selector: string): Map<string, string> {
   const result = new Map<string, string>();
-  const body = new RegExp(
-    `${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{([^}]*)\\}`,
-  ).exec(source)?.[1];
+  const body = ruleBody(source, selector);
   for (const match of (body ?? '').matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) {
     result.set(match[1], match[2].replace(/\s+/g, ' ').trim());
   }

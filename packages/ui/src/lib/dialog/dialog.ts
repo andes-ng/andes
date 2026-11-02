@@ -31,6 +31,7 @@ import {
   dialogWidthStyles,
   registerDialogLabel,
 } from './dialog-base';
+import { useDialogTriggerControl } from './dialog-trigger-control';
 
 /**
  * Marks the `<ng-template>` holding a dialog's surface, so the body is only
@@ -132,10 +133,10 @@ export class AndesDialog extends AndesDialogRootBase {
 }
 
 /**
- * The element that opens a dialog. Put it on a natively interactive element — a
- * `<button>` — so the ARIA state the overlay primitive keeps in sync
- * (`aria-haspopup`, `aria-expanded`, `aria-controls`) lands on an element allowed
- * to carry it.
+ * The element that opens a dialog: a `<button>` or an `<andes-button>`. On the wrapper
+ * the ARIA state the overlay primitive keeps in sync (`aria-haspopup`, `aria-expanded`,
+ * `aria-controls`) and the element focus returns to are moved onto the real button
+ * inside it, which is the only element allowed to carry them.
  *
  * Registers itself as the element focus returns to when the dialog closes.
  */
@@ -144,13 +145,20 @@ export class AndesDialog extends AndesDialogRootBase {
   exportAs: 'andesDialogTrigger',
   hostDirectives: [AndesOverlayTriggerPrimitive],
   host: {
-    '(click)': 'root.toggle()',
+    '(click)': 'toggle()',
     '[attr.data-slot]': '"dialog-trigger"',
   },
 })
 export class AndesDialogTrigger {
   /** The dialog this trigger opens. */
   protected readonly root = inject(AndesDialogRoot);
+  private readonly control = useDialogTriggerControl();
+
+  protected toggle(): void {
+    if (!this.control.isDisabled()) {
+      this.root.toggle();
+    }
+  }
 }
 
 /**

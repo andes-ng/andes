@@ -65,6 +65,7 @@ import {
   dialogWidthStyles,
   registerDialogLabel,
 } from './dialog-base';
+import { useDialogTriggerControl } from './dialog-trigger-control';
 
 /**
  * Lets the service's own dialog opt an alert dialog back into outside-click dismissal,
@@ -190,19 +191,29 @@ export class AndesAlertDialog extends AndesDialogRootBase {
   }
 }
 
-/** The element that opens an alert dialog. */
+/**
+ * The element that opens an alert dialog: a `<button>` or an `<andes-button>`. See
+ * `AndesDialogTrigger` for how the wrapper is handled.
+ */
 @Directive({
   selector: '[andesAlertDialogTrigger]',
   exportAs: 'andesAlertDialogTrigger',
   hostDirectives: [AndesOverlayTriggerPrimitive],
   host: {
-    '(click)': 'root.toggle()',
+    '(click)': 'toggle()',
     '[attr.data-slot]': '"alert-dialog-trigger"',
   },
 })
 export class AndesAlertDialogTrigger {
   /** The alert dialog this trigger opens. */
   protected readonly root = inject(AndesDialogRoot);
+  private readonly control = useDialogTriggerControl();
+
+  protected toggle(): void {
+    if (!this.control.isDisabled()) {
+      this.root.toggle();
+    }
+  }
 }
 
 /**

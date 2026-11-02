@@ -39,7 +39,7 @@ let nextOptionId = 0;
     'data-slot': 'segmented-option',
     '[attr.data-state]': "checked() ? 'checked' : 'unchecked'",
     '[attr.data-disabled]': "isDisabled() ? '' : null",
-    '[attr.data-size]': 'group.size()',
+    '[attr.data-size]': 'group.resolvedSize()',
     '[attr.data-readonly]': "group.readOnly() ? '' : null",
     '[attr.data-described]': "group.hasDescription() ? '' : null",
   },

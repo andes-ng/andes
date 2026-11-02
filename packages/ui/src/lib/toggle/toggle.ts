@@ -19,6 +19,10 @@ import {
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 import {
+  andesIdRefs,
+  injectAndesFieldBinding,
+} from '../form-field/field-binding';
+import {
   ANDES_TOGGLE_GROUP,
   AndesToggleSize,
   AndesToggleStatus,
@@ -125,19 +129,58 @@ export class AndesToggle<T = unknown> implements ControlValueAccessor {
   readonly ariaDescribedby = input<string | undefined>(undefined, {
     alias: 'aria-describedby',
   });
+  /** Id of the toggle button. Defaults to the enclosing field's control id (on its own, not
+   *  inside a group). */
+  readonly id = input<string | undefined>(undefined);
+  /** Marks the toggle as required, as `data-required` on the button (a button has no
+   *  `aria-required`). Also set by a required field. */
+  readonly required = input(false, { transform: booleanAttribute });
 
   private readonly cvaDisabled = signal(false);
+
+  /**
+   * The enclosing form field and form. A toggle inside a group leaves the field to the group
+   * (`field: false`) and only follows the form's size and disabled.
+   */
+  protected readonly field = injectAndesFieldBinding({
+    field: this.group === null,
+  });
+
+  /** Whether the button has text of its own, measured after the first render. */
+  private readonly hasText = signal(true);
+
+  protected readonly controlId = computed(() => this.id() ?? this.field.id());
+
+  /** `aria-labelledby`, else - for an icon-only toggle - the field's label. */
+  protected readonly labelledBy = computed(
+    () =>
+      this.ariaLabelledby() ??
+      (this.ariaLabel() || this.hasText()
+        ? undefined
+        : this.field.labelledBy()),
+  );
+
+  protected readonly describedBy = computed(() =>
+    andesIdRefs(this.ariaDescribedby(), this.field.describedBy()),
+  );
+
+  protected readonly isRequired = computed(
+    () => this.required() || this.field.required(),
+  );
   private onChange: (pressed: boolean) => void = noop;
   private onTouched: () => void = noop;
 
   protected readonly resolvedVariant = computed(
     () => this.variant() ?? this.group?.variant() ?? 'default',
   );
-  protected readonly resolvedSize = computed(
-    () => this.size() ?? this.group?.size() ?? 'md',
+  /** The size in effect: its own, the group's, else the form's, else `md`. */
+  readonly resolvedSize = computed<AndesToggleSize>(
+    () =>
+      this.size() ?? this.group?.resolvedSize() ?? this.field.size() ?? 'md',
   );
-  protected readonly resolvedStatus = computed(
-    () => this.status() ?? this.group?.status(),
+  /** The status in effect: its own, the group's, else the enclosing field's. */
+  readonly resolvedStatus = computed<AndesToggleStatus | undefined>(
+    () => this.status() ?? this.group?.resolvedStatus() ?? this.field.status(),
   );
   /** The group is at its `maxCount` and this toggle is not pressed. */
   protected readonly isLimited = computed(
@@ -150,6 +193,7 @@ export class AndesToggle<T = unknown> implements ControlValueAccessor {
     () =>
       this.disabled() ||
       this.cvaDisabled() ||
+      this.field.disabled() ||
       (this.group?.isDisabled() ?? false) ||
       this.isLimited(),
   );
@@ -179,6 +223,7 @@ export class AndesToggle<T = unknown> implements ControlValueAccessor {
   constructor() {
     // After the first render only, so it is browser-only (SSR-safe) and runs once per toggle.
     afterNextRender(() => {
+      this.hasText.set((this.button?.textContent ?? '').trim() !== '');
       this.warnWithoutName();
       const timer = setTimeout(() => (this.motionReady = true));
       this.destroyRef.onDestroy(() => clearTimeout(timer));
@@ -280,8 +325,7 @@ export class AndesToggle<T = unknown> implements ControlValueAccessor {
       return;
     }
     const hasText = (button.textContent ?? '').trim() !== '';
-    const named =
-      !!this.ariaLabel() || !!this.ariaLabelledby() || !!this.tooltip();
+    const named = !!this.ariaLabel() || !!this.labelledBy() || !!this.tooltip();
     if (!hasText && !named) {
       console.warn(
         '[andes-toggle] An icon-only toggle needs an accessible name: set aria-label (or tooltip).',

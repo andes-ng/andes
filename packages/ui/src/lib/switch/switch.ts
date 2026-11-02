@@ -20,6 +20,11 @@ import {
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import clsx from 'clsx';
+
+import {
+  andesIdRefs,
+  injectAndesFieldBinding,
+} from '../form-field/field-binding';
 import { isObservable, Observable, Subscription, take } from 'rxjs';
 
 let nextSwitchId = 0;
@@ -160,7 +165,8 @@ export class AndesSwitch implements ControlValueAccessor {
    * Track and label scale: `sm` / `md` / `lg`, the same steps as AndesInput and AndesCheckbox
    * (the label text follows them; the track is 16 / 22 / 28px tall).
    */
-  readonly size = input<AndesSwitchSize>('md');
+  /** `md` unless set, or the enclosing `andesForm`'s `size`. */
+  readonly size = input<AndesSwitchSize | undefined>(undefined);
   /**
    * Validation tier, like AndesInput's: `error` paints the track (or card) in the danger color
    * and sets `aria-invalid` - the same result as `aria-invalid="true"` - while `warning` only
@@ -292,21 +298,41 @@ export class AndesSwitch implements ControlValueAccessor {
 
   private readonly formDisabled = signal(false);
 
+  /** The enclosing form field and form: id, ARIA, status, size and disabled. */
+  protected readonly field = injectAndesFieldBinding();
+
+  /** The size in effect: `size`, else the form's, else `md`. */
+  readonly resolvedSize = computed<AndesSwitchSize>(
+    () => this.size() ?? this.field.size() ?? 'md',
+  );
+
+  /** The status in effect: `status`, else the enclosing field's error or warning. */
+  readonly resolvedStatus = computed<AndesSwitchStatus | undefined>(
+    () => this.status() ?? this.field.status(),
+  );
+
+  /** `id`, else the enclosing field's control id, so its label toggles the switch. */
+  protected readonly controlId = computed(() => this.id() ?? this.field.id());
+
+  protected readonly isRequired = computed(
+    () => this.required() || this.field.required(),
+  );
+
   protected readonly isDisabled = computed(
-    () => this.disabled() || this.formDisabled(),
+    () => this.disabled() || this.formDisabled() || this.field.disabled(),
   );
 
   /** `aria-invalid` and `status="error"` are one state: same look, same announcement. */
   protected readonly isInvalid = computed(
-    () => this.ariaInvalid() || this.status() === 'error',
+    () => this.ariaInvalid() || this.resolvedStatus() === 'error',
   );
 
   protected readonly classes = computed(() =>
     clsx(
       'andes-switch',
-      `andes-switch--${this.size()}`,
+      `andes-switch--${this.resolvedSize()}`,
       this.isInvalid() && 'andes-switch--invalid',
-      this.status() === 'warning' && 'andes-switch--warning',
+      this.resolvedStatus() === 'warning' && 'andes-switch--warning',
       this.isBusy() && 'andes-switch--loading',
     ),
   );
@@ -314,7 +340,7 @@ export class AndesSwitch implements ControlValueAccessor {
   protected readonly fieldClasses = computed(() =>
     clsx(
       'andes-switch-field',
-      `andes-switch-field--${this.size()}`,
+      `andes-switch-field--${this.resolvedSize()}`,
       this.variant() === 'card' && 'andes-switch-field--card',
       this.labelPosition() === 'start' && 'andes-switch-field--label-start',
       this.isChecked() && 'andes-switch-field--checked',
@@ -322,7 +348,7 @@ export class AndesSwitch implements ControlValueAccessor {
       this.readonly() && 'andes-switch-field--readonly',
       this.isBusy() && 'andes-switch-field--loading',
       this.isInvalid() && 'andes-switch-field--invalid',
-      this.status() === 'warning' && 'andes-switch-field--warning',
+      this.resolvedStatus() === 'warning' && 'andes-switch-field--warning',
     ),
   );
 
@@ -357,16 +383,20 @@ export class AndesSwitch implements ControlValueAccessor {
       this.ariaLabelledby() ??
       (this.hasDescription() && this.hasLabelText() && !this.ariaLabel()
         ? this.labelTextId
-        : undefined),
+        : undefined) ??
+      // With no text of its own, the switch is named by the field's label.
+      (this.hasLabelText() || this.ariaLabel()
+        ? undefined
+        : this.field.labelledBy()),
   );
 
-  protected readonly effectiveDescribedby = computed(() => {
-    const ids = [
+  protected readonly effectiveDescribedby = computed(() =>
+    andesIdRefs(
       this.ariaDescribedby(),
       this.hasDescription() ? this.descriptionId : undefined,
-    ].filter((id): id is string => !!id);
-    return ids.length > 0 ? ids.join(' ') : undefined;
-  });
+      this.field.describedBy(),
+    ),
+  );
 
   /** The hidden form field exists only for a named switch that is on. */
   protected readonly submitsValue = computed(

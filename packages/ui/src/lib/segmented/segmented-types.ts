@@ -70,7 +70,8 @@ export interface AndesSegmentedChange<T = unknown> {
 
 /** What an option reads from and reports to its group. */
 export interface AndesSegmentedApi {
-  readonly size: Signal<AndesSegmentedSize>;
+  /** The size in effect (the group's own, else its form's). */
+  readonly resolvedSize: Signal<AndesSegmentedSize>;
   readonly isDisabled: Signal<boolean>;
   /** Nothing can be changed, but the options stay focusable and look normal. */
   readonly readOnly: Signal<boolean>;

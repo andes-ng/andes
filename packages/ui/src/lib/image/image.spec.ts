@@ -815,9 +815,12 @@ describe('AndesImage inside a modal dialog', () => {
     expect(panes.indexOf(viewerHost as Element)).toBeGreaterThan(
       panes.indexOf(dialogHost as Element),
     );
-    // The same modal layer: the later overlay paints on top.
-    expect((viewerHost as HTMLElement).style.zIndex).toBe(
-      (dialogHost as HTMLElement).style.zIndex,
+    // An overlay opened from inside another one stacks one above it, even on the same layer.
+    // jsdom keeps `var(--andes-z-index-modal, 1050)` as declared: read its fallback number.
+    const zIndexOf = (host: Element) =>
+      Number(/(-?\d+)\s*\)?\s*$/.exec((host as HTMLElement).style.zIndex)?.[1]);
+    expect(zIndexOf(viewerHost as Element)).toBe(
+      zIndexOf(dialogHost as Element) + 1,
     );
   });
 

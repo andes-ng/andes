@@ -76,6 +76,7 @@ const CARET_SIZES: Readonly<Record<AndesButtonSize, AndesButtonSize>> = {
       class="andes-dropdown-button__main"
       [variant]="variant()"
       [size]="size()"
+      [danger]="danger()"
       [disabled]="isDisabled()"
       [loading]="loading()"
       [loadingDelay]="loadingDelay()"
@@ -89,6 +90,7 @@ const CARET_SIZES: Readonly<Record<AndesButtonSize, AndesButtonSize>> = {
       class="andes-dropdown-button__caret"
       [variant]="variant()"
       [size]="caretSize()"
+      [danger]="danger()"
       [disabled]="isDisabled()"
       [aria-label]="menuLabel()"
     >
@@ -163,6 +165,8 @@ const CARET_SIZES: Readonly<Record<AndesButtonSize, AndesButtonSize>> = {
 export class AndesDropdownButton extends AndesDropdownMenu {
   /** Visual variant of both halves. Default `'outline'`. */
   readonly variant = input<AndesButtonVariant>('outline');
+  /** Destructive styling of both halves, as `AndesButton`'s `danger`. Default `false`. */
+  readonly danger = input(false, { transform: booleanAttribute });
   /** Size of both halves. Default `'md'`. */
   readonly size = input<AndesButtonSize>('md');
   /** Shows the main button's loading state (the caret stays usable). */

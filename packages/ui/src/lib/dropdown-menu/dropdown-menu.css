@@ -289,27 +289,28 @@
 .andes-dropdown-menu__shortcut {
   flex-shrink: 0;
   white-space: nowrap;
-  margin-left: auto;
-  padding-left: var(--andes-space-4);
+  margin-inline-start: auto;
+  padding-inline-start: var(--andes-space-4);
   font-size: 0.75rem;
   letter-spacing: 0.05em;
   color: var(--andes-color-muted-foreground);
 }
 
 /*
- * Selection (`selectable` menus). The row keeps a faint tint while not hovered, so
- * the current choice is findable at a glance. A foreground mix rather than
- * `--andes-color-accent`, which equals the popover surface in dark mode (no tint at
- * all there); 5% matches accent in light and stays below the hover/focus row. The theme-aware primary text color and
- * the heavier weight must survive hover and keyboard focus too - otherwise a selected
- * row that is also the focused one (the usual case right after opening) looks exactly
- * like any other focused row - hence the `:not([data-disabled])` rule, which ties the
- * hover/active rules on specificity and wins by coming later.
+ * Selection (`selectable` menus). The row keeps a light primary tint while not hovered, so
+ * the current choice is findable at a glance, the way Ant Design tints it: blue text on a
+ * light blue row. A mix of the primary fill rather than a fixed hex so it follows the theme
+ * (a translucent tint reads on the dark popover surface too); 8% keeps the primary text above
+ * 4.5:1 on it (4.6:1 light). The theme-aware primary text
+ * color and the heavier weight must survive hover and keyboard focus too - otherwise a
+ * selected row that is also the focused one (the usual case right after opening) looks
+ * exactly like any other focused row - hence the `:not([data-disabled])` rule, which ties
+ * the hover/active rules on specificity and wins by coming later.
  */
 .andes-dropdown-menu__item[data-selected] {
   background-color: color-mix(
     in srgb,
-    var(--andes-color-popover-foreground) 5%,
+    var(--andes-color-primary) 8%,
     transparent
   );
 }
@@ -350,8 +351,8 @@
 .andes-dropdown-menu__extra {
   flex-shrink: 0;
   white-space: nowrap;
-  margin-left: auto;
-  padding-left: var(--andes-space-4);
+  margin-inline-start: auto;
+  padding-inline-start: var(--andes-space-4);
   font-size: 0.75rem;
   color: var(--andes-color-muted-foreground);
 }
@@ -401,9 +402,14 @@
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
-  margin-left: auto;
-  padding-left: var(--andes-space-2);
+  margin-inline-start: auto;
+  padding-inline-start: var(--andes-space-2);
   color: var(--andes-color-muted-foreground);
+}
+
+/* The default chevron points at the inline end, so a right-to-left menu mirrors it. */
+.andes-dropdown-menu__chevron:dir(rtl) {
+  transform: scaleX(-1);
 }
 
 .andes-dropdown-menu__sub-trigger[data-state='open']

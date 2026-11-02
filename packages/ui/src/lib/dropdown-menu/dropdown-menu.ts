@@ -535,6 +535,31 @@ export class AndesDropdownMenu
   }
 
   /**
+   * Opens the menu at viewport coordinates instead of against a trigger - the "selection
+   * actions" pattern, where a menu appears next to a text selection or a canvas point and
+   * there is no trigger element (the `andesDropdownMenuTrigger` directive is optional
+   * then). Already open, it moves to the new point. Focus returns to whatever held it
+   * when the menu opened, as for a context menu.
+   *
+   * ```ts
+   * const rect = window.getSelection()?.getRangeAt(0).getBoundingClientRect();
+   * menu.showAt(rect.left, rect.bottom);
+   * ```
+   */
+  showAt(x: number, y: number): void {
+    if (this.isDisabled()) {
+      return;
+    }
+    if (this.overlay.isOpen()) {
+      this.hide('programmatic');
+    }
+    this.showMenu('programmatic', {
+      point: { x, y },
+      focus: this.autoFocus() === false ? 'none' : 'first',
+    });
+  }
+
+  /**
    * Opens the menu, focusing its last enabled item - `ArrowUp` on a closed trigger.
    * A no-op if already open.
    */

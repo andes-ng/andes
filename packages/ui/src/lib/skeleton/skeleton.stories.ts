@@ -27,11 +27,19 @@ const meta: Meta<AndesSkeleton> = {
   argTypes: {
     loading: { control: 'boolean' },
     active: { control: 'boolean' },
+    animation: {
+      control: 'inline-radio',
+      options: [undefined, 'shimmer', 'pulse', 'none'],
+      description:
+        'Picks the animation by name; `active` is the shorthand for shimmer.',
+    },
     avatar: { control: 'object' },
     title: { control: 'object' },
     paragraph: { control: 'object' },
     round: { control: 'boolean' },
     loadingLabel: { control: 'text' },
+    classNames: { control: 'object' },
+    styles: { control: 'object' },
     shape: {
       control: 'select',
       options: [undefined, 'text', 'circular', 'rectangular'],
@@ -56,10 +64,13 @@ const meta: Meta<AndesSkeleton> = {
         <andes-skeleton
           [loading]="loading"
           [active]="active"
+          [animation]="animation"
           [avatar]="avatar"
           [title]="title"
           [paragraph]="paragraph"
           [round]="round"
+          [classNames]="classNames"
+          [styles]="styles"
         />
       </div>
     `,
@@ -123,7 +134,7 @@ export const LoadingWrapper: Story = {
         </andes-button>
         <andes-skeleton [loading]="isLoading" [active]="active" [avatar]="avatar">
           <div style="display: flex; gap: 1rem; font-family: var(--andes-font-family), sans-serif; font-size: 0.875rem; line-height: 1.375rem; color: var(--andes-color-foreground);">
-            <div style="flex: none; width: 2rem; height: 2rem; border-radius: 9999px; background: var(--andes-color-primary); color: var(--andes-color-primary-foreground); display: flex; align-items: center; justify-content: center; font-size: 0.875rem;">AN</div>
+            <div style="flex: none; width: 2.5rem; height: 2.5rem; border-radius: 9999px; background: var(--andes-color-primary); color: var(--andes-color-primary-foreground); display: flex; align-items: center; justify-content: center; font-size: 0.875rem;">AN</div>
             <div>
               <h4 style="margin: 0.25rem 0 0.5rem; font-size: 1rem; line-height: 1.5rem; font-weight: 600;">Andes NG</h4>
               <p style="margin: 0; color: var(--andes-color-muted-foreground);">
@@ -165,31 +176,25 @@ export const OnCard: Story = {
 };
 
 /**
- * The placeholder takes the same lines as the text it stands in for: a 16/24 title, a 4px step
- * and 14/22 body lines (the layout of an alert's title and description). Toggle `loading` - the
- * block keeps its height and nothing below it moves.
+ * The three animations - `shimmer` (what `active` turns on), `pulse` and `none` - on the same
+ * placeholder. All of them stand still under `prefers-reduced-motion`.
  */
-export const TextRhythm: Story = {
-  args: { loading: true, active: true },
-  render: (args) => ({
-    props: args,
+export const Animations: Story = {
+  render: () => ({
+    props: { caption },
     template: `
-      <div style="display: flex; gap: 1.5rem; align-items: flex-start; font-family: var(--andes-font-family), sans-serif; color: var(--andes-color-foreground);">
-        <div data-testid="skeleton-side" style="width: 320px; padding: 1rem 1.25rem; border: 1px solid var(--andes-color-border); border-radius: var(--andes-radius-lg); background: var(--andes-color-card);">
-          <andes-skeleton [loading]="loading" [active]="active" [paragraph]="{ rows: 3 }">
-            <div style="font-size: 1rem; line-height: 1.5rem; font-weight: 600;">Quarterly report</div>
-            <p style="margin: 0.25rem 0 0; font-size: 0.875rem; line-height: 1.375rem;">
-              Revenue grew in every region this quarter. Costs stayed flat, and the new plan
-              shipped on time to all teams.
-            </p>
-          </andes-skeleton>
+      <div style="display: flex; flex-direction: column; gap: 1.5rem; width: 420px;">
+        <div>
+          <span [style]="caption">shimmer</span>
+          <andes-skeleton animation="shimmer" avatar />
         </div>
-        <div data-testid="text-side" style="width: 320px; padding: 1rem 1.25rem; border: 1px solid var(--andes-color-border); border-radius: var(--andes-radius-lg); background: var(--andes-color-card);">
-          <div style="font-size: 1rem; line-height: 1.5rem; font-weight: 600;">Quarterly report</div>
-          <p style="margin: 0.25rem 0 0; font-size: 0.875rem; line-height: 1.375rem;">
-            Revenue grew in every region this quarter. Costs stayed flat, and the new plan
-            shipped on time to all teams.
-          </p>
+        <div>
+          <span [style]="caption">pulse</span>
+          <andes-skeleton animation="pulse" avatar />
+        </div>
+        <div>
+          <span [style]="caption">none</span>
+          <andes-skeleton animation="none" avatar />
         </div>
       </div>
     `,

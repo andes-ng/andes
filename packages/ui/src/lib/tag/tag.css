@@ -223,6 +223,23 @@ a.andes-tag:focus-visible {
   }
 }
 
+/* A `processing` tag spins whatever icon it holds (the icon is the consumer's, so `::ng-deep`). */
+.andes-tag--processing .andes-tag__icon ::ng-deep > * {
+  animation: andes-tag-spin 1s linear infinite;
+}
+
+@keyframes andes-tag-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .andes-tag--processing .andes-tag__icon ::ng-deep > * {
+    animation: none;
+  }
+}
+
 /* No animation means Angular inserts and removes the tag immediately. */
 @media (prefers-reduced-motion: reduce) {
   :host(.andes-tag-enter),

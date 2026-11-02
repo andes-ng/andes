@@ -340,6 +340,42 @@ describe('AndesTag', () => {
     expect(tag.textContent?.trim()).toBe('iconBeta');
   });
 
+  it('marks only a processing tag so its icon can spin', () => {
+    @Component({
+      imports: [AndesTag],
+      template: `
+        <andes-tag id="processing" color="processing">Running</andes-tag>
+        <andes-tag id="success" color="success">Done</andes-tag>
+      `,
+    })
+    class StatusHost {}
+
+    const fixture = TestBed.createComponent(StatusHost);
+    fixture.detectChanges();
+    const tagOf = (id: string) =>
+      fixture.nativeElement.querySelector(`#${id} [data-slot="tag"]`);
+
+    expect(tagOf('processing').classList).toContain('andes-tag--processing');
+    expect(tagOf('success').classList).not.toContain('andes-tag--processing');
+  });
+
+  it('spins the icon of a processing tag and stops under reduced motion (tag.css)', () => {
+    const css = readFileSync(
+      join(process.cwd(), 'packages/ui/src/lib/tag/tag.css'),
+      'utf8',
+    ).replace(/\s+/g, ' ');
+
+    expect(css).toContain(
+      '.andes-tag--processing .andes-tag__icon ::ng-deep > * { animation: andes-tag-spin 1s linear infinite; }',
+    );
+    expect(css).toContain(
+      '@keyframes andes-tag-spin { to { transform: rotate(360deg); } }',
+    );
+    expect(css).toMatch(
+      /prefers-reduced-motion: reduce\) \{ \.andes-tag--processing \.andes-tag__icon ::ng-deep > \* \{ animation: none; \}/,
+    );
+  });
+
   it('treats bare boolean attributes (no brackets) as true, not the string ""', () => {
     @Component({
       imports: [AndesTag],

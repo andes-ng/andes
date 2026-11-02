@@ -351,12 +351,9 @@ export const Icon: Story = {
 export const StatusTag: Story = {
   render: () => ({
     props: { variants: VARIANTS },
-    styles: [
-      '@keyframes story-spin { to { transform: rotate(360deg); } } .story-spin { animation: story-spin 1s linear infinite; } @media (prefers-reduced-motion: reduce) { .story-spin { animation: none; } }',
-    ],
     template: `
       <ng-template #success><ng-icon name="lucideCircleCheck" /></ng-template>
-      <ng-template #processing><ng-icon class="story-spin" name="lucideRefreshCw" /></ng-template>
+      <ng-template #processing><ng-icon name="lucideRefreshCw" /></ng-template>
       <ng-template #warning><ng-icon name="lucideCircleAlert" /></ng-template>
       <ng-template #error><ng-icon name="lucideCircleX" /></ng-template>
       <ng-template #waiting><ng-icon name="lucideClock" /></ng-template>

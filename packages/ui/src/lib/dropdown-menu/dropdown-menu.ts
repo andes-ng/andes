@@ -31,6 +31,7 @@ import {
   TemplateRef,
   untracked,
   viewChild,
+  ViewEncapsulation,
   WritableSignal,
 } from '@angular/core';
 
@@ -182,6 +183,8 @@ interface ShowOptions {
       }
     </ng-template>
   `,
+  styleUrl: './dropdown-menu-trigger.css',
+  encapsulation: ViewEncapsulation.None,
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     provideAndesOverlay(),

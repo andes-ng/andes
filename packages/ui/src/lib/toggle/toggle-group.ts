@@ -24,6 +24,10 @@ import {
   Validator,
 } from '@angular/forms';
 
+import {
+  andesIdRefs,
+  injectAndesFieldBinding,
+} from '../form-field/field-binding';
 import { AndesToggle } from './toggle';
 import {
   ANDES_TOGGLE_GROUP,
@@ -90,16 +94,18 @@ function noop(): void {
   host: {
     role: 'group',
     'data-slot': 'toggle-group',
+    '[attr.id]': 'controlId() ?? null',
     '[attr.aria-label]': 'ariaLabel()',
-    '[attr.aria-labelledby]': 'ariaLabelledby()',
+    '[attr.aria-labelledby]': 'labelledBy() ?? null',
+    '[attr.aria-describedby]': 'describedBy() ?? null',
     '[attr.aria-disabled]': 'isDisabled() || null',
     '[attr.data-type]': 'type()',
     '[attr.data-orientation]': 'orientation()',
     '[attr.data-joined]': "spacing() === 0 ? '' : null",
     '[attr.data-disabled]': "isDisabled() ? '' : null",
     '[attr.data-readonly]': "readOnly() ? '' : null",
-    '[attr.data-required]': "required() ? '' : null",
-    '[attr.data-status]': 'status() ?? null',
+    '[attr.data-required]': "isRequired() ? '' : null",
+    '[attr.data-status]': 'resolvedStatus() ?? null',
     '[style.gap.px]': 'spacing()',
     '(keydown)': 'onKeydown($event)',
     '(focusin)': 'onFocusIn($event)',
@@ -119,7 +125,8 @@ export class AndesToggleGroup<T = unknown>
    *  (also for programmatic writes); `selectionChange` carries what a user change did. */
   readonly value = model<T | readonly T[] | null>(null);
   readonly variant = input<AndesToggleVariant>('default');
-  readonly size = input<AndesToggleSize>('md');
+  /** `md` unless set, or the enclosing `andesForm`'s `size`. */
+  readonly size = input<AndesToggleSize | undefined>(undefined);
   /** Validation tier for every toggle (a toggle's own `status` wins): `error` paints the
    *  border and focus ring in the danger color, `warning` in the amber one. */
   readonly status = input<AndesToggleStatus | undefined>(undefined);
@@ -169,6 +176,38 @@ export class AndesToggleGroup<T = unknown>
   readonly ariaLabelledby = input<string | undefined>(undefined, {
     alias: 'aria-labelledby',
   });
+  /** Ids describing the whole group; merged with the enclosing field's hint and messages. */
+  readonly ariaDescribedby = input<string | undefined>(undefined, {
+    alias: 'aria-describedby',
+  });
+  /** Id of the group element. Defaults to the enclosing field's control id. */
+  readonly id = input<string | undefined>(undefined);
+
+  /** The enclosing form field and form: id, ARIA, status, size and disabled. */
+  protected readonly field = injectAndesFieldBinding();
+
+  protected readonly controlId = computed(() => this.id() ?? this.field.id());
+
+  /** `aria-labelledby`, else the field's label - unless an `aria-label` names the group. */
+  protected readonly labelledBy = computed(
+    () =>
+      this.ariaLabelledby() ??
+      (this.ariaLabel() ? undefined : this.field.labelledBy()),
+  );
+
+  protected readonly describedBy = computed(() =>
+    andesIdRefs(this.ariaDescribedby(), this.field.describedBy()),
+  );
+
+  protected readonly isRequired = computed(
+    () => this.required() || this.field.required(),
+  );
+
+  readonly resolvedSize = computed(() => this.size() ?? this.field.size());
+
+  readonly resolvedStatus = computed(
+    () => this.status() ?? this.field.status(),
+  );
 
   /**
    * Fires on every USER change (a click or Space/Enter), never for programmatic writes, with
@@ -194,7 +233,9 @@ export class AndesToggleGroup<T = unknown>
     descendants: true,
   });
 
-  readonly isDisabled = computed(() => this.disabled() || this.cvaDisabled());
+  readonly isDisabled = computed(
+    () => this.disabled() || this.cvaDisabled() || this.field.disabled(),
+  );
 
   protected readonly selected = computed<readonly T[]>(() => {
     const value = this.value();

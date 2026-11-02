@@ -98,6 +98,7 @@ function withScrollableDocument() {
         id="trigger"
         andesOverlayTrigger
         [ariaAttachment]="ariaAttachment()"
+        [attr.aria-describedby]="describedBy()"
         (click)="toggle()"
       >
         Open
@@ -119,6 +120,7 @@ class OverlayHost {
   readonly ariaAttachment = signal<'expanded' | 'described-by' | 'none'>(
     'expanded',
   );
+  readonly describedBy = signal<string | null>(null);
 
   toggle(): void {
     this.overlay.toggle(this.content());
@@ -293,6 +295,70 @@ describe('AndesOverlayPrimitive', () => {
       expect(backdrop()?.style.getPropertyValue('z-index')).toBe(
         hostWrapper()?.style.getPropertyValue('z-index'),
       );
+    });
+
+    describe('an overlay opened from inside another overlay', () => {
+      const zIndexOf = (host: HTMLElement | null) =>
+        Number.parseInt(
+          (host?.style.getPropertyValue('z-index') ?? '').replace(
+            /^var\(.*,\s*(\d+)\)$/,
+            '$1',
+          ),
+          10,
+        );
+
+      function openFrom(outerPreset: 'dialog' | 'drawer', innerPreset: 'menu') {
+        const outer = createHost(andesOverlayPreset(outerPreset));
+        outer.host.open();
+        outer.fixture.detectChanges();
+        const inner = createHost(andesOverlayPreset(innerPreset));
+        inner.overlay.registerAnchor(outer.element('first'));
+        inner.host.open();
+        inner.fixture.detectChanges();
+        return { outer, inner };
+      }
+
+      it('stacks a dropdown-layer panel above the modal dialog its anchor sits in', () => {
+        const { outer, inner } = openFrom('dialog', 'menu');
+
+        expect(zIndexOf(inner.hostWrapper())).toBeGreaterThan(
+          zIndexOf(outer.hostWrapper()),
+        );
+      });
+
+      it('stacks it above a drawer too', () => {
+        const { outer, inner } = openFrom('drawer', 'menu');
+
+        expect(zIndexOf(inner.hostWrapper())).toBeGreaterThan(
+          zIndexOf(outer.hostWrapper()),
+        );
+      });
+
+      it('keeps the layer token when the anchor is not inside an overlay', () => {
+        const { fixture, host, hostWrapper } = createHost(
+          andesOverlayPreset('menu'),
+        );
+        host.open();
+        fixture.detectChanges();
+
+        expect(hostWrapper()?.style.getPropertyValue('z-index')).toBe(
+          'var(--andes-z-index-dropdown, 1000)',
+        );
+      });
+
+      it('keeps the layer token when it is already above the overlay it is opened from', () => {
+        const outer = createHost(andesOverlayPreset('drawer'));
+        outer.host.open();
+        outer.fixture.detectChanges();
+        const inner = createHost(andesOverlayPreset('tooltip'));
+        inner.overlay.registerAnchor(outer.element('first'));
+        inner.host.open();
+        inner.fixture.detectChanges();
+
+        expect(inner.hostWrapper()?.style.getPropertyValue('z-index')).toBe(
+          'var(--andes-z-index-tooltip, 1070)',
+        );
+      });
     });
 
     it('re-applies the layer when reconfigured while open', () => {
@@ -1874,6 +1940,43 @@ describe('AndesOverlayPrimitive', () => {
       expect(trigger().hasAttribute('aria-expanded')).toBe(false);
       expect(trigger().hasAttribute('aria-haspopup')).toBe(false);
       expect(content()?.getAttribute('role')).toBe('tooltip');
+    });
+
+    it('keeps the trigger`s own aria-describedby on an expanded trigger', () => {
+      const { fixture, host, trigger } = createHost(
+        andesOverlayPreset('dialog'),
+      );
+      host.describedBy.set('hint');
+      fixture.detectChanges();
+
+      expect(trigger().getAttribute('aria-describedby')).toBe('hint');
+
+      host.open();
+      fixture.detectChanges();
+      host.describedBy.set('hint error');
+      fixture.detectChanges();
+
+      expect(trigger().getAttribute('aria-describedby')).toBe('hint error');
+    });
+
+    it('adds the tooltip to the trigger`s own description, and takes it out on close', () => {
+      const { fixture, host, overlay, trigger } = createHost(
+        andesOverlayPreset('tooltip'),
+      );
+      host.ariaAttachment.set('described-by');
+      host.describedBy.set('hint');
+      fixture.detectChanges();
+      host.open();
+      fixture.detectChanges();
+
+      expect(trigger().getAttribute('aria-describedby')).toBe(
+        `hint ${overlay.contentId}`,
+      );
+
+      overlay.close();
+      fixture.detectChanges();
+
+      expect(trigger().getAttribute('aria-describedby')).toBe('hint');
     });
 
     it('wires no ARIA at all when the consumer opts out', () => {

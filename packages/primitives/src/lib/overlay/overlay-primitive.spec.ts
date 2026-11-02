@@ -98,6 +98,7 @@ function withScrollableDocument() {
         id="trigger"
         andesOverlayTrigger
         [ariaAttachment]="ariaAttachment()"
+        [attr.aria-describedby]="describedBy()"
         (click)="toggle()"
       >
         Open
@@ -119,6 +120,7 @@ class OverlayHost {
   readonly ariaAttachment = signal<'expanded' | 'described-by' | 'none'>(
     'expanded',
   );
+  readonly describedBy = signal<string | null>(null);
 
   toggle(): void {
     this.overlay.toggle(this.content());
@@ -1874,6 +1876,43 @@ describe('AndesOverlayPrimitive', () => {
       expect(trigger().hasAttribute('aria-expanded')).toBe(false);
       expect(trigger().hasAttribute('aria-haspopup')).toBe(false);
       expect(content()?.getAttribute('role')).toBe('tooltip');
+    });
+
+    it('keeps the trigger`s own aria-describedby on an expanded trigger', () => {
+      const { fixture, host, trigger } = createHost(
+        andesOverlayPreset('dialog'),
+      );
+      host.describedBy.set('hint');
+      fixture.detectChanges();
+
+      expect(trigger().getAttribute('aria-describedby')).toBe('hint');
+
+      host.open();
+      fixture.detectChanges();
+      host.describedBy.set('hint error');
+      fixture.detectChanges();
+
+      expect(trigger().getAttribute('aria-describedby')).toBe('hint error');
+    });
+
+    it('adds the tooltip to the trigger`s own description, and takes it out on close', () => {
+      const { fixture, host, overlay, trigger } = createHost(
+        andesOverlayPreset('tooltip'),
+      );
+      host.ariaAttachment.set('described-by');
+      host.describedBy.set('hint');
+      fixture.detectChanges();
+      host.open();
+      fixture.detectChanges();
+
+      expect(trigger().getAttribute('aria-describedby')).toBe(
+        `hint ${overlay.contentId}`,
+      );
+
+      overlay.close();
+      fixture.detectChanges();
+
+      expect(trigger().getAttribute('aria-describedby')).toBe('hint');
     });
 
     it('wires no ARIA at all when the consumer opts out', () => {

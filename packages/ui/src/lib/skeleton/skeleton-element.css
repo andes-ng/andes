@@ -19,7 +19,8 @@
   display: inline-block;
   box-sizing: border-box;
   vertical-align: top;
-  border-radius: var(--andes-radius-md);
+  /* Every placeholder shares one 4px corner, whatever its size. */
+  border-radius: var(--andes-radius-sm);
 }
 
 .andes-skeleton-element--block {
@@ -37,6 +38,11 @@
 
 .andes-skeleton-avatar--circle {
   border-radius: var(--andes-radius-full);
+}
+
+/* A square avatar keeps square corners, like the picture it stands in for. */
+.andes-skeleton-avatar--square {
+  border-radius: 0;
 }
 
 /* Button */
@@ -92,7 +98,9 @@
   --andes-skeleton-size: var(--andes-control-height-lg, 2.5rem);
 }
 
-/* Image and Node: a fixed box (overridable through width/height) with centered content. */
+/* Image and Node: a fixed box (overridable through width/height) with centered content. The
+   glyph inside is the foreground colour at 22% (72% on the dark theme) - the quiet grey of Ant
+   Design's picture mark - so it stays a soft mark on the fill. */
 
 .andes-skeleton-image,
 .andes-skeleton-node {
@@ -102,10 +110,12 @@
   width: 6rem;
   height: 6rem;
   line-height: normal;
+  color: color-mix(in srgb, var(--andes-color-foreground) 22%, transparent);
 }
 
-.andes-skeleton-image {
-  color: var(--andes-color-secondary-active);
+:host-context([data-andes-theme='dark']) .andes-skeleton-image,
+:host-context([data-andes-theme='dark']) .andes-skeleton-node {
+  color: color-mix(in srgb, var(--andes-color-foreground) 72%, transparent);
 }
 
 .andes-skeleton-image__icon {
@@ -116,6 +126,5 @@
 }
 
 .andes-skeleton-node {
-  color: var(--andes-color-muted-foreground);
   font-family: var(--andes-font-family), sans-serif;
 }

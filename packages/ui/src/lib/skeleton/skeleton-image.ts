@@ -1,5 +1,4 @@
 import {
-  booleanAttribute,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -7,6 +6,7 @@ import {
 } from '@angular/core';
 import clsx from 'clsx';
 
+import { AndesSkeletonElementBase } from './skeleton-element-base';
 import { toCssSize } from './skeleton-utils';
 
 @Component({
@@ -14,6 +14,7 @@ import { toCssSize } from './skeleton-utils';
   template: `<span
     data-slot="skeleton-image"
     [class]="classes()"
+    [style]="contentStyle()"
     [style.width]="widthStyle()"
     [style.height]="heightStyle()"
   >
@@ -38,11 +39,12 @@ import { toCssSize } from './skeleton-utils';
     '[attr.aria-hidden]': 'true',
   },
 })
-export class AndesSkeletonImage {
+export class AndesSkeletonImage extends AndesSkeletonElementBase {
   /** Numbers are pixels. Defaults to a 6rem square. */
   readonly width = input<string | number | undefined>(undefined);
   readonly height = input<string | number | undefined>(undefined);
-  readonly active = input(false, { transform: booleanAttribute });
+
+  protected readonly extraProps = computed(() => ({}));
 
   protected readonly widthStyle = computed(() => toCssSize(this.width()));
   protected readonly heightStyle = computed(() => toCssSize(this.height()));
@@ -52,7 +54,8 @@ export class AndesSkeletonImage {
       'andes-skeleton-element',
       'andes-skeleton-image',
       'andes-skeleton-fill',
-      this.active() && 'andes-skeleton-fill--active',
+      this.animationClass(),
+      this.contentClass(),
     ),
   );
 }

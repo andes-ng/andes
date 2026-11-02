@@ -55,8 +55,15 @@
 /* --- Composite mode (avatar + title + paragraph) ---------------------------------------------- */
 
 .andes-skeleton-composite {
+  /* The gap between the title and the paragraph; a little wider beside an avatar. */
+  --_paragraph-offset: 1.5rem;
   display: block;
+  box-sizing: border-box;
   width: 100%;
+}
+
+.andes-skeleton-composite--with-avatar {
+  --_paragraph-offset: 1.75rem;
 }
 
 .andes-skeleton-composite__body {
@@ -72,53 +79,46 @@
 }
 
 .andes-skeleton-composite__content {
-  /* A flex column so the line boxes' margins below add up instead of collapsing. */
+  /* A flex column, so the paragraph's top margin below is never collapsed. */
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
   min-width: 0;
 }
 
+/* The bars: a 16px title and 16px rows, 16px apart, with 24px between the title and the
+   paragraph (28px beside an avatar) - the rhythm of Ant Design's Skeleton. */
 .andes-skeleton-composite__title {
   width: 100%;
   height: 1rem;
-  /* Each bar stands in for one line of text, so it sits inside that line's box: a 16px bar
-     with 4px of half-leading either side fills a 24px title line exactly, and the content that
-     replaces it doesn't jump when it loads. */
-  margin-top: 0.25rem;
-  margin-bottom: 0.25rem;
   border-radius: var(--andes-radius-sm);
 }
 
-/* Beside an avatar, the title line drops a further 4px so its bar sits vertically centered on
-   the default (md, 2rem) avatar. */
+/* Beside an avatar, the title drops 12px so its bar sits vertically centered on the 40px
+   avatar. */
 .andes-skeleton-composite--with-avatar .andes-skeleton-composite__title {
-  margin-top: var(--andes-space-2);
+  margin-top: 0.75rem;
 }
 
-/* Body rows follow 14px text on a 22px line: 14px bars, 8px apart, with 4px of half-leading
-   above the first and below the last - so n rows take exactly n lines of body text. */
 .andes-skeleton-composite__paragraph {
   display: flex;
   flex-direction: column;
-  gap: var(--andes-space-2);
-  padding-block: var(--andes-space-1);
+  gap: 1rem;
 }
 
-/* The same small step a title and its description keep between them. */
 .andes-skeleton-composite__title + .andes-skeleton-composite__paragraph {
-  margin-top: var(--andes-space-1);
+  margin-top: var(--_paragraph-offset);
 }
 
 .andes-skeleton-composite__row {
   width: 100%;
-  height: 0.875rem;
+  height: 1rem;
   border-radius: var(--andes-radius-sm);
 }
 
 .andes-skeleton-composite--round .andes-skeleton-composite__title,
 .andes-skeleton-composite--round .andes-skeleton-composite__row {
-  border-radius: var(--andes-radius-full);
+  border-radius: 100px;
 }
 
 /* The placeholder's single accessible status text - visually hidden, read by assistive technology. */

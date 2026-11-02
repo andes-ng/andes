@@ -1,5 +1,4 @@
 import {
-  booleanAttribute,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -7,6 +6,7 @@ import {
 } from '@angular/core';
 import clsx from 'clsx';
 
+import { AndesSkeletonElementBase } from './skeleton-element-base';
 import { AndesSkeletonSize, toCssSize } from './skeleton-utils';
 
 export type AndesSkeletonAvatarShape = 'circle' | 'square';
@@ -16,6 +16,7 @@ export type AndesSkeletonAvatarShape = 'circle' | 'square';
   template: `<span
     data-slot="skeleton-avatar"
     [class]="classes()"
+    [style]="contentStyle()"
     [style.width]="customSize()"
     [style.height]="customSize()"
   ></span>`,
@@ -26,11 +27,15 @@ export type AndesSkeletonAvatarShape = 'circle' | 'square';
     '[attr.aria-hidden]': 'true',
   },
 })
-export class AndesSkeletonAvatar {
+export class AndesSkeletonAvatar extends AndesSkeletonElementBase {
   /** A named step of the shared scale, or a number of pixels. */
   readonly size = input<AndesSkeletonSize | number>('md');
   readonly shape = input<AndesSkeletonAvatarShape>('circle');
-  readonly active = input(false, { transform: booleanAttribute });
+
+  protected readonly extraProps = computed(() => ({
+    size: this.size(),
+    shape: this.shape(),
+  }));
 
   protected readonly customSize = computed(() => {
     const size = this.size();
@@ -45,7 +50,8 @@ export class AndesSkeletonAvatar {
       'andes-skeleton-fill',
       `andes-skeleton-avatar--${this.shape()}`,
       typeof size === 'string' && `andes-skeleton-element--${size}`,
-      this.active() && 'andes-skeleton-fill--active',
+      this.animationClass(),
+      this.contentClass(),
     );
   });
 }

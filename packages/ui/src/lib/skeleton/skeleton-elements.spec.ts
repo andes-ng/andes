@@ -9,10 +9,22 @@ import {
   AndesSkeletonButton,
   AndesSkeletonButtonShape,
 } from './skeleton-button';
+import {
+  AndesSkeletonElementClassNames,
+  AndesSkeletonElementProps,
+  AndesSkeletonElementStyles,
+} from './skeleton-element-base';
 import { AndesSkeletonImage } from './skeleton-image';
 import { AndesSkeletonInput } from './skeleton-input';
 import { AndesSkeletonNode } from './skeleton-node';
-import { AndesSkeletonSize } from './skeleton-utils';
+import {
+  AndesSkeletonAnimation,
+  AndesSkeletonSize,
+  animationClass,
+  resolveAnimation,
+  resolveSemantic,
+  toStyleMap,
+} from './skeleton-utils';
 
 function render<T>(component: new () => T) {
   const fixture = TestBed.createComponent(component);
@@ -327,5 +339,284 @@ describe('AndesSkeletonNode', () => {
     expect(part('skeleton-node').classList).toContain(
       'andes-skeleton-fill--active',
     );
+  });
+});
+
+describe('element placeholders: animation, classNames and styles', () => {
+  @Component({
+    imports: [
+      AndesSkeletonAvatar,
+      AndesSkeletonButton,
+      AndesSkeletonImage,
+      AndesSkeletonInput,
+      AndesSkeletonNode,
+    ],
+    template: `
+      <andes-skeleton-avatar
+        [active]="active()"
+        [animation]="animation()"
+        [classNames]="classNames()"
+        [styles]="styles()"
+      />
+      <andes-skeleton-button
+        [active]="active()"
+        [animation]="animation()"
+        [classNames]="classNames()"
+        [styles]="styles()"
+      />
+      <andes-skeleton-input
+        [active]="active()"
+        [animation]="animation()"
+        [classNames]="classNames()"
+        [styles]="styles()"
+      />
+      <andes-skeleton-image
+        [active]="active()"
+        [animation]="animation()"
+        [classNames]="classNames()"
+        [styles]="styles()"
+      />
+      <andes-skeleton-node
+        [active]="active()"
+        [animation]="animation()"
+        [classNames]="classNames()"
+        [styles]="styles()"
+      />
+    `,
+  })
+  class Host {
+    readonly active = signal(false);
+    readonly animation = signal<AndesSkeletonAnimation | undefined>(undefined);
+    readonly classNames = signal<AndesSkeletonElementClassNames | undefined>(
+      undefined,
+    );
+    readonly styles = signal<AndesSkeletonElementStyles | undefined>(undefined);
+  }
+
+  const SLOTS = [
+    'skeleton-avatar',
+    'skeleton-button',
+    'skeleton-input',
+    'skeleton-image',
+    'skeleton-node',
+  ] as const;
+
+  const HOSTS = [
+    'andes-skeleton-avatar',
+    'andes-skeleton-button',
+    'andes-skeleton-input',
+    'andes-skeleton-image',
+    'andes-skeleton-node',
+  ] as const;
+
+  function createHost() {
+    const { fixture, root, part } = render(Host);
+    const host = (tag: string) => root.querySelector(tag) as HTMLElement;
+    return { fixture, root, part, host, state: fixture.componentInstance };
+  }
+
+  it.each(SLOTS)('%s is still unless animated', (slot) => {
+    const { part } = createHost();
+
+    expect(part(slot).className).not.toMatch(/andes-skeleton-fill--/);
+  });
+
+  it.each(SLOTS)('%s pulses with animation="pulse"', (slot) => {
+    const { fixture, part, state } = createHost();
+    state.animation.set('pulse');
+    fixture.detectChanges();
+
+    expect(part(slot).classList).toContain('andes-skeleton-fill--pulse');
+    expect(part(slot).classList).not.toContain('andes-skeleton-fill--active');
+  });
+
+  it.each(SLOTS)(
+    '%s shimmers with active, unless animation says none',
+    (slot) => {
+      const { fixture, part, state } = createHost();
+      state.active.set(true);
+      fixture.detectChanges();
+      expect(part(slot).classList).toContain('andes-skeleton-fill--active');
+
+      state.animation.set('none');
+      fixture.detectChanges();
+      expect(part(slot).className).not.toMatch(/andes-skeleton-fill--/);
+    },
+  );
+
+  it.each(HOSTS.map((tag, index) => [tag, SLOTS[index]] as const))(
+    '%s takes root classes on the element and content classes on the box',
+    (tag, slot) => {
+      const { fixture, part, host, state } = createHost();
+      state.classNames.set({ root: 'c-root', content: 'c-content' });
+      fixture.detectChanges();
+
+      expect(host(tag).classList).toContain('c-root');
+      expect(host(tag).classList).not.toContain('c-content');
+      expect(part(slot).classList).toContain('c-content');
+      expect(part(slot).classList).not.toContain('c-root');
+      expect(part(slot).classList).toContain('andes-skeleton-fill');
+    },
+  );
+
+  it.each(HOSTS.map((tag, index) => [tag, SLOTS[index]] as const))(
+    '%s takes root and content styles, numbers as pixels',
+    (tag, slot) => {
+      const { fixture, part, host, state } = createHost();
+      state.styles.set({
+        root: { marginLeft: 8 },
+        content: { border: '1px solid #aaa', opacity: 0.5 },
+      });
+      fixture.detectChanges();
+
+      expect(host(tag).style.marginLeft).toBe('8px');
+      expect(part(slot).style.border).toContain('1px solid');
+      expect(part(slot).style.opacity).toBe('0.5');
+    },
+  );
+
+  it('hands the element inputs to a classNames and styles function', () => {
+    const seen: AndesSkeletonElementProps[] = [];
+    @Component({
+      imports: [AndesSkeletonButton],
+      template: `<andes-skeleton-button
+        size="lg"
+        shape="round"
+        block
+        active
+        [classNames]="classNames"
+        [styles]="styles"
+      />`,
+    })
+    class FunctionHost {
+      readonly classNames: AndesSkeletonElementClassNames = (info) => {
+        seen.push(info.props);
+        return { content: info.props.shape === 'round' ? 'c-round' : '' };
+      };
+      readonly styles: AndesSkeletonElementStyles = (info) => ({
+        content: { height: info.props.size === 'lg' ? 50 : 10 },
+      });
+    }
+    const { part } = render(FunctionHost);
+
+    expect(seen.at(-1)).toEqual({
+      active: true,
+      animation: 'shimmer',
+      size: 'lg',
+      shape: 'round',
+      block: true,
+    });
+    expect(part('skeleton-button').classList).toContain('c-round');
+    expect(part('skeleton-button').style.height).toBe('50px');
+  });
+
+  it('passes the avatar size and shape to the function', () => {
+    const seen: AndesSkeletonElementProps[] = [];
+    @Component({
+      imports: [AndesSkeletonAvatar],
+      template: `<andes-skeleton-avatar
+        [size]="56"
+        shape="square"
+        [classNames]="classNames"
+      />`,
+    })
+    class AvatarHost {
+      readonly classNames: AndesSkeletonElementClassNames = (info) => {
+        seen.push(info.props);
+        return {};
+      };
+    }
+    render(AvatarHost);
+
+    expect(seen.at(-1)).toEqual({
+      active: false,
+      animation: 'none',
+      size: 56,
+      shape: 'square',
+    });
+  });
+
+  it('keeps the width of a button next to its content styles', () => {
+    @Component({
+      imports: [AndesSkeletonButton],
+      template: `<andes-skeleton-button
+        [width]="120"
+        [styles]="{ content: { height: 20 } }"
+      />`,
+    })
+    class WidthHost {}
+    const { part } = render(WidthHost);
+
+    expect(part('skeleton-button').style.width).toBe('120px');
+    expect(part('skeleton-button').style.height).toBe('20px');
+  });
+
+  it('lets a consumer class and style on the host through as before', () => {
+    @Component({
+      imports: [AndesSkeletonInput],
+      template: `<andes-skeleton-input class="mine" style="margin-top: 4px" />`,
+    })
+    class PlainHost {}
+    const { root } = render(PlainHost);
+    const host = root.querySelector('andes-skeleton-input') as HTMLElement;
+
+    expect(host.classList).toContain('mine');
+    expect(host.style.marginTop).toBe('4px');
+  });
+});
+
+describe('style helpers', () => {
+  it('turns camelCase and kebab-case into kebab-case, numbers into pixels', () => {
+    expect(
+      toStyleMap({
+        backgroundColor: 'red',
+        'margin-top': 4,
+        height: 20,
+        zIndex: 3,
+        lineHeight: 1.5,
+        '--x': 7,
+      }),
+    ).toEqual({
+      'background-color': 'red',
+      'margin-top': '4px',
+      height: '20px',
+      'z-index': '3',
+      'line-height': '1.5',
+      '--x': '7',
+    });
+  });
+
+  it('skips empty values and returns null when nothing is left', () => {
+    expect(toStyleMap(undefined)).toBeNull();
+    expect(toStyleMap({})).toBeNull();
+    expect(toStyleMap({ height: undefined, width: null })).toBeNull();
+    expect(toStyleMap({ height: undefined, width: 3 })).toEqual({
+      width: '3px',
+    });
+  });
+
+  it('resolves an animation from the explicit name, else from active', () => {
+    expect(resolveAnimation(undefined, false)).toBe('none');
+    expect(resolveAnimation(undefined, true)).toBe('shimmer');
+    expect(resolveAnimation('pulse', false)).toBe('pulse');
+    expect(resolveAnimation('none', true)).toBe('none');
+    expect(animationClass('shimmer')).toBe('andes-skeleton-fill--active');
+    expect(animationClass('pulse')).toBe('andes-skeleton-fill--pulse');
+    expect(animationClass('none')).toBeNull();
+  });
+
+  it('resolves an object as itself and a function by calling it', () => {
+    const object = { root: 'a' };
+
+    expect(resolveSemantic(object, {})).toBe(object);
+    expect(resolveSemantic(undefined, {})).toBeUndefined();
+    expect(
+      resolveSemantic(
+        (info: { props: { n: number } }) => ({ root: `${info.props.n}` }),
+        {
+          n: 2,
+        },
+      ),
+    ).toEqual({ root: '2' });
   });
 });

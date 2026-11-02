@@ -12,13 +12,26 @@ import {
   AndesSkeletonAvatar,
   AndesSkeletonAvatarShape,
 } from './skeleton-avatar';
-import { AndesSkeletonSize, toCssSize } from './skeleton-utils';
+import {
+  AndesSkeletonAnimation,
+  AndesSkeletonSemanticValue,
+  AndesSkeletonSize,
+  AndesSkeletonStyle,
+  animationClass,
+  resolveAnimation,
+  resolveSemantic,
+  toCssSize,
+  toStyleMap,
+} from './skeleton-utils';
 
 export type AndesSkeletonShape = 'text' | 'circular' | 'rectangular';
 
 export interface AndesSkeletonAvatarConfig {
+  /** A named step of the shared scale (`lg`, 40px, by default) or a number of pixels. */
   size?: AndesSkeletonSize | number;
   shape?: AndesSkeletonAvatarShape;
+  /** Shimmers (or, with `false`, stills) the avatar on its own, apart from the other bars. */
+  active?: boolean;
 }
 
 export interface AndesSkeletonTitleConfig {
@@ -34,6 +47,34 @@ export interface AndesSkeletonParagraphConfig {
    */
   width?: number | string | (number | string)[];
 }
+
+/** The parts of the composite placeholder a `classNames` / `styles` input can target. */
+export type AndesSkeletonSlot =
+  'root' | 'header' | 'section' | 'avatar' | 'title' | 'paragraph';
+
+/** The composite placeholder's current inputs, handed to a `classNames` / `styles` function. */
+export interface AndesSkeletonProps {
+  loading: boolean;
+  active: boolean;
+  animation: AndesSkeletonAnimation;
+  round: boolean;
+  avatar: boolean | AndesSkeletonAvatarConfig;
+  title: boolean | AndesSkeletonTitleConfig;
+  paragraph: boolean | AndesSkeletonParagraphConfig;
+}
+
+export type AndesSkeletonClassNames = AndesSkeletonSemanticValue<
+  Partial<Record<AndesSkeletonSlot, string>>,
+  AndesSkeletonProps
+>;
+
+export type AndesSkeletonStyles = AndesSkeletonSemanticValue<
+  Partial<Record<AndesSkeletonSlot, AndesSkeletonStyle>>,
+  AndesSkeletonProps
+>;
+
+/** The width of a paragraph's last row when it is not set and the paragraph has 3 rows or more. */
+const LAST_ROW_WIDTH = '61%';
 
 type SectionInput<T> = boolean | T | string | null | undefined;
 
@@ -81,6 +122,11 @@ export class AndesSkeleton {
   readonly loading = input(true, { transform: booleanAttribute });
   /** Shimmer animation (ignored under `prefers-reduced-motion: reduce`). */
   readonly active = input(false, { transform: booleanAttribute });
+  /**
+   * Picks the animation by name - `shimmer`, `pulse` or `none` - and wins over `active`, which
+   * is the shorthand for `'shimmer'`. Ignored under `prefers-reduced-motion: reduce`.
+   */
+  readonly animation = input<AndesSkeletonAnimation | undefined>(undefined);
   readonly avatar = input<
     boolean | AndesSkeletonAvatarConfig,
     SectionInput<AndesSkeletonAvatarConfig>
@@ -97,6 +143,16 @@ export class AndesSkeleton {
   readonly round = input(false, { transform: booleanAttribute });
   /** Visually hidden status text announced while the placeholder shows. */
   readonly loadingLabel = input('Loading…');
+  /**
+   * Extra classes for the `root`, `header`, `section`, `avatar`, `title` and `paragraph` parts, as
+   * an object or as a function of the current inputs.
+   */
+  readonly classNames = input<AndesSkeletonClassNames | undefined>(undefined);
+  /**
+   * Inline styles for the same parts as `classNames`, as an object or as a function of the
+   * current inputs. Numbers are pixels.
+   */
+  readonly styles = input<AndesSkeletonStyles | undefined>(undefined);
 
   // --- Block (original single-bar) API ---------------------------------------------------------
   // Setting `shape` switches the component to the original single-bar rendering, unchanged:
@@ -124,17 +180,42 @@ export class AndesSkeleton {
   // Section defaults are chosen so a bare <andes-skeleton /> looks balanced: the title
   // shortens and the paragraph gets fewer rows as more sections share the space.
 
+  /** What actually runs: an explicit `animation`, else the shimmer when `active`. */
+  protected readonly animationMode = computed(() =>
+    resolveAnimation(this.animation(), this.active()),
+  );
+
   protected readonly avatarConfig = computed(
-    (): Required<AndesSkeletonAvatarConfig> | null => {
+    (): {
+      size: AndesSkeletonSize | number;
+      shape: AndesSkeletonAvatarShape;
+      animation: AndesSkeletonAnimation;
+    } | null => {
       const avatar = this.avatar();
       if (!avatar) {
         return null;
       }
       const hasSquareDefault = !!this.title() && !this.paragraph();
-      return {
-        size: 'md',
-        shape: hasSquareDefault ? 'square' : 'circle',
+      const config = {
+        size: 'lg' as AndesSkeletonSize | number,
+        shape: (hasSquareDefault
+          ? 'square'
+          : 'circle') as AndesSkeletonAvatarShape,
         ...(avatar === true ? {} : definedOnly(avatar)),
+      };
+      const mode = this.animationMode();
+      return {
+        size: config.size,
+        shape: config.shape,
+        // An avatar's own `active` overrides the placeholder's animation for that avatar alone.
+        animation:
+          config.active === undefined
+            ? mode
+            : config.active
+              ? mode === 'none'
+                ? 'shimmer'
+                : mode
+              : 'none',
       };
     },
   );
@@ -168,11 +249,68 @@ export class AndesSkeleton {
     const width = config.width;
 
     return Array.from({ length: rows }, (_, index) => {
-      if (Array.isArray(width)) {
-        return toCssSize(width[index]);
-      }
-      return index === rows - 1 ? toCssSize(width) : undefined;
+      const rowWidth = Array.isArray(width)
+        ? toCssSize(width[index])
+        : index === rows - 1
+          ? toCssSize(width)
+          : undefined;
+      // A paragraph of 3 rows or more ends on a shorter line unless its last row has a width.
+      return (
+        rowWidth ??
+        (rows >= 3 && index === rows - 1 ? LAST_ROW_WIDTH : undefined)
+      );
     });
+  });
+
+  private readonly barAnimationClass = computed(() =>
+    animationClass(this.animationMode()),
+  );
+
+  protected readonly titleClass = computed(() =>
+    clsx(
+      'andes-skeleton-composite__title',
+      'andes-skeleton-fill',
+      this.barAnimationClass(),
+      this.parts().classNames.title,
+    ),
+  );
+
+  protected readonly rowClass = computed(() =>
+    clsx(
+      'andes-skeleton-composite__row',
+      'andes-skeleton-fill',
+      this.barAnimationClass(),
+    ),
+  );
+
+  private readonly semanticProps = computed((): AndesSkeletonProps => ({
+    loading: this.loading(),
+    active: this.active(),
+    animation: this.animationMode(),
+    round: this.round(),
+    avatar: this.avatar(),
+    title: this.title(),
+    paragraph: this.paragraph(),
+  }));
+
+  /** The resolved `classNames` / `styles`: classes per part, style maps per part. */
+  protected readonly parts = computed(() => {
+    const props = this.semanticProps();
+    const classNames = resolveSemantic(this.classNames(), props) ?? {};
+    const styles = resolveSemantic(this.styles(), props) ?? {};
+    return {
+      classNames,
+      styles: {
+        root: toStyleMap(styles.root),
+        header: toStyleMap(styles.header),
+        section: toStyleMap(styles.section),
+        title: toStyleMap(styles.title),
+        paragraph: toStyleMap(styles.paragraph),
+      },
+      // The avatar is a placeholder element of its own: its parts are `root` and `content`.
+      avatarClassNames: { content: classNames.avatar },
+      avatarStyles: { content: styles.avatar },
+    };
   });
 
   protected readonly classes = computed(() =>
@@ -180,6 +318,7 @@ export class AndesSkeleton {
       'andes-skeleton-composite',
       this.avatar() && 'andes-skeleton-composite--with-avatar',
       this.round() && 'andes-skeleton-composite--round',
+      this.parts().classNames.root,
     ),
   );
 }

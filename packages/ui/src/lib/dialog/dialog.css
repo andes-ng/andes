@@ -1,8 +1,10 @@
 /*
- * AndesDialogContent renders with ViewEncapsulation.None: the parts inside a dialog
- * (header, title, footer, close controls) are consumer markup projected from the
- * consumer's own view, so an encapsulated stylesheet could never reach them. Every
- * class is namespaced `andes-dialog*` to make that safe.
+ * Shared by AndesDialogContent and AndesAlertDialogContent, both of which render
+ * with ViewEncapsulation.None: the parts inside a dialog (header, title, footer,
+ * close controls) are consumer markup projected from the consumer's own view, so
+ * an encapsulated stylesheet could never reach them. Every class is namespaced
+ * `andes-dialog*` to make that safe, and the two surfaces are one visual part
+ * distinguished by `data-slot`, not by a second class family.
  */
 
 .andes-dialog {
@@ -110,10 +112,16 @@
   max-width: 56rem;
 }
 
+/* A confirmation is a short, dense surface - it should not stretch to a content width
+   it will never use. */
+.andes-dialog--alert.andes-dialog--md {
+  max-width: 26rem;
+}
+
 /* An explicit `width`, including its per-breakpoint object form. The
    component writes one custom property per breakpoint, already resolved so each one
    inherits the nearest smaller breakpoint given; the rules below only pick the one for
-   the current viewport. Doubled class so it outranks any size step.
+   the current viewport. Doubled class so it outranks the alert variant's own step above.
    `width: 100%` on the surface still caps it at the pane, so a large value can never
    overflow a narrow screen. */
 .andes-dialog.andes-dialog--custom-width {
@@ -168,7 +176,7 @@
 }
 
 /* `fullscreen`: the surface fills the pane edge to edge, square-cornered. Doubled class
-   so it outranks any size step. */
+   so it outranks the alert variant's own size step. */
 .andes-dialog.andes-dialog--fullscreen {
   width: 100%;
   max-width: none;
@@ -184,8 +192,9 @@
 }
 
 /* Clearance for the built-in close control, applied only where one is actually
-   rendered. Applying it unconditionally made a `[showCloseButton]="false"` dialog wrap
-   its copy against 20px of reserved gutter that nothing occupied. The control's box reaches in past the content
+   rendered. Applying it unconditionally made an alert dialog - which never has a close
+   button - and a `[showCloseButton]="false"` dialog wrap their copy against 20px of
+   reserved gutter that nothing occupied. The control's box reaches in past the content
    edge by its size plus its inset minus the padding; the step clears that and leaves a
    visible gap beside it. */
 .andes-dialog:has(> .andes-dialog__close) .andes-dialog__header {
@@ -419,6 +428,80 @@
   );
 }
 
+/* Imperative dialogs from AndesDialogService: a status icon beside the title and
+   content. */
+.andes-dialog__method {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--andes-space-3);
+}
+
+/* Clearance for the optional "x" (`closable`), the same step the header gets. */
+.andes-dialog--method-closable .andes-dialog__method {
+  padding-inline-end: calc(
+    var(--andes-dialog-close-size) + var(--andes-dialog-close-inset) -
+      var(--andes-dialog-padding-inline) + var(--andes-space-2)
+  );
+}
+
+/* A 22px filled disc (Ant Design's status icons) nudged down 1px, so it is centred on
+   the title's 24px first line. */
+.andes-dialog__method-icon {
+  display: inline-flex;
+  flex: none;
+  width: 1.375rem;
+  height: 1.375rem;
+  margin-block-start: 1px;
+  color: var(--andes-color-warning);
+}
+
+/* A consumer's own `icon` is a stroked glyph in the status colour. */
+.andes-dialog__method-icon > svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The built-in icon is a disc in the status colour (`currentcolor`) with the glyph cut
+   out of it by stroking in the surface colour, so one icon works on a light and a dark
+   surface alike. */
+.andes-dialog__method-icon > svg.andes-dialog__method-glyph {
+  fill: currentcolor;
+  stroke: none;
+}
+
+.andes-dialog__method-glyph > path {
+  fill: none;
+  stroke: var(--andes-color-popover);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.andes-dialog--method-info .andes-dialog__method-icon {
+  color: var(--andes-color-info);
+}
+
+.andes-dialog--method-success .andes-dialog__method-icon {
+  color: var(--andes-color-success);
+}
+
+.andes-dialog--method-error .andes-dialog__method-icon {
+  color: var(--andes-color-danger);
+}
+
+.andes-dialog__method-text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--andes-space-2);
+  min-width: 0;
+}
+
 /* On a narrow screen the actions stack and fill the width. `column-reverse` keeps the
    DOM order - Cancel first, so the focus trap opens on the safe choice - while showing
    the affirmative action first, which is the order both reference libraries stack a
@@ -481,7 +564,7 @@
 /* The CDK's prebuilt stylesheet fades every backdrop over 400ms, so the scrim kept
    darkening for well over a tenth of a second after the dialog had finished arriving.
    Ant Design's mask fades linearly over 200ms, which lands inside the surface's own entry.
-   Scoped to the class the dialog root passes as `backdropClass`, so no other
+   Scoped to the class the two dialog roots pass as `backdropClass`, so no other
    overlay's timing changes.
 
    The scrim is a flat 45% black, also as in Ant Design, in both themes: the primitive

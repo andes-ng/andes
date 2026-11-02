@@ -20,13 +20,14 @@ import type {
 } from './dialog-base';
 
 /**
- * The built-in footer a dialog surface renders: a Cancel/OK pair, or a consumer's
- * custom footer template laid out in the same box.
+ * The built-in footer both dialog surfaces and the imperative service render: a
+ * Cancel/OK pair, or a consumer's custom footer template laid out in the same box.
  * A custom template is handed the built-in buttons as templates too
  * (`okButton`, `cancelButton`, `defaultButtons`), so it can extend the pair.
  *
- * It only reports activations; what OK and Cancel *do* (emit an output, close) is the
- * caller's business.
+ * It only reports activations; what OK and Cancel *do* (emit an output, await a
+ * promise, close) is the caller's business, which is what lets the declarative roots
+ * and `AndesDialogService` share it.
  *
  * The host is the footer box itself (`andes-dialog__footer`), so it sits directly in
  * the surface's scroll viewport and gets the same pinning and narrow-screen stacking
@@ -42,7 +43,7 @@ import type {
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: 'andes-dialog__footer',
-    '[attr.data-slot]': '"dialog-footer"',
+    '[attr.data-slot]': 'slot()',
   },
   template: `
     @if (template(); as custom) {
@@ -108,6 +109,8 @@ import type {
   `,
 })
 export class AndesDialogActions implements AfterViewInit {
+  /** `data-slot` for the footer box, so each surface keeps its own slot vocabulary. */
+  readonly slot = input('dialog-footer');
   readonly okText = input('OK');
   readonly cancelText = input('Cancel');
   readonly okType = input<AndesButtonVariant>('primary');

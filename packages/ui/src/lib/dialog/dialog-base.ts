@@ -39,7 +39,7 @@ import type { AndesButtonSize, AndesButtonVariant } from '../button/button';
 export type AndesDialogSize = 'sm' | 'md' | 'lg' | 'xl';
 
 /**
- * Extra class a dialog root puts on its backdrop, so `dialog.css` can retime the
+ * Extra class both dialog roots put on their backdrop, so `dialog.css` can retime the
  * scrim's fade without reaching the backdrop of every other overlay through the shared
  * `andes-overlay-backdrop` hook.
  */
@@ -116,7 +116,7 @@ export interface AndesDialogButtonProps {
 export interface AndesDialogFooterContext {
   /** The same object as the named fields, for `let-actions`. */
   readonly $implicit: AndesDialogFooterActions;
-  /** Runs the OK action (the root's `ok` output). */
+  /** Runs the OK action (the root's `ok` output, or a service dialog's `onOk`). */
   readonly ok: () => void;
   /** Runs the Cancel action: emits `cancelled` and closes. */
   readonly cancel: () => void;
@@ -250,9 +250,9 @@ export class AndesDialogKeepAlive {
 /**
  * The root of a dialog compound, as seen by its sub-parts.
  *
- * `AndesDialog` provides itself under this token, so a trigger/close directive and the
- * surface drive the root they sit inside without importing it (and without a circular
- * import).
+ * Both `AndesDialog` and `AndesAlertDialog` provide themselves under this token, so
+ * a trigger/close/action directive drives whichever root it happens to sit inside
+ * without importing either of them (and without a circular import).
  */
 export abstract class AndesDialogRoot {
   /** Whether the dialog is currently open. */
@@ -326,9 +326,10 @@ export abstract class AndesDialogSurface {
 }
 
 /**
- * Everything a dialog root holds: the overlay instance, the open-state contract and
- * the mapping from inputs onto the overlay's behavior config. Subclasses only choose an
- * overlay preset and say where their surface template comes from.
+ * Everything `AndesDialog` and `AndesAlertDialog` share: the overlay instance, the
+ * open-state contract and the mapping from inputs onto the overlay's behavior
+ * config. Subclasses only choose an overlay preset and say where their surface
+ * template comes from.
  */
 @Directive({
   host: {
@@ -397,7 +398,8 @@ export abstract class AndesDialogRootBase implements AndesDialogRoot {
    */
   readonly fullscreen = model(false);
   /**
-   * Render a maximize/restore control beside the "x" that toggles `fullscreen`.
+   * Render a maximize/restore control beside the "x" that toggles `fullscreen`. Only
+   * the default dialog surface has one: an alert dialog has no controls in its corner.
    */
   readonly maximizable = input(false, { transform: booleanAttribute });
   /**
@@ -478,7 +480,8 @@ export abstract class AndesDialogRootBase implements AndesDialogRoot {
   readonly ok = output<void>();
   /**
    * The user backed out: Escape, a backdrop/outside click, the built-in "x" or the
-   * built-in Cancel. Emits the close reason, just before `closed`.
+   * built-in Cancel (or an alert dialog's `andesAlertDialogCancel`). Emits the close
+   * reason, just before `closed`.
    */
   readonly cancelled = output<AndesOverlayCloseReason>();
   /**
@@ -520,8 +523,8 @@ export abstract class AndesDialogRootBase implements AndesDialogRoot {
   }
 
   constructor() {
-    // The presets were designed for the dialog roots; deriving the config field by
-    // field here would be a second, drifting source of truth.
+    // The presets were designed for exactly these two components; deriving the
+    // config field by field here would be a second, drifting source of truth.
     this.overlay.configure(andesOverlayPreset(this.overlayPreset()));
 
     effect(() => {
@@ -756,9 +759,9 @@ export function registerDialogLabel(part: 'title' | 'description'): string {
 }
 
 /**
- * The classes a surface derives from its root: size step, explicit width, top
- * placement, fullscreen and the loading state. Kept in one place so every dialog surface
- * agrees on what an input means visually.
+ * The classes both surfaces derive from their root: size step, explicit width, top
+ * placement, fullscreen and the loading state. Kept in one place so Dialog and Alert Dialog cannot
+ * drift apart on what an input means visually.
  */
 export function dialogSurfaceClasses(root: AndesDialogRoot): string[] {
   const classes = ['andes-dialog', `andes-dialog--${root.size()}`];

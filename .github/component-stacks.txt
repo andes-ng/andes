@@ -6,3 +6,4 @@ feature/breadcrumb-component feature/dropdown-menu-component
 feature/tree-select-component feature/tree-component
 feature/select-component feature/overlay-flexible-dimensions
 feature/combobox-component feature/overlay-flexible-dimensions
+feature/alert-dialog-component feature/dialog-core-component

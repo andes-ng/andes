@@ -518,11 +518,11 @@ describe('dialog fullscreen, maximize and mask class', () => {
 describe('service dialogs: Ant Design status icons', () => {
   /** The cut-out glyph path each kind draws on its disc. */
   const GLYPHS = {
-    confirm: 'M12 6.5v7M12 17.25h.01',
-    warning: 'M12 6.5v7M12 17.25h.01',
-    error: 'M8.25 8.25l7.5 7.5M15.75 8.25l-7.5 7.5',
-    info: 'M12 10.5v7M12 6.75h.01',
-    success: 'M7.25 12.5l3.25 3.25L16.75 9.5',
+    confirm: 'M12 6.75v6.5M12 17.25h.01',
+    warning: 'M12 6.75v6.5M12 17.25h.01',
+    error: 'M8.6 8.6l6.8 6.8M15.4 8.6l-6.8 6.8',
+    info: 'M12 11v6.25M12 7.25h.01',
+    success: 'M7.7 12.7l2.6 3 6.1-7',
   } as const;
 
   beforeAll(() => {

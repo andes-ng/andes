@@ -1,5 +1,5 @@
 import type { AndesOverlayCloseReason } from '@andes-ng/primitives';
-import { Component, signal, viewChild } from '@angular/core';
+import { ApplicationRef, Component, signal, viewChild } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { readFileSync } from 'node:fs';
 import { vi } from 'vitest';
@@ -14,6 +14,8 @@ import {
 } from './alert-dialog';
 import { matchesConfirmPhrase } from './alert-dialog-confirm-phrase';
 import type { AndesAlertDialogImpactItem } from './alert-dialog-impact';
+import { ANDES_DIALOG_STATUS_GLYPHS } from './dialog-status-glyph';
+import { AndesDialogService } from './dialog.service';
 
 /**
  * jsdom reports zero geometry for every element, which makes CDK's
@@ -830,6 +832,9 @@ describe('asynchronous confirmation', () => {
     expect(errorPart().hidden).toBe(false);
     expect(errorPart().textContent).toContain('Network down');
     expect(errorPart().textContent).toContain('You can try again.');
+    expect(errorPart().querySelector('path')?.getAttribute('d')).toBe(
+      ANDES_DIALOG_STATUS_GLYPHS.warning,
+    );
     expect(live().textContent).toBe('Network down');
 
     click(action());
@@ -1396,22 +1401,62 @@ describe('three-way answer and tone', () => {
     }
   });
 
-  it('draws a different silhouette for each tone', async () => {
+  it('draws every tone as a full-size disc, as the alert and the service do', async () => {
     const { fixture, host } = await setup();
-    const shapes = new Set<string>();
 
     for (const tone of ['danger', 'warning', 'info', 'success'] as const) {
       host.tone.set(tone);
       fixture.detectChanges();
-      shapes.add(
-        inDialog('#icon .andes-alert-dialog__icon-shape').getAttribute('d') ??
+
+      const svg = inDialog('#icon svg');
+      expect(svg.getAttribute('viewBox')).toBe('0 0 24 24');
+      expect(svg.querySelector('circle')?.getAttribute('r')).toBe('12');
+      expect(svg.querySelector('circle')?.getAttribute('cx')).toBe('12');
+      expect(svg.querySelector('circle')?.getAttribute('cy')).toBe('12');
+      expect(
+        svg.querySelector('.andes-alert-dialog__icon-glyph')?.getAttribute('d'),
+      ).toBe(ANDES_DIALOG_STATUS_GLYPHS[tone]);
+    }
+  });
+
+  it('gives each tone its own glyph, so colour is never the only cue', async () => {
+    const { fixture, host } = await setup();
+    const glyphs = new Set<string>();
+
+    for (const tone of ['danger', 'warning', 'info', 'success'] as const) {
+      host.tone.set(tone);
+      fixture.detectChanges();
+      glyphs.add(
+        inDialog('#icon .andes-alert-dialog__icon-glyph').getAttribute('d') ??
           '',
       );
     }
 
-    // Danger and warning each have their own outline; info and success share a circle
-    // and differ by glyph, so colour is never the only difference.
-    expect(shapes.size).toBe(3);
+    expect(glyphs.size).toBe(4);
+  });
+
+  it('draws the same glyphs as the dialog service icons', async () => {
+    const service = TestBed.inject(AndesDialogService);
+    const seen = new Map<string, string>();
+
+    for (const kind of ['error', 'warning', 'info', 'success'] as const) {
+      service[kind]({ title: 'Title' });
+      await TestBed.inject(ApplicationRef).whenStable();
+      seen.set(
+        kind,
+        document
+          .querySelector('[data-slot="dialog-method-icon"] path')
+          ?.getAttribute('d') ?? '',
+      );
+      service.destroyAll();
+    }
+
+    expect(Object.fromEntries(seen)).toEqual({
+      error: ANDES_DIALOG_STATUS_GLYPHS.danger,
+      warning: ANDES_DIALOG_STATUS_GLYPHS.warning,
+      info: ANDES_DIALOG_STATUS_GLYPHS.info,
+      success: ANDES_DIALOG_STATUS_GLYPHS.success,
+    });
   });
 });
 
@@ -1542,6 +1587,21 @@ describe('alert-dialog-patterns.css', () => {
   it('takes its colours from the tokens', () => {
     expect(css).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
     expect(css).not.toMatch(/\brgba?\(/);
+  });
+
+  it('sizes the tone icon like the service confirm icon: a 22px disc in the tone colour', () => {
+    expect(declaredValue(css, '.andes-alert-dialog__icon', 'inline-size')).toBe(
+      '1.375rem',
+    );
+    expect(declaredValue(css, '.andes-alert-dialog__icon', 'block-size')).toBe(
+      '1.375rem',
+    );
+    expect(declaredValue(css, '.andes-alert-dialog__icon-disc', 'fill')).toBe(
+      'currentcolor',
+    );
+    expect(
+      declaredValue(css, '.andes-alert-dialog__icon-glyph', 'stroke'),
+    ).toBe('var(--andes-color-popover)');
   });
 
   it('draws the hold fill from the start edge, so it fills the right way in RTL', () => {

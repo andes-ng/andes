@@ -27,6 +27,7 @@ import {
   AndesAlertDialogTitle,
 } from './alert-dialog';
 import { AndesDialogActions } from './dialog-actions';
+import { ANDES_DIALOG_STATUS_GLYPHS } from './dialog-status-glyph';
 import type {
   AndesDialogAutoFocusButton,
   AndesDialogButtonProps,
@@ -217,14 +218,15 @@ export class AndesDialogMethodRef {
   }
 }
 
+// `confirm` shares the exclamation glyph with `warning`, as Ant Design's does: both ask
+// for attention. The glyphs are the ones `andes-alert` and the alert dialog's tone icon
+// draw, each cut out of a full-size disc.
 const METHOD_ICON_PATHS: Record<AndesDialogMethodKind, string> = {
-  // `confirm` shares the exclamation glyph with `warning`, as Ant Design's does: both
-  // ask for attention. Each is cut out of a full-size disc.
-  confirm: 'M12 6.5v7M12 17.25h.01',
-  warning: 'M12 6.5v7M12 17.25h.01',
-  error: 'M8.25 8.25l7.5 7.5M15.75 8.25l-7.5 7.5',
-  info: 'M12 10.5v7M12 6.75h.01',
-  success: 'M7.25 12.5l3.25 3.25L16.75 9.5',
+  confirm: ANDES_DIALOG_STATUS_GLYPHS.warning,
+  warning: ANDES_DIALOG_STATUS_GLYPHS.warning,
+  error: ANDES_DIALOG_STATUS_GLYPHS.danger,
+  info: ANDES_DIALOG_STATUS_GLYPHS.info,
+  success: ANDES_DIALOG_STATUS_GLYPHS.success,
 };
 
 /**

@@ -29,34 +29,32 @@
 .andes-dialog[data-tone='danger'],
 .andes-alert-dialog__icon[data-tone='danger'] {
   --andes-alert-tone: var(--andes-color-danger);
-  --andes-alert-tone-foreground: var(--andes-color-danger-foreground);
 }
 
 .andes-dialog[data-tone='warning'],
 .andes-alert-dialog__icon[data-tone='warning'] {
   --andes-alert-tone: var(--andes-color-warning);
-  --andes-alert-tone-foreground: var(--andes-color-warning-foreground);
 }
 
 .andes-dialog[data-tone='info'],
 .andes-alert-dialog__icon[data-tone='info'] {
   --andes-alert-tone: var(--andes-color-info);
-  --andes-alert-tone-foreground: var(--andes-color-info-foreground);
 }
 
 .andes-dialog[data-tone='success'],
 .andes-alert-dialog__icon[data-tone='success'] {
   --andes-alert-tone: var(--andes-color-success);
-  --andes-alert-tone-foreground: var(--andes-color-success-foreground);
 }
 
 .andes-alert-dialog__icon {
   position: absolute;
-  inset-block-start: 0;
+  /* The 22px disc of the dialog service's confirm icon, nudged down 1px so it is centred
+     on the title's 24px first line. */
+  inset-block-start: 1px;
   inset-inline-start: 0;
   display: inline-flex;
-  inline-size: 1.5rem;
-  block-size: 1.5rem;
+  inline-size: 1.375rem;
+  block-size: 1.375rem;
   color: var(--andes-alert-tone);
 }
 
@@ -65,17 +63,16 @@
   block-size: 100%;
 }
 
-.andes-alert-dialog__icon-shape {
-  fill: var(--andes-alert-tone);
-  stroke: var(--andes-alert-tone);
-  stroke-width: 1.5;
-  stroke-linejoin: round;
+/* A solid disc in the tone colour with the glyph knocked out in the surface colour, as
+   `andes-alert` draws its severities, so one icon works on a light and a dark surface. */
+.andes-alert-dialog__icon-disc {
+  fill: currentcolor;
 }
 
 .andes-alert-dialog__icon-glyph {
   fill: none;
-  stroke: var(--andes-alert-tone-foreground);
-  stroke-width: 2;
+  stroke: var(--andes-color-popover);
+  stroke-width: 2.2;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -83,7 +80,7 @@
 /* Room for the icon beside the title and description. The header is already a sticky
    (so positioned) box inside the dialog's viewport, which the icon anchors to. */
 .andes-dialog__header:has(> .andes-alert-dialog__icon) {
-  padding-inline-start: calc(1.5rem + var(--andes-space-3));
+  padding-inline-start: calc(1.375rem + var(--andes-space-3));
 }
 
 /* ----------------------------------------------------------------- footer actions */
@@ -364,7 +361,7 @@
 .andes-alert-dialog__error-icon path {
   fill: none;
   stroke: var(--andes-color-popover);
-  stroke-width: 2.5;
+  stroke-width: 2.2;
   stroke-linecap: round;
 }
 

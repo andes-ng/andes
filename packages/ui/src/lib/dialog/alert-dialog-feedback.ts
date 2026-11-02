@@ -10,6 +10,7 @@ import {
   AndesAlertDialogState,
   type AndesAlertDialogTone,
 } from './alert-dialog-state';
+import { ANDES_DIALOG_STATUS_GLYPHS } from './dialog-status-glyph';
 
 /**
  * Why an asynchronous confirmation failed, shown inline above the actions so the user
@@ -38,7 +39,7 @@ import {
         focusable="false"
       >
         <circle cx="12" cy="12" r="12" />
-        <path d="M12 6.5v7M12 17.25h.01" />
+        <path [attr.d]="glyph" />
       </svg>
       <span class="andes-alert-dialog__error-text">
         {{ message }}
@@ -54,36 +55,16 @@ export class AndesAlertDialogError {
 
   /** Added after the failure message. Empty to leave it out. */
   readonly hint = input('You can try again.');
+
+  /** The exclamation mark of the shared status discs. */
+  protected readonly glyph = ANDES_DIALOG_STATUS_GLYPHS.warning;
 }
 
-/** Geometry of each tone's glyph, cut out of a coloured badge shape. */
-const TONE_SHAPES: Record<
-  AndesAlertDialogTone,
-  { shape: string; glyph: string }
-> = {
-  // Four distinct silhouettes, so the tone never rests on colour alone.
-  danger: {
-    shape: 'M8.25 2h7.5L22 8.25v7.5L15.75 22h-7.5L2 15.75v-7.5z',
-    glyph: 'M12 7v6M12 16.75h.01',
-  },
-  warning: {
-    shape: 'M12 2.5 22 20.5H2z',
-    glyph: 'M12 9.5v5M12 17.75h.01',
-  },
-  info: {
-    shape: 'M12 0a12 12 0 1 0 0 24 12 12 0 0 0 0-24z',
-    glyph: 'M12 10.5v6.5M12 7h.01',
-  },
-  success: {
-    shape: 'M12 0a12 12 0 1 0 0 24 12 12 0 0 0 0-24z',
-    glyph: 'M7.25 12.5l3.25 3.25 6.25-6.25',
-  },
-};
-
 /**
- * The status icon for the dialog's `tone`: an octagon for danger, a triangle for warning,
- * a circle for info and success. Place it first in the header; the header makes room
- * for it. Decorative - the title says what is at stake.
+ * The status icon for the dialog's `tone`: the filled disc `andes-alert` and the dialog
+ * service draw, with a cross for danger, an exclamation mark for warning, an "i" for info
+ * and a check for success, so the tone never rests on colour alone. Place it first in the
+ * header; the header makes room for it. Decorative - the title says what is at stake.
  *
  * ```html
  * <div andesAlertDialogHeader>
@@ -102,10 +83,10 @@ const TONE_SHAPES: Record<
     '[attr.data-tone]': 'resolved()',
   },
   template: `
-    @if (geometry(); as g) {
+    @if (glyph(); as d) {
       <svg viewBox="0 0 24 24" focusable="false">
-        <path class="andes-alert-dialog__icon-shape" [attr.d]="g.shape" />
-        <path class="andes-alert-dialog__icon-glyph" [attr.d]="g.glyph" />
+        <circle class="andes-alert-dialog__icon-disc" cx="12" cy="12" r="12" />
+        <path class="andes-alert-dialog__icon-glyph" [attr.d]="d" />
       </svg>
     }
   `,
@@ -120,8 +101,8 @@ export class AndesAlertDialogIcon {
     () => this.tone() ?? this.state?.tone() ?? null,
   );
 
-  protected readonly geometry = computed(() => {
+  protected readonly glyph = computed(() => {
     const tone = this.resolved();
-    return tone ? TONE_SHAPES[tone] : null;
+    return tone ? ANDES_DIALOG_STATUS_GLYPHS[tone] : null;
   });
 }

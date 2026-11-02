@@ -309,6 +309,40 @@ export const ScrollingContent: Story = {
 };
 
 /**
+ * `maximizable` adds a control beside the "x" that fills the viewport edge to edge, and
+ * `[(fullscreen)]` keeps it in sync with the page (or opens the dialog maximized).
+ */
+export const Maximizable: Story = {
+  render: () => ({
+    moduleMetadata: { imports: [ANDES_DIALOG_IMPORTS, AndesButton] },
+    props: { paragraphs: Array.from({ length: 6 }, (_, i) => i + 1) },
+    template: `
+      ${TRIGGER_STYLES}
+      <andes-dialog [maximizable]="true" #dialog>
+        <button type="button" class="sb-dialog-trigger" andesDialogTrigger>Open document</button>
+
+        <andes-dialog-content *andesDialogContent>
+          <div andesDialogHeader>
+            <h2 andesDialogTitle>Quarterly report</h2>
+            <p andesDialogDescription>Maximize it to read at full size.</p>
+          </div>
+
+          @for (paragraph of paragraphs; track paragraph) {
+            <p style="margin: 0; font-size: 0.875rem;">
+              Section {{ paragraph }} - the surface grows to the whole viewport.
+            </p>
+          }
+
+          <div andesDialogFooter>
+            <andes-button variant="primary" andesDialogClose>Close</andes-button>
+          </div>
+        </andes-dialog-content>
+      </andes-dialog>
+    `,
+  }),
+};
+
+/**
  * `[centered]="false"` parks the dialog near the top so the surface
  * does not jump as its content grows. `width` takes px, any CSS length or a
  * per-breakpoint map - resize the viewport to watch this one step.

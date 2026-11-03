@@ -376,7 +376,7 @@ describe('AndesToastViewport', () => {
       });
     });
 
-    describe('metrics shared with Ant Design', () => {
+    describe('card and text metrics', () => {
       const item = readFileSync(
         'packages/ui/src/lib/toast/toast-item.css',
         'utf8',
@@ -1450,18 +1450,18 @@ describe('AndesToastViewport', () => {
                 '--_toast-progress',
               ),
             ),
-          ).toBe(
-            `color-mix(in srgb, var(--_toast-line-${tone}) 70%, transparent)`,
-          );
+          ).toBe(`color-mix(in srgb, var(--_toast-${tone}) 70%, transparent)`);
         }
-        // Dark card: the -text tints, which stay legible there.
-        expect(
-          declaredValue(
-            css,
-            ":host-context([data-andes-theme='dark'])",
-            '--_toast-line-danger',
-          ),
-        ).toBe('var(--andes-color-danger-text)');
+        // Dark card: the -text tints, which stay legible there, for the icon and the bar alike.
+        for (const tone of ['success', 'danger', 'warning', 'info']) {
+          expect(
+            declaredValue(
+              css,
+              ":host-context([data-andes-theme='dark'])",
+              `--_toast-${tone}`,
+            ),
+          ).toBe(`var(--andes-color-${tone}-text)`);
+        }
         // The override wins, then the severity tone, then the neutral ink.
         expect(
           tight(declaredValue(css, '.andes-toast__progress', 'background')),

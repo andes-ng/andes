@@ -3,7 +3,7 @@
  * or - with richColors - by a tinted wash too. Layout inside the stack (position, depth,
  * enter/exit/swipe motion) belongs to toast-region.css; this file only paints the card.
  *
- * Sized like Ant Design's notification and message: 20px/24px padding (9px/12px on a
+ * Sized as follows: 20px/24px padding (9px/12px on a
  * message), an 8px radius, a 24px icon (16px on a message) 12px from the text, a 16px title
  * over a 14px description 8px apart, and a 22px close button pinned to the top-end corner.
  * The 1px border sits inside those sizes, so the paddings give it back.
@@ -67,66 +67,34 @@
   --_toast-info: var(--andes-color-info);
 }
 
-/* The countdown line's tones: the icon's accents on the light card, and on the dark card the
-   -text shades (the tokens' own tints for dark surfaces), because the darker -hover shades
-   used above sit too close to the card colour for a 2px line to read. */
-:host {
-  --_toast-line-success: var(--_toast-success);
-  --_toast-line-danger: var(--_toast-danger);
-  --_toast-line-warning: var(--_toast-warning);
-  --_toast-line-info: var(--_toast-info);
-}
-
-/* On the dark card the base green, red and blue drop under 3:1; their -hover shades are the
-   brighter ones on that theme. */
+/* On the dark card the base green, red and blue drop under 3:1, and their -hover shades are
+   darker still, so the icon takes the -text shades, the tokens' own tints for dark surfaces.
+   The countdown line uses the same accents. */
 :host-context([data-andes-theme='dark']) {
-  --_toast-success: var(--andes-color-success-hover);
-  --_toast-danger: var(--andes-color-danger-hover);
-  --_toast-info: var(--andes-color-info-hover);
-}
-
-/* (the dark values of the line tones, after the light ones above) */
-:host-context([data-andes-theme='dark']) {
-  --_toast-line-success: var(--andes-color-success-text);
-  --_toast-line-danger: var(--andes-color-danger-text);
-  --_toast-line-warning: var(--andes-color-warning-text);
-  --_toast-line-info: var(--andes-color-info-text);
+  --_toast-success: var(--andes-color-success-text);
+  --_toast-danger: var(--andes-color-danger-text);
+  --_toast-warning: var(--andes-color-warning-text);
+  --_toast-info: var(--andes-color-info-text);
 }
 
 :host([data-severity='success']) {
   --_toast-accent: var(--_toast-success);
-  --_toast-progress: color-mix(
-    in srgb,
-    var(--_toast-line-success) 70%,
-    transparent
-  );
+  --_toast-progress: color-mix(in srgb, var(--_toast-success) 70%, transparent);
 }
 
 :host([data-severity='error']) {
   --_toast-accent: var(--_toast-danger);
-  --_toast-progress: color-mix(
-    in srgb,
-    var(--_toast-line-danger) 70%,
-    transparent
-  );
+  --_toast-progress: color-mix(in srgb, var(--_toast-danger) 70%, transparent);
 }
 
 :host([data-severity='warning']) {
   --_toast-accent: var(--_toast-warning);
-  --_toast-progress: color-mix(
-    in srgb,
-    var(--_toast-line-warning) 70%,
-    transparent
-  );
+  --_toast-progress: color-mix(in srgb, var(--_toast-warning) 70%, transparent);
 }
 
 :host([data-severity='info']) {
   --_toast-accent: var(--_toast-info);
-  --_toast-progress: color-mix(
-    in srgb,
-    var(--_toast-line-info) 70%,
-    transparent
-  );
+  --_toast-progress: color-mix(in srgb, var(--_toast-info) 70%, transparent);
 }
 
 /* Rich colours: the Alert's tinted recipe - a 9% wash of the accent mixed into the card, a 35%

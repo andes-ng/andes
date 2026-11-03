@@ -1,3 +1,22 @@
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideActivity,
+  lucideArchive,
+  lucideBox,
+  lucideCloud,
+  lucideCpu,
+  lucideDatabase,
+  lucideGlobe,
+  lucideHardDrive,
+  lucideLayers,
+  lucideMinus,
+  lucideNetwork,
+  lucidePlus,
+  lucideRoute,
+  lucideServer,
+  lucideTable,
+  lucideZap,
+} from '@ng-icons/lucide';
 import {
   type Decorator,
   moduleMetadata,
@@ -34,27 +53,23 @@ function byDepartment(node: SamplePerson): SamplePerson {
   };
 }
 
-/** 16px stroke icons for the architecture story (the story is about custom content). */
+/** The lucide icon of each service category for the architecture story. */
 const ICONS: Readonly<Record<SampleService['icon'], string>> = {
-  cloud: 'M5 12.5h6.5a3 3 0 0 0 .4-6 4 4 0 0 0-7.7 1A2.5 2.5 0 0 0 5 12.5z',
-  compute:
-    'M5 5h6v6H5zM7 2.5V5M9 2.5V5M7 11v2.5M9 11v2.5M2.5 7H5M2.5 9H5M11 7h2.5M11 9h2.5',
-  storage:
-    'M3 4.5c0-1.1 2.2-2 5-2s5 .9 5 2-2.2 2-5 2-5-.9-5-2zM3 4.5v7c0 1.1 2.2 2 5 2s5-.9 5-2v-7M3 8c0 1.1 2.2 2 5 2s5-.9 5-2',
-  network:
-    'M6.5 1.5h3v3h-3zM2.5 11.5h3v3h-3zM10.5 11.5h3v3h-3zM8 4.5v4M4 11.5v-3h8v3',
-  data: 'M2.5 3.5h11v9h-11zM2.5 6.5h11M6.5 6.5v6',
-  server: 'M3 3h10v4H3zM3 9h10v4H3zM5.5 5h.01M5.5 11h.01',
-  box: 'M2.5 5 8 2.5 13.5 5v6L8 13.5 2.5 11zM2.5 5 8 7.5 13.5 5M8 7.5v6',
-  bolt: 'M9 1.5 3.5 9H8l-1 5.5L12.5 7H8z',
-  disk: 'M8 2.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11zM8 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z',
-  archive: 'M2.5 3h11v3h-11zM3.5 6v7h9V6M6.5 8.5h3',
-  globe:
-    'M8 2.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11zM2.5 8h11M8 2.5c1.7 1.6 2.5 3.4 2.5 5.5S9.7 11.9 8 13.5C6.3 11.9 5.5 10.1 5.5 8S6.3 4.1 8 2.5z',
-  route: 'M3 4h7a2 2 0 0 1 0 4H6a2 2 0 0 0 0 4h7M11.5 10.5 13 12l-1.5 1.5',
-  table: 'M2.5 3.5h11v9h-11zM2.5 6.5h11M6.5 6.5v6',
-  stream: 'M2.5 5h8M2.5 8h11M2.5 11h6M10.5 3.5 12 5l-1.5 1.5',
-  cache: 'M4 2.5h8v11H4zM6 5.5h4M6 8h4M6 10.5h2',
+  cloud: 'lucideCloud',
+  compute: 'lucideCpu',
+  storage: 'lucideDatabase',
+  network: 'lucideNetwork',
+  data: 'lucideTable',
+  server: 'lucideServer',
+  box: 'lucideBox',
+  bolt: 'lucideZap',
+  disk: 'lucideHardDrive',
+  archive: 'lucideArchive',
+  globe: 'lucideGlobe',
+  route: 'lucideRoute',
+  table: 'lucideTable',
+  stream: 'lucideActivity',
+  cache: 'lucideLayers',
 };
 
 /**
@@ -80,6 +95,7 @@ const meta: Meta<AndesOrgChart> = {
   decorators: [
     moduleMetadata({
       imports: [
+        NgIcon,
         AndesButton,
         AndesOrgChartConnectorTemplate,
         AndesOrgChartEmptyTemplate,
@@ -87,6 +103,26 @@ const meta: Meta<AndesOrgChart> = {
         AndesOrgChartToggleIconTemplate,
         AndesOrgChartToggleTemplate,
         AndesOrgChartToolbarTemplate,
+      ],
+      providers: [
+        provideIcons({
+          lucideActivity,
+          lucideArchive,
+          lucideBox,
+          lucideCloud,
+          lucideCpu,
+          lucideDatabase,
+          lucideGlobe,
+          lucideHardDrive,
+          lucideLayers,
+          lucideMinus,
+          lucideNetwork,
+          lucidePlus,
+          lucideRoute,
+          lucideServer,
+          lucideTable,
+          lucideZap,
+        }),
       ],
     }),
   ],
@@ -124,9 +160,7 @@ export const Content: Story = {
             [style.background]="'color-mix(in srgb, ' + service.color + ' 14%, transparent)'"
             [style.color]="'color-mix(in srgb, ' + service.color + ' 75%, var(--andes-color-foreground))'"
           >
-            <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" focusable="false">
-              <path [attr.d]="icons[service.icon]" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
+            <ng-icon [name]="icons[service.icon]" size="18" strokeWidth="1.75" aria-hidden="true" />
           </span>
           <span style="display: grid; gap: 2px; min-width: 0;">
             <span style="font-size: 0.875rem; line-height: 1.25rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ service.title }}</span>
@@ -134,9 +168,7 @@ export const Content: Story = {
           </span>
         </ng-template>
         <ng-template andesOrgChartToggleIcon let-expanded>
-          <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" focusable="false">
-            <path [attr.d]="expanded ? 'M3 6h6' : 'M3 6h6M6 3v6'" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" />
-          </svg>
+          <ng-icon [name]="expanded ? 'lucideMinus' : 'lucidePlus'" size="12" strokeWidth="2.5" aria-hidden="true" />
         </ng-template>
       </andes-org-chart>
     `,

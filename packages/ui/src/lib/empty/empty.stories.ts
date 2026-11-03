@@ -5,7 +5,7 @@ import { AndesButton } from '../button/button';
 import { AndesEmpty } from './empty';
 
 const meta: Meta<AndesEmpty> = {
-  title: 'Data Display/Empty',
+  title: 'Data Display/Empty/Basics/Empty',
   component: AndesEmpty,
   tags: ['autodocs'],
   decorators: [moduleMetadata({ imports: [AndesButton] })],
@@ -17,6 +17,7 @@ const meta: Meta<AndesEmpty> = {
     },
     image: { control: 'text' },
     imageAlt: { control: 'text' },
+    heading: { control: 'text' },
     description: { control: 'text' },
     size: { control: 'select', options: [undefined, 'default', 'small'] },
     announce: { control: 'boolean' },
@@ -25,7 +26,7 @@ const meta: Meta<AndesEmpty> = {
   args: { preset: 'default', announce: false },
   render: (args) => ({
     props: args,
-    template: `<andes-empty [preset]="preset" [image]="image" [imageAlt]="imageAlt" [imageStyle]="imageStyle" [description]="description" [size]="size" [announce]="announce" />`,
+    template: `<andes-empty [preset]="preset" [image]="image" [imageAlt]="imageAlt" [imageStyle]="imageStyle" [heading]="heading" [description]="description" [size]="size" [announce]="announce" />`,
   }),
 };
 
@@ -78,6 +79,25 @@ export const Description: Story = {
           </andes-empty>
         </div>
         <div style="${panel}"><andes-empty [description]="false" /></div>
+      </div>`,
+  }),
+};
+
+export const Heading: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "`heading` adds a title line above the message, as text or a template. Like shadcn's `EmptyTitle` + `EmptyDescription` pair.",
+      },
+    },
+  },
+  render: () => ({
+    template: `
+      <div style="${surface} ${panel}">
+        <andes-empty image="simple" heading="No projects yet" description="Create a project to start collecting your work.">
+          <andes-button size="md">New project</andes-button>
+        </andes-empty>
       </div>`,
   }),
 };

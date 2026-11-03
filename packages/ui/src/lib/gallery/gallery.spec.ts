@@ -598,7 +598,9 @@ describe('AndesGallery', () => {
       thumbs()[1].querySelector('img')?.dispatchEvent(new Event('error'));
       f.detectChanges();
       expect(image.dataset['state']).toBe('error');
-      expect(image.querySelector('andes-image-icon')).not.toBeNull();
+      expect(
+        image.querySelector('ng-icon[name="lucideImageOff"]'),
+      ).not.toBeNull();
     });
 
     it('opens no preview from a thumbnail', () => {

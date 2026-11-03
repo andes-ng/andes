@@ -294,6 +294,25 @@
   height: 1rem;
 }
 
+/* The check and dot are lucide glyphs: the item's own colour (not the muted tone a projected
+   icon gets), 1rem square, laid out as a flex box so the svg never sits on a text baseline. */
+.andes-dropdown-menu__indicator ng-icon,
+.andes-dropdown-menu__expand-icon ng-icon.andes-dropdown-menu__chevron {
+  display: inline-flex;
+  color: inherit;
+}
+
+.andes-dropdown-menu__indicator ng-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Lucide's small circle, filled: the selected radio item's 8px dot. */
+.andes-dropdown-menu__dot circle {
+  fill: currentColor;
+  stroke: none;
+}
+
 .andes-dropdown-menu__separator {
   flex-shrink: 0;
   height: 1px;
@@ -459,7 +478,8 @@
   font-size: 0.75rem;
 }
 
-.andes-dropdown-menu__expand-icon svg {
+.andes-dropdown-menu__expand-icon svg,
+.andes-dropdown-menu__expand-icon ng-icon.andes-dropdown-menu__chevron {
   width: 1em;
   height: 1em;
 }

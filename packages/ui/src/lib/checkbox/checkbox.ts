@@ -19,6 +19,8 @@ import {
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideCheck, lucideMinus } from '@ng-icons/lucide';
 
 import {
   andesIdRefs,
@@ -67,7 +69,8 @@ export interface AndesCheckboxChange {
 
 @Component({
   selector: 'andes-checkbox',
-  imports: [NgTemplateOutlet],
+  viewProviders: [provideIcons({ lucideCheck, lucideMinus })],
+  imports: [NgIcon, NgTemplateOutlet],
   templateUrl: './checkbox.html',
   // The motion last, where its rules sat at the end of checkbox.css: with its keyframes, in
   // the sheet the tree and the cascader share.
@@ -212,9 +215,9 @@ export class AndesCheckbox implements ControlValueAccessor {
   });
 
   /**
-   * Replaces the default tick. A context-free template whose `<svg>` is sized to the box's
-   * glyph area and drawn in `currentColor` (the primary foreground), like AndesInput's
-   * `clearIcon`. Unset, it takes the enclosing group's `checkedIcon`.
+   * Replaces the default tick. A context-free template whose icon (an `ng-icon`) is sized to
+   * the box's glyph area and drawn in `currentColor` (the primary foreground), like
+   * AndesInput's `clearIcon`. Unset, it takes the enclosing group's `checkedIcon`.
    */
   readonly checkedIcon = input<TemplateRef<unknown> | undefined>(undefined);
 

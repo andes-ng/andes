@@ -46,19 +46,10 @@
         <ng-container [ngTemplateOutlet]="customChecked" />
       </span>
       } @else {
-      <svg
+      <ng-icon
         class="andes-checkbox__icon andes-checkbox__icon--check"
-        viewBox="0 0 16 16"
-        fill="none"
-      >
-        <path
-          d="M3.5 8.5L6.5 11.5L12.5 4.5"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-      </svg>
+        name="lucideCheck"
+      />
       } @if (effectiveIndeterminateIcon(); as customIndeterminate) {
       <span
         class="andes-checkbox__icon andes-checkbox__icon--indeterminate andes-checkbox__icon--custom"
@@ -66,19 +57,10 @@
         <ng-container [ngTemplateOutlet]="customIndeterminate" />
       </span>
       } @else {
-      <svg
+      <ng-icon
         class="andes-checkbox__icon andes-checkbox__icon--indeterminate"
-        viewBox="0 0 16 16"
-        fill="none"
-      >
-        <path
-          d="M3.5 8H12.5"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-      </svg>
+        name="lucideMinus"
+      />
       }
     </span>
   </span>

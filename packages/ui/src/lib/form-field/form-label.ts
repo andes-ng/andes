@@ -7,10 +7,11 @@ import {
   inject,
   ViewEncapsulation,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideCircleQuestionMark } from '@ng-icons/lucide';
 
 import { AndesTooltip, AndesTooltipTrigger } from '../tooltip';
 import { ANDES_FORM_FIELD, ANDES_FORM_LABEL } from './form-field-tokens';
-import { AndesFormIcon } from './form-icons';
 
 /**
  * Label for the control inside an `AndesFormField`. Renders a real `<label for="...">`
@@ -45,7 +46,8 @@ import { AndesFormIcon } from './form-icons';
  */
 @Component({
   selector: 'andes-form-label',
-  imports: [NgTemplateOutlet, AndesTooltip, AndesTooltipTrigger, AndesFormIcon],
+  viewProviders: [provideIcons({ lucideCircleQuestionMark })],
+  imports: [NgIcon, NgTemplateOutlet, AndesTooltip, AndesTooltipTrigger],
   template: `<label
       class="andes-form-label"
       [attr.id]="field?.labelId() ?? null"
@@ -97,7 +99,7 @@ import { AndesFormIcon } from './form-icons';
           class="andes-form-label__tooltip-trigger"
           [attr.aria-label]="field.tooltipLabel()"
         >
-          <andes-form-icon name="help" />
+          <ng-icon name="lucideCircleQuestionMark" />
         </button>
       </andes-tooltip>
     }

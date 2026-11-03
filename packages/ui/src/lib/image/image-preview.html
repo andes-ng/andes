@@ -95,9 +95,9 @@
         data-slot="image-preview-error"
         role="alert"
       >
-        <andes-image-icon
-          name="imageOff"
-          class="andes-image-preview__error-icon"
+        <ng-icon
+          name="lucideImageOff"
+          class="andes-image-preview__icon andes-image-preview__error-icon"
         />
         <span>{{ text().loadError }}</span>
       </div>
@@ -112,7 +112,7 @@
       [attr.title]="text().close"
       (click)="close()"
     >
-      <andes-image-icon name="close" />
+      <ng-icon class="andes-image-preview__icon" name="lucideX" />
     </button>
 
     @if (total() > 1) {
@@ -126,9 +126,9 @@
       [attr.aria-disabled]="canPrevious() ? null : 'true'"
       (click)="step(-1)"
     >
-      <andes-image-icon
-        name="previous"
-        class="andes-image-preview__directional"
+      <ng-icon
+        name="lucideChevronLeft"
+        class="andes-image-preview__icon andes-image-preview__directional"
       />
     </button>
     <button
@@ -141,7 +141,10 @@
       [attr.aria-disabled]="canNext() ? null : 'true'"
       (click)="step(1)"
     >
-      <andes-image-icon name="next" class="andes-image-preview__directional" />
+      <ng-icon
+        name="lucideChevronRight"
+        class="andes-image-preview__icon andes-image-preview__directional"
+      />
     </button>
     }
 
@@ -204,7 +207,7 @@
     [attr.aria-disabled]="actionDisabled(action) ? 'true' : null"
     (click)="run(action)"
   >
-    <andes-image-icon [name]="action" />
+    <ng-icon class="andes-image-preview__icon" [name]="actionIcons[action]" />
   </button>
   @if (ratioAfter() === action) {
   <ng-container [ngTemplateOutlet]="ratioTemplate" />

@@ -29,10 +29,28 @@ import {
   viewChildren,
   ViewEncapsulation,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideChevronLeft,
+  lucideChevronRight,
+  lucideDownload,
+  lucideFlipHorizontal2,
+  lucideFlipVertical2,
+  lucideImageOff,
+  lucideMaximize,
+  lucideMinimize,
+  lucidePause,
+  lucidePlay,
+  lucideRotateCcw,
+  lucideRotateCw,
+  lucideUndo2,
+  lucideX,
+  lucideZoomIn,
+  lucideZoomOut,
+} from '@ng-icons/lucide';
 
 import { AndesButton } from '../button/button';
 import { AndesImage } from '../image/image';
-import { AndesImageIcon, type AndesImageIconName } from '../image/image-icon';
 import {
   ANDES_IMAGE_IDENTITY_TRANSFORM,
   clamp,
@@ -80,17 +98,18 @@ const MIN_AUTOPLAY_INTERVAL = 1000;
 
 type LoadState = 'loading' | 'loaded' | 'error';
 
+/** The lucide glyph each toolbar action draws (the same ones the image preview uses). */
 const ICONS: Readonly<
-  Record<Exclude<AndesGalleryAction, 'fullscreen'>, AndesImageIconName>
+  Record<Exclude<AndesGalleryAction, 'fullscreen'>, string>
 > = {
-  zoomOut: 'zoomOut',
-  zoomIn: 'zoomIn',
-  rotateLeft: 'rotateLeft',
-  rotateRight: 'rotateRight',
-  flipX: 'flipX',
-  flipY: 'flipY',
-  reset: 'reset',
-  download: 'download',
+  zoomOut: 'lucideZoomOut',
+  zoomIn: 'lucideZoomIn',
+  rotateLeft: 'lucideRotateCcw',
+  rotateRight: 'lucideRotateCw',
+  flipX: 'lucideFlipHorizontal2',
+  flipY: 'lucideFlipVertical2',
+  reset: 'lucideUndo2',
+  download: 'lucideDownload',
 };
 
 function isTextEntry(element: EventTarget | null): boolean {
@@ -126,11 +145,31 @@ function isTextEntry(element: EventTarget | null): boolean {
  */
 @Component({
   selector: 'andes-gallery',
+  viewProviders: [
+    provideIcons({
+      lucideChevronLeft,
+      lucideChevronRight,
+      lucideDownload,
+      lucideFlipHorizontal2,
+      lucideFlipVertical2,
+      lucideImageOff,
+      lucideMaximize,
+      lucideMinimize,
+      lucidePause,
+      lucidePlay,
+      lucideRotateCcw,
+      lucideRotateCw,
+      lucideUndo2,
+      lucideX,
+      lucideZoomIn,
+      lucideZoomOut,
+    }),
+  ],
   imports: [
+    NgIcon,
     AndesButton,
     AndesGalleryControl,
     AndesImage,
-    AndesImageIcon,
     AndesOverlayContentPrimitive,
     NgTemplateOutlet,
   ],
@@ -567,9 +606,9 @@ export class AndesGallery {
     }
   }
 
-  protected icon(action: AndesGalleryAction): AndesImageIconName {
+  protected icon(action: AndesGalleryAction): string {
     if (action === 'fullscreen') {
-      return this.fullscreen() ? 'fullscreenExit' : 'fullscreen';
+      return this.fullscreen() ? 'lucideMinimize' : 'lucideMaximize';
     }
     return ICONS[action];
   }

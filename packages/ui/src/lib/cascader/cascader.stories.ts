@@ -1,5 +1,15 @@
 import { JsonPipe } from '@angular/common';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideChevronsUpDown,
+  lucideHourglass,
+  lucideMapPin,
+  lucidePlus,
+  lucideSearch,
+  lucideTrash,
+  lucideX,
+} from '@ng-icons/lucide';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
@@ -360,19 +370,17 @@ export const TagDensity: Story = {
  */
 export const Icons: Story = {
   render: () => ({
-    moduleMetadata: { imports: IMPORTS },
+    moduleMetadata: {
+      imports: [...IMPORTS, NgIcon],
+      providers: [provideIcons({ lucidePlus, lucideSearch })],
+    },
     props: { places: PLACES },
     template: `
       <ng-template #plus>
-        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-        </svg>
+        <ng-icon name="lucidePlus" size="12" aria-hidden="true" />
       </ng-template>
       <ng-template #magnifier>
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5" />
-          <path d="m10.5 10.5 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-        </svg>
+        <ng-icon name="lucideSearch" size="14" aria-hidden="true" />
       </ng-template>
       <div style="display: flex; flex-direction: column; gap: 0.75rem; width: 320px;">
         <andes-cascader aria-label="Places (custom expand icon)" placeholder="Pick a place" [options]="places" [expandIcon]="plus" />
@@ -437,7 +445,18 @@ export const Search: Story = {
  */
 export const DisplayRender: Story = {
   render: () => ({
-    moduleMetadata: { imports: [...IMPORTS, AndesButton, AndesInput] },
+    moduleMetadata: {
+      imports: [...IMPORTS, AndesButton, AndesInput, NgIcon],
+      providers: [
+        provideIcons({
+          lucideChevronsUpDown,
+          lucideHourglass,
+          lucideMapPin,
+          lucideTrash,
+          lucideX,
+        }),
+      ],
+    },
     props: {
       places: PLACES,
       choices: [...PLACES],
@@ -469,21 +488,21 @@ export const DisplayRender: Story = {
         <span style="display: inline-flex; align-items: center; gap: 0.125rem; height: 1.375rem; padding: 0 0.125rem 0 0.625rem; border-radius: var(--andes-radius-full); background: var(--andes-color-primary-subtle); color: var(--andes-color-primary); font-size: 0.875rem; line-height: 1;">
           {{ tag.labels[tag.labels.length - 1] }}
           <andes-button variant="ghost" size="icon-xs" aria-label="Drop" style="display: inline-flex; margin: 0;" (click)="onClose()">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+            <ng-icon name="lucideX" size="12" strokeWidth="2.5" aria-hidden="true" />
           </andes-button>
         </span>
       </ng-template>
       <ng-template #pin>
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        <ng-icon name="lucideMapPin" size="14" aria-hidden="true" />
       </ng-template>
       <ng-template #caret>
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></svg>
+        <ng-icon name="lucideChevronsUpDown" size="14" aria-hidden="true" />
       </ng-template>
       <ng-template #erase>
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg>
+        <ng-icon name="lucideTrash" size="14" aria-hidden="true" />
       </ng-template>
       <ng-template #hourglass>
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 2h12M6 22h12M7 2c0 6 10 6 10 10S7 16 7 22M17 2c0 6-10 6-10 10s10 4 10 10"/></svg>
+        <ng-icon name="lucideHourglass" size="14" aria-hidden="true" />
       </ng-template>
       <ng-template #header let-search>
         <span style="font-size: 0.75rem; color: var(--andes-color-muted-foreground);">{{ search ? 'Results for "' + search + '"' : 'Pick a department, then narrow it down' }}</span>

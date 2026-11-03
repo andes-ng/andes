@@ -1,5 +1,7 @@
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucidePlus, lucideX } from '@ng-icons/lucide';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
@@ -60,13 +62,17 @@ export const Presets: Story = {
 /** `prefix`, `suffixIcon` and `extraFooter` are template hooks. */
 export const Slots: Story = {
   render: () => ({
+    moduleMetadata: {
+      imports: [NgIcon],
+      providers: [provideIcons({ lucidePlus })],
+    },
     props: {
       weekends: (date: Date) => date.getDay() === 0 || date.getDay() === 6,
     },
     template: `
       <ng-template #prefix><span style="font-size: 0.875rem;">Due</span></ng-template>
       <ng-template #suffix>
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20" /></svg>
+        <ng-icon name="lucidePlus" size="16" />
       </ng-template>
       <ng-template #footer><span>Weekends are closed.</span></ng-template>
       <div style="min-height: 26rem;">
@@ -83,7 +89,10 @@ export const Slots: Story = {
  */
 export const CustomPanel: Story = {
   render: () => ({
-    moduleMetadata: { imports: [FormsModule, NgTemplateOutlet] },
+    moduleMetadata: {
+      imports: [FormsModule, NgTemplateOutlet, NgIcon],
+      providers: [provideIcons({ lucideX })],
+    },
     props: { picked: FEB_15 },
     template: `
       <ng-template #wrap let-content>
@@ -91,7 +100,7 @@ export const CustomPanel: Story = {
         <ng-container [ngTemplateOutlet]="content" />
       </ng-template>
       <ng-template #clear>
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12" /></svg>
+        <ng-icon name="lucideX" size="14" />
       </ng-template>
       <ng-template #previous><span aria-hidden="true">&#8592;</span></ng-template>
       <ng-template #next><span aria-hidden="true">&#8594;</span></ng-template>

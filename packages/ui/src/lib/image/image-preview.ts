@@ -24,8 +24,22 @@ import {
   ViewEncapsulation,
   viewChild,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideChevronLeft,
+  lucideChevronRight,
+  lucideDownload,
+  lucideFlipHorizontal2,
+  lucideFlipVertical2,
+  lucideImageOff,
+  lucideRotateCcw,
+  lucideRotateCw,
+  lucideUndo2,
+  lucideX,
+  lucideZoomIn,
+  lucideZoomOut,
+} from '@ng-icons/lucide';
 
-import { AndesImageIcon } from './image-icon';
 import {
   ANDES_IMAGE_IDENTITY_TRANSFORM,
   clamp,
@@ -67,6 +81,18 @@ const PANE_CLASS = 'andes-image-preview-pane';
 /** Distance the arrow keys pan a zoomed image per press, in px. */
 const KEY_PAN_STEP = 48;
 
+/** The lucide glyph each toolbar action draws. */
+const ACTION_ICONS: Readonly<Record<AndesImagePreviewAction, string>> = {
+  zoomOut: 'lucideZoomOut',
+  zoomIn: 'lucideZoomIn',
+  rotateLeft: 'lucideRotateCcw',
+  rotateRight: 'lucideRotateCw',
+  flipX: 'lucideFlipHorizontal2',
+  flipY: 'lucideFlipVertical2',
+  reset: 'lucideUndo2',
+  download: 'lucideDownload',
+};
+
 const SHORTCUTS: Readonly<Record<AndesImagePreviewAction, string>> = {
   zoomIn: '+',
   zoomOut: '-',
@@ -100,7 +126,23 @@ type LoadState = 'loading' | 'loaded' | 'error';
  */
 @Component({
   selector: 'andes-image-preview',
-  imports: [AndesImageIcon, AndesOverlayContentPrimitive, NgTemplateOutlet],
+  viewProviders: [
+    provideIcons({
+      lucideImageOff,
+      lucideX,
+      lucideChevronLeft,
+      lucideChevronRight,
+      lucideZoomOut,
+      lucideZoomIn,
+      lucideRotateCcw,
+      lucideRotateCw,
+      lucideFlipHorizontal2,
+      lucideFlipVertical2,
+      lucideUndo2,
+      lucideDownload,
+    }),
+  ],
+  imports: [NgIcon, AndesOverlayContentPrimitive, NgTemplateOutlet],
   templateUrl: './image-preview.html',
   styleUrl: './image-preview.css',
   encapsulation: ViewEncapsulation.None,
@@ -113,6 +155,9 @@ type LoadState = 'loading' | 'loaded' | 'error';
   },
 })
 export class AndesImagePreview {
+  /** The lucide glyph of each toolbar action. */
+  protected readonly actionIcons = ACTION_ICONS;
+
   protected readonly overlay = inject(AndesOverlayPrimitive);
   private readonly document = inject(DOCUMENT);
   private readonly directionality = inject(Directionality);

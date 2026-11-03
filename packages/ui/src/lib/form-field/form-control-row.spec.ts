@@ -8,7 +8,6 @@ import { declaredValue } from '../../testing/computed-style';
 import { AndesForm } from './form';
 import { AndesFormControl } from './form-control';
 import { AndesFormField } from './form-field';
-import { AndesFormIcon } from './form-icons';
 
 const CSS = readFileSync(
   'packages/ui/src/lib/form-field/form-field.css',
@@ -74,58 +73,4 @@ describe('AndesFormField - one control row for every control', () => {
       );
     },
   );
-});
-
-describe('AndesFormIcon', () => {
-  @Component({
-    imports: [AndesFormIcon],
-    template: `@for (name of names; track name) {
-      <andes-form-icon [name]="name" />
-    }`,
-  })
-  class IconsHost {
-    readonly names = [
-      'help',
-      'minus',
-      'minus-circle',
-      'plus',
-      'grip',
-      'chevron-up',
-      'chevron-down',
-    ] as const;
-  }
-
-  it('draws one decorative svg per name', () => {
-    const fixture = TestBed.createComponent(IconsHost);
-    fixture.detectChanges();
-    const icons = Array.from(
-      fixture.nativeElement.querySelectorAll('andes-form-icon svg'),
-    ) as SVGElement[];
-
-    expect(icons).toHaveLength(7);
-    for (const svg of icons) {
-      expect(svg.getAttribute('aria-hidden')).toBe('true');
-      expect(svg.children.length).toBeGreaterThan(0);
-    }
-  });
-
-  it('draws the question-circle as a circle with a question mark', () => {
-    const fixture = TestBed.createComponent(IconsHost);
-    fixture.detectChanges();
-    const help = fixture.nativeElement.querySelector('andes-form-icon svg');
-
-    expect(help.querySelector('circle')).toBeTruthy();
-    expect(help.querySelectorAll('path')).toHaveLength(2);
-  });
-
-  it('draws the minus-circle as a circle with one horizontal bar', () => {
-    const fixture = TestBed.createComponent(IconsHost);
-    fixture.detectChanges();
-    const icon = fixture.nativeElement.querySelectorAll(
-      'andes-form-icon svg',
-    )[2] as SVGElement;
-
-    expect(icon.querySelector('circle')).toBeTruthy();
-    expect(icon.querySelector('path')?.getAttribute('d')).toBe('M7.5 12h9');
-  });
 });

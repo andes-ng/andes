@@ -52,7 +52,7 @@
           [attr.title]="playing() ? text().pause : text().play"
           (click)="togglePlay()"
         >
-          <andes-image-icon [name]="playing() ? 'pause' : 'play'" />
+          <ng-icon [name]="playing() ? 'lucidePause' : 'lucidePlay'" />
         </andes-button>
         } @for (action of toolbarActions(); track action) { @if (action ===
         'zoomIn' && ratioBefore()) {
@@ -73,7 +73,7 @@
           }"
           (click)="run(action)"
         >
-          <andes-image-icon [name]="icon(action)" />
+          <ng-icon [name]="icon(action)" />
         </andes-button>
         } @else {
         <andes-button
@@ -90,7 +90,7 @@
           }"
           (click)="actionDisabled(action) || run(action)"
         >
-          <andes-image-icon [name]="icon(action)" />
+          <ng-icon [name]="icon(action)" />
         </andes-button>
         } @if (action === 'zoomOut') {
         <ng-container [ngTemplateOutlet]="ratioTemplate" />
@@ -108,7 +108,7 @@
         [attr.title]="text().close"
         (click)="close()"
       >
-        <andes-image-icon name="close" />
+        <ng-icon name="lucideX" />
       </andes-button>
       }
     </div>
@@ -184,7 +184,7 @@
       ></span>
       } @if (loadState() === 'error') {
       <div class="andes-gallery__error" data-slot="gallery-error">
-        <andes-image-icon name="imageOff" class="andes-gallery__error-icon" />
+        <ng-icon name="lucideImageOff" class="andes-gallery__error-icon" />
         <span>{{ text().loadError }}</span>
       </div>
       } @if (captionTemplate(); as caption) {
@@ -214,7 +214,7 @@
         }"
         (click)="onNav(-1)"
       >
-        <andes-image-icon name="previous" class="andes-gallery__directional" />
+        <ng-icon name="lucideChevronLeft" class="andes-gallery__directional" />
       </andes-button>
       <andes-button
         class="andes-gallery__nav andes-gallery__nav--next"
@@ -231,7 +231,7 @@
         }"
         (click)="onNav(1)"
       >
-        <andes-image-icon name="next" class="andes-gallery__directional" />
+        <ng-icon name="lucideChevronRight" class="andes-gallery__directional" />
       </andes-button>
       }
     </div>

@@ -455,6 +455,14 @@
   font-size: 1.25rem;
 }
 
+/* The lucide icons, 1em square; as a flex box the `ng-icon` lays its svg out edge to edge,
+   never on a text baseline. `.andes-gallery ng-icon` beats the icon's own host rule, which
+   this unencapsulated stylesheet would otherwise only tie. */
+.andes-gallery ng-icon {
+  display: inline-flex;
+  flex: none;
+}
+
 .andes-gallery__caption {
   position: absolute;
   inset-block-end: var(--andes-space-3, 0.75rem);

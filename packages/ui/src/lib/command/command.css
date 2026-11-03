@@ -64,14 +64,12 @@
   outline-offset: 1px;
 }
 
-.andes-command__back svg {
+/* Every icon is a lucide glyph in an `ng-icon`; as a flex box its svg never sits on a text
+   baseline, so it fills its 1rem box exactly. */
+.andes-command__back ng-icon {
+  display: flex;
   width: 1rem;
   height: 1rem;
-  fill: none;
-  stroke: currentcolor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
 .andes-command__crumbs {
@@ -148,13 +146,11 @@
 }
 
 .andes-command__search-icon {
+  display: flex;
   flex: none;
   width: 1rem;
   height: 1rem;
-  fill: none;
-  stroke: var(--andes-color-muted-foreground, #64748b);
-  stroke-width: 2;
-  stroke-linecap: round;
+  color: var(--andes-color-muted-foreground, #64748b);
 }
 
 .andes-command__input {
@@ -278,14 +274,11 @@
 }
 
 .andes-command__chevron {
+  display: flex;
   flex: none;
   width: 1rem;
   height: 1rem;
-  fill: none;
-  stroke: var(--andes-color-muted-foreground, #64748b);
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  color: var(--andes-color-muted-foreground, #64748b);
 }
 
 /* Shortcut keys at the end of the row, one small key cap each. */

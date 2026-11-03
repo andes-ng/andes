@@ -8,9 +8,7 @@
       (mousedown)="$event.preventDefault()"
       (click)="goBack()"
     >
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <path d="m15 18-6-6 6-6" />
-      </svg>
+      <ng-icon name="lucideChevronLeft" aria-hidden="true" />
     </button>
     <ol class="andes-command__crumbs">
       @for (page of pages(); track $index) {
@@ -26,15 +24,11 @@
   }
 
   <div class="andes-command__field" data-slot="command-input">
-    <svg
+    <ng-icon
       class="andes-command__search-icon"
-      viewBox="0 0 24 24"
+      name="lucideSearch"
       aria-hidden="true"
-      focusable="false"
-    >
-      <circle cx="11" cy="11" r="7" />
-      <path d="m21 21-4.3-4.3" />
-    </svg>
+    />
     <input
       #input
       class="andes-command__input"
@@ -137,14 +131,11 @@
       }
     </span>
     @if (row.item.children) {
-    <svg
+    <ng-icon
       class="andes-command__chevron"
-      viewBox="0 0 24 24"
+      name="lucideChevronRight"
       aria-hidden="true"
-      focusable="false"
-    >
-      <path d="m9 18 6-6-6-6" />
-    </svg>
+    />
     } @else if (row.keys.length) {
     <span class="andes-command__shortcut" aria-hidden="true">
       @for (key of row.keys; track $index) {

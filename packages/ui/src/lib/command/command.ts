@@ -17,6 +17,12 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideChevronLeft,
+  lucideChevronRight,
+  lucideSearch,
+} from '@ng-icons/lucide';
 
 import {
   andesCommandMatch,
@@ -97,7 +103,10 @@ let generation = 0;
  */
 @Component({
   selector: 'andes-command',
-  imports: [NgTemplateOutlet, AndesCommandOption],
+  viewProviders: [
+    provideIcons({ lucideChevronLeft, lucideChevronRight, lucideSearch }),
+  ],
+  imports: [NgIcon, NgTemplateOutlet, AndesCommandOption],
   templateUrl: './command.html',
   styleUrl: './command.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

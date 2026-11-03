@@ -20,6 +20,8 @@ minimumReleaseAgeExclude:
   - '@nx/*'
   # Security fix published 6 days ago; the rest of the tree keeps the seven-day wait.
   - 'body-parser'
+  # Same for follow-redirects: its fix is under a week old.
+  - 'follow-redirects'
 trustPolicy: no-downgrade
 # Releases older than a year were published before provenance was common, so a newer release can look like a trust
 # downgrade next to them (chokidar 4.0.3, semver 6.3.1). Recent releases, where a takeover would matter, stay checked.
@@ -46,7 +48,7 @@ overrides:
   'js-yaml@>=5.0.0 <5.4.1': '>=5.4.1'
   'fast-uri@>=3.0.0 <3.1.8': '>=3.1.8'
   'serialize-javascript@>=7.1.1 <7.1.2': '>=7.1.2'
-  'follow-redirects@>=1.16.0 <1.16.1': '>=1.16.1'
+  'follow-redirects@>=1.16.0 <1.16.2': '>=1.16.2'
   'vite@>=8.0.0 <8.1.6': '>=8.1.6'
   'body-parser@<1.20.9': '1.20.9'
   'body-parser@>=2.0.0 <2.4.0': '2.4.0'

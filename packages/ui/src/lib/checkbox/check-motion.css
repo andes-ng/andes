@@ -11,10 +11,11 @@
   scoped to that component like the rest of its CSS.
 
   The generic box: put `andes-check-motion` on the box, `andes-check-motion__tick` on the
-  tick's `<svg>` (a 16-unit viewBox path no longer than 14 units, the checkbox's own) and
-  `andes-check-motion__dash` on the dash's `<svg>`, and set `data-motion` on the box to
-  `check`, `uncheck` or `indeterminate` only when the state changes after the first render
-  (never for a box that is born checked), clearing it once the ring has played (1s).
+  tick's `<ng-icon name="lucideCheck">` (its path is 23 units long, the length the draw
+  animates) and `andes-check-motion__dash` on the dash's `<ng-icon name="lucideMinus">`, and
+  set `data-motion` on the box to `check`, `uncheck` or `indeterminate` only when the state
+  changes after the first render (never for a box that is born checked), clearing it once the
+  ring has played (1s).
 */
 
 @keyframes andes-checkbox-pop {
@@ -33,7 +34,7 @@
 
 @keyframes andes-checkbox-draw {
   from {
-    stroke-dashoffset: 14;
+    stroke-dashoffset: 23;
   }
 
   to {
@@ -118,7 +119,7 @@
 
 /* Motion: a one-shot animation keyed off `data-motion`, which the component sets only when the
    rendered state CHANGES after the first render - so a box that starts out checked never
-   animates. Checking draws the tick (stroke-dashoffset over its 14-unit length) while the
+   animates. Checking draws the tick (stroke-dashoffset over its 23-unit length) while the
    box pops; the indeterminate dash scales in; unchecking fades the mark out without shrinking
    it. Only with motion allowed, and not in forced-colors mode, where the system palette
    already redraws the box and an animated stroke can strand a half-drawn mark. */
@@ -157,8 +158,8 @@
   }
 
   /* prettier-ignore */
-  .andes-checkbox[data-motion='check'] .andes-checkbox__icon--check path {
-    stroke-dasharray: 14;
+  .andes-checkbox[data-motion='check'] .andes-checkbox__icon--check ::ng-deep path {
+    stroke-dasharray: 23;
     animation: andes-checkbox-draw var(--andes-motion-duration-mid, 0.2s) var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1)) both;
   }
 
@@ -205,8 +206,8 @@
   }
 
   /* prettier-ignore */
-  .andes-check-motion[data-motion='check'] .andes-check-motion__tick path {
-    stroke-dasharray: 14;
+  .andes-check-motion[data-motion='check'] .andes-check-motion__tick ::ng-deep path {
+    stroke-dasharray: 23;
     animation: andes-checkbox-draw var(--andes-motion-duration-mid, 0.2s) var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1)) both;
   }
 

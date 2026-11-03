@@ -113,13 +113,18 @@
   justify-content: center;
 }
 
+/* Lucide's star, filled: `fill` is set on the `ng-icon` (the status rule above tints it) and
+   handed down to the svg, whose own `fill="none"` would otherwise win. */
 .andes-rate__star-icon {
+  display: flex;
   inline-size: 100%;
   block-size: 100%;
   fill: currentcolor;
-  stroke: currentcolor;
-  stroke-width: 1.4;
-  stroke-linejoin: round;
+  --ng-icon__stroke-width: 1.4;
+}
+
+.andes-rate__star-icon ::ng-deep svg {
+  fill: inherit;
 }
 
 .andes-rate__text {

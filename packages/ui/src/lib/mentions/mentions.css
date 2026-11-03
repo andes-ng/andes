@@ -368,21 +368,24 @@
   outline-offset: calc((1em - 1.5rem) / 2 + 2px);
 }
 
-.andes-mentions__clear svg {
+/* The default glyph is lucide's circle-x in an `ng-icon`, laid out as a flex box so its svg
+   never sits on a text baseline. */
+.andes-mentions__clear ng-icon {
+  display: inline-flex;
   inline-size: 1em;
   block-size: 1em;
   flex-shrink: 0;
 }
 
-.andes-mentions__clear-glyph circle {
+/* Filled into a disc: the ring's 4-unit stroke takes it to the edge of the box and the "x" is
+   knocked out in the background colour. */
+.andes-mentions__clear-glyph ::ng-deep circle {
   fill: currentcolor;
+  stroke-width: 4;
 }
 
-.andes-mentions__clear-glyph path {
-  fill: none;
+.andes-mentions__clear-glyph ::ng-deep path {
   stroke: var(--andes-color-background);
-  stroke-width: 1.5;
-  stroke-linecap: round;
 }
 
 /* A custom `clearIcon` is stamped from the consumer's template, outside this component's

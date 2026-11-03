@@ -8,6 +8,8 @@ import {
   type AbstractControl,
   type ValidationErrors,
 } from '@angular/forms';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideBell, lucideHourglass, lucideX } from '@ng-icons/lucide';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
@@ -24,7 +26,12 @@ import { FIELD_ROW, fieldGrid } from '../../testing/story-layout';
 // `placeholders`...). The picker is imported through a decorator instead.
 const meta: Meta<AndesDatePicker> = {
   title: 'Data Entry/Time Picker',
-  decorators: [moduleMetadata({ imports: [AndesDatePicker] })],
+  decorators: [
+    moduleMetadata({
+      imports: [AndesDatePicker, NgIcon],
+      providers: [provideIcons({ lucideBell, lucideHourglass, lucideX })],
+    }),
+  ],
   parameters: { layout: 'padded' },
 };
 
@@ -225,10 +232,10 @@ export const PrefixAndSuffix: Story = {
     template: `
       <ng-template #label><span style="font-size: 0.875rem;">Opens</span></ng-template>
       <ng-template #bell>
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0" /></svg>
+        <ng-icon name="lucideBell" size="14" aria-hidden="true" />
       </ng-template>
       <ng-template #hourglass>
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 22h14M5 2h14M17 22v-4.2a2 2 0 0 0-.6-1.4L12 12l-4.4 4.4a2 2 0 0 0-.6 1.4V22M7 2v4.2a2 2 0 0 0 .6 1.4L12 12l4.4-4.4a2 2 0 0 0 .6-1.4V2" /></svg>
+        <ng-icon name="lucideHourglass" size="16" aria-hidden="true" />
       </ng-template>
       <div style="${fieldGrid('18rem')} min-height: 22rem;">
         <div>
@@ -383,7 +390,7 @@ export const ClearableAndReadOnly: Story = {
     props: { time: NINE_THIRTY, caption: CAPTION },
     template: `
       <ng-template #clear>
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+        <ng-icon name="lucideX" size="14" aria-hidden="true" />
       </ng-template>
       <div style="${fieldGrid('14rem')} min-height: 26rem;">
         <div>

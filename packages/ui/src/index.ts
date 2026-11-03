@@ -55,7 +55,7 @@ export * from './lib/dialog';
 
 export * from './lib/dropdown-menu';
 
-// @slot empty
+export * from './lib/empty';
 
 // @slot flex
 
@@ -115,7 +115,7 @@ export * from './lib/select';
 
 // @slot sheet
 
-// @slot skeleton
+export * from './lib/skeleton';
 
 export * from './lib/slider';
 

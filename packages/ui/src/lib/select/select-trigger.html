@@ -70,19 +70,7 @@
           @if (select.removeIcon(); as removeIcon) {
           <ng-container [ngTemplateOutlet]="removeIcon" />
           } @else {
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            aria-hidden="true"
-          >
-            <path
-              d="M18 6 6 18M6 6l12 12"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
+          <ng-icon name="lucideX" />
           }
         </button>
         }
@@ -283,15 +271,7 @@
       @if (select.clearIcon(); as clearIcon) {
       <ng-container [ngTemplateOutlet]="clearIcon" />
       } @else {
-      <svg
-        class="andes-select__clear-glyph"
-        viewBox="0 0 16 16"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <circle cx="8" cy="8" r="8" />
-        <path d="M5.5 5.5l5 5m0-5-5 5" />
-      </svg>
+      <ng-icon class="andes-select__clear-glyph" name="lucideCircleX" />
       }
     </button>
     } @if (select.loading()) { @if (select.loadingIcon(); as loadingIcon) {
@@ -313,14 +293,7 @@
       @if (select.suffixIcon(); as suffixIcon) {
       <ng-container [ngTemplateOutlet]="suffixIcon" />
       } @else {
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-      >
-        <path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round" />
-      </svg>
+      <ng-icon name="lucideChevronDown" />
       }
     </span>
     }

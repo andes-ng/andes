@@ -1117,11 +1117,22 @@ describe('AndesTag closeIcon as a flag', () => {
     },
   );
 
-  it('sizes the default glyph at 10px, as Ant Design does', () => {
-    const svg = setup(true).tag.querySelector('.andes-tag__close svg');
+  it("draws lucide's x at 10px: the close button's font size, the icon's 1em", () => {
+    const tag = setup(true).tag;
+    const icon = tag.querySelector('.andes-tag__close ng-icon');
 
-    expect(svg?.getAttribute('width')).toBe('10');
-    expect(svg?.getAttribute('height')).toBe('10');
+    expect(icon?.getAttribute('name')).toBe('lucideX');
+    expect(icon?.querySelector('svg')).toBeTruthy();
+    expect(
+      declaredValue(
+        readFileSync(
+          join(process.cwd(), 'packages/ui/src/lib/tag/tag.css'),
+          'utf8',
+        ),
+        '.andes-tag__close',
+        'font-size',
+      ),
+    ).toBe('0.625rem');
   });
 });
 

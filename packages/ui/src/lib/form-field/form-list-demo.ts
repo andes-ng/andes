@@ -38,14 +38,14 @@ export const LIST_ROW_STYLE = `
     .demo-inline { display: flex; align-items: center; gap: var(--andes-space-2); }
     .demo-inline > :first-child { flex: 1 1 auto; min-width: 0; }
     .demo-actions--labelled { margin-block-start: 1.875rem; }
-    .demo-actions andes-form-icon { font-size: 1rem; transition: color var(--andes-motion-duration-fast) var(--andes-motion-ease-out); }
-    .demo-quiet andes-form-icon, .demo-remove andes-form-icon { color: var(--andes-color-muted-foreground); }
-    .demo-quiet:hover andes-form-icon { color: var(--andes-color-foreground); }
+    .demo-actions ng-icon { font-size: 1rem; transition: color var(--andes-motion-duration-fast) var(--andes-motion-ease-out); }
+    .demo-quiet ng-icon, .demo-remove ng-icon { color: var(--andes-color-muted-foreground); }
+    .demo-quiet:hover ng-icon { color: var(--andes-color-foreground); }
     /* Only the glyph reacts: it gets darker, the button keeps no background of its own. */
-    andes-button.demo-remove andes-form-icon { font-size: 1.5rem; }
+    andes-button.demo-remove ng-icon { font-size: 1.5rem; }
     andes-button.demo-remove ::ng-deep button:hover:not(:disabled):not([data-disabled]),
     andes-button.demo-remove ::ng-deep button:active:not(:disabled):not([data-disabled]) { background-color: transparent; }
-    andes-button.demo-remove:hover andes-form-icon { color: var(--andes-color-foreground); }
+    andes-button.demo-remove:hover ng-icon { color: var(--andes-color-foreground); }
     .demo-grip { cursor: grab; }
 
     /* The slot the dragged row leaves: a faint dashed outline with its content hidden. */

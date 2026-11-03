@@ -1,3 +1,5 @@
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideChevronRight } from '@ng-icons/lucide';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesAccordion, type AndesAccordionItemConfig } from './accordion';
@@ -118,14 +120,19 @@ const CARD_ITEMS: AndesAccordionItemConfig[] = [
 
 export const CustomPanels: Story = {
   render: () => ({
+    moduleMetadata: {
+      imports: [NgIcon],
+      providers: [provideIcons({ lucideChevronRight })],
+    },
     props: { items: CARD_ITEMS },
     template: `
       <ng-template #caret let-active>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"
-             [style.transform]="active ? 'rotate(90deg)' : null"
-             style="transition: transform 0.2s ease;">
-          <path d="M8 5l10 7-10 7z" />
-        </svg>
+        <ng-icon
+          name="lucideChevronRight"
+          size="12"
+          [style.transform]="active ? 'rotate(90deg)' : null"
+          style="display: inline-flex; transition: transform 0.2s ease;"
+        />
       </ng-template>
       <andes-accordion
         ghost

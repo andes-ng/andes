@@ -125,7 +125,7 @@ export class AndesRadio {
     transform: optionalBooleanAttribute,
   });
   /** Replaces the default dot of the checked radio. A context-free template (typically an
-   *  `<svg>` drawn in `currentColor`, the primary color) sized from the circle. Unset, it
+   *  `ng-icon` drawn in `currentColor`, the primary color) sized from the circle. Unset, it
    *  takes the group's `indicator`. */
   readonly indicator = input<TemplateRef<unknown> | undefined>(undefined);
 

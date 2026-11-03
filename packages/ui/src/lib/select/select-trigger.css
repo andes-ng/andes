@@ -496,7 +496,14 @@
   outline-offset: 1px;
 }
 
-.andes-select__tag-remove svg {
+/* Every icon is a lucide glyph in an `ng-icon`; as a flex box its svg never sits on a text
+   baseline, so the glyph fills the icon box exactly. */
+ng-icon {
+  display: inline-flex;
+  flex: none;
+}
+
+.andes-select__tag-remove ng-icon {
   width: 0.75em;
   height: 0.75em;
 }
@@ -531,7 +538,7 @@
   }
 }
 
-.andes-select__chevron svg {
+.andes-select__chevron ng-icon {
   width: 0.875em;
   height: 0.875em;
 }
@@ -580,20 +587,20 @@
   outline-offset: calc((1em - 1.5rem) / 2 + 2px);
 }
 
-.andes-select__clear svg {
+.andes-select__clear ng-icon {
   width: 0.875em;
   height: 0.875em;
 }
 
-.andes-select__clear-glyph circle {
+/* Lucide's circle-x as a filled disc: the ring's 4-unit stroke takes the disc to the edge of
+   the box and the "x" is knocked out in the background colour. */
+.andes-select__clear-glyph ::ng-deep circle {
   fill: currentColor;
+  stroke-width: 4;
 }
 
-.andes-select__clear-glyph path {
-  fill: none;
+.andes-select__clear-glyph ::ng-deep path {
   stroke: var(--andes-color-background);
-  stroke-width: 1.5;
-  stroke-linecap: round;
 }
 
 .andes-select__trigger[data-clearable]:hover .andes-select__clear,

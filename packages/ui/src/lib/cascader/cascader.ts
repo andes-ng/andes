@@ -32,7 +32,17 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NG_VALUE_ACCESSOR, type ControlValueAccessor } from '@angular/forms';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideCheck,
+  lucideChevronDown,
+  lucideChevronRight,
+  lucideCircleX,
+  lucideMinus,
+  lucideX,
+} from '@ng-icons/lucide';
 
+import { AndesEmpty } from '../empty/empty';
 import { AndesSelectOverflow } from '../select/select-overflow';
 import {
   andesMeasureTagFit,
@@ -208,7 +218,19 @@ interface Column {
  */
 @Component({
   selector: 'andes-cascader',
+  viewProviders: [
+    provideIcons({
+      lucideX,
+      lucideCircleX,
+      lucideChevronDown,
+      lucideCheck,
+      lucideMinus,
+      lucideChevronRight,
+    }),
+  ],
   imports: [
+    NgIcon,
+    AndesEmpty,
     AndesOverlayContentPrimitive,
     AndesOverlayTriggerPrimitive,
     AndesSelectOverflow,
@@ -336,8 +358,12 @@ export class AndesCascader
     TemplateRef<AndesCascaderOptionContext> | undefined
   >(undefined);
   readonly placeholder = input<string | undefined>(undefined);
-  /** What the panel shows without options or search results. `null` shows nothing. */
-  readonly notFoundContent = input<AndesCascaderNotFound>('No data');
+  /**
+   * What the panel shows without options or search results: text or a template. `null` shows
+   * nothing; left unset it shows an `andes-empty` (the `select` preset, which follows
+   * `provideAndesEmpty()`).
+   */
+  readonly notFoundContent = input<AndesCascaderNotFound>(undefined);
   /** Shows a spinner in the field and a loading line in an empty panel. */
   readonly loading = input(false, { transform: booleanAttribute });
   readonly size = input<AndesCascaderSize>('md');

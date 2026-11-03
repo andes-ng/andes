@@ -131,16 +131,17 @@
   pointer-events: none;
 }
 
+/* The tick and the dash are lucide's check and minus in an `ng-icon`, centred in the 16px box
+   and 3 wide, which at 12px is the 1.5px stroke the old marks had. */
 .andes-transfer__mark {
   position: absolute;
+  display: flex;
   width: 0.75rem;
   height: 0.75rem;
-  stroke: var(--andes-color-primary-foreground);
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  color: var(--andes-color-primary-foreground);
   opacity: 0;
   transition: opacity 120ms ease;
+  --ng-icon__stroke-width: 3;
 }
 
 .andes-transfer__check-input:hover:not(:disabled) ~ .andes-transfer__box {
@@ -224,14 +225,13 @@
   }
 }
 
+/* Lucide's search glass in an `ng-icon`, a flex box so its svg never sits on a text baseline. */
 .andes-transfer__search-icon {
+  display: flex;
   flex: none;
   width: 1em;
   height: 1em;
-  fill: none;
-  stroke: var(--andes-color-muted-foreground);
-  stroke-width: 2;
-  stroke-linecap: round;
+  color: var(--andes-color-muted-foreground);
 }
 
 .andes-transfer__search-input {
@@ -280,20 +280,25 @@
   outline-offset: 2px;
 }
 
-.andes-transfer__search-clear svg {
+/* The clear glyph is a disc of the button's colour with lucide's "x" in an `ng-icon` knocked
+   out of it in the background colour, 5/8 of the disc wide and heavier than its default stroke
+   to keep the 1.5 weight the old mark had. */
+.andes-transfer__clear-glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 1em;
   height: 1em;
+  border-radius: var(--andes-radius-full, 9999px);
+  background-color: currentColor;
 }
 
-.andes-transfer__search-clear circle {
-  fill: currentColor;
-}
-
-.andes-transfer__search-clear path {
-  fill: none;
-  stroke: var(--andes-color-background);
-  stroke-width: 1.5;
-  stroke-linecap: round;
+.andes-transfer__clear-mark {
+  display: flex;
+  width: 0.625em;
+  height: 0.625em;
+  color: var(--andes-color-background);
+  --ng-icon__stroke-width: 3.5;
 }
 
 .andes-transfer__body {
@@ -420,13 +425,11 @@
   opacity: 0.5;
 }
 
-.andes-transfer__remove svg {
+/* Lucide's "x" in an `ng-icon`, a flex box so its svg never sits on a text baseline. */
+.andes-transfer__remove-icon {
+  display: flex;
   width: 0.875rem;
   height: 0.875rem;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.5;
-  stroke-linecap: round;
 }
 
 /* The empty list is an `andes-empty` (Ant's 35px picture and 8px margin), centred in the body. */
@@ -485,14 +488,11 @@
   opacity: 0.4;
 }
 
-.andes-transfer__page-button svg {
+/* Lucide's chevrons in an `ng-icon`, a flex box so the svg never sits on a text baseline. */
+.andes-transfer__page-icon {
+  display: flex;
   width: 0.875rem;
   height: 0.875rem;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
 .andes-transfer__footer {
@@ -552,13 +552,9 @@
 }
 
 .andes-transfer__move-icon {
+  display: flex;
   width: 0.875rem;
   height: 0.875rem;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
 /* The arrows point along the reading direction. */

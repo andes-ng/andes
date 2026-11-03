@@ -28,20 +28,14 @@
           (change)="toggleAll(list)"
         />
         <span class="andes-transfer__box" aria-hidden="true">
-          <svg
-            viewBox="0 0 16 16"
-            fill="none"
+          <ng-icon
             class="andes-transfer__mark andes-transfer__mark--check"
-          >
-            <path d="M3.5 8.5 6.5 11.5 12.5 4.5" />
-          </svg>
-          <svg
-            viewBox="0 0 16 16"
-            fill="none"
+            name="lucideCheck"
+          />
+          <ng-icon
             class="andes-transfer__mark andes-transfer__mark--dash"
-          >
-            <path d="M3.5 8h9" />
-          </svg>
+            name="lucideMinus"
+          />
         </span>
       </span>
       }
@@ -56,15 +50,7 @@
     @if (showSearch()) {
     <div class="andes-transfer__search">
       <span class="andes-transfer__field" data-slot="transfer-search">
-        <svg
-          class="andes-transfer__search-icon"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-          focusable="false"
-        >
-          <circle cx="11" cy="11" r="7" />
-          <path d="m20 20-3.5-3.5" />
-        </svg>
+        <ng-icon class="andes-transfer__search-icon" name="lucideSearch" />
         <input
           #searchInput
           type="text"
@@ -86,10 +72,9 @@
           (mousedown)="$event.preventDefault()"
           (click)="clearSearch(list, searchInput)"
         >
-          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-            <circle cx="8" cy="8" r="8" />
-            <path d="M5.5 5.5l5 5m0-5-5 5" />
-          </svg>
+          <span class="andes-transfer__clear-glyph" aria-hidden="true">
+            <ng-icon class="andes-transfer__clear-mark" name="lucideX" />
+          </span>
         </button>
         }
       </span>
@@ -130,13 +115,10 @@
         >
           @if (!isRemovable(list)) {
           <span class="andes-transfer__box" aria-hidden="true">
-            <svg
-              viewBox="0 0 16 16"
-              fill="none"
+            <ng-icon
               class="andes-transfer__mark andes-transfer__mark--check"
-            >
-              <path d="M3.5 8.5 6.5 11.5 12.5 4.5" />
-            </svg>
+              name="lucideCheck"
+            />
           </span>
           }
           <span class="andes-transfer__content">
@@ -160,9 +142,7 @@
             [disabled]="isItemDisabled(item)"
             (click)="onRemove($event, item)"
           >
-            <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-              <path d="M4.5 4.5l7 7m0-7-7 7" />
-            </svg>
+            <ng-icon class="andes-transfer__remove-icon" name="lucideX" />
           </button>
           }
         </li>
@@ -199,9 +179,7 @@
         [disabled]="list.currentPage() <= 1"
         (click)="goToPage(list, list.currentPage() - 1)"
       >
-        <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-          <path d="M10 3.5 5.5 8l4.5 4.5" />
-        </svg>
+        <ng-icon class="andes-transfer__page-icon" name="lucideChevronLeft" />
       </button>
       <span class="andes-transfer__page-text"
         >{{ list.currentPage() }} / {{ list.pageCount() }}</span
@@ -213,9 +191,7 @@
         [disabled]="list.currentPage() >= list.pageCount()"
         (click)="goToPage(list, list.currentPage() + 1)"
       >
-        <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-          <path d="M6 3.5 10.5 8 6 12.5" />
-        </svg>
+        <ng-icon class="andes-transfer__page-icon" name="lucideChevronRight" />
       </button>
     </div>
     } @if (footer(); as footerTemplate) {
@@ -240,14 +216,7 @@
       @if (operations(); as texts) {
       <span>{{ texts[0] }}</span>
       }
-      <svg
-        class="andes-transfer__move-icon"
-        viewBox="0 0 16 16"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <path d="M6 3.5 10.5 8 6 12.5" />
-      </svg>
+      <ng-icon class="andes-transfer__move-icon" name="lucideChevronRight" />
     </button>
     @if (!oneWay()) {
     <button
@@ -259,14 +228,7 @@
       [disabled]="!canMoveBack()"
       (click)="moveSelectedToSource()"
     >
-      <svg
-        class="andes-transfer__move-icon"
-        viewBox="0 0 16 16"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <path d="M10 3.5 5.5 8 10 12.5" />
-      </svg>
+      <ng-icon class="andes-transfer__move-icon" name="lucideChevronLeft" />
       @if (operations(); as texts) {
       <span>{{ texts[1] }}</span>
       }

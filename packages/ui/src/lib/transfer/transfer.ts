@@ -16,6 +16,15 @@ import {
   type WritableSignal,
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideCheck,
+  lucideChevronLeft,
+  lucideChevronRight,
+  lucideMinus,
+  lucideSearch,
+  lucideX,
+} from '@ng-icons/lucide';
 import clsx from 'clsx';
 
 import { AndesEmpty } from '../empty/empty';
@@ -128,7 +137,17 @@ interface ListState {
 
 @Component({
   selector: 'andes-transfer',
-  imports: [AndesEmpty, NgTemplateOutlet],
+  viewProviders: [
+    provideIcons({
+      lucideCheck,
+      lucideChevronLeft,
+      lucideChevronRight,
+      lucideMinus,
+      lucideSearch,
+      lucideX,
+    }),
+  ],
+  imports: [AndesEmpty, NgIcon, NgTemplateOutlet],
   templateUrl: './transfer.html',
   styleUrl: './transfer.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

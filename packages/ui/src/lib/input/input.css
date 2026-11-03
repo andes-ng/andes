@@ -286,9 +286,16 @@
 /* Projected icons keep their own encapsulation context, so a plain descendant selector
    can't reach them - ::ng-deep is the sanctioned way to size content Angular doesn't
    otherwise let this component's styles touch (same rationale as AndesButton). */
+/* The component's own icons are lucide glyphs in an `ng-icon`: as a flex box its svg never
+   sits on a text baseline, so the glyph fills the 1em icon box exactly. */
+ng-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
 .andes-input__prefix ::ng-deep svg,
 .andes-input__suffix ::ng-deep svg,
-.andes-input__password-toggle svg {
+.andes-input__password-toggle ng-icon {
   width: 1em;
   height: 1em;
   flex-shrink: 0;
@@ -427,21 +434,21 @@
   outline-offset: calc((1em - 1.5rem) / 2 + 2px);
 }
 
-.andes-input__clear svg {
+.andes-input__clear ng-icon {
   width: 1em;
   height: 1em;
   flex-shrink: 0;
 }
 
-.andes-input__clear-glyph circle {
+/* Lucide's circle-x as a filled disc: the ring's 4-unit stroke takes the disc to the edge of
+   the box and the "x" is knocked out in the background colour. */
+.andes-input__clear-glyph ::ng-deep circle {
   fill: currentColor;
+  stroke-width: 4;
 }
 
-.andes-input__clear-glyph path {
-  fill: none;
+.andes-input__clear-glyph ::ng-deep path {
   stroke: var(--andes-color-background);
-  stroke-width: 1.5;
-  stroke-linecap: round;
 }
 
 .andes-input__password-toggle:disabled {

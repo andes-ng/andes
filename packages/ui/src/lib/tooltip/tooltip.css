@@ -1,0 +1,390 @@
+/*
+ * Disabled-trigger wrapper: browsers do not reliably send pointer events to
+ * a disabled form control, so while the trigger is disabled it is made
+ * `pointer-events: none` and this host catches the hover instead. It needs a box of its own to do that.
+ */
+:host([data-disabled-trigger]) {
+  display: inline-block;
+  cursor: not-allowed;
+}
+
+/*
+ * The tooltip is three parts, each a hook for `classNames` / `styles`:
+ *
+ * - `.andes-tooltip` (root): the element the overlay positions. It carries the role and
+ *   the id, the drop shadow and the enter/leave motion, so the arrow shares the
+ *   container's silhouette and shadow.
+ * - `.andes-tooltip__container`: the visible box - padding, background, radius, text.
+ * - `.andes-tooltip__arrow`: the pointer on the edge that faces the trigger.
+ *
+ * Sizes follow Ant Design's tooltip: a 14px / 22px text in a box padded 6px 8px with a 6px
+ * radius, at least 32px tall and 28px wide, at most 250px wide, on a near-black surface
+ * (85% black on a light page, #424242 on a dark one) with white text.
+ *
+ * `--andes-tooltip-background`, `--andes-tooltip-foreground`,
+ * `--andes-tooltip-border-color` and `--andes-tooltip-max-width` are the
+ * component's public styling hooks. They are only ever *read* here (never
+ * declared on `.andes-tooltip` itself, bar the `color` presets), so a value
+ * set on `:root` or on a `tooltipClass` selector reaches the portalled
+ * tooltip.
+ */
+.andes-tooltip {
+  position: relative;
+  box-sizing: border-box;
+  /* Never wider than the viewport minus the overlay's 8px margins, whatever
+     maxWidth asks for. */
+  max-width: min(var(--andes-tooltip-max-width, 15.625rem), calc(100vw - 1rem));
+  font-family: var(--andes-font-family), sans-serif;
+  font-size: var(--andes-font-size-sm, 0.875rem);
+  line-height: var(--andes-text-line-height, 1.375rem);
+  /* `light-dark()` follows the page's `color-scheme`, which the theme tokens set. */
+  --_andes-tooltip-surface: light-dark(rgb(0 0 0 / 85%), #424242);
+  --_andes-tooltip-ink: #fff;
+  /* Drop-shadows rather than box-shadow so the arrow is lifted with the container. */
+  filter: drop-shadow(0 6px 16px rgb(0 0 0 / 8%))
+    drop-shadow(0 3px 6px rgb(0 0 0 / 12%))
+    drop-shadow(0 9px 28px rgb(0 0 0 / 5%));
+  /* With `disableHoverablePopup` the tooltip lets the pointer pass straight through
+     to whatever is beneath it. */
+  pointer-events: none;
+  /* The overlays' shared entry: a quick zoom out of the arrow's tip. */
+  animation: andes-tooltip-in var(--andes-duration-fast, 120ms)
+    var(--andes-ease-out, cubic-bezier(0.2, 0, 0, 1));
+}
+
+.andes-tooltip__container {
+  box-sizing: border-box;
+  min-inline-size: 1.75rem;
+  min-block-size: 2rem;
+  padding-block: 0.375rem;
+  padding-inline: var(--andes-space-2);
+  border-radius: var(--andes-radius-md);
+  background-color: var(
+    --andes-tooltip-background,
+    var(--_andes-tooltip-surface)
+  );
+  color: var(--andes-tooltip-foreground, var(--_andes-tooltip-ink));
+  text-align: start;
+  overflow-wrap: break-word;
+}
+
+/*
+ * Hoverable (the default): the tooltip takes the pointer, so moving from the
+ * trigger onto it keeps it open (WCAG 2.1 SC 1.4.13).
+ */
+.andes-tooltip[data-hoverable] {
+  pointer-events: auto;
+}
+
+/*
+ * Entry and exit zoom out of the arrow's tip, so the tooltip reads as growing from the
+ * trigger it points at. The tip sits 6px past the container's edge, on the arrow's
+ * offset along it.
+ */
+.andes-tooltip[data-side='top'] {
+  transform-origin: var(--andes-tooltip-arrow-offset, 50%) calc(100% + 6px);
+}
+
+.andes-tooltip[data-side='bottom'] {
+  transform-origin: var(--andes-tooltip-arrow-offset, 50%) -6px;
+}
+
+.andes-tooltip[data-side='left'] {
+  transform-origin: calc(100% + 6px) var(--andes-tooltip-arrow-offset, 50%);
+}
+
+.andes-tooltip[data-side='right'] {
+  transform-origin: -6px var(--andes-tooltip-arrow-offset, 50%);
+}
+
+/*
+ * `variant="light"`: the theme's popover surface (light on a light page, dark on a dark
+ * one) rather than the near-black one. It is as edge-less as the page it sits on, so the
+ * silhouette gets a 1px hairline: four zero-blur drop-shadows trace the body and the
+ * arrow alike, under a soft shadow.
+ */
+.andes-tooltip--light {
+  --_andes-tooltip-surface: var(--andes-color-popover);
+  --_andes-tooltip-ink: var(--andes-color-popover-foreground);
+  --_andes-tooltip-edge: var(
+    --andes-tooltip-border-color,
+    var(--andes-color-border)
+  );
+  filter: drop-shadow(1px 0 0 var(--_andes-tooltip-edge))
+    drop-shadow(-1px 0 0 var(--_andes-tooltip-edge))
+    drop-shadow(0 1px 0 var(--_andes-tooltip-edge))
+    drop-shadow(0 -1px 0 var(--_andes-tooltip-edge))
+    drop-shadow(0 4px 6px rgb(0 0 0 / 0.15));
+}
+
+/*
+ * `variant="inverse"`: a dark surface with light text in both themes. The fill is
+ * a fixed slate ink nudged by the theme's foreground - near-black on a light page,
+ * lifted a few steps on a dark page (#0f172a) so the hint still reads as a layer
+ * above it rather than a hole in it. #f8fafc on either fill measures 7:1 or more.
+ * Declared before the presets so an explicit `color` still wins.
+ */
+.andes-tooltip--inverse {
+  --andes-tooltip-background: color-mix(
+    in srgb,
+    var(--andes-color-foreground) 15%,
+    #1e293b
+  );
+  --andes-tooltip-foreground: #f8fafc;
+  --andes-tooltip-border-color: var(--andes-tooltip-background);
+}
+
+/*
+ * Semantic presets: each maps onto an existing token pair. The saturated ones
+ * define their own edge, so the `light` variant's hairline takes the fill color -
+ * the same 1px-larger silhouette as the default, without a grey ring around a colored
+ * chip. Secondary keeps the border: its pale fill is as edge-less as the
+ * default on a light page.
+ */
+.andes-tooltip--primary,
+.andes-tooltip--success,
+.andes-tooltip--warning,
+.andes-tooltip--danger,
+.andes-tooltip--info,
+.andes-tooltip--hue,
+.andes-tooltip--custom-color {
+  --andes-tooltip-border-color: var(--andes-tooltip-background);
+}
+
+.andes-tooltip--primary {
+  --andes-tooltip-background: var(--andes-color-primary);
+  --andes-tooltip-foreground: var(--andes-color-primary-foreground);
+}
+
+.andes-tooltip--secondary {
+  --andes-tooltip-background: var(--andes-color-secondary);
+  --andes-tooltip-foreground: var(--andes-color-secondary-foreground);
+}
+
+/*
+ * Tooltip text is 14px, so every preset has to clear 4.5:1 - not the 3:1 a large label
+ * gets. White on the base success green measures 3.3:1 and on the base info blue 4.1:1,
+ * so those two fills are deepened locally (4.9:1 and 5.4:1); dark amber text on the
+ * warning fill measures 4.2:1, so the text is deepened instead (5.9:1) and the fill keeps
+ * its recognisable amber. Mixed from the tokens rather than taken from their
+ * -hover/-active steps, which turn lighter in the dark theme.
+ */
+.andes-tooltip--success {
+  --andes-tooltip-background: color-mix(
+    in srgb,
+    var(--andes-color-success) 80%,
+    #000
+  );
+  --andes-tooltip-foreground: var(--andes-color-success-foreground);
+}
+
+.andes-tooltip--warning {
+  --andes-tooltip-background: var(--andes-color-warning);
+  --andes-tooltip-foreground: color-mix(
+    in srgb,
+    var(--andes-color-warning-foreground) 70%,
+    #000
+  );
+}
+
+.andes-tooltip--danger {
+  --andes-tooltip-background: var(--andes-color-danger);
+  --andes-tooltip-foreground: var(--andes-color-danger-foreground);
+}
+
+.andes-tooltip--info {
+  --andes-tooltip-background: color-mix(
+    in srgb,
+    var(--andes-color-info) 85%,
+    #000
+  );
+  --andes-tooltip-foreground: var(--andes-color-info-foreground);
+}
+
+/*
+ * The hue presets are Ant Design's colour names, with its step-6 fills: the same
+ * colour in both themes, as a hue is a label rather than a surface. Their text is
+ * picked like a custom colour's, below.
+ */
+.andes-tooltip--pink {
+  --andes-tooltip-background: #eb2f96;
+}
+
+.andes-tooltip--red {
+  --andes-tooltip-background: #f5222d;
+}
+
+.andes-tooltip--yellow {
+  --andes-tooltip-background: #fadb14;
+}
+
+.andes-tooltip--orange {
+  --andes-tooltip-background: #fa8c16;
+}
+
+.andes-tooltip--cyan {
+  --andes-tooltip-background: #13c2c2;
+}
+
+.andes-tooltip--green {
+  --andes-tooltip-background: #52c41a;
+}
+
+.andes-tooltip--blue {
+  --andes-tooltip-background: #1677ff;
+}
+
+.andes-tooltip--purple {
+  --andes-tooltip-background: #722ed1;
+}
+
+.andes-tooltip--geekblue {
+  --andes-tooltip-background: #2f54eb;
+}
+
+.andes-tooltip--magenta {
+  --andes-tooltip-background: #eb2f96;
+}
+
+.andes-tooltip--volcano {
+  --andes-tooltip-background: #fa541c;
+}
+
+.andes-tooltip--gold {
+  --andes-tooltip-background: #faad14;
+}
+
+.andes-tooltip--lime {
+  --andes-tooltip-background: #a0d911;
+}
+
+/*
+ * An arbitrary `color`, and the hue presets: black or white text, whichever reads
+ * better, picked from the background's OKLCH lightness with relative color syntax - white
+ * up to 0.70, which keeps #f50 and #108ee9 on white and #2db7f5 and #87d068 on black as
+ * Ant Design does. Browsers without it keep the white fallback.
+ */
+.andes-tooltip--custom-color > .andes-tooltip__container,
+.andes-tooltip--hue > .andes-tooltip__container {
+  color: #fff;
+  color: oklch(
+    from var(--andes-tooltip-background) clamp(0, (0.7 - l) * 1000, 1) 0 0
+  );
+}
+
+/*
+ * The arrow: a 16 x 8 badge with a rounded tip, clipped out of a box painted with the
+ * same background as the container, so it always matches `color`. It sits against the
+ * edge facing the trigger and, along that edge, at `--andes-tooltip-arrow-offset` -
+ * measured so it keeps pointing at the trigger after a flip or a viewport shift. Its
+ * tip stands about 6px clear of the edge; the rest is the rounded base. One path per
+ * side, drawn in the arrow's own box.
+ */
+.andes-tooltip__arrow {
+  position: absolute;
+  background-color: var(
+    --andes-tooltip-background,
+    var(--_andes-tooltip-surface)
+  );
+  pointer-events: none;
+}
+
+.andes-tooltip[data-side='top'] > .andes-tooltip__arrow {
+  top: 100%;
+  left: var(--andes-tooltip-arrow-offset, 50%);
+  width: 16px;
+  height: 8px;
+  translate: -50% 0;
+  clip-path: path(
+    'M 16 0 A 4 4 0 0 0 13.172 1.172 L 9.414 4.929 A 2 2 0 0 1 6.586 4.929 L 2.828 1.172 A 4 4 0 0 0 0 0 Z'
+  );
+}
+
+.andes-tooltip[data-side='bottom'] > .andes-tooltip__arrow {
+  bottom: 100%;
+  left: var(--andes-tooltip-arrow-offset, 50%);
+  width: 16px;
+  height: 8px;
+  translate: -50% 0;
+  clip-path: path(
+    'M 0 8 A 4 4 0 0 0 2.828 6.828 L 6.586 3.071 A 2 2 0 0 1 9.414 3.071 L 13.172 6.828 A 4 4 0 0 0 16 8 Z'
+  );
+}
+
+.andes-tooltip[data-side='left'] > .andes-tooltip__arrow {
+  left: 100%;
+  top: var(--andes-tooltip-arrow-offset, 50%);
+  width: 8px;
+  height: 16px;
+  translate: 0 -50%;
+  clip-path: path(
+    'M 0 0 A 4 4 0 0 0 1.172 2.828 L 4.929 6.586 A 2 2 0 0 1 4.929 9.414 L 1.172 13.172 A 4 4 0 0 0 0 16 Z'
+  );
+}
+
+.andes-tooltip[data-side='right'] > .andes-tooltip__arrow {
+  right: 100%;
+  top: var(--andes-tooltip-arrow-offset, 50%);
+  width: 8px;
+  height: 16px;
+  translate: 0 -50%;
+  clip-path: path(
+    'M 8 16 A 4 4 0 0 0 6.828 13.172 L 3.071 9.414 A 2 2 0 0 1 3.071 6.586 L 6.828 2.828 A 4 4 0 0 0 8 0 Z'
+  );
+}
+
+@keyframes andes-tooltip-in {
+  from {
+    opacity: 0;
+    scale: 0.8;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+/*
+ * Exit: while the overlay primitive plays a close it marks this element (the pane's
+ * direct child) with `data-andes-closing` and waits for the animation before
+ * detaching; where the primitive does not do that yet, the attribute never appears
+ * and the tooltip just goes. The entry in reverse - a fade and the same zoom back into
+ * the arrow's tip - only accelerating away. `forwards` holds the faded frame until
+ * removal.
+ */
+.andes-tooltip[data-andes-closing] {
+  pointer-events: none;
+  animation: andes-tooltip-out var(--andes-duration-fast, 120ms)
+    var(--andes-ease-in, cubic-bezier(0.4, 0, 1, 1)) forwards;
+}
+
+@keyframes andes-tooltip-out {
+  from {
+    opacity: 1;
+    scale: 1;
+  }
+  to {
+    opacity: 0;
+    scale: 0.8;
+  }
+}
+
+/*
+ * A `unique` group hands one tooltip over to the next: the one leaving goes at once, and
+ * the one arriving glides in from where it stood (a script animation), without zooming.
+ */
+.andes-tooltip[data-handoff],
+.andes-tooltip[data-instant][data-andes-closing] {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .andes-tooltip {
+    animation: none;
+  }
+
+  /* No exit either: with nothing running the primitive detaches at once. */
+  .andes-tooltip[data-andes-closing] {
+    animation: none;
+  }
+}

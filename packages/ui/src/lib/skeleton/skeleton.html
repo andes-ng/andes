@@ -6,65 +6,91 @@
   [style.width]="widthStyle()"
   [style.height]="heightStyle()"
 ></div>
-} @else if (loading()) {
-<div data-slot="skeleton" [class]="classes()" [style]="parts().styles.root">
-  <span
-    data-slot="skeleton-status"
-    class="andes-skeleton-composite__status"
-    role="status"
-    >{{ loadingLabel() }}</span
+} @else { @if (statusText(); as status) {
+<span
+  data-slot="skeleton-status"
+  class="andes-skeleton-composite__status"
+  role="status"
+  aria-live="polite"
+  aria-atomic="true"
+  >{{ status }}</span
+>
+} @if (keepContent()) {
+<div class="andes-skeleton-stack">
+  @if (placeholderMounted()) {
+  <div
+    class="andes-skeleton-stack__placeholder"
+    [class.andes-skeleton-stack__placeholder--leaving]="isLeaving()"
   >
-  <div class="andes-skeleton-composite__body" aria-hidden="true">
-    @if (avatarConfig(); as avatar) {
-    <div
-      class="andes-skeleton-composite__header"
-      [class]="parts().classNames.header"
-      [style]="parts().styles.header"
-    >
-      <andes-skeleton-avatar
-        [size]="avatar.size"
-        [shape]="avatar.shape"
-        [animation]="avatar.animation"
-        [classNames]="parts().avatarClassNames"
-        [styles]="parts().avatarStyles"
-      />
-    </div>
-    }
-    <div
-      class="andes-skeleton-composite__content"
-      [class]="parts().classNames.section"
-      [style]="parts().styles.section"
-    >
-      @if (titleWidth() !== null) {
-      <div
-        data-slot="skeleton-title"
-        [class]="titleClass()"
-        [style]="parts().styles.title"
-        [style.width]="titleWidth()"
-      ></div>
-      } @if (paragraphRows().length > 0) {
-      <div
-        data-slot="skeleton-paragraph"
-        class="andes-skeleton-composite__paragraph"
-        [class]="parts().classNames.paragraph"
-        [style]="parts().styles.paragraph"
-      >
-        @for (rowWidth of paragraphRows(); track $index) {
-        <div
-          data-slot="skeleton-paragraph-row"
-          [class]="rowClass()"
-          [style.width]="rowWidth"
-        ></div>
-        }
-      </div>
-      }
-    </div>
+    <ng-container [ngTemplateOutlet]="placeholder" />
+  </div>
+  }
+  <div
+    class="andes-skeleton-stack__content"
+    [class.andes-skeleton-stack__content--hidden]="showPlaceholder()"
+  >
+    <ng-container [ngTemplateOutlet]="content" />
   </div>
 </div>
+} @else if (showPlaceholder()) {
+<ng-container [ngTemplateOutlet]="placeholder" />
 } @else {
 <ng-container [ngTemplateOutlet]="content" />
-}
+} }
 
-<!-- The one and only <ng-content>: projected once here and stamped out only in the loaded
-     branch above, so it is never duplicated across the @if/@else. -->
+<!-- The placeholder bars, stamped out where the layout above asks for them. Every bar is
+     aria-hidden: the status text above is the one thing assistive technology reads. -->
+<ng-template #placeholder>
+  <div data-slot="skeleton" [class]="classes()" [style]="parts().styles.root">
+    <div class="andes-skeleton-composite__body" aria-hidden="true">
+      @if (avatarConfig(); as avatar) {
+      <div
+        class="andes-skeleton-composite__header"
+        [class]="parts().classNames.header"
+        [style]="parts().styles.header"
+      >
+        <andes-skeleton-avatar
+          [size]="avatar.size"
+          [shape]="avatar.shape"
+          [animation]="avatar.animation"
+          [classNames]="parts().avatarClassNames"
+          [styles]="parts().avatarStyles"
+        />
+      </div>
+      }
+      <div
+        class="andes-skeleton-composite__content"
+        [class]="parts().classNames.section"
+        [style]="parts().styles.section"
+      >
+        @if (titleWidth() !== null) {
+        <div
+          data-slot="skeleton-title"
+          [class]="titleClass()"
+          [style]="parts().styles.title"
+          [style.width]="titleWidth()"
+        ></div>
+        } @if (paragraphRows().length > 0) {
+        <div
+          data-slot="skeleton-paragraph"
+          class="andes-skeleton-composite__paragraph"
+          [class]="parts().classNames.paragraph"
+          [style]="parts().styles.paragraph"
+        >
+          @for (rowWidth of paragraphRows(); track $index) {
+          <div
+            data-slot="skeleton-paragraph-row"
+            [class]="rowClass()"
+            [style.width]="rowWidth"
+          ></div>
+          }
+        </div>
+        }
+      </div>
+    </div>
+  </div>
+</ng-template>
+
+<!-- The one and only <ng-content>: projected once here and stamped out only where the layout
+     above asks for it, so it is never duplicated across the @if/@else. -->
 <ng-template #content><ng-content /></ng-template>

@@ -31,6 +31,11 @@ export type AndesSkeletonButtonShape =
 })
 export class AndesSkeletonButton extends AndesSkeletonElementBase {
   readonly size = input<AndesSkeletonSize>('md');
+  /**
+   * `square` is as wide as it is high (the 24/32/40px control scale), like an icon-only button.
+   * Ant Design draws its `square` the same size as `default` (twice as wide as high); the
+   * placeholder here stands in for AndesButton, whose square is square.
+   */
   readonly shape = input<AndesSkeletonButtonShape>('default');
   /** Stretches the placeholder to its parent's width, like a full-width button. */
   readonly block = input(false, { transform: booleanAttribute });

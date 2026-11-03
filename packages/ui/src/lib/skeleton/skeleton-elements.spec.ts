@@ -23,6 +23,7 @@ import {
   animationClass,
   resolveAnimation,
   resolveSemantic,
+  rowWidths,
   toStyleMap,
 } from './skeleton-utils';
 
@@ -290,6 +291,16 @@ describe('AndesSkeletonImage', () => {
     expect(
       root.querySelector('andes-skeleton-image')?.getAttribute('aria-hidden'),
     ).toBe('true');
+  });
+
+  it('draws a filled picture mark, not an outline', () => {
+    const { part } = render(Host);
+    const icon = part('skeleton-image').querySelector('svg') as SVGElement;
+
+    expect(icon.getAttribute('viewBox')).toBe('0 0 1098 1024');
+    expect(icon.getAttribute('fill')).toBe('currentColor');
+    expect(icon.getAttribute('stroke')).toBeNull();
+    expect(icon.querySelectorAll('path')).toHaveLength(1);
   });
 
   it('applies width/height and active', () => {
@@ -618,5 +629,27 @@ describe('style helpers', () => {
         },
       ),
     ).toEqual({ root: '2' });
+  });
+});
+
+describe('rowWidths', () => {
+  it('leaves rows full width, ending a block of 3 or more at 61%', () => {
+    expect(rowWidths(2, undefined)).toEqual([undefined, undefined]);
+    expect(rowWidths(3, undefined)).toEqual([undefined, undefined, '61%']);
+  });
+
+  it('applies a single width to the last row only, numbers as pixels', () => {
+    expect(rowWidths(3, 120)).toEqual([undefined, undefined, '120px']);
+    expect(rowWidths(2, '40%')).toEqual([undefined, '40%']);
+  });
+
+  it('applies an array row by row, falling back to 61% for a missing last entry', () => {
+    expect(rowWidths(4, ['90%', 80])).toEqual(['90%', '80px', undefined, '61%']);
+  });
+
+  it('copes with zero, negative and fractional counts', () => {
+    expect(rowWidths(0, undefined)).toEqual([]);
+    expect(rowWidths(-2, undefined)).toEqual([]);
+    expect(rowWidths(2.9, undefined)).toHaveLength(2);
   });
 });

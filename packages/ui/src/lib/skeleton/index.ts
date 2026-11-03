@@ -22,6 +22,7 @@ export type {
 export { AndesSkeletonImage } from './skeleton-image';
 export { AndesSkeletonInput } from './skeleton-input';
 export { AndesSkeletonNode } from './skeleton-node';
+export { AndesSkeletonText } from './skeleton-text';
 export type {
   AndesSkeletonAnimation,
   AndesSkeletonSemanticInfo,

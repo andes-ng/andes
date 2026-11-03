@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 
 import { readFileSync } from 'node:fs';
 
+import { atRule, collapsed } from '../../testing/at-rule';
 import { declaredValue, expectLength } from '../../testing/computed-style';
 import {
   AndesSkeleton,
@@ -761,6 +762,355 @@ describe('AndesSkeleton (rows, animation and semantic parts)', () => {
       });
 
       expect(q('skeleton-title').getAttribute('style')).toBe('width: 38%;');
+    });
+  });
+});
+
+describe('AndesSkeleton (timing, kept content and announcements)', () => {
+  @Component({
+    imports: [AndesSkeleton],
+    template: `<andes-skeleton
+      [loading]="loading()"
+      [delay]="delay()"
+      [minDuration]="minDuration()"
+      [keepContent]="keepContent()"
+      [loadedLabel]="loadedLabel()"
+      ><p class="real-content">Real content</p></andes-skeleton
+    >`,
+  })
+  class Host {
+    readonly loading = signal(true);
+    readonly delay = signal<number | string>(0);
+    readonly minDuration = signal<number | string>(0);
+    readonly keepContent = signal(false);
+    readonly loadedLabel = signal('');
+  }
+
+  function create(setup: (host: Host) => void = () => undefined) {
+    const fixture = TestBed.createComponent(Host);
+    setup(fixture.componentInstance);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const host = fixture.componentInstance;
+    return {
+      fixture,
+      host,
+      root,
+      placeholder: () =>
+        root.querySelector('[data-slot="skeleton"]') as HTMLElement | null,
+      content: () => root.querySelector('.real-content') as HTMLElement | null,
+      status: () =>
+        root.querySelector('[role="status"]') as HTMLElement | null,
+      tick: (ms: number) => {
+        vi.advanceTimersByTime(ms);
+        fixture.detectChanges();
+      },
+    };
+  }
+
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  describe('delay', () => {
+    it('shows the content, not the placeholder, until the delay has passed', () => {
+      const { placeholder, content, tick } = create((h) => h.delay.set(300));
+
+      expect(placeholder()).toBeNull();
+      expect(content()).not.toBeNull();
+
+      tick(299);
+      expect(placeholder()).toBeNull();
+
+      tick(1);
+      expect(placeholder()).not.toBeNull();
+      expect(content()).toBeNull();
+    });
+
+    it('never shows the placeholder for a load that finishes within the delay', () => {
+      const { fixture, host, placeholder, content, tick } = create((h) =>
+        h.delay.set(300),
+      );
+
+      tick(200);
+      host.loading.set(false);
+      fixture.detectChanges();
+      tick(1000);
+
+      expect(placeholder()).toBeNull();
+      expect(content()).not.toBeNull();
+    });
+
+    it('starts the delay again for each load', () => {
+      const { fixture, host, placeholder, tick } = create((h) =>
+        h.delay.set(100),
+      );
+      tick(100);
+      host.loading.set(false);
+      fixture.detectChanges();
+      expect(placeholder()).toBeNull();
+
+      host.loading.set(true);
+      fixture.detectChanges();
+      expect(placeholder()).toBeNull();
+      tick(100);
+      expect(placeholder()).not.toBeNull();
+    });
+
+    it('reads a string from a plain attribute', () => {
+      const { placeholder, tick } = create((h) => h.delay.set('50'));
+
+      expect(placeholder()).toBeNull();
+      tick(50);
+      expect(placeholder()).not.toBeNull();
+    });
+
+    it('announces nothing during the delay', () => {
+      const { status, tick } = create((h) => h.delay.set(100));
+
+      expect(status()).toBeNull();
+      tick(100);
+      expect(status()?.textContent?.trim()).toBe('Loading…');
+    });
+  });
+
+  describe('minDuration', () => {
+    it('holds a shown placeholder until the minimum has passed', () => {
+      const { fixture, host, placeholder, content, tick } = create((h) =>
+        h.minDuration.set(500),
+      );
+
+      tick(200);
+      host.loading.set(false);
+      fixture.detectChanges();
+      expect(placeholder()).not.toBeNull();
+      expect(content()).toBeNull();
+
+      tick(299);
+      expect(placeholder()).not.toBeNull();
+
+      tick(1);
+      expect(placeholder()).toBeNull();
+      expect(content()).not.toBeNull();
+    });
+
+    it('releases at once when the minimum has already passed', () => {
+      const { fixture, host, placeholder, tick } = create((h) =>
+        h.minDuration.set(100),
+      );
+
+      tick(400);
+      host.loading.set(false);
+      fixture.detectChanges();
+      tick(0);
+
+      expect(placeholder()).toBeNull();
+    });
+
+    it('keeps the placeholder when loading starts again during the hold', () => {
+      const { fixture, host, placeholder, tick } = create((h) =>
+        h.minDuration.set(500),
+      );
+      tick(100);
+      host.loading.set(false);
+      fixture.detectChanges();
+      host.loading.set(true);
+      fixture.detectChanges();
+      tick(2000);
+
+      expect(placeholder()).not.toBeNull();
+    });
+
+    it('combines with delay: the minimum counts from when the placeholder appeared', () => {
+      const { fixture, host, placeholder, tick } = create((h) => {
+        h.delay.set(100);
+        h.minDuration.set(300);
+      });
+      tick(100);
+      expect(placeholder()).not.toBeNull();
+
+      tick(50);
+      host.loading.set(false);
+      fixture.detectChanges();
+      tick(249);
+      expect(placeholder()).not.toBeNull();
+      tick(1);
+      expect(placeholder()).toBeNull();
+    });
+  });
+
+  describe('keepContent', () => {
+    it('keeps the content in the page, invisible, under the placeholder', () => {
+      const { root, placeholder, content } = create((h) =>
+        h.keepContent.set(true),
+      );
+
+      expect(placeholder()).not.toBeNull();
+      expect(content()).not.toBeNull();
+      const layer = content()?.closest('.andes-skeleton-stack__content');
+      expect(layer?.classList).toContain(
+        'andes-skeleton-stack__content--hidden',
+      );
+      expect(root.querySelectorAll('.real-content')).toHaveLength(1);
+    });
+
+    it('shows the content once loaded and fades the placeholder out', () => {
+      const { fixture, host, placeholder, content, tick } = create((h) =>
+        h.keepContent.set(true),
+      );
+      host.loading.set(false);
+      fixture.detectChanges();
+
+      const layer = content()?.closest('.andes-skeleton-stack__content');
+      expect(layer?.classList).not.toContain(
+        'andes-skeleton-stack__content--hidden',
+      );
+      expect(
+        placeholder()?.closest('.andes-skeleton-stack__placeholder')
+          ?.classList,
+      ).toContain('andes-skeleton-stack__placeholder--leaving');
+
+      tick(200);
+      expect(placeholder()).toBeNull();
+      expect(content()).not.toBeNull();
+    });
+
+    it('removes the placeholder at once under prefers-reduced-motion', () => {
+      vi.stubGlobal(
+        'matchMedia',
+        (query: string) =>
+          ({
+            matches: query.includes('prefers-reduced-motion'),
+          }) as MediaQueryList,
+      );
+      try {
+        const { fixture, host, placeholder } = create((h) =>
+          h.keepContent.set(true),
+        );
+        host.loading.set(false);
+        fixture.detectChanges();
+
+        expect(placeholder()).toBeNull();
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+
+    it('cancels the fade when loading starts again', () => {
+      const { fixture, host, placeholder, content, tick } = create((h) =>
+        h.keepContent.set(true),
+      );
+      host.loading.set(false);
+      fixture.detectChanges();
+      host.loading.set(true);
+      fixture.detectChanges();
+      tick(500);
+
+      expect(placeholder()).not.toBeNull();
+      expect(
+        placeholder()?.closest('.andes-skeleton-stack__placeholder')
+          ?.classList,
+      ).not.toContain('andes-skeleton-stack__placeholder--leaving');
+      expect(
+        content()?.closest('.andes-skeleton-stack__content')?.classList,
+      ).toContain('andes-skeleton-stack__content--hidden');
+    });
+
+    it('shows the content straight away while the delay runs', () => {
+      const { content, tick } = create((h) => {
+        h.keepContent.set(true);
+        h.delay.set(100);
+      });
+
+      expect(
+        content()?.closest('.andes-skeleton-stack__content')?.classList,
+      ).not.toContain('andes-skeleton-stack__content--hidden');
+      tick(100);
+      expect(
+        content()?.closest('.andes-skeleton-stack__content')?.classList,
+      ).toContain('andes-skeleton-stack__content--hidden');
+    });
+
+    it('is off by default: loading removes the content from the page', () => {
+      const { content, root } = create();
+
+      expect(content()).toBeNull();
+      expect(root.querySelector('.andes-skeleton-stack')).toBeNull();
+    });
+
+    it('lays the placeholder and the content in one grid cell', () => {
+      const css = skeletonCss();
+
+      expect(declaredValue(css, '.andes-skeleton-stack', 'display')).toBe(
+        'grid',
+      );
+      expect(collapsed(css)).toContain(
+        '.andes-skeleton-stack__placeholder, .andes-skeleton-stack__content { grid-area: 1 / 1;',
+      );
+      expect(
+        declaredValue(
+          css,
+          '.andes-skeleton-stack__content--hidden',
+          'visibility',
+        ),
+      ).toBe('hidden');
+      expect(
+        declaredValue(
+          css,
+          '.andes-skeleton-stack__placeholder--leaving',
+          'position',
+        ),
+      ).toBe('absolute');
+    });
+
+    it('drops both fades under prefers-reduced-motion', () => {
+      const reduced = atRule(
+        skeletonCss(),
+        '@media (prefers-reduced-motion: reduce)',
+      );
+
+      expect(collapsed(reduced)).toContain(
+        '.andes-skeleton-stack__content, .andes-skeleton-stack__placeholder { transition: none; }',
+      );
+    });
+  });
+
+  describe('loadedLabel', () => {
+    it('announces nothing when loading ends by default', () => {
+      const { fixture, host, status } = create();
+      host.loading.set(false);
+      fixture.detectChanges();
+
+      expect(status()).toBeNull();
+    });
+
+    it('swaps the loading status for the loaded one in the same element', () => {
+      const { fixture, host, status } = create((h) =>
+        h.loadedLabel.set('Profile loaded'),
+      );
+      const element = status();
+      expect(element?.textContent?.trim()).toBe('Loading…');
+
+      host.loading.set(false);
+      fixture.detectChanges();
+
+      expect(status()).toBe(element);
+      expect(status()?.textContent?.trim()).toBe('Profile loaded');
+    });
+
+    it('does not announce the loaded text while a delay is still running', () => {
+      const { status } = create((h) => {
+        h.delay.set(100);
+        h.loadedLabel.set('Profile loaded');
+      });
+
+      expect(status()).toBeNull();
+    });
+
+    it('makes the status a polite, atomic live region', () => {
+      const { status } = create();
+
+      expect(status()?.getAttribute('aria-live')).toBe('polite');
+      expect(status()?.getAttribute('aria-atomic')).toBe('true');
     });
   });
 });

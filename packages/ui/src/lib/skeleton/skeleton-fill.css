@@ -57,7 +57,8 @@
 }
 
 /* The band sweeps in reading direction - left to right by default, so under RTL it runs the
-   keyframes backwards instead. */
+   keyframes backwards and travels right to left. Ant Design keeps the same left-to-right sweep
+   in RTL; a skeleton is read like text, so ours follows the document instead. */
 .andes-skeleton-fill--active:dir(rtl) {
   animation-direction: reverse;
 }

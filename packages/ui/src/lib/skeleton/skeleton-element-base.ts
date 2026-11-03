@@ -27,6 +27,9 @@ export interface AndesSkeletonElementProps {
   size?: AndesSkeletonSize | number;
   shape?: string;
   block?: boolean;
+  /** `andes-skeleton-text` only. */
+  lines?: number;
+  round?: boolean;
 }
 
 export type AndesSkeletonElementClassNames = AndesSkeletonSemanticValue<
@@ -64,7 +67,10 @@ export abstract class AndesSkeletonElementBase {
 
   /** Size, shape and block of the subclass, for the `classNames` / `styles` functions. */
   protected abstract readonly extraProps: Signal<
-    Pick<AndesSkeletonElementProps, 'size' | 'shape' | 'block'>
+    Pick<
+      AndesSkeletonElementProps,
+      'size' | 'shape' | 'block' | 'lines' | 'round'
+    >
   >;
 
   protected readonly resolvedAnimation = computed(() =>

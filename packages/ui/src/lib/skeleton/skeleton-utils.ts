@@ -9,6 +9,33 @@ export function toCssSize(
   return typeof value === 'number' ? `${value}px` : value;
 }
 
+/** The width of a paragraph's last row when it is not set and the paragraph has 3 rows or more. */
+export const LAST_ROW_WIDTH = '61%';
+
+/**
+ * The CSS width of each row of a paragraph (or line of a text placeholder), `undefined` for a full
+ * row. An array sets the rows in order; a single value sets only the LAST row, so the paragraph
+ * ends on a shorter line; with no width at all, a block of 3 rows or more still ends at 61%.
+ * Numbers are pixels. This is Ant Design's rule, shared by `andes-skeleton` and
+ * `andes-skeleton-text`.
+ */
+export function rowWidths(
+  rows: number,
+  width: string | number | (string | number)[] | null | undefined,
+): (string | undefined)[] {
+  const count = Math.max(0, Math.floor(rows || 0));
+  return Array.from({ length: count }, (_, index) => {
+    const rowWidth = Array.isArray(width)
+      ? toCssSize(width[index])
+      : index === count - 1
+        ? toCssSize(width)
+        : undefined;
+    return (
+      rowWidth ?? (count >= 3 && index === count - 1 ? LAST_ROW_WIDTH : undefined)
+    );
+  });
+}
+
 /** Size scale shared by the avatar/button/input placeholders - the same names as AndesButton. */
 export type AndesSkeletonSize = 'sm' | 'md' | 'lg';
 

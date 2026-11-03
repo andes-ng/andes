@@ -134,3 +134,51 @@
   border: 0;
   font-family: var(--andes-font-family), sans-serif;
 }
+
+/* --- Kept content (`keepContent`) -------------------------------------------------------------- */
+
+/* The placeholder and the content share one grid cell, so the cell is as tall as the taller of
+   the two: the content's room is reserved while it is invisible. */
+.andes-skeleton-stack {
+  position: relative;
+  display: grid;
+}
+
+.andes-skeleton-stack__placeholder,
+.andes-skeleton-stack__content {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+
+/* Invisible, not removed: it stays laid out, but cannot be read, focused or clicked. */
+.andes-skeleton-stack__content {
+  transition:
+    opacity 200ms ease,
+    visibility 200ms;
+}
+
+.andes-skeleton-stack__content--hidden {
+  visibility: hidden;
+  opacity: 0;
+}
+
+/* Once the content is back the placeholder fades out on top of it, out of the flow so the
+   content alone sets the height. */
+.andes-skeleton-stack__placeholder {
+  transition: opacity 200ms ease;
+}
+
+.andes-skeleton-stack__placeholder--leaving {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .andes-skeleton-stack__content,
+  .andes-skeleton-stack__placeholder {
+    transition: none;
+  }
+}

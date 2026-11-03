@@ -4,7 +4,14 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
+  effect,
+  inject,
   input,
+  linkedSignal,
+  numberAttribute,
+  signal,
+  untracked,
 } from '@angular/core';
 import clsx from 'clsx';
 
@@ -20,6 +27,7 @@ import {
   animationClass,
   resolveAnimation,
   resolveSemantic,
+  rowWidths,
   toCssSize,
   toStyleMap,
 } from './skeleton-utils';
@@ -73,8 +81,15 @@ export type AndesSkeletonStyles = AndesSkeletonSemanticValue<
   AndesSkeletonProps
 >;
 
-/** The width of a paragraph's last row when it is not set and the paragraph has 3 rows or more. */
-const LAST_ROW_WIDTH = '61%';
+/** How long the placeholder takes to fade out over kept content - the CSS transition's length. */
+const FADE_MS = 200;
+
+function prefersReducedMotion(): boolean {
+  return (
+    typeof matchMedia === 'function' &&
+    matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+}
 
 type SectionInput<T> = boolean | T | string | null | undefined;
 
@@ -120,6 +135,23 @@ export class AndesSkeleton {
 
   /** Shows the placeholder while true; renders the projected content once false. */
   readonly loading = input(true, { transform: booleanAttribute });
+  /**
+   * Milliseconds `loading` must last before the placeholder appears; until then the projected
+   * content shows as it is. A load that finishes sooner never flashes a placeholder.
+   */
+  readonly delay = input(0, { transform: numberAttribute });
+  /**
+   * Milliseconds the placeholder stays once it has appeared, even if `loading` ends sooner, so a
+   * load that finishes just after the placeholder showed does not blink.
+   */
+  readonly minDuration = input(0, { transform: numberAttribute });
+  /**
+   * Keeps the projected content in the page, invisible, while the placeholder shows, so the
+   * placeholder takes at least the content's room and nothing jumps when it arrives. The content
+   * then fades in over the placeholder instead of replacing it. Without it the content is not
+   * in the page while loading.
+   */
+  readonly keepContent = input(false, { transform: booleanAttribute });
   /** Shimmer animation (ignored under `prefers-reduced-motion: reduce`). */
   readonly active = input(false, { transform: booleanAttribute });
   /**
@@ -143,6 +175,13 @@ export class AndesSkeleton {
   readonly round = input(false, { transform: booleanAttribute });
   /** Visually hidden status text announced while the placeholder shows. */
   readonly loadingLabel = input('Loading…');
+  /**
+   * Visually hidden status text announced when the placeholder gives way to the content (for
+   * example `Profile loaded`). Empty by default: nothing is announced when loading ends. With a
+   * label, the status element stays in the page for good, which is what makes screen readers
+   * announce the change reliably.
+   */
+  readonly loadedLabel = input('');
   /**
    * Extra classes for the `root`, `header`, `section`, `avatar`, `title` and `paragraph` parts, as
    * an object or as a function of the current inputs.
@@ -176,6 +215,97 @@ export class AndesSkeleton {
 
   protected readonly widthStyle = computed(() => toCssSize(this.width()));
   protected readonly heightStyle = computed(() => toCssSize(this.height()));
+
+  // --- When the placeholder shows ---------------------------------------------------------------
+  // Without `delay` and `minDuration` the placeholder is exactly `loading`. With them, `shown`
+  // follows `loading` through two timers: it turns on `delay` ms after loading starts and off
+  // `minDuration` ms after it appeared. A linked signal, so its first value is right on the very
+  // first render (no frame of content before the placeholder).
+
+  private readonly shown = linkedSignal<
+    { loading: boolean; delay: number; minDuration: number },
+    boolean
+  >({
+    source: () => ({
+      loading: this.loading(),
+      delay: this.delay(),
+      minDuration: this.minDuration(),
+    }),
+    computation: (source, previous) => {
+      if (source.loading) {
+        return source.delay > 0 ? (previous?.value ?? false) : true;
+      }
+      return source.minDuration > 0 ? (previous?.value ?? false) : false;
+    },
+  });
+
+  /** Whether the placeholder is up at this moment. */
+  protected readonly showPlaceholder = this.shown;
+
+  /** The placeholder fading out over freshly arrived content (`keepContent` only). */
+  private readonly leaving = signal(false);
+
+  protected readonly placeholderMounted = computed(
+    () => this.shown() || this.leaving(),
+  );
+
+  protected readonly isLeaving = computed(() => this.leaving() && !this.shown());
+
+  private shownSince = 0;
+
+  constructor() {
+    const destroyRef = inject(DestroyRef);
+
+    // The two timers behind `shown`.
+    effect((onCleanup) => {
+      const loading = this.loading();
+      const delay = this.delay();
+      const minDuration = this.minDuration();
+      const shown = untracked(this.shown);
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      if (loading && !shown && delay > 0) {
+        timer = setTimeout(() => this.shown.set(true), delay);
+      } else if (!loading && shown && minDuration > 0) {
+        const left = minDuration - (Date.now() - this.shownSince);
+        timer = setTimeout(() => this.shown.set(false), Math.max(0, left));
+      }
+      onCleanup(() => clearTimeout(timer));
+    });
+
+    // When the placeholder was last put up, for `minDuration`; and the fade-out that follows it
+    // when the content is kept in the page.
+    let wasShown = false;
+    let leaveTimer: ReturnType<typeof setTimeout> | undefined;
+    effect(() => {
+      const shown = this.shown();
+      const keep = this.keepContent();
+      untracked(() => {
+        clearTimeout(leaveTimer);
+        if (shown && !wasShown) {
+          this.shownSince = Date.now();
+        }
+        if (!shown && wasShown && keep && !prefersReducedMotion()) {
+          this.leaving.set(true);
+          leaveTimer = setTimeout(() => this.leaving.set(false), FADE_MS);
+        } else {
+          this.leaving.set(false);
+        }
+        wasShown = shown;
+      });
+    });
+    destroyRef.onDestroy(() => clearTimeout(leaveTimer));
+  }
+
+  /** The status text for assistive technology: what is loading, or what just loaded. */
+  protected readonly statusText = computed(() =>
+    this.isBlock()
+      ? ''
+      : this.shown()
+        ? this.loadingLabel()
+        : this.loading()
+          ? ''
+          : this.loadedLabel(),
+  );
 
   // Section defaults are chosen so a bare <andes-skeleton /> looks balanced: the title
   // shortens and the paragraph gets fewer rows as more sections share the space.
@@ -245,21 +375,7 @@ export class AndesSkeleton {
       width: !hasAvatar || !hasTitle ? '61%' : undefined,
       ...(paragraph === true ? {} : definedOnly(paragraph)),
     };
-    const rows = Math.max(0, Math.floor(config.rows ?? 0));
-    const width = config.width;
-
-    return Array.from({ length: rows }, (_, index) => {
-      const rowWidth = Array.isArray(width)
-        ? toCssSize(width[index])
-        : index === rows - 1
-          ? toCssSize(width)
-          : undefined;
-      // A paragraph of 3 rows or more ends on a shorter line unless its last row has a width.
-      return (
-        rowWidth ??
-        (rows >= 3 && index === rows - 1 ? LAST_ROW_WIDTH : undefined)
-      );
-    });
+    return rowWidths(config.rows ?? 0, config.width);
   });
 
   private readonly barAnimationClass = computed(() =>

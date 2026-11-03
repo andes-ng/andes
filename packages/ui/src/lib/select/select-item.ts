@@ -12,6 +12,8 @@ import {
   type AfterViewInit,
   type OnDestroy,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideCheck } from '@ng-icons/lucide';
 
 import { AndesSelectGroup } from './select-group';
 import { AndesSelectState, type AndesSelectItemRef } from './select-state';
@@ -26,7 +28,8 @@ import { AndesSelectState, type AndesSelectItemRef } from './select-state';
  */
 @Component({
   selector: 'andes-select-item',
-  imports: [AndesListNavigationItem, NgTemplateOutlet],
+  viewProviders: [provideIcons({ lucideCheck })],
+  imports: [NgIcon, AndesListNavigationItem, NgTemplateOutlet],
   templateUrl: './select-item.html',
   styleUrl: './select-item.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

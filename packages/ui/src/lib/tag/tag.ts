@@ -15,6 +15,8 @@ import {
   viewChild,
 } from '@angular/core';
 import clsx from 'clsx';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideX } from '@ng-icons/lucide';
 
 import { AndesPaletteColor, resolvePaletteColor } from '../palette/palette';
 import {
@@ -103,7 +105,8 @@ export class AndesTagCloseEvent {
 
 @Component({
   selector: 'andes-tag',
-  imports: [NgTemplateOutlet],
+  viewProviders: [provideIcons({ lucideX })],
+  imports: [NgIcon, NgTemplateOutlet],
   templateUrl: './tag.html',
   styleUrls: ['../palette/palette.css', './tag.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,

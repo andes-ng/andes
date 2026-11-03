@@ -60,7 +60,7 @@ function isRing(animationName: string): boolean {
  *
  * Icons: `iconStart` / `iconEnd` (templates) or projected `[slot=icon-start]` /
  * `[slot=icon-end]` elements sit beside the label and are decorative. A toggle with no text
- * (an icon-only toggle, including a bare projected `<svg>`) must be named through `aria-label`,
+ * (an icon-only toggle, including a bare projected `ng-icon`) must be named through `aria-label`,
  * `aria-labelledby` or `tooltip`; in development a console warning says so, once per toggle.
  *
  * `status` paints the border and the focus ring (`error` danger, `warning` amber) and

@@ -119,10 +119,17 @@
 }
 
 .andes-skeleton-image__icon {
+  display: flex;
   width: 50%;
   height: 50%;
   max-width: 3rem;
   max-height: 3rem;
+}
+
+/* The svg inside the `ng-icon` would inherit the 50% and halve the glyph again. */
+.andes-skeleton-image__icon ::ng-deep svg {
+  width: 100%;
+  height: 100%;
 }
 
 .andes-skeleton-node {

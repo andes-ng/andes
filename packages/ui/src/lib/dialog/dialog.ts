@@ -20,6 +20,8 @@ import {
   ViewEncapsulation,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideMaximize, lucideMinimize, lucideX } from '@ng-icons/lucide';
 
 import { AndesDialogActions } from './dialog-actions';
 import {
@@ -173,11 +175,12 @@ export class AndesDialogTrigger {
  */
 @Component({
   selector: 'andes-dialog-content',
+  viewProviders: [provideIcons({ lucideMaximize, lucideMinimize, lucideX })],
   templateUrl: './dialog-content.html',
   styleUrl: './dialog.css',
   encapsulation: ViewEncapsulation.None,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [AndesDialogActions, NgTemplateOutlet],
+  imports: [NgIcon, AndesDialogActions, NgTemplateOutlet],
   hostDirectives: [AndesOverlayContentPrimitive],
   providers: [
     {

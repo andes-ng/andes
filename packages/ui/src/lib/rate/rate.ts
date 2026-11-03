@@ -26,6 +26,8 @@ import {
   ValidationErrors,
   Validator,
 } from '@angular/forms';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideStar } from '@ng-icons/lucide';
 
 import {
   andesIdRefs,
@@ -91,7 +93,8 @@ function normalizeValue(value: unknown, count: number): number {
  */
 @Component({
   selector: 'andes-rate',
-  imports: [NgTemplateOutlet],
+  viewProviders: [provideIcons({ lucideStar })],
+  imports: [NgIcon, NgTemplateOutlet],
   templateUrl: './rate.html',
   styleUrl: './rate.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

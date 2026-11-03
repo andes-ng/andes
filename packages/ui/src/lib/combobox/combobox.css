@@ -432,16 +432,21 @@ textarea.andes-combobox-input[data-size='lg'] {
   color: var(--andes-color-foreground);
 }
 
-.andes-combobox-tag__remove svg {
-  width: 0.75em;
-  height: 0.75em;
+/* The combobox's own icons are lucide glyphs in an `ng-icon`; as a flex box its svg never
+   sits on a text baseline, so the glyph fills the icon box exactly. `ng-icon.` beats the
+   icon's own host rule, which this unencapsulated stylesheet would otherwise only tie. */
+ng-icon.andes-combobox-tag__remove-icon,
+ng-icon.andes-combobox-clear__icon,
+ng-icon.andes-combobox-item__create-icon,
+ng-icon.andes-combobox-item__check,
+ng-icon.andes-combobox-empty__icon {
+  display: inline-flex;
+  flex: none;
 }
 
-.andes-combobox-tag__remove path {
-  fill: none;
-  stroke: currentcolor;
-  stroke-width: 1.75;
-  stroke-linecap: round;
+ng-icon.andes-combobox-tag__remove-icon {
+  width: 0.75em;
+  height: 0.75em;
 }
 
 /* Prefix, over the input's inline start in the single mode. */
@@ -724,7 +729,7 @@ textarea.andes-combobox-input[data-size='lg'] {
   color: var(--andes-color-primary-text);
 }
 
-.andes-combobox-item__check {
+ng-icon.andes-combobox-item__check {
   width: 1em;
   height: 1em;
 }
@@ -734,15 +739,11 @@ textarea.andes-combobox-input[data-size='lg'] {
   color: var(--andes-color-primary-text);
 }
 
-.andes-combobox-item__create-icon {
+ng-icon.andes-combobox-item__create-icon {
   width: 1em;
   height: 1em;
   margin-inline-end: var(--andes-space-2);
   vertical-align: -0.125em;
-  fill: none;
-  stroke: currentcolor;
-  stroke-width: 1.75;
-  stroke-linecap: round;
 }
 
 .andes-combobox-empty {
@@ -757,10 +758,11 @@ textarea.andes-combobox-input[data-size='lg'] {
   text-align: center;
 }
 
-.andes-combobox-empty__icon {
+ng-icon.andes-combobox-empty__icon {
   width: 2rem;
   height: 2rem;
   opacity: 0.65;
+  --ng-icon__stroke-width: 1.5;
 }
 
 /* The [options] mode's popup with nothing to show and notFoundContent set to null. */
@@ -910,15 +912,20 @@ textarea.andes-combobox-input[data-size='lg'] {
   flex-shrink: 0;
 }
 
+ng-icon.andes-combobox-clear__icon {
+  width: 1em;
+  height: 1em;
+}
+
+/* Lucide's circle-x as a filled disc: the ring's 4-unit stroke takes the disc to the edge of
+   the box and the "x" is knocked out in the background colour. */
 .andes-combobox-clear__icon circle {
   fill: currentColor;
+  stroke-width: 4;
 }
 
 .andes-combobox-clear__icon path {
-  fill: none;
   stroke: var(--andes-color-background);
-  stroke-width: 1.5;
-  stroke-linecap: round;
 }
 
 .andes-combobox-spinner {

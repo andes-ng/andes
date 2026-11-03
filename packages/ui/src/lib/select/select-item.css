@@ -153,7 +153,10 @@
   color: var(--andes-color-primary-text);
 }
 
-.andes-select__option-indicator svg {
+/* The default check is lucide's; as a flex box the `ng-icon` lays its svg out edge to edge,
+   never on a text baseline. */
+.andes-select__option-indicator ng-icon {
+  display: inline-flex;
   width: 1em;
   height: 1em;
 }

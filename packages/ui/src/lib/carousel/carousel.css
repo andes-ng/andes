@@ -196,7 +196,10 @@
   grid-area: 4 / 3;
 }
 
+/* The arrows and the play/pause mark are lucide glyphs in an `ng-icon`, 1em square; as a flex
+   box the svg never sits on a text baseline, so it fills the box exactly. */
 .andes-carousel__chevron {
+  display: flex;
   width: 1em;
   height: 1em;
 }
@@ -221,9 +224,17 @@
   font-size: 0.75rem;
 }
 
-.andes-carousel__control > svg {
+/* Play and pause were solid shapes: `fill` is set on the `ng-icon` and handed down to the svg,
+   whose own `fill="none"` would otherwise win. */
+.andes-carousel__control > ng-icon {
+  display: flex;
   width: 1em;
   height: 1em;
+  fill: currentcolor;
+}
+
+.andes-carousel__control > ng-icon ::ng-deep svg {
+  fill: inherit;
 }
 
 :host([data-arrows='hover']) .andes-carousel__arrow {

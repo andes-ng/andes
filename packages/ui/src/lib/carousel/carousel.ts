@@ -21,6 +21,13 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideChevronLeft,
+  lucideChevronRight,
+  lucidePause,
+  lucidePlay,
+} from '@ng-icons/lucide';
 
 import {
   resolveAutoplayState,
@@ -161,7 +168,15 @@ function parseCssTime(text: string): number | null {
  */
 @Component({
   selector: 'andes-carousel',
-  imports: [NgTemplateOutlet],
+  viewProviders: [
+    provideIcons({
+      lucideChevronLeft,
+      lucideChevronRight,
+      lucidePause,
+      lucidePlay,
+    }),
+  ],
+  imports: [NgIcon, NgTemplateOutlet],
   templateUrl: './carousel.html',
   styleUrl: './carousel.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

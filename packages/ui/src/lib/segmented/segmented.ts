@@ -22,6 +22,10 @@ import {
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
+import {
+  andesIdRefs,
+  injectAndesFieldBinding,
+} from '../form-field/field-binding';
 import { AndesSegmentedOption } from './segmented-option';
 import {
   ANDES_SEGMENTED,
@@ -108,18 +112,19 @@ const REVEAL_MARGIN = 20;
   host: {
     role: 'radiogroup',
     'data-slot': 'segmented',
+    '[attr.id]': 'controlId() ?? null',
     '[attr.aria-label]': 'ariaLabel()',
-    '[attr.aria-labelledby]': 'ariaLabelledby()',
-    '[attr.aria-describedby]': 'ariaDescribedby()',
+    '[attr.aria-labelledby]': 'labelledBy() ?? null',
+    '[attr.aria-describedby]': 'describedBy() ?? null',
     // `error` and `aria-invalid` are one state: same look, same announcement.
     '[attr.aria-invalid]': 'isInvalid() || null',
-    '[attr.aria-required]': 'required() || null',
+    '[attr.aria-required]': 'isRequired() || null',
     // `aria-readonly` is supported on the radiogroup role (not on the individual radios).
     '[attr.aria-readonly]': 'readOnly() || null',
     '[attr.aria-disabled]': 'isDisabled() || null',
-    '[attr.data-size]': 'size()',
+    '[attr.data-size]': 'resolvedSize()',
     '[attr.data-shape]': 'shape()',
-    '[attr.data-variant]': 'variant()',
+    '[attr.data-variant]': 'resolvedVariant()',
     '[attr.data-status]': 'resolvedStatus()',
     '[attr.data-orientation]': "vertical() ? 'vertical' : 'horizontal'",
     '[attr.data-block]': "block() ? '' : null",
@@ -156,7 +161,8 @@ export class AndesSegmented<T = unknown>
   readonly optionLabel = input<
     TemplateRef<AndesSegmentedOptionContext<T>> | undefined
   >(undefined);
-  readonly size = input<AndesSegmentedSize>('md');
+  /** `md` unless set, or the enclosing `andesForm`'s `size`. */
+  readonly size = input<AndesSegmentedSize | undefined>(undefined);
   readonly shape = input<AndesSegmentedShape>('default');
   /**
    * Look of the control: `default` (muted track, raised thumb), `outlined` (bordered track),
@@ -164,7 +170,9 @@ export class AndesSegmented<T = unknown>
    * `--andes-segmented-bg` and `--andes-segmented-thumb-bg` properties still restyle the
    * colors of `default`.
    */
-  readonly variant = input<AndesSegmentedVariant>('default');
+  readonly variant = input<AndesSegmentedVariant | undefined>(undefined);
+  /** Id of the radiogroup element. Defaults to the enclosing field's control id. */
+  readonly id = input<string | undefined>(undefined);
   /**
    * Validation tier, like AndesInput's `status`: `error` draws the track and the focus ring in
    * the danger color and sets `aria-invalid` (the existing `aria-invalid` input keeps working
@@ -269,14 +277,57 @@ export class AndesSegmented<T = unknown>
       ] as AndesSegmentedOption<T>[],
   );
 
-  readonly isDisabled = computed(() => this.disabled() || this.cvaDisabled());
+  /** The enclosing form field and form: id, ARIA, status, size, variant and disabled. */
+  protected readonly field = injectAndesFieldBinding();
+
+  /** The size in effect: `size`, else the form's, else `md`. */
+  readonly resolvedSize = computed<AndesSegmentedSize>(
+    () => this.size() ?? this.field.size() ?? 'md',
+  );
+
+  /** The variant in effect: `variant`, else the form's when this control has it
+   *  (`underlined` it has not), else `default`. */
+  readonly resolvedVariant = computed<AndesSegmentedVariant>(() => {
+    const own = this.variant();
+    if (own) {
+      return own;
+    }
+    const form = this.field.variant();
+    return form && form !== 'underlined' ? form : 'default';
+  });
+
+  protected readonly controlId = computed(() => this.id() ?? this.field.id());
+
+  /** `aria-labelledby`, else the field's label - unless an `aria-label` names the group. */
+  protected readonly labelledBy = computed(
+    () =>
+      this.ariaLabelledby() ??
+      (this.ariaLabel() ? undefined : this.field.labelledBy()),
+  );
+
+  protected readonly describedBy = computed(() =>
+    andesIdRefs(this.ariaDescribedby(), this.field.describedBy()),
+  );
+
+  protected readonly isRequired = computed(
+    () => this.required() || this.field.required(),
+  );
+
+  readonly isDisabled = computed(
+    () => this.disabled() || this.cvaDisabled() || this.field.disabled(),
+  );
+
+  /** `status`, else the enclosing field's error or warning. */
+  private readonly effectiveStatus = computed(
+    () => this.status() ?? this.field.status(),
+  );
 
   /** `aria-invalid` and `status="error"` are one state. */
   protected readonly isInvalid = computed(
-    () => this.ariaInvalid() || this.status() === 'error',
+    () => this.ariaInvalid() || this.effectiveStatus() === 'error',
   );
   protected readonly resolvedStatus = computed<AndesSegmentedStatus | null>(
-    () => (this.isInvalid() ? 'error' : (this.status() ?? null)),
+    () => (this.isInvalid() ? 'error' : (this.effectiveStatus() ?? null)),
   );
   protected readonly motionDuration = computed(() => {
     const duration = this.motion()?.duration;
@@ -338,9 +389,9 @@ export class AndesSegmented<T = unknown>
       // Re-measure whenever anything that can move the selected segment changes.
       this.checkedOption();
       const options = this.allOptions();
-      this.size();
+      this.resolvedSize();
       this.shape();
-      this.variant();
+      this.resolvedVariant();
       this.vertical();
       this.block();
       this.columns();

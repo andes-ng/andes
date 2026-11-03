@@ -34,6 +34,10 @@ import {
 } from '@angular/core';
 import { NG_VALUE_ACCESSOR, type ControlValueAccessor } from '@angular/forms';
 
+import {
+  andesIdRefs,
+  injectAndesFieldBinding,
+} from '../form-field/field-binding';
 import { AndesComboboxContent } from './combobox-content';
 import { AndesComboboxEmpty } from './combobox-empty';
 import { AndesComboboxInput } from './combobox-input';
@@ -506,11 +510,12 @@ export class AndesCombobox<T = string> implements ControlValueAccessor {
   readonly searchDebounce = input(0, { transform: numberAttribute });
 
   /** Control height and font size: 24px (`sm`), 32px (`md`) or 40px (`lg`). */
-  readonly size = input<AndesComboboxSize>('md');
+  readonly size = input<AndesComboboxSize | undefined>(undefined);
   /** Validation status. `'error'` also sets `aria-invalid` on the input. */
   readonly status = input<AndesComboboxStatus | undefined>(undefined);
-  /** Visual treatment of the input box. */
-  readonly variant = input<AndesComboboxVariant>('outlined');
+  /** Visual treatment of the input box: `outlined` unless set, or the enclosing
+   *  `andesForm`'s `variant`. */
+  readonly variant = input<AndesComboboxVariant | undefined>(undefined);
 
   /**
    * Where the popup opens relative to the input. It flips to the other side when that
@@ -589,6 +594,10 @@ export class AndesCombobox<T = string> implements ControlValueAccessor {
     alias: 'aria-invalid',
     transform: booleanAttribute,
   });
+  /** Ids describing the input; merged with the enclosing field's hint and messages. */
+  readonly ariaDescribedby = input<string | undefined>(undefined, {
+    alias: 'aria-describedby',
+  });
 
   /**
    * The input's text, on every edit (typing, or clearing) - after `searchDebounce`, when
@@ -640,6 +649,41 @@ export class AndesCombobox<T = string> implements ControlValueAccessor {
   private readonly _query = signal('');
   private readonly _backfill = signal<string | null>(null);
   private readonly formDisabled = signal(false);
+
+  /** The enclosing form field and form: id, ARIA, status, size, variant and disabled. */
+  private readonly fieldBinding = injectAndesFieldBinding();
+
+  /** The size in effect: `size`, else the form's, else `md`. */
+  readonly resolvedSize = computed<AndesComboboxSize>(
+    () => this.size() ?? this.fieldBinding.size() ?? 'md',
+  );
+
+  /** The variant in effect: `variant`, else the form's, else `outlined`. */
+  readonly resolvedVariant = computed<AndesComboboxVariant>(
+    () => this.variant() ?? this.fieldBinding.variant() ?? 'outlined',
+  );
+
+  /** The status in effect: `status`, else the enclosing field's error or warning. */
+  readonly resolvedStatus = computed<AndesComboboxStatus | undefined>(
+    () => this.status() ?? this.fieldBinding.status(),
+  );
+
+  /** @internal `aria-labelledby`, else the field's label - unless an `aria-label` names it. */
+  readonly labelledBy = computed(
+    () =>
+      this.ariaLabelledby() ??
+      (this.ariaLabel() ? undefined : this.fieldBinding.labelledBy()),
+  );
+
+  /** @internal `aria-describedby` merged with the enclosing field's hint and message ids. */
+  readonly describedBy = computed(() =>
+    andesIdRefs(this.ariaDescribedby(), this.fieldBinding.describedBy()),
+  );
+
+  /** @internal `required`, or a required enclosing field. */
+  readonly isRequired = computed(
+    () => this.required() || this.fieldBinding.required(),
+  );
   private readonly _inputElement = signal<HTMLElement | null>(null);
   private readonly _panelDirection = signal<'ltr' | 'rtl' | null>(null);
   private destroyed = false;
@@ -654,18 +698,23 @@ export class AndesCombobox<T = string> implements ControlValueAccessor {
   readonly panelDirection = this._panelDirection.asReadonly();
 
   /** Combines the `disabled` input with a disabled state set through the forms APIs. */
-  readonly isDisabled = computed(() => this.disabled() || this.formDisabled());
+  readonly isDisabled = computed(
+    () =>
+      this.disabled() || this.formDisabled() || this.fieldBinding.disabled(),
+  );
 
   /** @internal */
   readonly usesOptions = computed(() => this.options() !== undefined);
 
   /** @internal */
   readonly invalid = computed(
-    () => this.ariaInvalid() || this.status() === 'error',
+    () => this.ariaInvalid() || this.resolvedStatus() === 'error',
   );
 
-  /** @internal The `id` the input carries. */
-  readonly fieldId = computed(() => this.inputId() ?? this.id());
+  /** @internal The `id` the input carries: `inputId`, `id`, else the enclosing field's. */
+  readonly fieldId = computed(
+    () => this.inputId() ?? this.id() ?? this.fieldBinding.id(),
+  );
 
   /** @internal Whether the field can be edited at all right now. */
   readonly editable = computed(() => !this.isDisabled() && !this.readOnly());
@@ -1077,7 +1126,7 @@ export class AndesCombobox<T = string> implements ControlValueAccessor {
     afterRenderEffect(() => {
       // Re-measured when the content or the text size changes.
       this.prefix();
-      this.size();
+      this.resolvedSize();
       const prefix = this.prefixElement()?.nativeElement;
       const field = this.field()?.nativeElement;
       if (prefix && field) {

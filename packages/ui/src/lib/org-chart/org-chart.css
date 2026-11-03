@@ -432,9 +432,12 @@
   cursor: pointer;
 }
 
-.andes-org-chart__checkbox svg {
+.andes-org-chart__checkbox ng-icon {
+  display: flex;
   inline-size: 0.75rem;
   block-size: 0.75rem;
+  /* The old tick was drawn 1.5px thick in a 12px box: lucide's 24-unit grid needs 3. */
+  --ng-icon__stroke-width: 3;
 }
 
 .andes-org-chart__node[data-checked] .andes-org-chart__checkbox {
@@ -527,14 +530,19 @@
   place-items: center;
 }
 
+/* Every glyph is a lucide icon in an `ng-icon`; as a flex box its svg never sits on a text
+   baseline, so it fills the 12px box exactly. */
 .andes-org-chart__chevron,
 .andes-org-chart__spinner {
+  display: flex;
   flex: none;
   inline-size: 0.75rem;
   block-size: 0.75rem;
 }
 
 .andes-org-chart__chevron {
+  /* Drawn 1.25px thick in the 12px box before: 2.5 on lucide's 24-unit grid. */
+  --ng-icon__stroke-width: 2.5;
   rotate: var(--_andes-org-chart-chevron);
   transition: rotate var(--_andes-org-chart-motion) var(--_andes-org-chart-ease);
 }
@@ -548,9 +556,7 @@
   cursor: progress;
 }
 
-.andes-org-chart__spinner circle {
-  stroke-dasharray: 28 10;
-  transform-origin: center;
+.andes-org-chart__spinner {
   animation: andes-org-chart-spin 0.8s linear infinite;
 }
 
@@ -581,9 +587,16 @@
   color: var(--andes-color-popover-foreground);
 }
 
-.andes-org-chart__controls svg {
+.andes-org-chart__controls ng-icon {
+  display: flex;
   inline-size: 1rem;
   block-size: 1rem;
+}
+
+/* The button sizes any projected svg to 1em of its own font size; the glyph keeps 1rem. */
+.andes-org-chart__controls ng-icon ::ng-deep svg {
+  inline-size: 100%;
+  block-size: 100%;
 }
 
 .andes-org-chart__zoom {
@@ -629,7 +642,7 @@
     animation: none !important;
   }
 
-  .andes-org-chart__spinner circle {
+  .andes-org-chart__spinner {
     animation-duration: 2.4s;
   }
 }

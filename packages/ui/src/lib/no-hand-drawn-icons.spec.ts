@@ -13,6 +13,12 @@ const LIB = 'packages/ui/src/lib';
 const ILLUSTRATIONS: readonly string[] = [
   // The two Empty illustrations (the default box scene and the simple tray).
   'empty/empty.html',
+  // The org chart's connector lines between the cards (a drawing of the links, not a glyph).
+  'org-chart/org-chart.html',
+  // The org chart's `exportSvg()`: the serialised chart a consumer downloads, built as text.
+  'org-chart/org-chart.ts',
+  // The connector template's contract: the doc comments show the `<svg:path>` a consumer draws.
+  'org-chart/org-chart-templates.ts',
 ];
 
 /** What drawing an SVG by hand looks like, in a template or through `Renderer2`. */

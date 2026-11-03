@@ -29,6 +29,16 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideCheck,
+  lucideChevronDown,
+  lucideLoaderCircle,
+  lucideLocateFixed,
+  lucideMaximize,
+  lucideMinus,
+  lucidePlus,
+} from '@ng-icons/lucide';
 
 import { AndesButton } from '../button/button';
 import {
@@ -352,7 +362,18 @@ interface LinkView<T> {
 @Component({
   selector: 'andes-org-chart',
   exportAs: 'andesOrgChart',
-  imports: [NgTemplateOutlet, AndesButton, AndesOrgChartNodeItem],
+  viewProviders: [
+    provideIcons({
+      lucideCheck,
+      lucideChevronDown,
+      lucideLoaderCircle,
+      lucideLocateFixed,
+      lucideMaximize,
+      lucideMinus,
+      lucidePlus,
+    }),
+  ],
+  imports: [NgIcon, NgTemplateOutlet, AndesButton, AndesOrgChartNodeItem],
   templateUrl: './org-chart.html',
   styleUrl: './org-chart.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

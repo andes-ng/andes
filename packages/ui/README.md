@@ -5,10 +5,12 @@ Accessible Angular components for the Andes NG design system: standalone, signal
 ## Install
 
 ```bash
-npm install @andes-ng/ui @andes-ng/tokens
+npm install @andes-ng/ui @andes-ng/tokens @ng-icons/core @ng-icons/lucide
 ```
 
-Peer dependencies: Angular 22 (`@angular/core`, `common`, `forms`, `cdk`) and RxJS 7.
+Peer dependencies: Angular 22 (`@angular/core`, `common`, `forms`, `cdk`), RxJS 7, and `@ng-icons/core` with `@ng-icons/lucide` 36.
+
+The components draw no icons of their own: every glyph (chevrons, checks, the clear "x", status marks, file and folder icons) is a [lucide](https://lucide.dev) icon rendered through `ng-icon`. Each component registers the icons it uses, so there is nothing to set up; the icon packages are peer dependencies, never bundled, so the application shares one copy with its own `ng-icon` usage.
 
 ## Use
 

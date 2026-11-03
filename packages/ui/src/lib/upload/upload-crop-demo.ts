@@ -7,12 +7,22 @@ import {
   effect,
   ElementRef,
   inject,
-  input,
   signal,
   TemplateRef,
   untracked,
   viewChild,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideCrop,
+  lucideRectangleHorizontal,
+  lucideRotateCcw,
+  lucideRotateCw,
+  lucideSquare,
+  lucideTvMinimal,
+  lucideZoomIn,
+  lucideZoomOut,
+} from '@ng-icons/lucide';
 
 import { AndesButton } from '../button/button';
 import { ANDES_DIALOG_IMPORTS } from '../dialog/dialog';
@@ -89,77 +99,6 @@ interface Drag {
   lastY: number;
 }
 
-type CropGlyphName =
-  | 'free'
-  | 'square'
-  | 'four-three'
-  | 'sixteen-nine'
-  | 'zoom-in'
-  | 'zoom-out'
-  | 'rotate'
-  | 'reset';
-
-/** 24x24 stroke paths (Lucide's crop, zoom and rotate shapes; the ratios drawn to scale). */
-const GLYPHS: Readonly<Record<CropGlyphName, readonly string[]>> = {
-  free: ['M6 2v14a2 2 0 0 0 2 2h14', 'M18 22V8a2 2 0 0 0-2-2H2'],
-  square: [
-    'M6.5 5h11A1.5 1.5 0 0 1 19 6.5v11a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 17.5v-11A1.5 1.5 0 0 1 6.5 5z',
-  ],
-  'four-three': [
-    'M3.5 4.5h17A1.5 1.5 0 0 1 22 6v12a1.5 1.5 0 0 1-1.5 1.5h-17A1.5 1.5 0 0 1 2 18V6a1.5 1.5 0 0 1 1.5-1.5z',
-  ],
-  'sixteen-nine': [
-    'M3.5 6.375h17A1.5 1.5 0 0 1 22 7.875v8.25a1.5 1.5 0 0 1-1.5 1.5h-17A1.5 1.5 0 0 1 2 16.125v-8.25a1.5 1.5 0 0 1 1.5-1.5z',
-  ],
-  'zoom-in': [
-    'M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0z',
-    'm21 21-4.35-4.35',
-    'M11 8v6',
-    'M8 11h6',
-  ],
-  'zoom-out': [
-    'M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0z',
-    'm21 21-4.35-4.35',
-    'M8 11h6',
-  ],
-  rotate: ['M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8', 'M21 3v5h-5'],
-  reset: ['M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8', 'M3 3v5h5'],
-};
-
-/** A decorative 18px line icon: its control carries the accessible name. */
-@Component({
-  selector: 'andes-story-crop-glyph',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { 'aria-hidden': 'true' },
-  styles: `
-    :host {
-      display: inline-flex;
-      flex: none;
-      inline-size: 1.125rem;
-      block-size: 1.125rem;
-    }
-    svg {
-      inline-size: 100%;
-      block-size: 100%;
-      fill: none;
-      stroke: currentColor;
-      stroke-width: 1.75;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
-  `,
-  template: `<svg viewBox="0 0 24 24" focusable="false">
-    @for (path of paths(); track path) {
-      <path [attr.d]="path" />
-    }
-  </svg>`,
-})
-class CropGlyph {
-  readonly name = input.required<CropGlyphName>();
-
-  protected readonly paths = computed(() => GLYPHS[this.name()]);
-}
-
 interface PendingCrop {
   readonly file: File;
   readonly resolve: (result: File | false) => void;
@@ -176,20 +115,51 @@ interface PendingCrop {
     AndesButton,
     AndesSegmented,
     AndesSlider,
-    CropGlyph,
+    NgIcon,
     ...ANDES_DIALOG_IMPORTS,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  // Decorative 18px line icons: each control carries the accessible name.
+  viewProviders: [
+    provideIcons({
+      lucideCrop,
+      lucideRectangleHorizontal,
+      lucideRotateCcw,
+      lucideRotateCw,
+      lucideSquare,
+      lucideTvMinimal,
+      lucideZoomIn,
+      lucideZoomOut,
+    }),
+  ],
   template: `
-    <ng-template #freeIcon><andes-story-crop-glyph name="free" /></ng-template>
+    <ng-template #freeIcon
+      ><ng-icon
+        name="lucideCrop"
+        size="18"
+        strokeWidth="1.75"
+        aria-hidden="true"
+    /></ng-template>
     <ng-template #squareIcon
-      ><andes-story-crop-glyph name="square"
+      ><ng-icon
+        name="lucideSquare"
+        size="18"
+        strokeWidth="1.75"
+        aria-hidden="true"
     /></ng-template>
     <ng-template #fourThreeIcon
-      ><andes-story-crop-glyph name="four-three"
+      ><ng-icon
+        name="lucideTvMinimal"
+        size="18"
+        strokeWidth="1.75"
+        aria-hidden="true"
     /></ng-template>
     <ng-template #sixteenNineIcon
-      ><andes-story-crop-glyph name="sixteen-nine"
+      ><ng-icon
+        name="lucideRectangleHorizontal"
+        size="18"
+        strokeWidth="1.75"
+        aria-hidden="true"
     /></ng-template>
     <andes-dialog
       [(open)]="open"
@@ -311,7 +281,12 @@ interface PendingCrop {
                 [disabled]="!ready() || placement().zoom <= minZoom"
                 (click)="stepZoom(-1)"
               >
-                <andes-story-crop-glyph name="zoom-out" />
+                <ng-icon
+                  name="lucideZoomOut"
+                  size="18"
+                  strokeWidth="1.75"
+                  aria-hidden="true"
+                />
               </andes-button>
               <andes-slider
                 class="crop__slider"
@@ -332,7 +307,12 @@ interface PendingCrop {
                 [disabled]="!ready() || placement().zoom >= maxZoom"
                 (click)="stepZoom(1)"
               >
-                <andes-story-crop-glyph name="zoom-in" />
+                <ng-icon
+                  name="lucideZoomIn"
+                  size="18"
+                  strokeWidth="1.75"
+                  aria-hidden="true"
+                />
               </andes-button>
             </div>
             <div class="crop__actions">
@@ -344,7 +324,12 @@ interface PendingCrop {
                 [disabled]="!ready()"
                 (click)="rotate()"
               >
-                <andes-story-crop-glyph name="rotate" />
+                <ng-icon
+                  name="lucideRotateCw"
+                  size="18"
+                  strokeWidth="1.75"
+                  aria-hidden="true"
+                />
               </andes-button>
               <andes-button
                 variant="ghost"
@@ -354,7 +339,12 @@ interface PendingCrop {
                 [disabled]="!ready()"
                 (click)="reset()"
               >
-                <andes-story-crop-glyph name="reset" />
+                <ng-icon
+                  name="lucideRotateCcw"
+                  size="18"
+                  strokeWidth="1.75"
+                  aria-hidden="true"
+                />
               </andes-button>
             </div>
           </div>

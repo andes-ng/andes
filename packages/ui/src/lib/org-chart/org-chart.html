@@ -158,26 +158,9 @@
             (click)="onCheckboxClick(node, $event)"
           >
             @if (node.checkState === 'true') {
-            <svg viewBox="0 0 12 12" focusable="false">
-              <path
-                d="M2.5 6.25 5 8.5l4.5-5"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
+            <ng-icon name="lucideCheck" />
             } @else if (node.checkState === 'mixed') {
-            <svg viewBox="0 0 12 12" focusable="false">
-              <path
-                d="M3 6h6"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-                stroke-linecap="round"
-              />
-            </svg>
+            <ng-icon name="lucideMinus" />
             }
           </span>
           } @if (resolvedNodeTemplate(); as nodeTemplate) {
@@ -239,20 +222,11 @@
             [ngTemplateOutletContext]="node.context"
           />
           } @else if (node.context.loading) {
-          <svg
+          <ng-icon
             class="andes-org-chart__spinner"
-            viewBox="0 0 16 16"
-            focusable="false"
-          >
-            <circle
-              cx="8"
-              cy="8"
-              r="6"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            />
-          </svg>
+            name="lucideLoaderCircle"
+            aria-hidden="true"
+          />
           } @else { @if (node.count) {
           <span class="andes-org-chart__count">{{ node.count }}</span>
           }
@@ -263,20 +237,11 @@
               [ngTemplateOutletContext]="{ $implicit: node.context.expanded, node: node.context }"
             />
             } @else {
-            <svg
+            <ng-icon
               class="andes-org-chart__chevron"
-              viewBox="0 0 12 12"
-              focusable="false"
-            >
-              <path
-                d="M3.5 4.75 6 7.25l2.5-2.5"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.25"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
+              name="lucideChevronDown"
+              aria-hidden="true"
+            />
             }
           </span>
           }
@@ -311,15 +276,7 @@
     [disabled]="!canZoomIn()"
     (click)="zoomIn()"
   >
-    <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-      <path
-        d="M8 3.5v9M3.5 8h9"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.5"
-        stroke-linecap="round"
-      />
-    </svg>
+    <ng-icon name="lucidePlus" aria-hidden="true" />
   </andes-button>
   <span class="andes-org-chart__zoom" data-slot="org-chart-zoom"
     >{{ zoomPercent() }}</span
@@ -331,15 +288,7 @@
     [disabled]="!canZoomOut()"
     (click)="zoomOut()"
   >
-    <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-      <path
-        d="M3.5 8h9"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.5"
-        stroke-linecap="round"
-      />
-    </svg>
+    <ng-icon name="lucideMinus" aria-hidden="true" />
   </andes-button>
   <span class="andes-org-chart__divider" aria-hidden="true"></span>
   }
@@ -349,15 +298,7 @@
     [aria-label]="text().fit"
     (click)="fitView()"
   >
-    <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-      <path
-        d="M2.75 6V3.75a1 1 0 0 1 1-1H6M10 2.75h2.25a1 1 0 0 1 1 1V6M13.25 10v2.25a1 1 0 0 1-1 1H10M6 13.25H3.75a1 1 0 0 1-1-1V10"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.5"
-        stroke-linecap="round"
-      />
-    </svg>
+    <ng-icon name="lucideMaximize" aria-hidden="true" />
   </andes-button>
   <andes-button
     variant="ghost"
@@ -365,16 +306,7 @@
     [aria-label]="text().reset"
     (click)="resetView()"
   >
-    <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-      <circle cx="8" cy="8" r="2" fill="currentColor" />
-      <path
-        d="M8 1.75v2.5M8 11.75v2.5M1.75 8h2.5M11.75 8h2.5"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.5"
-        stroke-linecap="round"
-      />
-    </svg>
+    <ng-icon name="lucideLocateFixed" aria-hidden="true" />
   </andes-button>
 </div>
 }

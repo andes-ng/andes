@@ -4,6 +4,8 @@ import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { AndesButton } from '../button/button';
 import { AndesInput } from './input';
 import type { Meta, StoryObj } from '@storybook/angular';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideCircleX } from '@ng-icons/lucide';
 
 const meta: Meta<AndesInput> = {
   title: 'Data Entry/Input/Basics/Features',
@@ -74,7 +76,10 @@ export const Addons: Story = {
  */
 export const ClearButton: Story = {
   render: () => ({
-    moduleMetadata: { imports: [ReactiveFormsModule] },
+    moduleMetadata: {
+      imports: [ReactiveFormsModule, NgIcon],
+      providers: [provideIcons({ lucideCircleX })],
+    },
     props: {
       smallText: signal('Small'),
       mediumText: signal('Medium'),
@@ -99,9 +104,7 @@ export const ClearButton: Story = {
         }
       </div>
       <ng-template #clearIconTpl>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path>
-        </svg>
+        <ng-icon name="lucideCircleX" aria-hidden="true" />
       </ng-template>
     `,
   }),

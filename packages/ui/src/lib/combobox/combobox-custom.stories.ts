@@ -1,6 +1,8 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideChevronDown, lucideMapPin } from '@ng-icons/lucide';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
@@ -107,7 +109,9 @@ const meta: Meta<AndesCombobox> = {
           AndesButton,
           FormsModule,
           NgTemplateOutlet,
+          NgIcon,
         ],
+        providers: [provideIcons({ lucideChevronDown, lucideMapPin })],
       },
       ...story(),
     }),
@@ -229,10 +233,10 @@ export const FieldContent: Story = {
         </andes-combobox>
       </div>
       <ng-template #pin>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.6-7-11a7 7 0 0 1 14 0c0 5.4-7 11-7 11Z" /><circle cx="12" cy="10" r="2.5" /></svg>
+        <ng-icon name="lucideMapPin" />
       </ng-template>
       <ng-template #chevron>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+        <ng-icon name="lucideChevronDown" />
       </ng-template>
     `,
   }),

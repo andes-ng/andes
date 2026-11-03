@@ -8,19 +8,10 @@
           @if (icon(); as customIcon) {
           <ng-container *ngTemplateOutlet="customIcon" />
           } @else {
-          <svg
+          <ng-icon
             class="andes-popconfirm-icon-default"
-            viewBox="0 0 16 16"
-            width="1em"
-            height="1em"
-            fill="currentColor"
-            fill-rule="evenodd"
-            focusable="false"
-          >
-            <path
-              d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1Zm-.75 3.25h1.5v5h-1.5v-5ZM8 12.25a.875.875 0 1 1 0-1.75.875.875 0 0 1 0 1.75Z"
-            />
-          </svg>
+            name="lucideCircleAlert"
+          />
           }
         </span>
         }

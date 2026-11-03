@@ -22,6 +22,8 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideCircleAlert } from '@ng-icons/lucide';
 
 import { AndesButton, type AndesButtonVariant } from '../button/button';
 import { AndesPopoverBase } from '../popover/popover-base';
@@ -70,7 +72,9 @@ function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
  */
 @Component({
   selector: 'andes-popconfirm',
+  viewProviders: [provideIcons({ lucideCircleAlert })],
   imports: [
+    NgIcon,
     AndesButton,
     AndesPopoverContent,
     AndesPopoverOutlet,

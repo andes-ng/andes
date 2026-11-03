@@ -39,6 +39,23 @@
   line-height: 1;
 }
 
+/* The default mark is lucide's circle-alert in an `ng-icon`, drawn as the solid disc it always
+   was: the ring is filled and the exclamation mark is knocked out in the panel's own colour.
+   As a flex box its svg never sits on a text baseline, so it fills the 1em box exactly. */
+.andes-popconfirm-icon-default {
+  display: flex;
+  width: 1em;
+  height: 1em;
+}
+
+.andes-popconfirm-icon-default ::ng-deep circle {
+  fill: currentcolor;
+}
+
+.andes-popconfirm-icon-default ::ng-deep line {
+  stroke: var(--andes-popover-background, var(--andes-color-popover));
+}
+
 .andes-popconfirm-text {
   display: flex;
   flex-direction: column;

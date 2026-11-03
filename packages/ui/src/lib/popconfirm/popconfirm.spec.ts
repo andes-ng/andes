@@ -165,6 +165,26 @@ describe('AndesPopconfirm', () => {
     expect(panel()?.querySelector('.andes-popover-arrow')).toBeTruthy();
   });
 
+  it("draws the default mark with lucide's circle-alert, registered by the component", async () => {
+    // No `provideIcons` in this test bed: the svg proves the registration is automatic, and the
+    // panel lives in the overlay, outside the component's own element.
+    const { panel, openIt } = setup();
+    await openIt();
+
+    const icon = panel()?.querySelector(
+      'ng-icon.andes-popconfirm-icon-default',
+    );
+
+    expect(icon?.getAttribute('name')).toBe('lucideCircleAlert');
+    expect(icon?.querySelector('svg circle')).not.toBeNull();
+    expect(icon?.querySelectorAll('svg line')).toHaveLength(2);
+    expect(
+      panel()
+        ?.querySelector('.andes-popconfirm-icon')
+        ?.getAttribute('aria-hidden'),
+    ).toBe('true');
+  });
+
   it('renders the default warning icon, a custom icon, or none', async () => {
     const { host, panel, openIt, update, trigger } = setup();
     await openIt();

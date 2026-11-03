@@ -27,7 +27,10 @@
 /* `@ng-icons` wraps its SVG in an `<ng-icon>` host, which would otherwise
    become the flex item and make the percentage above resolve against that wrapper's
    auto-sized box instead of the avatar. `display: contents` drops the wrapper
-   from layout so the SVG itself is the flex item. */
+   from layout so the SVG itself is the flex item. The svg takes its size from the
+   wrapper (`width: inherit`), so the wrapper carries the same share as its icon size;
+   inherited as specified, the percentage then resolves against the avatar. */
 :host ::ng-deep ng-icon {
   display: contents;
+  --ng-icon__size: calc(100% * var(--andes-avatar-icon-scale, 0.66));
 }

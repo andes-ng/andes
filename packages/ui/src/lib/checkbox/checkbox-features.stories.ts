@@ -1,3 +1,5 @@
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideEllipsis, lucideHeart, lucideX } from '@ng-icons/lucide';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
@@ -113,22 +115,20 @@ export const Card: Story = {
 
 /**
  * `checkedIcon` / `indeterminateIcon` take a context-free template that replaces the tick or
- * the dash; its `<svg>` is sized to the box's glyph area in every size and drawn in
- * `currentColor`.
+ * the dash; its icon (an `ng-icon` here, or any SVG) is sized to the box's glyph area in every
+ * size and drawn in `currentColor`.
  */
 export const CustomIcons: Story = {
   name: 'Custom icons',
   render: () => ({
+    moduleMetadata: {
+      imports: [NgIcon],
+      providers: [provideIcons({ lucideEllipsis, lucideHeart, lucideX })],
+    },
     template: `
-      <ng-template #heart>
-        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 14s-5.5-3.3-5.5-7A3 3 0 0 1 8 5a3 3 0 0 1 5.5 2c0 3.7-5.5 7-5.5 7z" /></svg>
-      </ng-template>
-      <ng-template #cross>
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8" /></svg>
-      </ng-template>
-      <ng-template #dots>
-        <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="4" cy="8" r="1.5" /><circle cx="8" cy="8" r="1.5" /><circle cx="12" cy="8" r="1.5" /></svg>
-      </ng-template>
+      <ng-template #heart><ng-icon name="lucideHeart" /></ng-template>
+      <ng-template #cross><ng-icon name="lucideX" /></ng-template>
+      <ng-template #dots><ng-icon name="lucideEllipsis" /></ng-template>
       <div style="display: flex; flex-direction: column; gap: 1rem;">
         <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: center;">
           <andes-checkbox size="sm" [checkedIcon]="heart" [checked]="true">Small</andes-checkbox>
@@ -147,9 +147,11 @@ export const CustomIcons: Story = {
 
 /**
  * Click to watch: checking draws the tick and pops the box, a mixed state scales its dash in,
- * unchecking fades the mark out. The box that starts checked does NOT animate on load, the
- * buttons show that programmatic changes animate too, and nothing moves under
- * `prefers-reduced-motion` or in forced-colors mode.
+ * unchecking fades the mark out, and every change sends a soft ring out of the box (4 / 6 / 8px
+ * for the small / medium / large box, fading over a second; a button or a card without an
+ * indicator rings its whole face). Hover a checked or mixed box and it LIGHTENS. The box that
+ * starts checked does NOT animate on load, the buttons show that programmatic changes animate
+ * too, and nothing moves under `prefers-reduced-motion` or in forced-colors mode.
  */
 export const Animation: Story = {
   render: () => ({

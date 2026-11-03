@@ -118,6 +118,7 @@
 
 /* The glyph takes the same share of the face as in AndesAvatarIcon. */
 .andes-avatar-face-grid__glyph {
+  display: inline-flex;
   width: calc(var(--_andes-avatar-face) * var(--andes-avatar-icon-scale, 0.66));
   height: calc(
     var(--_andes-avatar-face) * var(--andes-avatar-icon-scale, 0.66)

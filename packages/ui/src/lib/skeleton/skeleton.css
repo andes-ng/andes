@@ -87,7 +87,7 @@
 }
 
 /* The bars: a 16px title and 16px rows, 16px apart, with 24px between the title and the
-   paragraph (28px beside an avatar) - the rhythm of Ant Design's Skeleton. */
+   paragraph (28px beside an avatar). */
 .andes-skeleton-composite__title {
   width: 100%;
   height: 1rem;

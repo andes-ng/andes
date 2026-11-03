@@ -376,7 +376,7 @@ describe('AndesSkeleton (composite)', () => {
     ).toContain('andes-skeleton-fill--active');
   });
 
-  it('sweeps the shimmer for 1.4s, like Ant Design', () => {
+  it('sweeps the shimmer for 1.4s', () => {
     const { fixture, q } = createComposite();
     fixture.componentInstance.active.set(true);
     fixture.detectChanges();
@@ -1154,7 +1154,7 @@ describe('Skeleton stylesheets (look of the placeholders)', () => {
     );
   });
 
-  it('shimmers a 400% wide 25/37/63 gradient for 1.4s, as Ant Design does', () => {
+  it('shimmers a 400% wide 25/37/63 gradient for 1.4s', () => {
     const css = fillCss();
 
     expect(

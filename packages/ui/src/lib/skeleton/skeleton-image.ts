@@ -18,7 +18,7 @@ import { toCssSize } from './skeleton-utils';
     [style.width]="widthStyle()"
     [style.height]="heightStyle()"
   >
-    <!-- The filled picture mark of Ant Design's image placeholder (MIT licensed). -->
+    <!-- The filled picture mark of the image placeholder. -->
     <svg
       class="andes-skeleton-image__icon"
       viewBox="0 0 1098 1024"

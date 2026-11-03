@@ -16,7 +16,7 @@ import { rowWidths } from './skeleton-utils';
  * skeleton is too much - a card body, a table cell, a comment. Like every element placeholder it
  * is decorative; the page's loading status belongs to whatever wraps it.
  *
- * Each line is 16px high, 16px apart (Ant Design's paragraph rhythm). A block of 3 lines or more
+ * Each line is 16px high, 16px apart (the paragraph rhythm of `andes-skeleton`). A block of 3 lines or more
  * ends on a shorter line, like the composite's paragraph.
  */
 @Component({

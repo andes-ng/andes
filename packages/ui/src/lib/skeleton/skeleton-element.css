@@ -99,8 +99,8 @@
 }
 
 /* Image and Node: a fixed box (overridable through width/height) with centered content. The
-   glyph inside is the foreground colour at 22% (72% on the dark theme) - the quiet grey of Ant
-   Design's picture mark - so it stays a soft mark on the fill. */
+   glyph inside is the foreground colour at 22% (72% on the dark theme) - a quiet grey - so it
+   stays a soft mark on the fill. */
 
 .andes-skeleton-image,
 .andes-skeleton-node {

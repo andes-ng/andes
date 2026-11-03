@@ -383,7 +383,9 @@ describe('buttons', () => {
     const [back, forward] = p.qa<HTMLButtonElement>('[data-slot=seek-button]');
     expect(back.getAttribute('aria-label')).toBe('Back 10 seconds');
     expect(forward.getAttribute('aria-label')).toBe('Forward 10 seconds');
-    expect(back.querySelector('text')?.textContent?.trim()).toBe('10');
+    expect(
+      back.querySelector('.andes-player-icon__label')?.textContent?.trim(),
+    ).toBe('10');
     back.click();
     expect(p.media().currentTime).toBe(20);
     forward.click();

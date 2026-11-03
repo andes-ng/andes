@@ -2,17 +2,52 @@
 
 /* ---- Icons ------------------------------------------------------------------------------- */
 
+/* Every glyph is a lucide icon in an `ng-icon` that fills the icon box (the svg is 24 units,
+   its 2-unit stroke scaling with the box, as the old drawing's did). */
 .andes-player-icon {
+  position: relative;
   display: inline-flex;
   flex-shrink: 0;
   width: var(--andes-video-icon-size, 1.25rem);
   height: var(--andes-video-icon-size, 1.25rem);
 }
 
+.andes-player-icon ng-icon {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 .andes-player-icon svg {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+/* Play, pause and the skip glyphs are solid shapes: `fill` is set on the `ng-icon` and handed
+   down to the svg, whose own `fill="none"` would otherwise win. */
+.andes-player-icon[data-solid] ng-icon {
+  fill: currentcolor;
+}
+
+.andes-player-icon[data-solid] svg {
+  fill: inherit;
+}
+
+/* The speaker body is solid, the waves and the cross stay lines. */
+.andes-player-icon[data-icon^='volume'] svg path:first-child {
+  fill: currentcolor;
+}
+
+/* The seconds of a seek icon, centred in the arrow. */
+.andes-player-icon__label {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: calc(var(--andes-video-icon-size, 1.25rem) * 7 / 24);
+  font-weight: 700;
+  line-height: 1;
 }
 
 /* Back/forward chevrons follow the reading direction; the time axis (seek icons, sliders)

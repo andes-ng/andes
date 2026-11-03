@@ -1015,7 +1015,7 @@ describe('dialog motion', () => {
   // relies on `:has()`, so the cascade cannot be read back here.
   const css = readFileSync('packages/ui/src/lib/dialog/dialog.css', 'utf8');
 
-  it('enters with Ant Design zoom and fade: 300ms on its ease-out-circ curve from 20%', () => {
+  it('enters with a zoom and fade: 300ms on an ease-out-circ curve from 20%', () => {
     const rule = /animation:\s*andes-dialog-enter\s+([\d.]+)s\s+([^;]+);/.exec(
       css,
     );
@@ -1040,7 +1040,7 @@ describe('dialog motion', () => {
     expect(reduced).toMatch(/animation:\s*none/);
   });
 
-  it('leaves in 200ms on Ant Design ease-in-out-circ curve, shrinking back to 20%', () => {
+  it('leaves in 200ms on an ease-in-out-circ curve, shrinking back to 20%', () => {
     const rule =
       /\.andes-overlay-pane\[data-andes-closing\]:has\([^{]*\{([^}]*)\}/.exec(
         css,
@@ -1071,7 +1071,7 @@ describe('dialog motion', () => {
     );
   });
 
-  it('fades the scrim in linearly over 200ms, as Ant Design does', () => {
+  it('fades the scrim in linearly over 200ms', () => {
     expect(
       declaredValue(css, '.andes-dialog-backdrop', 'transition-duration'),
     ).toBe('0.2s');

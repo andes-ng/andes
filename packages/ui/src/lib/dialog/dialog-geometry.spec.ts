@@ -8,8 +8,7 @@ import type { AndesDialogWidth } from './dialog-base';
 import { AndesDialogService } from './dialog.service';
 
 /**
- * The dialog's measurements against Ant Design's Modal, measured live on
- * https://ant.design/components/modal: a 520px surface, 20px by 24px padding, an 8px
+ * The dialog's measurements: a 520px surface, 20px by 24px padding, an 8px
  * gap under the title, a 12px gap above the footer, a 32px close control 12px from the
  * corner, a 45% black mask, and a zoom-and-fade entry.
  *
@@ -80,7 +79,7 @@ const dialogVar = (name: string) => {
   return resolve(value);
 };
 
-describe('dialog geometry matches Ant Design', () => {
+describe('dialog geometry', () => {
   it('is 520px wide by default and 416px for a confirmation', () => {
     expect(
       toPx(declaredValue(css, '.andes-dialog--md', 'max-width') ?? ''),
@@ -182,7 +181,7 @@ describe('dialog geometry matches Ant Design', () => {
     ).toBe(60);
   });
 
-  it('uses the three-layer Ant Design elevation', () => {
+  it('uses a three-layer elevation', () => {
     expect(declaredValue(css, '.andes-dialog', 'box-shadow')).toBe(
       '0 6px 16px 0 rgb(0 0 0 / 8%), 0 3px 6px -4px rgb(0 0 0 / 12%), 0 9px 28px 8px rgb(0 0 0 / 5%)',
     );
@@ -515,7 +514,7 @@ describe('dialog fullscreen, maximize and mask class', () => {
   });
 });
 
-describe('service dialogs: Ant Design status icons', () => {
+describe('service dialogs: status icons', () => {
   /** The cut-out glyph path each kind draws on its disc. */
   const GLYPHS = {
     confirm: 'M12 6.75v6.5M12 17.25h.01',

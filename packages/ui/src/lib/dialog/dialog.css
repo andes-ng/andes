@@ -8,13 +8,13 @@
  */
 
 .andes-dialog {
-  /* 20px above and below, 24px at the sides: the modal padding Ant Design uses. The
+  /* 20px above and below, 24px at the sides: the modal padding. The
      inline step is 24px, which the token scale does not have (it stops at 20px,
      --andes-space-5), so it is composed from tokens rather than hard-coded. Held as
      custom properties because the close control and the header's close-clearance are
      derived from them below. They measure from the surface's outer edge, so the 1px
      border is taken out of the scroll box's own padding and of the close control's inset:
-     text lands exactly 24px in, as it does in Ant Design's borderless modal. */
+     text lands exactly 24px in. */
   --andes-dialog-border-width: 1px;
   --andes-dialog-padding-block: var(--andes-space-5);
   --andes-dialog-padding-inline: calc(
@@ -58,7 +58,7 @@
   /* A fixed dark ink rather than one derived from --andes-color-foreground, for the same
      reason --andes-color-overlay is black-based: a shadow is cast light, not themed ink.
      Deriving it from the foreground turned this into a white halo in the dark theme,
-     where that token is #f8fafc. The three layers are Ant Design's modal elevation.
+     where that token is #f8fafc. The shadow has three layers.
      Dark-theme separation comes from the surface being
      lighter than the scrim plus the 1px border, which is how both references do it. */
   box-shadow:
@@ -95,7 +95,7 @@
 
 /* Sizes. Neither reference library exposes an enum, but a scale keeps consumers off
    magic widths; every step still collapses to the viewport on a narrow screen. `md` is
-   520px, the width of an Ant Design modal. */
+   520px, the width of a standard modal. */
 .andes-dialog--sm {
   max-width: 24rem;
 }
@@ -298,8 +298,8 @@
   display: none;
 }
 
-/* Four 16px bars 16px apart with 16px above and below, like Ant Design's modal skeleton
-   (the header already contributes the gap above, hence the 8px top margin). */
+/* Four 16px bars 16px apart with 16px above and below (the header already contributes the
+   gap above, hence the 8px top margin). */
 .andes-dialog__skeleton {
   display: flex;
   flex-direction: column;
@@ -338,7 +338,7 @@
 .andes-dialog__maximize {
   position: absolute;
   /* A 2rem hit area 12px from the corner with a 1rem glyph centred in it, the geometry
-     of Ant Design's close control. */
+     of the close control. */
   inset-block-start: calc(
     var(--andes-dialog-close-inset) - var(--andes-dialog-border-width)
   );
@@ -444,7 +444,7 @@
   );
 }
 
-/* A 22px filled disc (Ant Design's status icons) nudged down 1px, so it is centred on
+/* A 22px filled disc (the status icons) nudged down 1px, so it is centred on
    the title's 24px first line. */
 .andes-dialog__method-icon {
   display: inline-flex;
@@ -533,9 +533,9 @@
   justify-content: center;
   box-sizing: border-box;
   width: 100%;
-  /* 16px of gutter, so the surface is `100vw - 32px` on a phone, as Ant Design's is. */
+  /* 16px of gutter, so the surface is `100vw - 32px` on a phone. */
   padding: var(--andes-space-4);
-  /* Zoom and fade in, from 20% scale over 300ms on Ant Design's ease-out-circ curve: a
+  /* Zoom and fade in, from 20% scale over 300ms on an ease-out-circ curve: a
      fast start that settles without overshoot. */
   animation: andes-dialog-enter 0.3s cubic-bezier(0.08, 0.82, 0.17, 1);
 }
@@ -545,7 +545,7 @@
 /* prettier-ignore */
 .andes-overlay-pane:has(> .andes-dialog--top, > .andes-dialog-keep-alive > .andes-dialog--top) {
   align-self: flex-start;
-  /* 100px on a tall screen (Ant Design's `top`), shrinking with the viewport. */
+  /* 100px on a tall screen (the `top` offset), shrinking with the viewport. */
   padding-block-start: clamp(var(--andes-space-4), 12.5dvh, 6.25rem);
 }
 
@@ -563,11 +563,11 @@
 
 /* The CDK's prebuilt stylesheet fades every backdrop over 400ms, so the scrim kept
    darkening for well over a tenth of a second after the dialog had finished arriving.
-   Ant Design's mask fades linearly over 200ms, which lands inside the surface's own entry.
+   The mask fades linearly over 200ms, which lands inside the surface's own entry.
    Scoped to the class the two dialog roots pass as `backdropClass`, so no other
    overlay's timing changes.
 
-   The scrim is a flat 45% black, also as in Ant Design, in both themes: the primitive
+   The scrim is a flat 45% black in both themes: the primitive
    paints it from `--andes-color-overlay`, which resolves on the backdrop element, so
    re-pointing the token here recolours this scrim alone. `--andes-dialog-mask` is the
    consumer hook: any CSS background value (a gradient, say), usually set from a
@@ -583,7 +583,7 @@
    children and the scrim with `data-andes-closing` and waits for the animations below
    before detaching (on a branch whose primitive does not do that yet, the attribute
    never appears and the close stays instant). The surface mirrors its entry - a fade
-   and a shrink back to 20% - over 200ms on Ant Design's ease-in-out-circ curve, so a
+   and a shrink back to 20% - over 200ms on an ease-in-out-circ curve, so a
    dismissal is quicker than the arrival. `forwards` holds the last frame until the pane
    is removed, so the surface cannot flash back to full opacity for a frame in between. */
 /* prettier-ignore */

@@ -218,7 +218,7 @@ export class AndesDialogMethodRef {
   }
 }
 
-// `confirm` shares the exclamation glyph with `warning`, as Ant Design's does: both ask
+// `confirm` shares the exclamation glyph with `warning`: both ask
 // for attention. The glyphs are the ones `andes-alert` and the alert dialog's tone icon
 // draw, each cut out of a full-size disc.
 const METHOD_ICON_PATHS: Record<AndesDialogMethodKind, string> = {

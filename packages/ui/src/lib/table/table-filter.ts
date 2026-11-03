@@ -21,6 +21,12 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideChevronDown,
+  lucideFunnel,
+  lucideSearch,
+} from '@ng-icons/lucide';
 
 import { AndesButton } from '../button/button';
 import { AndesTable } from './table';
@@ -203,7 +209,10 @@ function sameValues(
  */
 @Component({
   selector: 'andes-table-filter',
-  imports: [AndesButton, NgTemplateOutlet],
+  viewProviders: [
+    provideIcons({ lucideChevronDown, lucideFunnel, lucideSearch }),
+  ],
+  imports: [AndesButton, NgIcon, NgTemplateOutlet],
   exportAs: 'andesTableFilter',
   templateUrl: './table-filter.html',
   styleUrl: './table-filter.css',

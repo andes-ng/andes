@@ -6,6 +6,8 @@ import {
   input,
   signal,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideSearch } from '@ng-icons/lucide';
 import type { Meta, StoryObj } from '@storybook/angular';
 import { moduleMetadata } from '@storybook/angular';
 
@@ -305,7 +307,8 @@ class FilterTreeDemo {
  */
 @Component({
   selector: 'andes-filter-panel-demo',
-  imports: [...TABLE_PARTS, AndesButton, AndesInput],
+  imports: [...TABLE_PARTS, AndesButton, AndesInput, NgIcon],
+  viewProviders: [provideIcons({ lucideSearch })],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <andes-table #table [(filters)]="filters" [(sort)]="sort">
@@ -393,11 +396,11 @@ class FilterTreeDemo {
     </ng-template>
 
     <ng-template #searchIcon let-filtered>
-      <span
+      <ng-icon
         class="search-icon"
+        name="lucideSearch"
         [class.search-icon--active]="filtered"
-        aria-hidden="true"
-      ></span>
+      />
     </ng-template>
   `,
   styles: [
@@ -418,12 +421,10 @@ class FilterTreeDemo {
         font-size: 0.875rem;
       }
       .search-icon {
-        display: block;
+        display: flex;
         width: 0.875rem;
         height: 0.875rem;
-        background-color: currentcolor;
-        mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round'><circle cx='11' cy='11' r='7'/><path d='m20 20-3.5-3.5'/></svg>")
-          center / contain no-repeat;
+        --ng-icon__stroke-width: 2.5;
       }
       .search-icon--active {
         color: var(--andes-color-primary-text);

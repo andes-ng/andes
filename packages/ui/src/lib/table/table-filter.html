@@ -18,8 +18,8 @@
   />
   } @else {
   <ng-content
-    ><span class="andes-table-filter__icon" aria-hidden="true"></span
-  ></ng-content>
+    ><ng-icon class="andes-table-filter__icon" name="lucideFunnel"
+  /></ng-content>
   }
 </button>
 @if (open()) {
@@ -47,7 +47,7 @@
   @if (!projectedPanel()) { @if (searchEnabled()) {
   <div class="andes-table-filter__search">
     <label class="andes-table-filter__search-field">
-      <span class="andes-table-filter__search-icon" aria-hidden="true"></span>
+      <ng-icon class="andes-table-filter__search-icon" name="lucideSearch" />
       <input
         type="search"
         class="andes-table-filter__search-input"
@@ -120,10 +120,10 @@
         [attr.aria-controls]="nodeId(option) + '-children'"
         (click)="toggleExpanded(option)"
       >
-        <span
+        <ng-icon
           class="andes-table-filter__switcher-icon"
-          aria-hidden="true"
-        ></span>
+          name="lucideChevronDown"
+        />
       </button>
       } @else {
       <span class="andes-table-filter__switcher-space"></span>

@@ -12,6 +12,8 @@ import {
   TemplateRef,
   ViewContainerRef,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideChevronRight } from '@ng-icons/lucide';
 
 import { AndesTable } from './table';
 import type { AndesTableRowKey } from './table-context';
@@ -31,6 +33,8 @@ import { AndesTableRow } from './table-row';
 @Component({
   selector: 'andes-table-expand-toggle',
   exportAs: 'andesTableExpandToggle',
+  viewProviders: [provideIcons({ lucideChevronRight })],
+  imports: [NgIcon],
   styleUrl: './table-controls.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'andes-table-control' },
@@ -49,8 +53,10 @@ import { AndesTableRow } from './table-row';
         (click)="toggle()"
       >
         <ng-content
-          ><span class="andes-table-control__chevron" aria-hidden="true"></span
-        ></ng-content>
+          ><ng-icon
+            class="andes-table-control__chevron"
+            name="lucideChevronRight"
+        /></ng-content>
       </button>
     }`,
 })

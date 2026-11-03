@@ -12,6 +12,8 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideChevronDown } from '@ng-icons/lucide';
 
 import { AndesTable } from './table';
 import {
@@ -151,6 +153,8 @@ export class AndesTableSelection implements AndesTableSelectable {
  */
 @Component({
   selector: 'andes-table-select-all',
+  viewProviders: [provideIcons({ lucideChevronDown })],
+  imports: [NgIcon],
   styleUrl: './table-controls.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
@@ -180,7 +184,10 @@ export class AndesTableSelection implements AndesTableSelectable {
           [disabled]="disabled() || !table.hasSelectableRows()"
           (click)="toggleMenu()"
         >
-          <span class="andes-table-control__caret" aria-hidden="true"></span>
+          <ng-icon
+            class="andes-table-control__caret"
+            name="lucideChevronDown"
+          />
         </button>
         @if (menuOpen()) {
           <div

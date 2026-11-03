@@ -3,9 +3,10 @@ import { join } from 'node:path';
 
 /**
  * The library draws no icons of its own: every glyph is a lucide icon rendered through
- * `<ng-icon>`. This guard reads the sources (templates and TypeScript, not the specs or
- * stories) of every component folder and fails when one draws an SVG, so a hand-drawn icon
- * cannot creep back. Plain string search, no patterns.
+ * `<ng-icon>`. This guard reads the sources (templates, TypeScript and stylesheets, not the
+ * specs or stories) of every component folder and fails when one draws an SVG - inline, through
+ * `Renderer2`, or as a `data:image/svg` mask in CSS - so a hand-drawn icon cannot creep back.
+ * Plain string search, no patterns.
  */
 const LIB = 'packages/ui/src/lib';
 
@@ -13,10 +14,17 @@ const LIB = 'packages/ui/src/lib';
 const ILLUSTRATIONS: readonly string[] = [
   // The two Empty illustrations (the default box scene and the simple tray).
   'empty/empty.html',
+  // The table's sort carets: two small filled triangles stacked as the sort-order mark, CSS
+  // shapes masked from a data uri, not pictograms.
+  'table/table.css',
 ];
 
-/** What drawing an SVG by hand looks like, in a template or through `Renderer2`. */
-const MARKERS: readonly string[] = ['<svg', 'http://www.w3.org/2000/svg'];
+/** What drawing an SVG by hand looks like: in a template, through `Renderer2`, or as a mask. */
+const MARKERS: readonly string[] = [
+  '<svg',
+  'http://www.w3.org/2000/svg',
+  'data:image/svg',
+];
 
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((entry) => {
@@ -24,7 +32,10 @@ function sources(dir: string): string[] {
     if (statSync(path).isDirectory()) {
       return sources(path);
     }
-    const isSource = entry.endsWith('.ts') || entry.endsWith('.html');
+    const isSource =
+      entry.endsWith('.ts') ||
+      entry.endsWith('.html') ||
+      entry.endsWith('.css');
     const isTest = entry.endsWith('.spec.ts') || entry.endsWith('.stories.ts');
     return isSource && !isTest ? [path] : [];
   });
@@ -45,7 +56,9 @@ describe('no hand-drawn icons', () => {
         return false;
       }
       const source = readFileSync(join(LIB, file), 'utf8');
-      return MARKERS.some((marker) => source.includes(marker));
+      // A stylesheet may name `<svg>` in a comment: only the data uri counts there.
+      const markers = file.endsWith('.css') ? MARKERS.slice(2) : MARKERS;
+      return markers.some((marker) => source.includes(marker));
     });
 
     expect(offenders).toEqual([]);

@@ -12,6 +12,8 @@ import {
   CdkDropList,
   moveItemInArray,
 } from '@angular/cdk/drag-drop';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideSearch } from '@ng-icons/lucide';
 import type { Meta, StoryObj } from '@storybook/angular';
 import { moduleMetadata } from '@storybook/angular';
 
@@ -2008,7 +2010,9 @@ const BILLING_PAGE_SIZE = 8;
     AndesTableTextFilter,
     AndesTableRangeFilter,
     AndesTableDateRangeFilter,
+    NgIcon,
   ],
+  viewProviders: [provideIcons({ lucideSearch })],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <andes-table
@@ -2043,7 +2047,7 @@ const BILLING_PAGE_SIZE = 8;
           <th andesTableHead sortKey="client">
             Client
             <andes-table-filter column="client" label="Filter client">
-              <span class="demo-filter-icon" aria-hidden="true"></span>
+              <ng-icon class="demo-filter-icon" name="lucideSearch" />
               <andes-table-text-filter
                 placeholder="Client name"
                 [operators]="textOperators"
@@ -2129,12 +2133,10 @@ const BILLING_PAGE_SIZE = 8;
     DEMO_STYLES,
     `
       .demo-filter-icon {
-        display: block;
+        display: flex;
         width: 0.875rem;
         height: 0.875rem;
-        background-color: currentcolor;
-        mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round'><circle cx='11' cy='11' r='7'/><path d='m20 20-3.5-3.5'/></svg>")
-          center / contain no-repeat;
+        --ng-icon__stroke-width: 2.5;
       }
       .demo-state code {
         overflow-wrap: anywhere;

@@ -13,6 +13,12 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideChevronDown,
+  lucideChevronUp,
+  lucideColumns3,
+} from '@ng-icons/lucide';
 
 import { andesPlacePanel, type AndesPanelSide } from './table-context';
 import { andesMoveColumn } from './table-data';
@@ -52,6 +58,10 @@ let nextSettingsId = 0;
  */
 @Component({
   selector: 'andes-table-column-settings',
+  viewProviders: [
+    provideIcons({ lucideChevronDown, lucideChevronUp, lucideColumns3 }),
+  ],
+  imports: [NgIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './table-column-settings.css',
   host: {
@@ -70,7 +80,10 @@ let nextSettingsId = 0;
       [attr.aria-controls]="open() ? id : null"
       (click)="toggle()"
     >
-      <span class="andes-table-column-settings__icon" aria-hidden="true"></span>
+      <ng-icon
+        class="andes-table-column-settings__icon"
+        name="lucideColumns3"
+      />
       {{ label() }}
     </button>
     @if (open()) {
@@ -111,14 +124,24 @@ let nextSettingsId = 0;
                   [attr.aria-label]="moveLabel()(column.label, 'up')"
                   [disabled]="first"
                   (click)="move(column.key, -1, 'up')"
-                ></button>
+                >
+                  <ng-icon
+                    class="andes-table-column-settings__arrow"
+                    name="lucideChevronUp"
+                  />
+                </button>
                 <button
                   type="button"
                   class="andes-table-column-settings__move andes-table-column-settings__move--down"
                   [attr.aria-label]="moveLabel()(column.label, 'down')"
                   [disabled]="last"
                   (click)="move(column.key, 1, 'down')"
-                ></button>
+                >
+                  <ng-icon
+                    class="andes-table-column-settings__arrow"
+                    name="lucideChevronDown"
+                  />
+                </button>
               }
             </li>
           }

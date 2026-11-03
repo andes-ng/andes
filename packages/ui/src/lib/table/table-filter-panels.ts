@@ -9,6 +9,8 @@ import {
   untracked,
   type WritableSignal,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideChevronDown } from '@ng-icons/lucide';
 
 import {
   andesReadDateRangeFilter,
@@ -93,6 +95,8 @@ const DEFAULT_OPERATOR_LABELS: AndesTextFilterOperatorLabels = {
  */
 @Component({
   selector: 'andes-table-text-filter',
+  viewProviders: [provideIcons({ lucideChevronDown })],
+  imports: [NgIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     { provide: ANDES_TABLE_FILTER_PANEL, useExisting: AndesTableTextFilter },
@@ -116,10 +120,10 @@ const DEFAULT_OPERATOR_LABELS: AndesTextFilterOperatorLabels = {
             </option>
           }
         </select>
-        <span
+        <ng-icon
           class="andes-table-filter-panel__chevron"
-          aria-hidden="true"
-        ></span>
+          name="lucideChevronDown"
+        />
       </span>
     }
     <span class="andes-table-filter-panel__field">

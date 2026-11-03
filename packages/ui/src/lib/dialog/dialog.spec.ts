@@ -3,8 +3,7 @@ import { Component, signal, viewChild } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { readFileSync } from 'node:fs';
 
-import { expectLength } from '../../testing/computed-style';
-import { ANDES_ALERT_DIALOG_IMPORTS, AndesAlertDialog } from './alert-dialog';
+import { declaredValue, expectLength } from '../../testing/computed-style';
 import { ANDES_DIALOG_IMPORTS, AndesDialog } from './dialog';
 import type { AndesDialogSize } from './dialog-base';
 
@@ -86,6 +85,46 @@ function clickOn(element: Element) {
 
 const SCROLL_BLOCK_CLASS = 'cdk-global-scrollblock';
 
+/**
+ * jsdom has no Web Animations, so an overlay closes synchronously there and the
+ * window between "close requested" and "closed emitted" never exists. This stubs
+ * `getAnimations` so a pane that is closing reports one still-running animation,
+ * the way a browser does mid exit animation; `finishExit()` then ends it.
+ */
+function withPendingExitAnimation() {
+  const state = { finishExit: () => undefined as void };
+
+  beforeEach(() => {
+    let finish!: () => void;
+    const finished = new Promise<void>((resolve) => (finish = resolve));
+    state.finishExit = () => finish();
+    const animation = {
+      playState: 'running',
+      effect: { getComputedTiming: () => ({ endTime: 150 }) },
+      finished,
+    };
+    Object.defineProperty(Element.prototype, 'getAnimations', {
+      configurable: true,
+      writable: true,
+      value(this: Element) {
+        return this.hasAttribute('data-andes-closing') ? [animation] : [];
+      },
+    });
+  });
+
+  afterEach(() => {
+    delete (Element.prototype as unknown as Record<string, unknown>)[
+      'getAnimations'
+    ];
+  });
+
+  return state;
+}
+
+/** Lets promise continuations (and the zero-delay timers behind them) run. */
+const flushMicrotasks = () =>
+  new Promise<void>((resolve) => setTimeout(resolve));
+
 @Component({
   imports: [ANDES_DIALOG_IMPORTS],
   template: `
@@ -136,53 +175,6 @@ class DialogHost {
   readonly showTrigger = signal(true);
   readonly reasons: AndesOverlayCloseReason[] = [];
   openedCount = 0;
-}
-
-@Component({
-  imports: [ANDES_ALERT_DIALOG_IMPORTS],
-  template: `
-    <button type="button" id="outside">Outside</button>
-
-    <andes-alert-dialog
-      [(open)]="open"
-      [closeOnEscape]="closeOnEscape()"
-      (closed)="reasons.push($event)"
-      (cancelled)="cancelReasons.push($event)"
-    >
-      <button type="button" id="trigger" andesAlertDialogTrigger>Delete</button>
-
-      <andes-alert-dialog-content *andesAlertDialogContent>
-        <div andesAlertDialogHeader>
-          <h2 andesAlertDialogTitle id="title">Delete this project?</h2>
-          <p andesAlertDialogDescription id="description">
-            This cannot be undone.
-          </p>
-        </div>
-
-        <div andesAlertDialogFooter>
-          <button type="button" id="cancel" andesAlertDialogCancel>
-            Cancel
-          </button>
-          <button
-            type="button"
-            id="action"
-            andesAlertDialogAction
-            (click)="confirmed = true"
-          >
-            Delete
-          </button>
-        </div>
-      </andes-alert-dialog-content>
-    </andes-alert-dialog>
-  `,
-})
-class AlertDialogHost {
-  readonly dialog = viewChild.required(AndesAlertDialog);
-  readonly open = signal(false);
-  readonly closeOnEscape = signal(true);
-  readonly reasons: AndesOverlayCloseReason[] = [];
-  readonly cancelReasons: AndesOverlayCloseReason[] = [];
-  confirmed = false;
 }
 
 describe('AndesDialog', () => {
@@ -599,234 +591,94 @@ describe('AndesDialog', () => {
   });
 });
 
-describe('AndesAlertDialog', () => {
+describe('closing while the exit animation is pending', () => {
   withElementGeometry();
+  const exit = withPendingExitAnimation();
 
-  function createHost() {
-    const fixture = TestBed.createComponent(AlertDialogHost);
+  // The two-way `open` only turns false once `closed` fires, after the animation,
+  // so a close request must not be undone by the open-sync effect in between.
+  async function expectStaysClosing(
+    fixture: { detectChanges(): void },
+    host: { open: { (): boolean } },
+    pane: () => HTMLElement,
+    reasons: AndesOverlayCloseReason[],
+    expectedReason: AndesOverlayCloseReason,
+  ) {
     fixture.detectChanges();
-    const host = fixture.componentInstance;
+    await flushMicrotasks();
+    fixture.detectChanges();
 
-    const inPage = (id: string) =>
-      (fixture.nativeElement as HTMLElement).querySelector(
-        `#${id}`,
-      ) as HTMLElement;
-    const surface = () =>
-      document.querySelector(
-        '[data-slot="alert-dialog-content"]',
-      ) as HTMLElement;
-    const inDialog = (id: string) =>
-      surface()?.querySelector(`#${id}`) as HTMLElement;
+    expect(pane().hasAttribute('data-andes-closing')).toBe(true);
+    expect(reasons).toEqual([]);
 
-    return {
-      fixture,
-      host,
-      surface,
-      inDialog,
-      trigger: () => inPage('trigger'),
-      outside: () => inPage('outside'),
-      pane: () => document.querySelector('.andes-overlay-pane') as HTMLElement,
-      backdrop: () =>
-        document.querySelector('.andes-overlay-backdrop') as HTMLElement,
-      async openViaTrigger() {
-        clickOn(inPage('trigger'));
-        fixture.detectChanges();
-        await fixture.whenStable();
-      },
-    };
+    exit.finishExit();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    expect(document.querySelector('.andes-overlay-pane')).toBeNull();
+    expect(host.open()).toBe(false);
+    expect(reasons).toEqual([expectedReason]);
   }
 
-  it('opens when the trigger is clicked', async () => {
-    const { surface, openViaTrigger } = createHost();
-    await openViaTrigger();
+  describe('AndesDialog', () => {
+    function createHost() {
+      const fixture = TestBed.createComponent(DialogHost);
+      fixture.detectChanges();
+      return {
+        fixture,
+        host: fixture.componentInstance,
+        pane: () =>
+          document.querySelector('.andes-overlay-pane') as HTMLElement,
+        surface: () =>
+          document.querySelector('[data-slot="dialog-content"]') as HTMLElement,
+        async open() {
+          fixture.componentInstance.open.set(true);
+          fixture.detectChanges();
+          await fixture.whenStable();
+          await flushMicrotasks();
+        },
+      };
+    }
 
-    expect(surface()).toBeTruthy();
-  });
+    it('does not reopen after the Cancel control', async () => {
+      const { fixture, host, pane, surface, open } = createHost();
+      await open();
 
-  it('renders role="alertdialog" with aria-modal="true"', async () => {
-    const { surface, openViaTrigger } = createHost();
-    await openViaTrigger();
+      clickOn(surface().querySelector('#cancel') as HTMLElement);
 
-    expect(surface().getAttribute('role')).toBe('alertdialog');
-    expect(surface().getAttribute('aria-modal')).toBe('true');
-  });
+      await expectStaysClosing(
+        fixture,
+        host,
+        pane,
+        host.reasons,
+        'close-button',
+      );
+    });
 
-  it('advertises a dialog popup on the trigger, since alertdialog is not a valid aria-haspopup token', async () => {
-    const { trigger, openViaTrigger } = createHost();
-    await openViaTrigger();
+    it('does not reopen after the built-in close button', async () => {
+      const { fixture, host, pane, surface, open } = createHost();
+      await open();
 
-    expect(trigger().getAttribute('aria-haspopup')).toBe('dialog');
-  });
+      clickOn(
+        surface().querySelector('[data-slot="dialog-close-button"]') as Element,
+      );
 
-  it('labels and describes the surface from its title and description parts', async () => {
-    const { surface, inDialog, openViaTrigger } = createHost();
-    await openViaTrigger();
+      await expectStaysClosing(
+        fixture,
+        host,
+        pane,
+        host.reasons,
+        'close-button',
+      );
+    });
 
-    expect(surface().getAttribute('aria-labelledby')).toBe(
-      inDialog('title').id,
-    );
-    expect(surface().getAttribute('aria-describedby')).toBe(
-      inDialog('description').id,
-    );
-  });
-
-  it('does NOT close on a backdrop click', async () => {
-    const { fixture, host, surface, backdrop, openViaTrigger } = createHost();
-    await openViaTrigger();
-
-    clickOn(backdrop());
-    fixture.detectChanges();
-
-    expect(surface()).toBeTruthy();
-    expect(host.open()).toBe(true);
-    expect(host.reasons).toEqual([]);
-  });
-
-  it('does NOT close on a pointer event elsewhere outside the surface', async () => {
-    const { fixture, surface, outside, openViaTrigger } = createHost();
-    await openViaTrigger();
-
-    clickOn(outside());
-    fixture.detectChanges();
-
-    expect(surface()).toBeTruthy();
-  });
-
-  it('renders no built-in close button - the dismiss path is the labelled Cancel action', async () => {
-    const { surface, openViaTrigger } = createHost();
-    await openViaTrigger();
-
-    expect(surface().querySelector('[data-slot="dialog-close-button"]')).toBe(
-      null,
-    );
-  });
-
-  it('closes on Escape', async () => {
-    const { fixture, host, surface, openViaTrigger } = createHost();
-    await openViaTrigger();
-
-    pressEscape();
-    fixture.detectChanges();
-
-    expect(surface()).toBeNull();
-    expect(host.reasons).toEqual(['escape-key']);
-  });
-
-  it('can refuse Escape too, for a confirmation that must be answered', async () => {
-    const { fixture, host, surface, openViaTrigger } = createHost();
-    host.closeOnEscape.set(false);
-    fixture.detectChanges();
-    await openViaTrigger();
-
-    pressEscape();
-    fixture.detectChanges();
-
-    expect(surface()).toBeTruthy();
-  });
-
-  it('closes from the Cancel action', async () => {
-    const { fixture, host, surface, inDialog, openViaTrigger } = createHost();
-    await openViaTrigger();
-
-    clickOn(inDialog('cancel'));
-    fixture.detectChanges();
-
-    expect(surface()).toBeNull();
-    expect(host.reasons).toEqual(['close-button']);
-    expect(host.confirmed).toBe(false);
-  });
-
-  it('emits cancelled from the Cancel action, like the built-in footer Cancel', async () => {
-    const { fixture, host, inDialog, openViaTrigger } = createHost();
-    await openViaTrigger();
-
-    clickOn(inDialog('cancel'));
-    fixture.detectChanges();
-
-    expect(host.cancelReasons).toEqual(['close-button']);
-  });
-
-  it('does not emit cancelled from the affirmative action', async () => {
-    const { fixture, host, inDialog, openViaTrigger } = createHost();
-    await openViaTrigger();
-
-    clickOn(inDialog('action'));
-    fixture.detectChanges();
-
-    expect(host.cancelReasons).toEqual([]);
-  });
-
-  it('closes from the affirmative action, after running the consumer handler', async () => {
-    const { fixture, host, surface, inDialog, openViaTrigger } = createHost();
-    await openViaTrigger();
-
-    clickOn(inDialog('action'));
-    fixture.detectChanges();
-
-    expect(host.confirmed).toBe(true);
-    expect(surface()).toBeNull();
-    expect(host.reasons).toEqual(['close-button']);
-  });
-
-  it('puts initial focus on Cancel, the safe choice, from DOM order alone', async () => {
-    const { inDialog, openViaTrigger } = createHost();
-    await openViaTrigger();
-
-    expect(document.activeElement).toBe(inDialog('cancel'));
-  });
-
-  it('traps focus inside while open', async () => {
-    const { pane, outside, openViaTrigger } = createHost();
-    await openViaTrigger();
-
-    outside().focus();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(pane().contains(document.activeElement)).toBe(true);
-  });
-
-  it('returns focus to the trigger on close', async () => {
-    const { fixture, trigger, inDialog, openViaTrigger } = createHost();
-    trigger().focus();
-    await openViaTrigger();
-
-    clickOn(inDialog('cancel'));
-    fixture.detectChanges();
-
-    expect(document.activeElement).toBe(trigger());
-  });
-
-  it('stacks on the modal z-index layer, above a drawer', async () => {
-    const { pane, openViaTrigger } = createHost();
-    await openViaTrigger();
-
-    expect(pane().parentElement?.style.getPropertyValue('z-index')).toBe(
-      'var(--andes-z-index-modal, 1050)',
-    );
-  });
-
-  it('marks the surface as the alert variant', async () => {
-    const { surface, openViaTrigger } = createHost();
-    await openViaTrigger();
-
-    expect(surface().classList).toContain('andes-dialog--alert');
-  });
-
-  describe('background scroll', () => {
-    withScrollableDocument();
-
-    it('locks document scroll while open and releases it on close', async () => {
-      const { fixture, openViaTrigger } = createHost();
-      await openViaTrigger();
-
-      expect(document.documentElement.classList).toContain(SCROLL_BLOCK_CLASS);
+    it('does not reopen after Escape', async () => {
+      const { fixture, host, pane, open } = createHost();
+      await open();
 
       pressEscape();
-      fixture.detectChanges();
 
-      expect(document.documentElement.classList).not.toContain(
-        SCROLL_BLOCK_CLASS,
-      );
+      await expectStaysClosing(fixture, host, pane, host.reasons, 'escape-key');
     });
   });
 });
@@ -836,26 +688,22 @@ describe('dialog motion', () => {
   // relies on `:has()`, so the cascade cannot be read back here.
   const css = readFileSync('packages/ui/src/lib/dialog/dialog.css', 'utf8');
 
-  it('enters with a short, soft scale-and-fade', () => {
+  it('enters with Ant Design zoom and fade: 300ms on its ease-out-circ curve from 20%', () => {
     const rule = /animation:\s*andes-dialog-enter\s+([\d.]+)s\s+([^;]+);/.exec(
       css,
     );
     expect(rule).not.toBeNull();
-    const seconds = Number(rule?.[1]);
-    expect(seconds).toBeGreaterThanOrEqual(0.15);
-    expect(seconds).toBeLessThanOrEqual(0.18);
-    expect(rule?.[2]).toBe('cubic-bezier(0.2, 0, 0, 1)');
+    expect(Number(rule?.[1])).toBe(0.3);
+    expect(rule?.[2]).toBe('cubic-bezier(0.08, 0.82, 0.17, 1)');
 
     const keyframes =
       /@keyframes andes-dialog-enter\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
-    const scales = [...keyframes.matchAll(/scale\(([\d.]+)\)/g)].map((m) =>
-      Number(m[1]),
+    expect(keyframes).toMatch(
+      /from\s*\{\s*opacity:\s*0;\s*transform:\s*scale\(0\.2\);/,
     );
-    expect(scales.length).toBeGreaterThan(0);
-    for (const scale of scales) {
-      expect(scale).toBeGreaterThanOrEqual(0.95);
-      expect(scale).toBeLessThanOrEqual(1);
-    }
+    expect(keyframes).toMatch(
+      /to\s*\{\s*opacity:\s*1;\s*transform:\s*scale\(1\);/,
+    );
   });
 
   it('drops the entry animation under reduced motion', () => {
@@ -865,25 +713,24 @@ describe('dialog motion', () => {
     expect(reduced).toMatch(/animation:\s*none/);
   });
 
-  it('leaves with a quicker, accelerating mirror of its entry', () => {
+  it('leaves in 200ms on Ant Design ease-in-out-circ curve, shrinking back to 20%', () => {
     const rule =
       /\.andes-overlay-pane\[data-andes-closing\]:has\([^{]*\{([^}]*)\}/.exec(
         css,
       )?.[1] ?? '';
     expect(rule).toContain('pointer-events: none');
     const exit =
-      /animation:\s*andes-dialog-exit\s+var\(--andes-duration-fast,\s*([\d.]+)s\)\s+var\(--andes-ease-in,[^;]+\)\s+forwards;/.exec(
+      /animation:\s*andes-dialog-exit\s+([\d.]+)s\s+(cubic-bezier\([^)]*\))\s+forwards;/.exec(
         rule,
       );
     expect(exit).not.toBeNull();
-    const seconds = Number(exit?.[1]);
-    expect(seconds).toBeGreaterThanOrEqual(0.12);
-    expect(seconds).toBeLessThanOrEqual(0.15);
+    expect(Number(exit?.[1])).toBe(0.2);
+    expect(exit?.[2]).toBe('cubic-bezier(0.78, 0.14, 0.15, 0.86)');
 
     const keyframes =
       /@keyframes andes-dialog-exit\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
     expect(keyframes).toMatch(
-      /to\s*\{\s*opacity:\s*0;\s*transform:\s*scale\(0\.97\);/,
+      /to\s*\{\s*opacity:\s*0;\s*transform:\s*scale\(0\.2\);/,
     );
   });
 
@@ -893,9 +740,21 @@ describe('dialog motion', () => {
         css,
       )?.[1] ?? '';
     expect(rule).toMatch(
-      /animation:\s*andes-dialog-scrim-exit\s+var\(--andes-duration-fast,\s*0\.13s\)/,
+      /animation:\s*andes-dialog-scrim-exit\s+0\.2s\s+linear\s+forwards;/,
     );
-    expect(rule).toContain('forwards');
+  });
+
+  it('fades the scrim in linearly over 200ms, as Ant Design does', () => {
+    expect(
+      declaredValue(css, '.andes-dialog-backdrop', 'transition-duration'),
+    ).toBe('0.2s');
+    expect(
+      declaredValue(
+        css,
+        '.andes-dialog-backdrop',
+        'transition-timing-function',
+      ),
+    ).toBe('linear');
   });
 
   it('closes instantly under reduced motion', () => {

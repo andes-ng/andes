@@ -15,6 +15,7 @@
     <span class="andes-dialog__skeleton-line"></span>
     <span class="andes-dialog__skeleton-line"></span>
     <span class="andes-dialog__skeleton-line"></span>
+    <span class="andes-dialog__skeleton-line"></span>
   </div>
   } @else if (root.footer(); as footer) {
   <andes-dialog-actions
@@ -37,6 +38,33 @@
   }
 </div>
 
+@if (root.maximizable()) {
+<!-- Sits beside the "x", after the content for the same focus-order reason. `aria-pressed`
+     rather than a swapped label alone, so the state is announced as well as the action. -->
+<button
+  type="button"
+  class="andes-dialog__maximize"
+  data-slot="dialog-maximize-button"
+  [attr.aria-label]="root.fullscreen() ? restoreLabel() : maximizeLabel()"
+  [attr.aria-pressed]="root.fullscreen()"
+  (click)="root.toggleFullscreen()"
+>
+  <svg
+    class="andes-dialog__close-icon"
+    viewBox="0 0 24 24"
+    aria-hidden="true"
+    focusable="false"
+  >
+    @if (root.fullscreen()) {
+    <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
+    } @else {
+    <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+    }
+  </svg>
+</button>
+}
+
+<!-- The close control follows the maximize one, so the pair tabs left to right. -->
 @if (showCloseButton()) {
 <!-- Rendered after the projected content so the focus trap lands on the dialog's own
      first control rather than on the dismiss affordance. A modal should

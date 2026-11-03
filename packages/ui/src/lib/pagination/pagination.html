@@ -89,16 +89,8 @@
       </button>
       } @else {
       <span class="andes-pagination__ellipsis" aria-hidden="true"
-        ><svg
-          class="andes-pagination__dots"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          aria-hidden="true"
-        >
-          <circle cx="5" cy="12" r="1.5" />
-          <circle cx="12" cy="12" r="1.5" />
-          <circle cx="19" cy="12" r="1.5" /></svg
-      ></span>
+        ><ng-icon class="andes-pagination__dots" name="lucideEllipsis"
+      /></span>
       } } @else {
       <!--
         Native buttons rather than andes-button: AndesButton's host deliberately nulls
@@ -170,14 +162,10 @@
         </option>
         }
       </select>
-      <svg
+      <ng-icon
         class="andes-pagination__size-changer-icon"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <path d="M6 9l6 6 6-6" />
-      </svg>
+        name="lucideChevronDown"
+      />
     </span>
     } } @if (isQuickJumperVisible()) {
     <span class="andes-pagination__jump">
@@ -252,80 +240,18 @@
 
 <ng-template #defaultItem let-page let-type="type">
   @switch (type) { @case ('prev') {
-  <svg
-    class="andes-pagination__arrow"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    aria-hidden="true"
-  >
-    <path d="m15 18-6-6 6-6" />
-  </svg>
+  <ng-icon class="andes-pagination__arrow" name="lucideChevronLeft" />
   } @case ('next') {
-  <svg
-    class="andes-pagination__arrow"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    aria-hidden="true"
-  >
-    <path d="m9 18 6-6-6-6" />
-  </svg>
+  <ng-icon class="andes-pagination__arrow" name="lucideChevronRight" />
   } @case ('jump-prev') {
   <span class="andes-pagination__jumper-dots" aria-hidden="true"
-    ><svg
-      class="andes-pagination__dots"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      aria-hidden="true"
-    >
-      <circle cx="5" cy="12" r="1.5" />
-      <circle cx="12" cy="12" r="1.5" />
-      <circle cx="19" cy="12" r="1.5" /></svg
-  ></span>
-  <svg
-    class="andes-pagination__jumper-icon"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    aria-hidden="true"
-  >
-    <path d="m11 17-5-5 5-5" />
-    <path d="m18 17-5-5 5-5" />
-  </svg>
+    ><ng-icon class="andes-pagination__dots" name="lucideEllipsis"
+  /></span>
+  <ng-icon class="andes-pagination__jumper-icon" name="lucideChevronsLeft" />
   } @case ('jump-next') {
   <span class="andes-pagination__jumper-dots" aria-hidden="true"
-    ><svg
-      class="andes-pagination__dots"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      aria-hidden="true"
-    >
-      <circle cx="5" cy="12" r="1.5" />
-      <circle cx="12" cy="12" r="1.5" />
-      <circle cx="19" cy="12" r="1.5" /></svg
-  ></span>
-  <svg
-    class="andes-pagination__jumper-icon"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    aria-hidden="true"
-  >
-    <path d="m6 17 5-5-5-5" />
-    <path d="m13 17 5-5-5-5" />
-  </svg>
+    ><ng-icon class="andes-pagination__dots" name="lucideEllipsis"
+  /></span>
+  <ng-icon class="andes-pagination__jumper-icon" name="lucideChevronsRight" />
   } @default { {{ page }} } }
 </ng-template>

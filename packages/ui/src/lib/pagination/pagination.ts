@@ -17,6 +17,15 @@ import {
   TemplateRef,
   viewChild,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideChevronDown,
+  lucideChevronLeft,
+  lucideChevronRight,
+  lucideChevronsLeft,
+  lucideChevronsRight,
+  lucideEllipsis,
+} from '@ng-icons/lucide';
 
 import { AndesButton } from '../button/button';
 import {
@@ -152,7 +161,17 @@ const RESPONSIVE_QUERY = '(max-width: 575.98px)';
 
 @Component({
   selector: 'andes-pagination',
-  imports: [AndesButton, NgTemplateOutlet],
+  viewProviders: [
+    provideIcons({
+      lucideChevronDown,
+      lucideChevronLeft,
+      lucideChevronRight,
+      lucideChevronsLeft,
+      lucideChevronsRight,
+      lucideEllipsis,
+    }),
+  ],
+  imports: [AndesButton, NgIcon, NgTemplateOutlet],
   templateUrl: './pagination.html',
   styleUrl: './pagination.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -87,19 +87,7 @@
           @if (removeIcon(); as removeTemplate) {
           <ng-container [ngTemplateOutlet]="removeTemplate" />
           } @else {
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            aria-hidden="true"
-          >
-            <path
-              d="M18 6 6 18M6 6l12 12"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
+          <ng-icon name="lucideX" />
           }
         </button>
       </span>
@@ -292,15 +280,7 @@
         @if (clearIcon(); as clearTemplate) {
         <ng-container [ngTemplateOutlet]="clearTemplate" />
         } @else {
-        <svg
-          class="andes-cascader__clear-glyph"
-          viewBox="0 0 16 16"
-          aria-hidden="true"
-          focusable="false"
-        >
-          <circle cx="8" cy="8" r="8" />
-          <path d="M5.5 5.5l5 5m0-5-5 5" />
-        </svg>
+        <ng-icon class="andes-cascader__clear-glyph" name="lucideCircleX" />
         }
       </button>
       } @if (loading()) { @if (loadingIcon(); as loadingTemplate) {
@@ -329,18 +309,7 @@
         } @else if (suffixIcon(); as suffixTemplate) {
         <ng-container [ngTemplateOutlet]="suffixTemplate" />
         } @else {
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-        >
-          <path
-            d="m6 9 6 6 6-6"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
+        <ng-icon name="lucideChevronDown" />
         }
       </span>
       }
@@ -380,24 +349,9 @@
     [attr.data-motion]="motion ?? null"
   >
     @if (state === 'checked') {
-    <svg class="andes-check-motion__tick" viewBox="0 0 16 16" fill="none">
-      <path
-        d="m3.5 8.5 3 3 6-6.5"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
-    </svg>
+    <ng-icon class="andes-check-motion__tick" name="lucideCheck" />
     } @else if (state === 'indeterminate') {
-    <svg class="andes-check-motion__dash" viewBox="0 0 16 16" fill="none">
-      <path
-        d="M4 8h8"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-      />
-    </svg>
+    <ng-icon class="andes-check-motion__dash" name="lucideMinus" />
     }
   </span>
 </ng-template>
@@ -576,21 +530,7 @@
             />
           </span>
           } @else {
-          <svg
-            class="andes-cascader__expand"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            aria-hidden="true"
-            focusable="false"
-          >
-            <path
-              d="m9 6 6 6-6 6"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
+          <ng-icon class="andes-cascader__expand" name="lucideChevronRight" />
           } }
         </li>
         }

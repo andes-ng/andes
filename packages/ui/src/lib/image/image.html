@@ -70,7 +70,7 @@
 </span>
 } @else {
 <span class="andes-image__error" data-slot="image-error" aria-hidden="true">
-  <andes-image-icon name="imageOff" />
+  <ng-icon class="andes-image__icon" name="lucideImageOff" />
 </span>
 } } @if (canPreview()) {
 <button
@@ -90,7 +90,7 @@
   @if (maskTemplate(); as template) {
   <ng-container [ngTemplateOutlet]="template" />
   } @else if (maskText(); as label) {
-  <andes-image-icon name="eye" class="andes-image__mask-icon" />
+  <ng-icon class="andes-image__icon andes-image__mask-icon" name="lucideEye" />
   <span class="andes-image__mask-text">{{ label }}</span>
   }
 </button>

@@ -231,15 +231,9 @@
         @if (suffixIcon(); as suffixTemplate) {
         <ng-container [ngTemplateOutlet]="suffixTemplate" />
         } @else if (timeOptions()) {
-        <svg viewBox="0 0 24 24" focusable="false">
-          <path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 6v6l4 2" />
-        </svg>
+        <ng-icon name="lucideClock" />
         } @else {
-        <svg viewBox="0 0 24 24" focusable="false">
-          <path
-            d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"
-          />
-        </svg>
+        <ng-icon name="lucideCalendar" />
         }
       </span>
 
@@ -258,15 +252,7 @@
         @if (clearIcon(); as clearTemplate) {
         <ng-container [ngTemplateOutlet]="clearTemplate" />
         } @else {
-        <svg
-          class="andes-date-picker__clear-glyph"
-          viewBox="0 0 16 16"
-          aria-hidden="true"
-          focusable="false"
-        >
-          <circle cx="8" cy="8" r="8" />
-          <path d="M5.5 5.5l5 5m0-5-5 5" />
-        </svg>
+        <ng-icon class="andes-date-picker__clear-glyph" name="lucideCircleX" />
         }
       </button>
       }
@@ -342,9 +328,7 @@
       (mousedown)="$event.preventDefault()"
       (click)="remove ? remove(tag.date, $event) : onTagRemove(tag, $event)"
     >
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <path d="M18 6 6 18M6 6l12 12" />
-      </svg>
+      <ng-icon name="lucideX" />
     </button>
     }
   </span>

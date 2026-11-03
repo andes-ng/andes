@@ -5,12 +5,16 @@ import {
   input,
 } from '@angular/core';
 import clsx from 'clsx';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideImage } from '@ng-icons/lucide';
 
 import { AndesSkeletonElementBase } from './skeleton-element-base';
 import { toCssSize } from './skeleton-utils';
 
 @Component({
   selector: 'andes-skeleton-image',
+  viewProviders: [provideIcons({ lucideImage })],
+  imports: [NgIcon],
   template: `<span
     data-slot="skeleton-image"
     [class]="classes()"
@@ -18,17 +22,8 @@ import { toCssSize } from './skeleton-utils';
     [style.width]="widthStyle()"
     [style.height]="heightStyle()"
   >
-    <!-- The filled picture mark of the image placeholder. -->
-    <svg
-      class="andes-skeleton-image__icon"
-      viewBox="0 0 1098 1024"
-      fill="currentColor"
-      focusable="false"
-    >
-      <path
-        d="M365.7 329.1q0 45.8-32 77.7t-77.7 32-77.7-32-32-77.7 32-77.6 77.7-32 77.7 32 32 77.6M951 548.6v256H146.3V694.9L329 512l91.5 91.4L713 311zm54.8-402.3H91.4q-7.4 0-12.8 5.4T73 164.6v694.8q0 7.5 5.5 12.9t12.8 5.4h914.3q7.5 0 12.9-5.4t5.4-12.9V164.6q0-7.5-5.4-12.9t-12.9-5.4m91.4 18.3v694.8q0 37.8-26.8 64.6t-64.6 26.9H91.4q-37.7 0-64.6-26.9T0 859.4V164.6q0-37.8 26.8-64.6T91.4 73h914.3q37.8 0 64.6 26.9t26.8 64.6"
-      />
-    </svg>
+    <!-- The picture mark of the image placeholder: lucide's image glyph. -->
+    <ng-icon class="andes-skeleton-image__icon" name="lucideImage" />
   </span>`,
   styleUrls: ['./skeleton-fill.css', './skeleton-element.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,

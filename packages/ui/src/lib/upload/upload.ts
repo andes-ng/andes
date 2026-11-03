@@ -6,12 +6,44 @@ import {
   inject,
 } from '@angular/core';
 import { NG_VALUE_ACCESSOR } from '@angular/forms';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideCircleAlert,
+  lucideDownload,
+  lucideEye,
+  lucideFile,
+  lucideImage,
+  lucideInbox,
+  lucideLoaderCircle,
+  lucidePaperclip,
+  lucidePlus,
+  lucideRotateCw,
+  lucideTrash2,
+  lucideUpload,
+  lucideX,
+} from '@ng-icons/lucide';
 
 import { ANDES_BUTTON_CONTEXT } from '../button/button-context';
 import { AndesButton } from '../button/button';
 import { AndesImagePreview } from '../image/image-preview';
 import { AndesUploadBase } from './upload-base';
-import { AndesUploadIcon } from './upload-icon';
+
+/** The lucide icons the control draws (registered by the component, no app setup needed). */
+const UPLOAD_ICONS = {
+  lucideCircleAlert,
+  lucideDownload,
+  lucideEye,
+  lucideFile,
+  lucideImage,
+  lucideInbox,
+  lucideLoaderCircle,
+  lucidePaperclip,
+  lucidePlus,
+  lucideRotateCw,
+  lucideTrash2,
+  lucideUpload,
+  lucideX,
+};
 
 /**
  * Click-to-select upload. Project the trigger (a button, an icon...) as content, or leave it
@@ -34,7 +66,8 @@ import { AndesUploadIcon } from './upload-icon';
 @Component({
   selector: 'andes-upload',
   exportAs: 'andesUpload',
-  imports: [NgTemplateOutlet, AndesButton, AndesImagePreview, AndesUploadIcon],
+  imports: [NgTemplateOutlet, AndesButton, AndesImagePreview, NgIcon],
+  viewProviders: [provideIcons(UPLOAD_ICONS)],
   templateUrl: './upload.html',
   styleUrl: './upload.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -60,7 +93,8 @@ export class AndesUpload extends AndesUploadBase {}
 @Component({
   selector: 'andes-upload-dragger',
   exportAs: 'andesUploadDragger',
-  imports: [NgTemplateOutlet, AndesButton, AndesImagePreview, AndesUploadIcon],
+  imports: [NgTemplateOutlet, AndesButton, AndesImagePreview, NgIcon],
+  viewProviders: [provideIcons(UPLOAD_ICONS)],
   templateUrl: './upload.html',
   styleUrl: './upload.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

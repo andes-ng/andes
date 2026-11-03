@@ -528,7 +528,14 @@ button.andes-cascader__combobox {
   outline-offset: 1px;
 }
 
-.andes-cascader__tag-remove svg {
+/* Every icon is a lucide glyph in an `ng-icon`; as a flex box its svg never sits on a text
+   baseline, so the glyph fills the icon box exactly. */
+ng-icon {
+  display: inline-flex;
+  flex: none;
+}
+
+.andes-cascader__tag-remove ng-icon {
   width: 0.75em;
   height: 0.75em;
 }
@@ -550,7 +557,7 @@ button.andes-cascader__combobox {
     opacity var(--andes-duration-base, 150ms) ease;
 }
 
-.andes-cascader__chevron svg {
+.andes-cascader__chevron ng-icon {
   width: 0.875em;
   height: 0.875em;
 }
@@ -627,20 +634,20 @@ button.andes-cascader__combobox {
   outline-offset: calc((1em - 1.5rem) / 2 + 2px);
 }
 
-.andes-cascader__clear svg {
+.andes-cascader__clear ng-icon {
   width: 0.875em;
   height: 0.875em;
 }
 
-.andes-cascader__clear-glyph circle {
+/* Lucide's circle-x as a filled disc: the ring's 4-unit stroke takes the disc to the edge of
+   the box and the "x" is knocked out in the background colour. */
+.andes-cascader__clear-glyph ::ng-deep circle {
   fill: currentColor;
+  stroke-width: 4;
 }
 
-.andes-cascader__clear-glyph path {
-  fill: none;
+.andes-cascader__clear-glyph ::ng-deep path {
   stroke: var(--andes-color-background);
-  stroke-width: 1.5;
-  stroke-linecap: round;
 }
 
 .andes-cascader__trigger[data-clearable]:hover .andes-cascader__clear,
@@ -1055,7 +1062,7 @@ button.andes-cascader__combobox {
     border-color 150ms ease;
 }
 
-.andes-cascader__check > svg {
+.andes-cascader__check > ng-icon {
   width: 0.75rem;
   height: 0.75rem;
 }

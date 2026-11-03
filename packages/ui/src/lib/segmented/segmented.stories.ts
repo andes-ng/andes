@@ -1,13 +1,15 @@
 import { BidiModule } from '@angular/cdk/bidi';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideLayoutGrid, lucideList, lucideMap } from '@ng-icons/lucide';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesSegmented } from './segmented';
 import { AndesSegmentedOption } from './segmented-option';
 
-const list = `<svg slot="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5 4h8M5 8h8M5 12h8M2.5 4h.01M2.5 8h.01M2.5 12h.01"/></svg>`;
-const grid = `<svg slot="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>`;
-const map = `<svg slot="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M2 4l4-1.5 4 1.5 4-1.5v9.5L10 13.5 6 12l-4 1.5z"/><path d="M6 2.5V12M10 4v9.5"/></svg>`;
+const list = `<ng-icon slot="icon" name="lucideList" />`;
+const grid = `<ng-icon slot="icon" name="lucideLayoutGrid" />`;
+const map = `<ng-icon slot="icon" name="lucideMap" />`;
 
 const meta: Meta<AndesSegmented> = {
   title: 'Data Entry/Segmented/Basics/Field',
@@ -126,7 +128,10 @@ export const Options: Story = {
  */
 export const Icons: Story = {
   render: () => ({
-    moduleMetadata: { imports: [AndesSegmentedOption] },
+    moduleMetadata: {
+      imports: [AndesSegmentedOption, NgIcon],
+      providers: [provideIcons({ lucideLayoutGrid, lucideList, lucideMap })],
+    },
     template: `
       <div style="display: flex; flex-direction: column; gap: 1rem; align-items: flex-start;">
         <andes-segmented aria-label="Layout (with text)" value="list">

@@ -15,6 +15,14 @@ import {
   type CdkDragDrop,
   CdkDropList,
 } from '@angular/cdk/drag-drop';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideChevronDown,
+  lucideChevronUp,
+  lucideCircleMinus,
+  lucideGripVertical,
+  lucidePlus,
+} from '@ng-icons/lucide';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
@@ -25,7 +33,6 @@ import { AndesForm } from './form';
 import { AndesFormError } from './form-error';
 import { AndesFormField } from './form-field';
 import { AndesFormFieldset } from './form-fieldset';
-import { AndesFormIcon } from './form-icons';
 import { LIST_ROW_STYLE } from './form-list-demo';
 
 const moduleMetadata = {
@@ -40,10 +47,19 @@ const moduleMetadata = {
     AndesFormFieldset,
     AndesFormError,
     AndesButton,
-    AndesFormIcon,
+    NgIcon,
     AndesInput,
     AndesInputNumber,
     AndesSelect,
+  ],
+  providers: [
+    provideIcons({
+      lucideChevronDown,
+      lucideChevronUp,
+      lucideCircleMinus,
+      lucideGripVertical,
+      lucidePlus,
+    }),
   ],
 };
 
@@ -138,7 +154,7 @@ export const NestedLists: Story = {
                 <andes-form-field [label]="'Team ' + (i + 1)">
                   <div class="demo-inline">
                     <andes-input formControlName="name" />
-                    <andes-button class="demo-remove" variant="ghost" size="icon" [aria-label]="'Remove team ' + (i + 1)" (click)="removeTeam(i)"><andes-form-icon name="minus-circle" /></andes-button>
+                    <andes-button class="demo-remove" variant="ghost" size="icon" [aria-label]="'Remove team ' + (i + 1)" (click)="removeTeam(i)"><ng-icon name="lucideCircleMinus" strokeWidth="1.5" /></andes-button>
                   </div>
                 </andes-form-field>
                 <div formArrayName="members" style="display: flex; flex-direction: column; gap: 1rem; padding-inline-start: 1rem;">
@@ -146,16 +162,16 @@ export const NestedLists: Story = {
                     <andes-form-field [label]="'Member ' + (j + 1)" [formGroupName]="j">
                       <div class="demo-inline">
                         <andes-input formControlName="name" />
-                        <andes-button class="demo-remove" variant="ghost" size="icon" [aria-label]="'Remove member ' + (j + 1) + ' of team ' + (i + 1)" (click)="removeMember(team, j)"><andes-form-icon name="minus-circle" /></andes-button>
+                        <andes-button class="demo-remove" variant="ghost" size="icon" [aria-label]="'Remove member ' + (j + 1) + ' of team ' + (i + 1)" (click)="removeMember(team, j)"><ng-icon name="lucideCircleMinus" strokeWidth="1.5" /></andes-button>
                       </div>
                     </andes-form-field>
                   }
-                  <andes-button variant="dashed" fullWidth (click)="addMember(team)"><andes-form-icon name="plus" /> Add member</andes-button>
+                  <andes-button variant="dashed" fullWidth (click)="addMember(team)"><ng-icon name="lucidePlus" /> Add member</andes-button>
                 </div>
               </div>
             }
           </div>
-          <andes-button variant="dashed" fullWidth (click)="addTeam()"><andes-form-icon name="plus" /> Add team</andes-button>
+          <andes-button variant="dashed" fullWidth (click)="addTeam()"><ng-icon name="lucidePlus" /> Add team</andes-button>
           <div><andes-button type="submit">Save</andes-button></div>
           @if (log()) {
             <pre style="${LOG_STYLE}">validSubmit {{ log() }}</pre>
@@ -206,7 +222,7 @@ export const DragSorting: Story = {
             @for (control of rows.controls; track control; let i = $index) {
               <div class="demo-row" cdkDrag [formGroupName]="i" style="display: grid; grid-template-columns: auto minmax(0, 1fr) 7rem auto; column-gap: 0.5rem; align-items: start; padding: 0.5rem;">
                 <div class="demo-actions demo-actions--labelled">
-                  <span class="demo-quiet demo-grip" cdkDragHandle role="img" [attr.aria-label]="'Drag task ' + (i + 1)" style="display: inline-flex; padding: 0.25rem;"><andes-form-icon name="grip" /></span>
+                  <span class="demo-quiet demo-grip" cdkDragHandle role="img" [attr.aria-label]="'Drag task ' + (i + 1)" style="display: inline-flex; padding: 0.25rem;"><ng-icon name="lucideGripVertical" /></span>
                 </div>
                 <andes-form-field [label]="'Task ' + (i + 1)">
                   <andes-input formControlName="title" />
@@ -215,14 +231,14 @@ export const DragSorting: Story = {
                   <andes-input-number formControlName="qty" />
                 </andes-form-field>
                 <div class="demo-actions demo-actions--labelled">
-                  <andes-button class="demo-quiet" variant="ghost" size="icon-sm" [aria-label]="'Move task ' + (i + 1) + ' up'" [disabled]="i === 0" (click)="move(i, i - 1)"><andes-form-icon name="chevron-up" /></andes-button>
-                  <andes-button class="demo-quiet" variant="ghost" size="icon-sm" [aria-label]="'Move task ' + (i + 1) + ' down'" [disabled]="i === rows.length - 1" (click)="move(i, i + 1)"><andes-form-icon name="chevron-down" /></andes-button>
-                  <andes-button class="demo-remove" variant="ghost" size="icon" [aria-label]="'Remove task ' + (i + 1)" (click)="remove(i)"><andes-form-icon name="minus-circle" /></andes-button>
+                  <andes-button class="demo-quiet" variant="ghost" size="icon-sm" [aria-label]="'Move task ' + (i + 1) + ' up'" [disabled]="i === 0" (click)="move(i, i - 1)"><ng-icon name="lucideChevronUp" /></andes-button>
+                  <andes-button class="demo-quiet" variant="ghost" size="icon-sm" [aria-label]="'Move task ' + (i + 1) + ' down'" [disabled]="i === rows.length - 1" (click)="move(i, i + 1)"><ng-icon name="lucideChevronDown" /></andes-button>
+                  <andes-button class="demo-remove" variant="ghost" size="icon" [aria-label]="'Remove task ' + (i + 1)" (click)="remove(i)"><ng-icon name="lucideCircleMinus" strokeWidth="1.5" /></andes-button>
                 </div>
               </div>
             }
           </div>
-          <andes-button variant="dashed" fullWidth (click)="add()"><andes-form-icon name="plus" /> Add task</andes-button>
+          <andes-button variant="dashed" fullWidth (click)="add()"><ng-icon name="lucidePlus" /> Add task</andes-button>
           <pre style="${LOG_STYLE}">order = {{ rows.value | json }}</pre>
         </form>
       `,
@@ -308,14 +324,14 @@ export const ComplexList: Story = {
                     <andes-input-number formControlName="price" [min]="0" [precision]="2" />
                   </andes-form-field>
                   <div class="demo-actions demo-actions--labelled">
-                    <andes-button class="demo-remove" variant="ghost" size="icon" [aria-label]="'Remove line ' + (i + 1)" (click)="remove(i)"><andes-form-icon name="minus-circle" /></andes-button>
+                    <andes-button class="demo-remove" variant="ghost" size="icon" [aria-label]="'Remove line ' + (i + 1)" (click)="remove(i)"><ng-icon name="lucideCircleMinus" strokeWidth="1.5" /></andes-button>
                   </div>
                 </div>
               </andes-form-fieldset>
             }
           </div>
           <andes-form-error [control]="lines" [errorMessages]="{ required: 'Add at least one line.' }" />
-          <andes-button variant="dashed" fullWidth (click)="add()"><andes-form-icon name="plus" /> Add line</andes-button>
+          <andes-button variant="dashed" fullWidth (click)="add()"><ng-icon name="lucidePlus" /> Add line</andes-button>
           <div style="display: flex; align-items: center; gap: 0.75rem;">
             <andes-button type="submit">Place order</andes-button>
             <strong style="margin-inline-start: auto; font-family: var(--andes-font-family), sans-serif; color: var(--andes-color-foreground);">Total {{ total().toFixed(2) }}</strong>

@@ -32,6 +32,8 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NG_VALUE_ACCESSOR, type ControlValueAccessor } from '@angular/forms';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideChevronDown, lucideCircleX, lucideX } from '@ng-icons/lucide';
 
 import { AndesEmpty } from '../empty/empty';
 import { AndesSelectOverflow } from '../select/select-overflow';
@@ -210,7 +212,9 @@ function toKeys(
  */
 @Component({
   selector: 'andes-tree-select',
+  viewProviders: [provideIcons({ lucideX, lucideCircleX, lucideChevronDown })],
   imports: [
+    NgIcon,
     NgTemplateOutlet,
     AndesEmpty,
     AndesTree,

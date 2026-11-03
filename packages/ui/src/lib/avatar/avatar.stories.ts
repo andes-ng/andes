@@ -1,3 +1,5 @@
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideUserRound } from '@ng-icons/lucide';
 import { type Meta, moduleMetadata, type StoryObj } from '@storybook/angular';
 
 import { AndesAvatar } from './avatar';
@@ -11,10 +13,7 @@ import { AndesAvatarImage } from './avatar-image';
 const VALID_IMAGE = 'https://i.pravatar.cc/150?img=12';
 const BROKEN_IMAGE = 'https://andes-ng.dev/this-image-does-not-exist.png';
 
-const USER_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path d="M20 21a8 8 0 0 0-16 0" />
-        <circle cx="12" cy="7" r="4" />
-      </svg>`;
+const USER_ICON = `<ng-icon name="lucideUserRound" aria-hidden="true" />`;
 
 const meta: Meta<AndesAvatar> = {
   title: 'Data Display/Avatar/Basics/Avatar',
@@ -48,7 +47,9 @@ const meta: Meta<AndesAvatar> = {
   // side.
   decorators: [
     moduleMetadata({
+      providers: [provideIcons({ lucideUserRound })],
       imports: [
+        NgIcon,
         AndesAvatarImage,
         AndesAvatarFallback,
         AndesAvatarIcon,

@@ -256,9 +256,12 @@ describe('Breadcrumb', () => {
       '.andes-breadcrumb-separator',
     ) as HTMLElement;
 
-    expect(
-      separator.querySelector('svg.andes-breadcrumb-separator__icon'),
-    ).toBeTruthy();
+    // Lucide's chevron, registered by the separator itself: no provideIcons in this test bed.
+    const icon = separator.querySelector(
+      'ng-icon.andes-breadcrumb-separator__icon',
+    );
+    expect(icon?.getAttribute('name')).toBe('lucideChevronRight');
+    expect(icon?.querySelector('svg')).toBeTruthy();
   });
 
   it('renders custom projected content in the separator instead of the default icon', async () => {
@@ -292,9 +295,11 @@ describe('Breadcrumb', () => {
 
     expect(ellipsis.getAttribute('role')).toBe('presentation');
     expect(ellipsis.getAttribute('aria-hidden')).toBe('true');
-    expect(
-      ellipsis.querySelector('svg.andes-breadcrumb-ellipsis__icon'),
-    ).toBeTruthy();
+    const icon = ellipsis.querySelector(
+      'ng-icon.andes-breadcrumb-ellipsis__icon',
+    );
+    expect(icon?.getAttribute('name')).toBe('lucideEllipsis');
+    expect(icon?.querySelector('svg')).toBeTruthy();
     expect(
       ellipsis.querySelector('.andes-breadcrumb-ellipsis__sr-only')
         ?.textContent,
@@ -414,16 +419,15 @@ describe('Breadcrumb', () => {
       const { fixture, separator } = renderStyledTrail();
       await fixture.whenStable();
       const style = getComputedStyle(separator);
-      const svg = separator.querySelector('svg') as SVGElement;
+      const icon = separator.querySelector('ng-icon') as HTMLElement;
 
       expect(style.display).toBe('inline-flex');
       expect(style.alignItems).toBe('center');
-      // The default chevron is inserted imperatively via Renderer2 (see breadcrumb.ts) using the
-      // consumer's own renderer, so it can never be reached by breadcrumb.css's scoped selectors
-      // either - it must carry an explicit size so it can't fall back to a replaced element's
-      // ~300x150px browser default.
-      expect(svg.getAttribute('width')).toBe('14');
-      expect(svg.getAttribute('height')).toBe('14');
+      // The default chevron is an `ng-icon` created through Renderer2 (see breadcrumb.ts): the
+      // unencapsulated breadcrumb.css sizes it to 14px, never the icon's own 1em default.
+      expect(icon.classList).toContain('andes-breadcrumb-separator__icon');
+      expect(getComputedStyle(icon).width).toBe('14px');
+      expect(getComputedStyle(icon).height).toBe('14px');
     });
   });
 
@@ -525,7 +529,7 @@ describe('Breadcrumb', () => {
       const { trigger } = createCollapsed();
 
       expect(
-        trigger()?.querySelector('svg.andes-breadcrumb-ellipsis__icon'),
+        trigger()?.querySelector('ng-icon.andes-breadcrumb-ellipsis__icon svg'),
       ).toBeTruthy();
       expect(
         trigger()?.querySelector('.andes-breadcrumb-ellipsis__sr-only')
@@ -715,7 +719,7 @@ describe('Breadcrumb', () => {
       expect(ellipsis().getAttribute('role')).toBe('presentation');
       expect(ellipsis().getAttribute('aria-hidden')).toBe('true');
       expect(
-        ellipsis().querySelector('svg.andes-breadcrumb-ellipsis__icon'),
+        ellipsis().querySelector('ng-icon.andes-breadcrumb-ellipsis__icon svg'),
       ).toBeTruthy();
       expect(
         ellipsis().querySelector('.andes-breadcrumb-ellipsis__sr-only')
@@ -1230,9 +1234,11 @@ describe('Breadcrumb', () => {
         expect(trigger.textContent?.trim()).toBe('Component');
         expect(trigger.getAttribute('aria-haspopup')).toBe('menu');
         expect(trigger.getAttribute('aria-expanded')).toBe('false');
-        expect(
-          trigger.querySelector('svg.andes-breadcrumb-menu-trigger__icon'),
-        ).toBeTruthy();
+        const caretIcon = trigger.querySelector(
+          'ng-icon.andes-breadcrumb-menu-trigger__icon',
+        );
+        expect(caretIcon?.getAttribute('name')).toBe('lucideChevronDown');
+        expect(caretIcon?.querySelector('svg')).toBeTruthy();
         expect(trigger.hasAttribute('aria-current')).toBe(false);
       });
 
@@ -1739,9 +1745,9 @@ describe('Breadcrumb', () => {
         );
         expect(caret.getAttribute('aria-haspopup')).toBe('menu');
         expect(caret.textContent?.trim()).toBe('Components: Mostrar menú');
-        expect(caret.querySelector('svg')?.getAttribute('aria-hidden')).toBe(
-          'true',
-        );
+        expect(
+          caret.querySelector('ng-icon')?.getAttribute('aria-hidden'),
+        ).toBe('true');
         expect(
           split?.querySelectorAll('.andes-breadcrumb-menu-trigger'),
         ).toHaveLength(1);

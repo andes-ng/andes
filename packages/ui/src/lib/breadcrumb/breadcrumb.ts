@@ -8,6 +8,7 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  type ComponentRef,
   computed,
   DestroyRef,
   Directive,
@@ -29,8 +30,15 @@ import {
   viewChild,
   ViewEncapsulation,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideChevronDown,
+  lucideChevronRight,
+  lucideEllipsis,
+} from '@ng-icons/lucide';
 
 import { AndesDropdownMenu } from '../dropdown-menu/dropdown-menu';
+import { renderAndesIcon } from '../icons/render-icon';
 import { AndesDropdownMenuContent } from '../dropdown-menu/dropdown-menu-content';
 import { AndesDropdownMenuItem } from '../dropdown-menu/dropdown-menu-item';
 import { AndesDropdownMenuLabel } from '../dropdown-menu/dropdown-menu-label';
@@ -177,8 +185,6 @@ export class AndesBreadcrumbPage {
   protected readonly root = inject(ANDES_BREADCRUMB, { optional: true });
 }
 
-const SVG_NS = 'http://www.w3.org/2000/svg';
-
 /**
  * An `<li role="presentation" aria-hidden="true">` divider between items.
  *
@@ -187,7 +193,7 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
  * 2. Its own `[andesBreadcrumbSeparator]` value - a string or a `TemplateRef` - which is how a
  *    single position overrides the trail's separator.
  * 3. The enclosing `AndesBreadcrumb`'s `separator` input (an empty string renders nothing).
- * 4. A default chevron icon.
+ * 4. A default chevron, lucide's `chevron-right`.
  *
  * A plain `@Directive` has no template of its own to project into, so 2-4 are inserted
  * imperatively via `Renderer2` - the same technique `AndesButton` already uses for its ripple -
@@ -196,6 +202,7 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
  */
 @Directive({
   selector: 'li[andesBreadcrumbSeparator]',
+  providers: [provideIcons({ lucideChevronRight })],
   host: {
     class: 'andes-breadcrumb-separator',
     role: 'presentation',
@@ -231,6 +238,7 @@ export class AndesBreadcrumbSeparator {
   private ownsContent: boolean | undefined;
   private renderedNodes: Node[] = [];
   private renderedView: EmbeddedViewRef<unknown> | undefined;
+  private renderedIcon: ComponentRef<NgIcon> | undefined;
 
   constructor() {
     afterRenderEffect(() => {
@@ -270,6 +278,8 @@ export class AndesBreadcrumbSeparator {
   }
 
   private clear(): void {
+    this.renderedIcon?.destroy();
+    this.renderedIcon = undefined;
     if (this.renderedView) {
       this.appRef.detachView(this.renderedView);
       this.renderedView.destroy();
@@ -284,30 +294,13 @@ export class AndesBreadcrumbSeparator {
   }
 
   private createChevron(): Node {
-    const svg = this.renderer.createElement('svg', SVG_NS);
-    this.renderer.setAttribute(
-      svg,
-      'class',
+    this.renderedIcon = renderAndesIcon(
+      this.renderer,
+      this.injector,
+      'lucideChevronRight',
       'andes-breadcrumb-separator__icon',
     );
-    this.renderer.setAttribute(svg, 'viewBox', '0 0 24 24');
-    this.renderer.setAttribute(svg, 'fill', 'none');
-    this.renderer.setAttribute(svg, 'stroke', 'currentColor');
-    this.renderer.setAttribute(svg, 'stroke-width', '2');
-    this.renderer.setAttribute(svg, 'stroke-linecap', 'round');
-    this.renderer.setAttribute(svg, 'stroke-linejoin', 'round');
-    // Explicit size, not left to `.andes-breadcrumb-separator__icon` in breadcrumb.css alone:
-    // an unsized `<svg>` is a replaced element that falls back to the browser's default
-    // replaced-element size (~300x150px) the instant it renders, before any stylesheet has
-    // necessarily been applied - setting it here guarantees the icon is never briefly (or, if
-    // the stylesheet somehow failed to load, permanently) oversized.
-    this.renderer.setAttribute(svg, 'width', '14');
-    this.renderer.setAttribute(svg, 'height', '14');
-
-    const path = this.renderer.createElement('path', SVG_NS);
-    this.renderer.setAttribute(path, 'd', 'm9 18 6-6-6-6');
-    this.renderer.appendChild(svg, path);
-    return svg;
+    return this.renderedIcon.location.nativeElement;
   }
 }
 
@@ -693,7 +686,8 @@ export class AndesBreadcrumbDropdown {
  */
 @Component({
   selector: 'andes-breadcrumb-ellipsis',
-  imports: [NgTemplateOutlet, AndesBreadcrumbDropdown],
+  viewProviders: [provideIcons({ lucideEllipsis })],
+  imports: [NgIcon, NgTemplateOutlet, AndesBreadcrumbDropdown],
   template: `
     @if (hasMenu()) {
       <andes-breadcrumb-dropdown
@@ -716,15 +710,10 @@ export class AndesBreadcrumbDropdown {
          template instantiated from exactly one live branch has no such ambiguity. -->
     <ng-template #glyph>
       <ng-content>
-        <svg
+        <ng-icon
           class="andes-breadcrumb-ellipsis__icon"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-        >
-          <circle cx="5" cy="12" r="1.5" />
-          <circle cx="12" cy="12" r="1.5" />
-          <circle cx="19" cy="12" r="1.5" />
-        </svg>
+          name="lucideEllipsis"
+        />
       </ng-content>
     </ng-template>
   `,
@@ -829,7 +818,9 @@ function optionalNumberAttribute(value: unknown): number | undefined {
  */
 @Component({
   selector: 'andes-breadcrumb',
+  viewProviders: [provideIcons({ lucideChevronDown })],
   imports: [
+    NgIcon,
     NgTemplateOutlet,
     AndesBreadcrumbList,
     AndesBreadcrumbItem,
@@ -1010,20 +1001,10 @@ function optionalNumberAttribute(value: unknown): number | undefined {
         @if (dropdownIcon(); as icon) {
           <ng-container [ngTemplateOutlet]="icon" />
         } @else {
-          <svg
+          <ng-icon
             class="andes-breadcrumb-menu-trigger__icon"
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <path d="m6 9 6 6 6-6" />
-          </svg>
+            name="lucideChevronDown"
+          />
         }
       </andes-breadcrumb-dropdown>
     </ng-template>

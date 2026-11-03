@@ -17,6 +17,7 @@ import {
   viewChild,
 } from '@angular/core';
 
+import { AndesEmpty } from '../empty/empty';
 import { AndesSelectGroup } from './select-group';
 import { AndesSelectItem } from './select-item';
 import { AndesSelectLabel } from './select-label';
@@ -38,6 +39,7 @@ import { AndesSelectState, matchTriggerWidthAttribute } from './select-state';
 @Component({
   selector: 'andes-select-content',
   imports: [
+    AndesEmpty,
     AndesOverlayContentPrimitive,
     AndesSelectGroup,
     AndesSelectItem,
@@ -89,7 +91,7 @@ export class AndesSelectContent {
 
   protected readonly notFoundText = computed(() => {
     const content = this.select.notFoundContent();
-    return typeof content === 'string' ? content : '';
+    return typeof content === 'string' ? content : null;
   });
 
   constructor() {

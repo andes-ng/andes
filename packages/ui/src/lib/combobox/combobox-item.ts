@@ -4,23 +4,25 @@ import {
 } from '@andes-ng/primitives';
 import {
   booleanAttribute,
+  type ComponentRef,
   computed,
   Directive,
   effect,
   ElementRef,
   inject,
+  Injector,
   input,
   OnDestroy,
   OnInit,
   Renderer2,
   type Signal,
+  untracked,
 } from '@angular/core';
+import { type NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideCheck } from '@ng-icons/lucide';
 
 import type { AndesCombobox } from './combobox';
-import {
-  ANDES_COMBOBOX_SELECTED_ICON,
-  createAndesComboboxIcon,
-} from './combobox-icons';
+import { renderAndesIcon } from '../icons/render-icon';
 import { ANDES_COMBOBOX } from './combobox-token';
 
 let nextItemId = 0;
@@ -53,6 +55,7 @@ let nextItemId = 0;
  */
 @Directive({
   selector: '[andesComboboxItem]',
+  providers: [provideIcons({ lucideCheck })],
   host: {
     class: 'andes-combobox-item',
     role: 'option',
@@ -115,7 +118,8 @@ export class AndesComboboxItem<T = string>
 
   /** The slot the check lives in; always laid out, so labels line up across every row. */
   private indicator: HTMLElement | null = null;
-  private check: SVGElement | null = null;
+  private check: ComponentRef<NgIcon> | null = null;
+  private readonly injector = inject(Injector);
 
   constructor() {
     // A directive has no template to hang `@if (isSelected())` off, so the check is added
@@ -130,14 +134,21 @@ export class AndesComboboxItem<T = string>
         return;
       }
       if (selected) {
-        this.check = createAndesComboboxIcon(
-          this.renderer,
-          ANDES_COMBOBOX_SELECTED_ICON,
-          'andes-combobox-item__check',
+        this.check = untracked(() =>
+          renderAndesIcon(
+            this.renderer,
+            this.injector,
+            'lucideCheck',
+            'andes-combobox-item__check',
+          ),
         );
-        this.renderer.appendChild(indicator, this.check);
+        this.renderer.appendChild(indicator, this.check.location.nativeElement);
       } else {
-        this.renderer.removeChild(indicator, this.check);
+        this.renderer.removeChild(
+          indicator,
+          this.check?.location.nativeElement,
+        );
+        this.check?.destroy();
         this.check = null;
       }
     });
@@ -149,6 +160,7 @@ export class AndesComboboxItem<T = string>
 
   ngOnDestroy(): void {
     this.navigation.unregister(this);
+    this.check?.destroy();
   }
 
   getLabel(): string {

@@ -1225,14 +1225,16 @@ describe('AndesInput clear button design', () => {
 
   it('draws the shared glyph: a filled disc with the "x" knocked out of it', () => {
     const { clear } = createClearHost();
-    const glyph = clear().querySelector('svg.andes-input__clear-glyph');
-    expect(glyph?.querySelector('circle')).toBeTruthy();
-    expect(glyph?.querySelector('path')).toBeTruthy();
+    // Lucide's circle-x, registered by the input itself: no provideIcons in this test bed.
+    const glyph = clear().querySelector('ng-icon.andes-input__clear-glyph');
+    expect(glyph?.getAttribute('name')).toBe('lucideCircleX');
+    expect(glyph?.querySelector('svg circle')).toBeTruthy();
+    expect(glyph?.querySelector('svg path')).toBeTruthy();
     expect(css()).toMatch(
-      /\.andes-input__clear-glyph circle\s*{[^}]*fill: currentColor;/,
+      /\.andes-input__clear-glyph ::ng-deep circle\s*{[^}]*fill: currentColor;/,
     );
     expect(css()).toMatch(
-      /\.andes-input__clear-glyph path\s*{[^}]*stroke: var\(--andes-color-background\);/,
+      /\.andes-input__clear-glyph ::ng-deep path\s*{[^}]*stroke: var\(--andes-color-background\);/,
     );
   });
 

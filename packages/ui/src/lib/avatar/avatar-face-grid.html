@@ -43,17 +43,7 @@
         [style.--andes-avatar-foreground]="cell.face.foreground ?? null"
       >
         @if (cell.face.icon) {
-        <svg
-          class="andes-avatar-face-grid__glyph"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          [attr.aria-hidden]="cell.face.name ? 'true' : null"
-        >
-          <path d="M20 21a8 8 0 0 0-16 0" />
-          <circle cx="12" cy="7" r="4" />
-        </svg>
+        <ng-icon class="andes-avatar-face-grid__glyph" name="lucideUserRound" />
         } @else {
         <span
           class="andes-avatar-face-grid__text"

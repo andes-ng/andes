@@ -1,0 +1,349 @@
+import { InjectionToken, type Signal, type TemplateRef } from '@angular/core';
+import type { AbstractControl, ValidationErrors } from '@angular/forms';
+
+/**
+ * Validation status of a field, as used by `AndesFormField`'s `validateStatus`.
+ * `null` means "no status yet" (untouched, or nothing to report).
+ */
+export type AndesFormValidateStatus =
+  'success' | 'warning' | 'error' | 'validating';
+
+/** `vertical` stacks label over control; `horizontal` puts them side by side in a two-column
+ *  grid sized by `labelCol`/`wrapperCol`; `inline` lays whole fields out in a wrapping row. */
+export type AndesFormLayout = 'horizontal' | 'vertical' | 'inline';
+
+export type AndesFormLabelAlign = 'left' | 'right';
+
+/** Same `sm`/`md`/`lg` vocabulary as `AndesButtonSize`. */
+export type AndesFormSize = 'sm' | 'md' | 'lg';
+
+/** Same `outlined`/`filled`/`borderless`/`underlined` vocabulary a control's own `variant`
+ *  would use; read by controls through `injectAndesFormVariant()`. */
+export type AndesFormVariant =
+  'outlined' | 'filled' | 'borderless' | 'underlined';
+
+/** Context of a custom required-mark template. */
+export interface AndesFormRequiredMarkContext {
+  /** Whether the field is required - same as `required`. */
+  readonly $implicit: boolean;
+  readonly required: boolean;
+}
+
+/** `true` marks required fields with an asterisk, `false` marks nothing, `'optional'` marks
+ *  the NON-required ones with an "(optional)" suffix instead. A template replaces both marks
+ *  and is rendered after the label text of every field, required or not, with
+ *  {@link AndesFormRequiredMarkContext}. */
+export type AndesFormRequiredMark =
+  boolean | 'optional' | TemplateRef<AndesFormRequiredMarkContext>;
+
+/** Where the asterisk of a required field sits in its label: before the text (`start`, the
+ *  default) or after it (`end`). It follows the writing direction, so it flips in right-to-left
+ *  text. Only the asterisk moves; the `'optional'` suffix and a custom template keep their
+ *  place after the text. */
+export type AndesFormRequiredMarkPosition = 'start' | 'end';
+
+/** The parts of a form field that take a consumer's classes and inline styles. */
+export type AndesFormPart =
+  'root' | 'label' | 'control' | 'help' | 'extra' | 'error';
+
+/**
+ * Classes added to the parts of a field: `root` the field box, `label` the label cell,
+ * `control` the cell holding the control, `help` the `help` text and the warning lines,
+ * `extra` the `extra` text and `error` the generated validation messages and an
+ * `<andes-form-error>`. On an `AndesForm`, `root` is the `<form>` itself and the other parts
+ * are the default for every field inside it (a field adds its own to them).
+ */
+export type AndesFormClassNames = Partial<Record<AndesFormPart, string>>;
+
+/** Inline styles set on each part, keyed like {@link AndesFormClassNames}; a field's own win
+ *  over its form's. */
+export type AndesFormStyles = Partial<
+  Record<AndesFormPart, Record<string, string | number>>
+>;
+
+/**
+ * When a field starts showing its derived status (error, warning, validating, success):
+ * - `interacted` (default) - once the control is touched or dirty, or the form submitted;
+ * - `touched` - once the control is blurred, or the form submitted (no errors while typing
+ *   the first time);
+ * - `dirty` - as soon as the value changes, or the form is submitted;
+ * - `submitted` - only after the enclosing form has been submitted;
+ * - `always` - immediately, even on a pristine control.
+ *
+ * Purely a display gate: *when validation runs* is Angular's `updateOn` (`'change'`,
+ * `'blur'`, `'submit'`) on the control or group.
+ */
+export type AndesFormShowErrorsOn =
+  'interacted' | 'touched' | 'dirty' | 'submitted' | 'always';
+
+/** How many messages a field shows while its control fails several validators at once: every
+ *  one (`all`, the default) or only the first, in the order the validators reported them. */
+export type AndesFormMessageMode = 'all' | 'first';
+
+/** Context of a custom `feedbackIcons` template. */
+export interface AndesFormFeedbackIconContext {
+  /** The status to draw an icon for - same as `status`. */
+  readonly $implicit: AndesFormValidateStatus;
+  readonly status: AndesFormValidateStatus;
+}
+
+/** Options for `scrollToFirstError` / `scrollToField`: where to scroll (standard
+ *  `scrollIntoView` options, default `block: 'center'`, `behavior: 'smooth'`) and whether to
+ *  move focus into the field's control (default `true`). */
+export interface AndesFormScrollOptions extends ScrollIntoViewOptions {
+  readonly focus?: boolean;
+}
+
+/** One failing control, as reported by `invalidSubmit` and `collectAndesFormErrors()`. */
+export interface AndesFormFieldError {
+  /** Path from the form root - the same segments `FormGroup.get()` accepts. `[]` is the root
+   *  group itself (a cross-field validator on the form). */
+  readonly path: readonly (string | number)[];
+  readonly errors: ValidationErrors;
+}
+
+/** Payload of `AndesForm`'s `invalidSubmit` output. */
+export interface AndesFormInvalidSubmit {
+  /** The form's `value` at submit time. */
+  readonly value: unknown;
+  /** Every enabled control with errors, in document order of the form model. */
+  readonly errors: readonly AndesFormFieldError[];
+}
+
+/**
+ * Width of the label or control column in `horizontal` layout. A number is a span out of 24
+ * (a 24-column grid - `8` is one third); a string is used verbatim as a CSS track size
+ * (`'10rem'`, `'120px'`, `'30%'`, `'auto'`).
+ */
+export type AndesFormColumn = number | string;
+
+/** Context passed to a function-valued error message. */
+export interface AndesFormErrorContext {
+  /** The validator error key (`'required'`, `'minlength'`, ...). */
+  readonly key: string;
+  /** The field's `label` input, when one was given. */
+  readonly label: string | undefined;
+}
+
+/**
+ * One entry of an error-message map. A string may contain `{placeholder}`s, filled from the
+ * validator's own error object (`{requiredLength}`/`{actualLength}` for `minlength`,
+ * `{min}`/`{actual}` for `min`, ...) plus `{label}`. A function receives that error object
+ * as-is.
+ */
+export type AndesFormErrorMessage =
+  | string
+  // The error payload's shape is validator-defined (`ValidationErrors` is `Record<string, any>`).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  | ((error: any, context: AndesFormErrorContext) => string);
+
+/** Validator error key -> message. The `default` key is the fallback for any key with no
+ *  entry of its own (a validator whose error value is itself a string uses that string). */
+export type AndesFormErrorMessages = Readonly<
+  Record<string, AndesFormErrorMessage>
+>;
+
+/**
+ * Narrow surface `AndesFormField` exposes to the parts nested inside it (`AndesFormLabel`,
+ * `AndesFormControl`, `AndesFormDescription`, `AndesFormError`) - kept as an interface +
+ * injection token, rather than each of those parts importing the concrete `AndesFormField`
+ * class directly, so that `form-field.ts` and `form-control.ts`/`form-label.ts`/etc. don't
+ * end up in a circular import (the field also needs to look up `AndesFormControl` and the
+ * description/error parts by their own tokens below, going the other direction). The token
+ * is also what decouples the field from every control that plugs into it
+ * (`injectAndesFieldBinding()`).
+ *
+ * It doubles as a status hook for custom controls: any control can
+ * `inject(ANDES_FORM_FIELD, { optional: true })` and read `status()`/`hasFeedback()` to draw
+ * status styling or a feedback icon of its own.
+ */
+export interface AndesFormFieldApi {
+  readonly controlId: () => string;
+  readonly labelId: () => string;
+  /** What the label's `for` points at: the control id, another id (`htmlFor`), or `null` for
+   *  no association. */
+  readonly labelFor: () => string | null;
+  readonly descriptionId: () => string;
+  readonly errorId: () => string;
+  /** The `<andes-form-label>` id, or `undefined` when the field has no label. */
+  readonly labelledBy: () => string | undefined;
+  /** Ids of the description, messages and extra text, space separated, or `undefined`. */
+  readonly describedBy: () => string | undefined;
+  readonly showError: () => boolean;
+  /** Effective status: the manual `validateStatus` override, else derived from the control. */
+  readonly status: () => AndesFormValidateStatus | null;
+  readonly hasFeedback: () => boolean;
+  /** Label decorations, already resolved against the enclosing `AndesForm`'s defaults. */
+  readonly showRequiredMark: () => boolean;
+  readonly showOptionalMark: () => boolean;
+  readonly optionalText: () => string;
+  readonly showColon: () => boolean;
+  /** Where the asterisk of a required field sits in the label. */
+  readonly resolvedRequiredMarkPosition: () => AndesFormRequiredMarkPosition;
+  /** The classes of a part: the form's, then the field's own. */
+  readonly partClass: (part: AndesFormPart) => string;
+  /** The inline styles of a part: the form's, overridden by the field's own. */
+  readonly partStyle: (
+    part: AndesFormPart,
+  ) => Record<string, string | number> | null;
+  /** A custom required-mark template, when the resolved `requiredMark` is one. */
+  readonly requiredMarkTemplate: () => TemplateRef<AndesFormRequiredMarkContext> | null;
+  /** Whether the field counts as required (the `required` input, else the control). */
+  readonly isRequired: () => boolean;
+  readonly tooltip: () => string | TemplateRef<void> | undefined;
+  readonly tooltipLabel: () => string;
+  /** The resolved display gate - read by `AndesFormControl` for its `interacted` signal. */
+  readonly resolvedShowErrorsOn: () => AndesFormShowErrorsOn;
+  /** The control the field labels and describes: the first one registered. Only that one
+   *  takes the field's id and ARIA, so a second control in the same field never duplicates
+   *  the id. */
+  readonly primaryControl: () => AndesFormControlApi | undefined;
+  /** Called by `AndesFormControl` from its constructor; returns the unregister callback. */
+  registerControl(control: AndesFormControlApi): () => void;
+  /** Called by a nested `noStyle` field so its status/messages surface on this one. */
+  registerChild(child: AndesFormFieldChildApi): () => void;
+}
+
+export const ANDES_FORM_FIELD = new InjectionToken<AndesFormFieldApi>(
+  'AndesFormField',
+);
+
+/** What a `noStyle` field reports up to the field it is nested in. */
+export interface AndesFormFieldChildApi {
+  readonly noStyle: () => boolean;
+  readonly status: () => AndesFormValidateStatus | null;
+  readonly errorMessages: () => readonly string[];
+  readonly warningMessages: () => readonly string[];
+}
+
+/** Surface `AndesFormField` reads back from the `AndesFormControl` directive nested inside
+ *  it, via the same token-indirection technique. */
+export interface AndesFormControlApi {
+  readonly showError: () => boolean;
+  /** Whether the field's `showErrorsOn` gate is open (by default `touched || dirty || parent
+   *  form submitted`) - the gate every status waits for. */
+  readonly interacted: () => boolean;
+  readonly pending: () => boolean;
+  readonly valid: () => boolean;
+  readonly errors: () => ValidationErrors | null;
+  /** The control's current value, as a signal - re-read on every control event. */
+  readonly value: () => unknown;
+  /** The bound `AbstractControl`, once the host directive has created it. */
+  readonly control: () => AbstractControl | null;
+  /** The control's path from its form root, joined with `.` (`'address.city'`), or `null`
+   *  for a standalone control. */
+  readonly path: () => string | null;
+  /** The errors of the control's parent group or array (cross-field validators). */
+  readonly parentErrors: () => ValidationErrors | null;
+  /** Whether a signal forms schema hides the control (`hidden()`). */
+  readonly hidden: () => boolean;
+  /** `Validators.required`/`requiredTrue`, or a native `required` attribute on the element -
+   *  i.e. anything that should earn a required mark on the label. */
+  readonly markedRequired: () => boolean;
+}
+
+export const ANDES_FORM_CONTROL = new InjectionToken<AndesFormControlApi>(
+  'AndesFormControl',
+);
+
+/** Presence markers only - `AndesFormField` just needs to know whether a label/description/
+ *  error slot was authored at all, to decide whether to expose its id (`aria-labelledby`) or
+ *  fold it into `aria-describedby`. */
+export const ANDES_FORM_LABEL = new InjectionToken<unknown>('AndesFormLabel');
+
+export const ANDES_FORM_DESCRIPTION = new InjectionToken<unknown>(
+  'AndesFormDescription',
+);
+
+export const ANDES_FORM_ERROR = new InjectionToken<unknown>('AndesFormError');
+
+/**
+ * Form-wide presentation defaults an `AndesForm` provides to every field below it through
+ * DI. Each field-level input of the same name wins over it.
+ */
+export interface AndesFormApi {
+  readonly layout: Signal<AndesFormLayout>;
+  readonly labelAlign: Signal<AndesFormLabelAlign>;
+  readonly labelCol: Signal<AndesFormColumn | undefined>;
+  readonly wrapperCol: Signal<AndesFormColumn | undefined>;
+  readonly labelWrap: Signal<boolean>;
+  readonly colon: Signal<boolean>;
+  readonly requiredMark: Signal<AndesFormRequiredMark>;
+  readonly requiredMarkPosition: Signal<AndesFormRequiredMarkPosition>;
+  readonly optionalText: Signal<string>;
+  readonly size: Signal<AndesFormSize | undefined>;
+  readonly variant: Signal<AndesFormVariant | undefined>;
+  readonly disabled: Signal<boolean>;
+  readonly showErrorsOn: Signal<AndesFormShowErrorsOn>;
+  readonly feedbackIcons: Signal<
+    TemplateRef<AndesFormFeedbackIconContext> | undefined
+  >;
+  readonly errorMessages: Signal<AndesFormErrorMessages | undefined>;
+  readonly messageMode: Signal<AndesFormMessageMode>;
+  readonly classNames: Signal<AndesFormClassNames>;
+  readonly styles: Signal<AndesFormStyles>;
+  /** Milliseconds a field waits after its last change before its async validators run. */
+  readonly validateDebounce: Signal<number>;
+  /** Prefix of the field ids the form generates from control paths, when set. */
+  readonly name: Signal<string | undefined>;
+  /** Whether the form was submitted and not reset since. */
+  readonly submitted: Signal<boolean>;
+  /** Name of the signal forms root field bound with `[formRoot]`, which field paths are
+   *  relative to; `null` without one. */
+  readonly signalRootName: Signal<string | null>;
+}
+
+export const ANDES_FORM = new InjectionToken<AndesFormApi>('AndesForm');
+
+/**
+ * A form as an `AndesFormProvider` sees it: what a linked form shows of itself, and the two
+ * calls a footer button needs. Implemented by `AndesForm`.
+ */
+export interface AndesLinkedForm {
+  /** The form's `name` - what it is registered under. */
+  readonly name: Signal<string | undefined>;
+  /** No enabled control has an error. */
+  readonly valid: Signal<boolean>;
+  /** An async validator is still running. */
+  readonly pending: Signal<boolean>;
+  /** Valid, and nothing pending - what a submit button waits for. */
+  readonly canSubmit: Signal<boolean>;
+  /** Submitted and not reset since. */
+  readonly submitted: Signal<boolean>;
+  /** Submits the form as its own submit button would. */
+  submit(): void;
+  /** Resets the form to `value`, or to each control's initial value. */
+  reset(value?: unknown): void;
+}
+
+/** What an `AndesFormProvider` reports about one of its forms. */
+export interface AndesFormProviderEvent {
+  /** The form's `name`. */
+  readonly name: string;
+  /** The form itself, for `submit()`, `reset()` or its `canSubmit`. */
+  readonly form: AndesLinkedForm;
+  /** The form's value: after a change for `formChange`, at a valid submit for `formFinish`. */
+  readonly value: unknown;
+}
+
+/** The surface `AndesForm` uses on an enclosing `AndesFormProvider`. */
+export interface AndesFormProviderApi {
+  /** Adds a form under `name`; returns the callback that removes it. */
+  register(name: string, form: AndesLinkedForm): () => void;
+  /** A named form's value changed. */
+  notifyChange(name: string, form: AndesLinkedForm, value: unknown): void;
+  /** A named form was submitted and is valid. */
+  notifyFinish(name: string, form: AndesLinkedForm, value: unknown): void;
+}
+
+export const ANDES_FORM_PROVIDER = new InjectionToken<AndesFormProviderApi>(
+  'AndesFormProvider',
+);
+
+/**
+ * App- or subtree-wide error messages, merged between the built-in
+ * defaults and any `AndesForm`/`AndesFormField` `errorMessages` input. Register with
+ * {@link provideAndesFormErrorMessages}.
+ */
+export const ANDES_FORM_ERROR_MESSAGES =
+  new InjectionToken<AndesFormErrorMessages>('AndesFormErrorMessages');

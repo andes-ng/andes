@@ -1,0 +1,103 @@
+<div [class]="wrapperClasses()">
+  @if (isTextarea()) {
+  <textarea andesMentionsField></textarea>
+  } @else {
+  <input andesMentionsField type="text" />
+  } @if (showClear()) {
+  <button
+    type="button"
+    class="andes-mentions__clear"
+    data-slot="mentions-clear"
+    [attr.aria-label]="clearLabel()"
+    (mousedown)="$event.preventDefault()"
+    (click)="clear($event)"
+  >
+    @if (clearIcon(); as icon) {
+    <ng-container [ngTemplateOutlet]="icon" />
+    } @else {
+    <svg
+      class="andes-mentions__clear-glyph"
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <circle cx="8" cy="8" r="8" />
+      <path d="M5.5 5.5l5 5m0-5-5 5" />
+    </svg>
+    }
+  </button>
+  }
+  <!-- Zero-size marker kept at the trigger's position in the text; the suggestions anchor to
+       it, so they open at the caret rather than under the whole field. -->
+  <span #caret class="andes-mentions__caret" aria-hidden="true"></span>
+</div>
+@if (showCount()) {
+<span
+  class="andes-mentions__count"
+  [class.andes-mentions__count--exceeded]="countExceeded()"
+  [id]="countId"
+  >{{ countText() }}</span
+>
+}
+<span class="andes-mentions__live" role="status" aria-live="polite"
+  >{{ announcement() }}</span
+>
+
+<ng-template #panel>
+  <div
+    andesOverlayContent
+    [class]="panelClasses()"
+    [attr.data-side]="renderedSide()"
+    (mousedown)="$event.preventDefault()"
+    (scroll)="onPopupScroll($event)"
+  >
+    @if (popupTemplate(); as template) {
+    <ng-container
+      *ngTemplateOutlet="
+        template;
+        context: {
+          $implicit: popupBody,
+          query: query(),
+          prefix: activePrefix(),
+        }
+      "
+    />
+    } @else {
+    <ng-container *ngTemplateOutlet="popupBody" />
+    }
+  </div>
+</ng-template>
+
+<ng-template #popupBody>
+  @if (loading()) {
+  <div class="andes-mentions__status">
+    <span class="andes-mentions__spinner" aria-hidden="true"></span>
+    {{ loadingText() }}
+  </div>
+  } @else { @for (option of filteredOptions(); track optionKey(option)) {
+  <div [andesMentionsOption]="option">
+    @if (optionTemplate(); as template) {
+    <ng-container
+      *ngTemplateOutlet="
+        template;
+        context: {
+          $implicit: option,
+          query: query(),
+          prefix: activePrefix(),
+        }
+      "
+    />
+    } @else {
+    <span class="andes-mentions__option-label"
+      >{{ option.label ?? option.value }}</span
+    >
+    }
+  </div>
+  } @empty { @if (notFoundContent() !== null) {
+  <div class="andes-mentions__status">
+    @if (notFoundTemplate(); as template) {
+    <ng-container *ngTemplateOutlet="template" />
+    } @else { {{ notFoundText() }} }
+  </div>
+  } } }
+</ng-template>

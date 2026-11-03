@@ -26,6 +26,8 @@ import {
   ViewEncapsulation,
   viewChild,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideX } from '@ng-icons/lucide';
 
 import {
   computeTourLayout,
@@ -119,7 +121,8 @@ function sameRect(a: AndesTourRect | null, b: AndesTourRect | null): boolean {
  */
 @Component({
   selector: 'andes-tour',
-  imports: [AndesOverlayContentPrimitive, NgTemplateOutlet],
+  viewProviders: [provideIcons({ lucideX })],
+  imports: [AndesOverlayContentPrimitive, NgIcon, NgTemplateOutlet],
   templateUrl: './tour.html',
   styleUrl: './tour.css',
   encapsulation: ViewEncapsulation.None,

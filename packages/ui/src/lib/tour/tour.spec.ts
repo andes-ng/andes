@@ -293,6 +293,18 @@ describe('AndesTour', () => {
       ]);
     });
 
+    it("draws the close mark with lucide's x, registered by the tour itself", () => {
+      // No `provideIcons` in this test bed: the svg proves the registration is automatic, and
+      // the card is rendered in the overlay, outside the tour's own element.
+      const f = setup();
+      begin(f);
+      const icon = slot('tour-close')?.querySelector('ng-icon');
+
+      expect(icon?.getAttribute('name')).toBe('lucideX');
+      expect(icon?.getAttribute('aria-hidden')).toBe('true');
+      expect(icon?.querySelector('svg')).not.toBeNull();
+    });
+
     it('can leave out Skip and the close button', () => {
       const f = setup((h) => {
         h.showSkip.set(false);

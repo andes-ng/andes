@@ -26,6 +26,8 @@ import {
   viewChild,
   type ElementRef,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideChevronDown, lucideEllipsis } from '@ng-icons/lucide';
 
 import { AndesMenuRow, AndesMenuRowBase } from './menu-row';
 import { navigableRows } from './menu-dom';
@@ -55,7 +57,13 @@ import {
  */
 @Component({
   selector: 'andes-sub-menu',
-  imports: [NgTemplateOutlet, AndesMenuRow, AndesOverlayContentPrimitive],
+  viewProviders: [provideIcons({ lucideChevronDown, lucideEllipsis })],
+  imports: [
+    NgIcon,
+    NgTemplateOutlet,
+    AndesMenuRow,
+    AndesOverlayContentPrimitive,
+  ],
   templateUrl: './sub-menu.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [

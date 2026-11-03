@@ -1,12 +1,21 @@
 import {
   Component,
   computed,
-  inject,
   input,
   signal,
   viewChild,
 } from '@angular/core';
-import { DomSanitizer } from '@angular/platform-browser';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideBell,
+  lucideChartColumn,
+  lucideFileText,
+  lucideHouse,
+  lucidePackage,
+  lucideSettings,
+  lucideShoppingCart,
+  lucideUsers,
+} from '@ng-icons/lucide';
 import type { TemplateRef } from '@angular/core';
 import { type Meta, moduleMetadata, type StoryObj } from '@storybook/angular';
 
@@ -18,42 +27,39 @@ import { AndesMenuItem } from './menu-item';
 import type { AndesMenuNode } from './menu-types';
 import { AndesSubMenu } from './sub-menu';
 
-const ICONS: Record<string, string> = {
-  home: '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
-  cart: '<circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.4a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.8L20 7H6"/>',
-  box: '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/>',
-  chart: '<path d="M3 3v18h18"/><path d="M7 15v3M12 10v8M17 6v12"/>',
-  gear: '<circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3 1a7 7 0 0 0-2-1.2L14 3h-4l-.6 2.7a7 7 0 0 0-2 1.2l-2.3-1-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 2 1.2L10 21h4l.6-2.7a7 7 0 0 0 2-1.2l2.3 1 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z"/>',
-  users:
-    '<circle cx="9" cy="8" r="3.5"/><path d="M2 20a7 7 0 0 1 14 0M17 4.5a3.5 3.5 0 0 1 0 7M22 20a7 7 0 0 0-4-6.3"/>',
-  file: '<path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5"/>',
-  bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 0 0 4 0"/>',
-};
+const ICONS = {
+  home: 'lucideHouse',
+  cart: 'lucideShoppingCart',
+  box: 'lucidePackage',
+  chart: 'lucideChartColumn',
+  gear: 'lucideSettings',
+  users: 'lucideUsers',
+  file: 'lucideFileText',
+  bell: 'lucideBell',
+} as const;
 
-/** A small stroke icon, so the demos do not depend on an icon package. */
+/** A small lucide icon at 16px (a touch lighter than the default stroke) for the demos. */
 @Component({
   selector: 'andes-story-icon',
-  template: `<svg
-    viewBox="0 0 24 24"
-    width="16"
-    height="16"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="1.75"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    aria-hidden="true"
-    [innerHTML]="markup()"
-  ></svg>`,
+  imports: [NgIcon],
+  viewProviders: [
+    provideIcons({
+      lucideBell,
+      lucideChartColumn,
+      lucideFileText,
+      lucideHouse,
+      lucidePackage,
+      lucideSettings,
+      lucideShoppingCart,
+      lucideUsers,
+    }),
+  ],
+  template: `<ng-icon [name]="icon()" size="16" strokeWidth="1.75" />`,
   host: { style: 'display: inline-flex' },
 })
 class StoryIcon {
-  readonly name = input.required<string>();
-  private readonly sanitizer = inject(DomSanitizer);
-  /** The paths are the story's own constants, so they are trusted as markup. */
-  protected readonly markup = computed(() =>
-    this.sanitizer.bypassSecurityTrustHtml(ICONS[this.name()] ?? ''),
-  );
+  readonly name = input.required<keyof typeof ICONS>();
+  protected readonly icon = computed(() => ICONS[this.name()]);
 }
 
 /** The ERP navigation tree most demos share. */

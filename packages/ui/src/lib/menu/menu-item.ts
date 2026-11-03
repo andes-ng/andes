@@ -16,7 +16,7 @@ import { AndesMenuRow, AndesMenuRowBase } from './menu-row';
  *
  * ```html
  * <andes-menu-item key="inbox">
- *   <svg slot="icon">…</svg>
+ *   <ng-icon slot="icon" name="lucideInbox" />
  *   Inbox
  *   <andes-badge slot="extra">4</andes-badge>
  * </andes-menu-item>

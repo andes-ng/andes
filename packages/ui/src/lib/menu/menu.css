@@ -245,6 +245,13 @@
   align-items: center;
 }
 
+/* The default arrow and overflow dots are lucide icons in an `ng-icon`, 1em square; as a flex
+   box the `ng-icon` lays its svg out edge to edge, never on a text baseline. */
+.andes-menu__arrow ng-icon,
+.andes-menu__overflow-indicator ng-icon {
+  display: flex;
+}
+
 .andes-menu__extra {
   flex: none;
   padding-inline-start: var(--andes-space-3, 0.75rem);

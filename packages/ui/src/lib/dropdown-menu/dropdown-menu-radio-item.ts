@@ -10,6 +10,8 @@ import {
   output,
   ViewEncapsulation,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideCircleSmall } from '@ng-icons/lucide';
 
 import { AndesDropdownMenuRadioGroup } from './dropdown-menu-radio-group';
 import { AndesDropdownMenuRoot } from './dropdown-menu-root';
@@ -36,6 +38,8 @@ import { AndesDropdownMenuLevel } from './dropdown-menu-types';
  */
 @Component({
   selector: 'andes-dropdown-menu-radio-item',
+  viewProviders: [provideIcons({ lucideCircleSmall })],
+  imports: [NgIcon],
   hostDirectives: [
     {
       directive: AndesListNavigationItem,
@@ -45,9 +49,7 @@ import { AndesDropdownMenuLevel } from './dropdown-menu-types';
   template: `
     <span class="andes-dropdown-menu__indicator" aria-hidden="true">
       @if (checked()) {
-        <svg viewBox="0 0 24 24" fill="currentColor">
-          <circle cx="12" cy="12" r="6" />
-        </svg>
+        <ng-icon class="andes-dropdown-menu__dot" name="lucideCircleSmall" />
       }
     </span>
     <ng-content />

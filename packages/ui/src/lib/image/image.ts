@@ -15,12 +15,13 @@ import {
   TemplateRef,
   viewChild,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideEye, lucideImageOff } from '@ng-icons/lucide';
 
 import {
   ANDES_IMAGE_GROUP,
   type AndesImageGroupMember,
 } from './image-group-context';
-import { AndesImageIcon } from './image-icon';
 import { AndesImagePreview } from './image-preview';
 import {
   normalizePreviewInput,
@@ -105,7 +106,8 @@ function toCssLength(value: number | string | null | undefined): string | null {
  */
 @Component({
   selector: 'andes-image',
-  imports: [AndesImageIcon, AndesImagePreview, NgTemplateOutlet],
+  viewProviders: [provideIcons({ lucideImageOff, lucideEye })],
+  imports: [NgIcon, AndesImagePreview, NgTemplateOutlet],
   templateUrl: './image.html',
   styleUrl: './image.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

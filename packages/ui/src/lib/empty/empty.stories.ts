@@ -1,6 +1,14 @@
 import { moduleMetadata } from '@storybook/angular';
 import type { Meta, StoryObj } from '@storybook/angular';
 
+import {
+  EMPTY_BOX,
+  EMPTY_FRAME,
+  EMPTY_NOTE,
+  EMPTY_ROOM,
+  EMPTY_SURFACE,
+  emptyGrid,
+} from '../../testing/empty-story-layout';
 import { AndesButton } from '../button/button';
 import { AndesEmpty } from './empty';
 
@@ -26,17 +34,16 @@ const meta: Meta<AndesEmpty> = {
   args: { preset: 'default', announce: false },
   render: (args) => ({
     props: args,
-    template: `<andes-empty [preset]="preset" [image]="image" [imageAlt]="imageAlt" [imageStyle]="imageStyle" [heading]="heading" [description]="description" [size]="size" [announce]="announce" />`,
+    template: `<div style="${EMPTY_SURFACE} ${EMPTY_BOX}"><andes-empty [preset]="preset" [image]="image" [imageAlt]="imageAlt" [imageStyle]="imageStyle" [heading]="heading" [description]="description" [size]="size" [announce]="announce" /></div>`,
   }),
 };
 
 export default meta;
 type Story = StoryObj<AndesEmpty>;
 
-const surface =
-  'font: 14px/22px var(--andes-font-family, system-ui), sans-serif; color: var(--andes-color-foreground);';
-const panel =
-  'border: 1px solid var(--andes-color-border); border-radius: var(--andes-radius-md, 8px); background: var(--andes-color-card, var(--andes-color-background));';
+const surface = EMPTY_SURFACE;
+const panel = EMPTY_BOX;
+const grid = emptyGrid('14rem');
 
 export const Playground: Story = {};
 
@@ -51,7 +58,7 @@ export const Illustrations: Story = {
   },
   render: () => ({
     template: `
-      <div style="${surface} display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem;">
+      <div style="${surface} ${grid}">
         <div style="${panel}"><andes-empty /></div>
         <div style="${panel}"><andes-empty image="simple" description="simple" /></div>
       </div>`,
@@ -69,7 +76,7 @@ export const Description: Story = {
   },
   render: () => ({
     template: `
-      <div style="${surface} display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem;">
+      <div style="${surface} ${grid}">
         <div style="${panel}"><andes-empty description="No invoices match your filters" /></div>
         <div style="${panel}">
           <andes-empty [description]="text">
@@ -112,10 +119,12 @@ export const WithActions: Story = {
   },
   render: () => ({
     template: `
-      <andes-empty description="You have not created any invoices yet">
-        <andes-button size="md">Create invoice</andes-button>
-        <andes-button variant="outline" size="md">Import from file</andes-button>
-      </andes-empty>`,
+      <div style="${surface} ${panel}">
+        <andes-empty description="You have not created any invoices yet">
+          <andes-button size="md">Create invoice</andes-button>
+          <andes-button variant="outline" size="md">Import from file</andes-button>
+        </andes-empty>
+      </div>`,
   }),
 };
 
@@ -130,7 +139,7 @@ export const Sizes: Story = {
   },
   render: () => ({
     template: `
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem; ${panel}">
+      <div style="${grid} ${panel}">
         <andes-empty size="small" />
         <andes-empty size="small" image="simple" />
         <andes-empty style="--andes-empty-image-size: 64px;" description="64px" />
@@ -150,7 +159,7 @@ export const CustomImage: Story = {
         ),
     },
     template: `
-      <div style="${surface} display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem;">
+      <div style="${surface} ${grid}">
         <div style="${panel}"><andes-empty [image]="art" imageAlt="An empty mailbox" description="Your inbox is empty" /></div>
         <div style="${panel}">
           <andes-empty [image]="chart" description="No chart data for this period">
@@ -176,11 +185,11 @@ export const Presets: Story = {
   },
   render: () => ({
     template: `
-      <div style="${surface} display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem;">
+      <div style="${surface} ${grid}">
         @for (preset of presets; track preset) {
-        <div style="${panel}">
-          <andes-empty [preset]="preset" />
-          <div style="text-align: center; padding-bottom: 0.75rem; font-size: 12px; line-height: 20px; color: var(--andes-color-muted-foreground);">preset="{{ preset }}"</div>
+        <div>
+          <div style="${panel}"><andes-empty [preset]="preset" /></div>
+          <div style="${EMPTY_NOTE} text-align: center;">preset="{{ preset }}"</div>
         </div>
         }
       </div>`,
@@ -191,11 +200,13 @@ export const Presets: Story = {
 export const InCard: Story = {
   render: () => ({
     template: `
-      <div style="${surface} max-width: 28rem; ${panel}">
+      <div style="${surface} max-width: 28rem; ${EMPTY_FRAME}">
         <div style="padding: 1rem; border-bottom: 1px solid var(--andes-color-border); font-size: 16px; line-height: 24px; font-weight: 600;">Recent activity</div>
-        <andes-empty description="Nothing has happened yet">
-          <andes-button variant="outline" size="sm">Refresh</andes-button>
-        </andes-empty>
+        <div style="${EMPTY_ROOM}">
+          <andes-empty description="Nothing has happened yet">
+            <andes-button variant="outline" size="sm">Refresh</andes-button>
+          </andes-empty>
+        </div>
       </div>`,
   }),
 };
@@ -211,7 +222,7 @@ export const InTableBody: Story = {
   },
   render: () => ({
     template: `
-      <div style="${surface} ${panel} overflow: hidden;">
+      <div style="${surface} ${EMPTY_FRAME} overflow: hidden;">
         <table style="width: 100%; border-collapse: collapse;">
           <thead>
             <tr style="background: var(--andes-color-muted); text-align: start;">
@@ -243,7 +254,7 @@ export const InListbox: Story = {
   },
   render: () => ({
     template: `
-      <div style="${surface} width: 16rem; ${panel} box-shadow: var(--andes-shadow-md, 0 4px 12px rgb(0 0 0 / 0.12)); padding: 4px;">
+      <div style="${surface} width: 16rem; ${EMPTY_FRAME} box-shadow: var(--andes-shadow-md, 0 4px 12px rgb(0 0 0 / 0.12)); padding: 4px;">
         <div style="padding: 0 8px; height: 32px; display: flex; align-items: center; border: 1px solid var(--andes-color-input); border-radius: var(--andes-radius-md, 8px); color: var(--andes-color-muted-foreground);">zzz</div>
         <andes-empty preset="select" description="No matches for “zzz”" announce />
       </div>`,

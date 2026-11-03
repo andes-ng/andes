@@ -17,6 +17,13 @@ import {
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import clsx from 'clsx';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideChevronDown,
+  lucideChevronUp,
+  lucideMinus,
+  lucidePlus,
+} from '@ng-icons/lucide';
 
 import {
   andesIdRefs,
@@ -104,6 +111,15 @@ function optionalDecimal(value: unknown): DecimalInput | undefined {
 
 @Component({
   selector: 'andes-input-number',
+  viewProviders: [
+    provideIcons({
+      lucideMinus,
+      lucidePlus,
+      lucideChevronUp,
+      lucideChevronDown,
+    }),
+  ],
+  imports: [NgIcon],
   templateUrl: './input-number.html',
   styleUrl: './input-number.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

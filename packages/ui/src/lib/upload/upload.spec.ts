@@ -4,8 +4,10 @@ import { join } from 'node:path';
 import { Component, signal, viewChild } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { lucideFile, lucideImage, lucidePaperclip } from '@ng-icons/lucide';
 
 import { declaredValue, toPx } from '../../testing/computed-style';
+import { lucideName } from '../../testing/lucide';
 import { AndesButton } from '../button/button';
 import type { AndesImagePreviewConfig } from '../image/image-types';
 import { AndesUpload, AndesUploadDragger } from './upload';
@@ -563,7 +565,10 @@ describe('AndesUpload', () => {
         expect(inner().classList).toContain('andes-button--outline');
         expect(inner().classList).toContain('andes-button--md');
         expect(inner().textContent).toContain('Select files');
-        expect(inner().querySelector('andes-upload-icon')).not.toBeNull();
+        // Lucide's upload, registered by the control: no provideIcons in this test bed.
+        expect(
+          inner().querySelector('ng-icon[name="lucideUpload"] svg'),
+        ).not.toBeNull();
       });
 
       it('keeps the file input as the one tab stop', async () => {
@@ -2065,13 +2070,13 @@ describe('AndesUpload', () => {
       const { host, flush, root } = setup();
       pick([png('a.png')]);
       await flush();
-      const icon = () =>
-        root.querySelector('.andes-upload__thumb andes-upload-icon');
-      expect(icon()?.classList).toContain('andes-upload-icon--spin');
+      const icon = () => root.querySelector('.andes-upload__thumb ng-icon');
+      expect(icon()?.classList).toContain('andes-upload__spin');
+      expect(icon()?.getAttribute('name')).toBe('lucideLoaderCircle');
 
       host.listType.set('picture');
       await flush();
-      expect(icon()?.classList).toContain('andes-upload-icon--spin');
+      expect(icon()?.classList).toContain('andes-upload__spin');
       expect(root.querySelector('img')).toBeNull();
 
       host.listType.set('picture-card');
@@ -2173,8 +2178,12 @@ describe('AndesUpload', () => {
         // The picture is replaced by the file icon, like Ant's failed card.
         expect(root.querySelector('.andes-upload__img')).toBeNull();
         expect(
-          root.querySelector('.andes-upload__thumb andes-upload-icon'),
-        ).not.toBeNull();
+          lucideName(root.querySelector('.andes-upload__thumb ng-icon'), {
+            lucideFile,
+            lucideImage,
+            lucidePaperclip,
+          }),
+        ).toBe('lucideImage');
         const meta = root.querySelector('.andes-upload__meta') as HTMLElement;
         expect(meta.classList).not.toContain('andes-upload__meta--sr');
         expect(
@@ -2240,10 +2249,10 @@ describe('AndesUpload', () => {
           host.listType.set(type);
           fixture.detectChanges();
           const remove = root.querySelector(
-            '[data-action="remove"] andes-upload-icon',
+            '[data-action="remove"] ng-icon',
           ) as HTMLElement;
           expect(remove).not.toBeNull();
-          expect(remove.getAttribute('name')).toBe('trash');
+          expect(remove.getAttribute('name')).toBe('lucideTrash2');
         }
       });
 
@@ -2312,7 +2321,9 @@ describe('AndesUpload', () => {
       await flush();
       const tile = root.querySelector('[data-slot="upload-card-default"]');
       expect(tile?.textContent?.trim()).toBe('Subir');
-      expect(tile?.querySelector('andes-upload-icon')).not.toBeNull();
+      expect(
+        tile?.querySelector('ng-icon[name="lucidePlus"] svg'),
+      ).not.toBeNull();
       expect(root.querySelector('andes-button')).toBeNull();
 
       host.listType.set('text');
@@ -3122,25 +3133,20 @@ describe('AndesUpload', () => {
       ).toBe('30%');
     });
 
-    it('turns a thin quarter ring while a file is sending, and shows its icon after', async () => {
+    it("turns lucide's loader while a file is sending, and shows its icon after", async () => {
       const { root, flush, requests } = setup();
       pick([pdf('a.pdf')]);
       await flush();
       const icon = () =>
-        root.querySelector(
-          '.andes-upload__thumb andes-upload-icon',
-        ) as HTMLElement;
+        root.querySelector('.andes-upload__thumb ng-icon') as HTMLElement;
       expect(icon().classList).toContain('andes-upload__spinner');
-      expect(icon().classList).toContain('andes-upload-icon--spin');
-      // A quarter of the ring, as the reference draws it, not three quarters.
-      expect(icon().querySelector('path')?.getAttribute('d')).toBe(
-        'M23.1 12A11.1 11.1 0 0 0 12 0.9',
-      );
+      expect(icon().classList).toContain('andes-upload__spin');
+      expect(icon().getAttribute('name')).toBe('lucideLoaderCircle');
 
       requests[0].onSuccess({});
       await flush();
       expect(icon().classList).not.toContain('andes-upload__spinner');
-      expect(icon().classList).not.toContain('andes-upload-icon--spin');
+      expect(icon().classList).not.toContain('andes-upload__spin');
     });
 
     it('lets rows animate only after the first render', async () => {
@@ -3772,12 +3778,12 @@ describe('AndesUploadDragger', () => {
   it('renders the icon, title and hint of the drop area', () => {
     const { root, host, fixture } = setup();
     expect(root.querySelector('.andes-upload__drag-icon svg')).not.toBeNull();
-    // The default icon is the inbox tray of the reference.
+    // The default icon is lucide's inbox tray.
     expect(
       root
-        .querySelector('.andes-upload__drag-icon svg path')
-        ?.getAttribute('d'),
-    ).toBe('M22 12h-6l-2 3h-4l-2-3H2');
+        .querySelector('.andes-upload__drag-icon ng-icon')
+        ?.getAttribute('name'),
+    ).toBe('lucideInbox');
     expect(
       root.querySelector('.andes-upload__drag-title')?.textContent?.trim(),
     ).toBe('Click or drag files to this area to upload');

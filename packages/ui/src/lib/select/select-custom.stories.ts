@@ -1,5 +1,12 @@
 import { JsonPipe } from '@angular/common';
 import { signal } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideChevronsUpDown,
+  lucideCircleDot,
+  lucideHourglass,
+  lucideSearch,
+} from '@ng-icons/lucide';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesSelect } from './select';
@@ -50,7 +57,17 @@ const FRUITS = [
  */
 export const Icons: Story = {
   render: () => ({
-    moduleMetadata: { imports: SELECT_IMPORTS },
+    moduleMetadata: {
+      imports: [...SELECT_IMPORTS, NgIcon],
+      providers: [
+        provideIcons({
+          lucideChevronsUpDown,
+          lucideCircleDot,
+          lucideHourglass,
+          lucideSearch,
+        }),
+      ],
+    },
     props: { fruits: FRUITS, picked: ['apple', 'banana'] },
     template: `
       <div style="display: flex; flex-direction: column; gap: 1rem; width: 300px;">
@@ -64,24 +81,16 @@ export const Icons: Story = {
         <andes-select aria-label="Loading fruit" placeholder="Loading" loading [options]="fruits" [loadingIcon]="hourglass" />
       </div>
       <ng-template #searchIcon>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" stroke-linecap="round" />
-        </svg>
+        <ng-icon name="lucideSearch" size="16" aria-hidden="true" />
       </ng-template>
       <ng-template #chevrons>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path d="m7 15 5 5 5-5M7 9l5-5 5 5" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
+        <ng-icon name="lucideChevronsUpDown" size="16" aria-hidden="true" />
       </ng-template>
       <ng-template #dot>
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
-          <circle cx="12" cy="12" r="5" />
-        </svg>
+        <ng-icon name="lucideCircleDot" size="16" aria-hidden="true" />
       </ng-template>
       <ng-template #hourglass>
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path d="M6 2h12M6 22h12M7 2c0 6 10 6 10 10S7 16 7 22M17 2c0 6-10 6-10 10s10 4 10 10" stroke-linecap="round" />
-        </svg>
+        <ng-icon name="lucideHourglass" size="14" aria-hidden="true" />
       </ng-template>
     `,
   }),

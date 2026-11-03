@@ -70,7 +70,7 @@
         @if (dropIcon(); as icon) {
         <ng-container *ngTemplateOutlet="icon" />
         } @else {
-        <andes-upload-icon name="inbox" />
+        <ng-icon class="andes-upload__icon" name="lucideInbox" />
         }
       </span>
       <p class="andes-upload__drag-title">
@@ -85,7 +85,10 @@
     @if (!dragMode && !hasContent()) { @if (isCardList()) {
     <!-- A card or circle with nothing projected: a plus over "Upload", as the reference draws it. -->
     <span class="andes-upload__card-default" data-slot="upload-card-default">
-      <andes-upload-icon class="andes-upload__card-default-icon" name="plus" />
+      <ng-icon
+        class="andes-upload__icon andes-upload__card-default-icon"
+        name="lucidePlus"
+      />
       <span>{{ text().upload }}</span>
     </span>
     } @else {
@@ -97,7 +100,11 @@
       [disabled]="triggerBlocked()"
       [aria-invalid]="ariaInvalid()"
     >
-      <andes-upload-icon slot="icon-start" name="upload" />
+      <ng-icon
+        class="andes-upload__icon"
+        slot="icon-start"
+        name="lucideUpload"
+      />
       {{ text().selectFiles }}
     </andes-button>
     } }
@@ -178,9 +185,13 @@
         alt=""
       />
       } @else if (item.status === 'uploading') {
-      <andes-upload-icon name="loading" class="andes-upload__spinner" />
+      <ng-icon
+        class="andes-upload__icon andes-upload__spinner andes-upload__spin"
+        name="lucideLoaderCircle"
+      />
       } @else {
-      <andes-upload-icon
+      <ng-icon
+        class="andes-upload__icon"
         animate.enter="andes-upload__swap--enter"
         [name]="item.icon"
       />
@@ -251,7 +262,7 @@
         @if (listConfig().previewIcon; as icon) {
         <ng-container *ngTemplateOutlet="icon; context: item.iconCtx" />
         } @else {
-        <andes-upload-icon name="eye" />
+        <ng-icon class="andes-upload__icon" name="lucideEye" />
         }
       </button>
       } @if (item.canDownload) {
@@ -270,7 +281,7 @@
         @if (listConfig().downloadIcon; as icon) {
         <ng-container *ngTemplateOutlet="icon; context: item.iconCtx" />
         } @else {
-        <andes-upload-icon name="download" />
+        <ng-icon class="andes-upload__icon" name="lucideDownload" />
         }
       </a>
       } @if (item.canRetry) {
@@ -282,7 +293,7 @@
         [attr.title]="item.labels.retry"
         (click)="onRetryClick(item.file)"
       >
-        <andes-upload-icon name="retry" />
+        <ng-icon class="andes-upload__icon" name="lucideRotateCw" />
       </button>
       } @if (item.canRemove) {
       <button
@@ -297,7 +308,7 @@
         @if (listConfig().removeIcon; as icon) {
         <ng-container *ngTemplateOutlet="icon; context: item.iconCtx" />
         } @else {
-        <andes-upload-icon name="trash" />
+        <ng-icon class="andes-upload__icon" name="lucideTrash2" />
         }
       </button>
       }
@@ -349,7 +360,7 @@
       data-slot="upload-field-button"
       aria-hidden="true"
     >
-      <andes-upload-icon name="upload" />
+      <ng-icon class="andes-upload__icon" name="lucideUpload" />
       <span class="andes-upload__field-label">{{ text().selectFiles }}</span>
     </span>
     <span
@@ -359,7 +370,10 @@
       [attr.title]="fieldView().empty ? null : fieldView().text"
     >
       @if (fieldView().status === 'error') {
-      <andes-upload-icon class="andes-upload__field-alert" name="alert" />
+      <ng-icon
+        class="andes-upload__icon andes-upload__field-alert"
+        name="lucideCircleAlert"
+      />
       }
       <span class="andes-upload__field-name" dir="auto"
         >{{ fieldView().text }}</span
@@ -381,7 +395,7 @@
       [attr.title]="fieldView().clearLabel"
       (click)="onClearClick($event)"
     >
-      <andes-upload-icon name="x" />
+      <ng-icon class="andes-upload__icon" name="lucideX" />
     </button>
     } @if (fieldView().status === 'uploading') {
     <span

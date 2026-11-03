@@ -33,6 +33,8 @@ import {
   ViewEncapsulation,
 } from '@angular/core';
 import { NG_VALUE_ACCESSOR, type ControlValueAccessor } from '@angular/forms';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideCircleX, lucidePlus, lucideX } from '@ng-icons/lucide';
 
 import {
   andesIdRefs,
@@ -262,7 +264,9 @@ let nextUniqueId = 0;
  */
 @Component({
   selector: 'andes-combobox',
+  viewProviders: [provideIcons({ lucideX, lucideCircleX, lucidePlus })],
   imports: [
+    NgIcon,
     NgTemplateOutlet,
     AndesComboboxInput,
     AndesComboboxContent,

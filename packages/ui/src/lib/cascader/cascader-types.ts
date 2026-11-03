@@ -183,4 +183,9 @@ export const ANDES_CASCADER_DEFAULT_LABELS: AndesCascaderLabels = {
   tagsRemoved: 'Removed {labels}',
 };
 
-export type AndesCascaderNotFound = string | TemplateRef<unknown> | null;
+/**
+ * What `notFoundContent` takes: text, a template, `null` for no empty state, or `undefined` for
+ * the default `andes-empty`.
+ */
+export type AndesCascaderNotFound =
+  string | TemplateRef<unknown> | null | undefined;

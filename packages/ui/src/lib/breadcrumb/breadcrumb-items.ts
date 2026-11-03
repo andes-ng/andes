@@ -106,8 +106,8 @@ export interface AndesBreadcrumbRouteItem {
    */
   readonly title?: string | TemplateRef<AndesBreadcrumbItemRenderContext>;
   /**
-   * A leading icon (a template, e.g. an `<svg>`), rendered before `title` inside the crumb's link,
-   * page or text. Decorative - pair an icon-only crumb with `ariaLabel`.
+   * A leading icon (a template, e.g. an `ng-icon`), rendered before `title` inside the crumb's
+   * link, page or text. Decorative - pair an icon-only crumb with `ariaLabel`.
    */
   readonly icon?: TemplateRef<unknown>;
   /**

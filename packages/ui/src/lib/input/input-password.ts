@@ -11,6 +11,13 @@ import {
   TemplateRef,
 } from '@angular/core';
 import { NG_VALUE_ACCESSOR } from '@angular/forms';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideCircleX,
+  lucideEye,
+  lucideEyeOff,
+  lucideSearch,
+} from '@ng-icons/lucide';
 
 import { AndesButton } from '../button/button';
 import {
@@ -27,7 +34,10 @@ export type { AndesInputVisibilityIconContext } from './input-base';
  */
 @Component({
   selector: 'andes-input-password',
-  imports: [AndesButton, NgTemplateOutlet],
+  viewProviders: [
+    provideIcons({ lucideCircleX, lucideEye, lucideEyeOff, lucideSearch }),
+  ],
+  imports: [NgIcon, AndesButton, NgTemplateOutlet],
   templateUrl: './input.html',
   styleUrl: './input.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

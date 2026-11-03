@@ -110,7 +110,9 @@ describe('AndesResult', () => {
         fixture.detectChanges();
         expect(root().getAttribute('data-status')).toBe(status);
         expect(root().classList).toContain(`andes-result--${status}`);
-        expect(el().querySelector('.andes-result__svg--glyph')).toBeTruthy();
+        expect(
+          el().querySelector('.andes-result__status ng-icon svg'),
+        ).toBeTruthy();
         expect(
           el().querySelector('.andes-result__visual--illustration'),
         ).toBeNull();
@@ -137,19 +139,31 @@ describe('AndesResult', () => {
       expect(seen.size).toBe(3);
     });
 
-    it('uses a different glyph for every glyph status', () => {
+    it('draws the lucide icon of each glyph status, a different one for each', () => {
       const { fixture, el, host } = createHost();
-      const glyphs = new Set<string>();
+      const names: Record<string, string | null | undefined> = {};
 
-      for (const status of ['success', 'error', 'info', 'warning'] as const) {
+      for (const status of [
+        'success',
+        'error',
+        'info',
+        'warning',
+        'processing',
+      ] as const) {
         host.status.set(status);
         fixture.detectChanges();
-        glyphs.add(
-          el().querySelector('.andes-result__visual')?.innerHTML ?? '',
-        );
+        names[status] = el()
+          .querySelector('.andes-result__status ng-icon')
+          ?.getAttribute('name');
       }
 
-      expect(glyphs.size).toBe(4);
+      expect(names).toEqual({
+        success: 'lucideCheck',
+        error: 'lucideX',
+        info: 'lucideInfo',
+        warning: 'lucideTriangleAlert',
+        processing: 'lucideLoaderCircle',
+      });
     });
 
     it('hides empty regions', () => {

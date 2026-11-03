@@ -13,6 +13,8 @@ const LIB = 'packages/ui/src/lib';
 const ILLUSTRATIONS: readonly string[] = [
   // The two Empty illustrations (the default box scene and the simple tray).
   'empty/empty.html',
+  // The 403 / 404 / 500 scenes of Result: full-page illustrations with no lucide equivalent.
+  'result/result.html',
 ];
 
 /** What drawing an SVG by hand looks like, in a template or through `Renderer2`. */

@@ -1,3 +1,5 @@
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideRocket } from '@ng-icons/lucide';
 import type { Meta, StoryObj } from '@storybook/angular';
 import { moduleMetadata } from '@storybook/angular';
 
@@ -8,7 +10,12 @@ const meta: Meta<AndesResult> = {
   title: 'Feedback/Result',
   component: AndesResult,
   tags: ['autodocs'],
-  decorators: [moduleMetadata({ imports: [AndesButton] })],
+  decorators: [
+    moduleMetadata({
+      imports: [AndesButton, NgIcon],
+      providers: [provideIcons({ lucideRocket })],
+    }),
+  ],
   parameters: { layout: 'padded' },
   argTypes: {
     status: {
@@ -127,12 +134,7 @@ export const CustomContent: Story = {
   render: () => ({
     template: `
       <ng-template #rocket let-status>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--andes-color-primary);">
-          <path d="M5 15c-1.5 1.3-2 5-2 5s3.7-.5 5-2c.7-.8.7-2.1-.1-2.9a2.2 2.2 0 0 0-2.9-.1Z" />
-          <path d="m12 15-3-3a22 22 0 0 1 2-3.9A12.9 12.9 0 0 1 22 2c0 2.7-.8 7.5-6 11a22 22 0 0 1-4 2Z" />
-          <path d="M9 12H4s.6-3 2-4c1.6-1.1 5 0 5 0" />
-          <path d="M12 15v5s3-.6 4-2c1.1-1.6 0-5 0-5" />
-        </svg>
+        <ng-icon name="lucideRocket" aria-hidden="true" style="color: var(--andes-color-primary); --ng-icon__stroke-width: 1.5;" />
       </ng-template>
       <ng-template #title let-status><span>Order <code>#2024-118</code> placed</span></ng-template>
       <ng-template #sub><span>Paid with the card ending in <strong>4242</strong>.</span></ng-template>

@@ -8,6 +8,14 @@ import {
   TemplateRef,
 } from '@angular/core';
 import clsx from 'clsx';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideCheck,
+  lucideInfo,
+  lucideLoaderCircle,
+  lucideTriangleAlert,
+  lucideX,
+} from '@ng-icons/lucide';
 
 /**
  * `success`, `error`, `info`, `warning` and `processing` draw a tinted status glyph. `403`,
@@ -56,7 +64,16 @@ const ASSERTIVE: readonly AndesResultStatus[] = ['error', '500'];
  */
 @Component({
   selector: 'andes-result',
-  imports: [NgTemplateOutlet],
+  viewProviders: [
+    provideIcons({
+      lucideCheck,
+      lucideInfo,
+      lucideLoaderCircle,
+      lucideTriangleAlert,
+      lucideX,
+    }),
+  ],
+  imports: [NgIcon, NgTemplateOutlet],
   templateUrl: './result.html',
   styleUrl: './result.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

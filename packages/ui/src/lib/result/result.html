@@ -160,39 +160,24 @@
       <path class="andes-result__accent-stroke" d="M170 133h.01" />
     </svg>
     } @case ('processing') {
-    <svg
-      class="andes-result__svg andes-result__svg--glyph"
-      viewBox="0 0 72 72"
-      fill="none"
-    >
-      <circle class="andes-result__disc" cx="36" cy="36" r="34" />
-      <circle class="andes-result__track" cx="36" cy="36" r="16" />
-      <circle class="andes-result__spin" cx="36" cy="36" r="16" />
-    </svg>
-    } @default {
-    <svg
-      class="andes-result__svg andes-result__svg--glyph"
-      viewBox="0 0 72 72"
-      fill="none"
-    >
-      <circle class="andes-result__disc" cx="36" cy="36" r="34" />
-      @switch (status()) { @case ('success') {
-      <path class="andes-result__glyph" d="m24 37 8.5 8.5L49 28" />
-      } @case ('error') {
-      <path class="andes-result__glyph" d="m27 27 18 18" />
-      <path class="andes-result__glyph" d="M45 27 27 45" />
-      } @case ('warning') {
-      <path
-        class="andes-result__glyph"
-        d="M33.2 21.5a3.2 3.2 0 0 1 5.6 0l14.3 25a3.2 3.2 0 0 1-2.8 4.8H21.7a3.2 3.2 0 0 1-2.8-4.8Z"
+    <span class="andes-result__status">
+      <ng-icon
+        class="andes-result__glyph andes-result__spin"
+        name="lucideLoaderCircle"
       />
-      <path class="andes-result__glyph" d="M36 31v8" />
-      <path class="andes-result__glyph" d="M36 44.5h.01" />
+    </span>
+    } @default {
+    <span class="andes-result__status">
+      @switch (status()) { @case ('success') {
+      <ng-icon class="andes-result__glyph" name="lucideCheck" />
+      } @case ('error') {
+      <ng-icon class="andes-result__glyph" name="lucideX" />
+      } @case ('warning') {
+      <ng-icon class="andes-result__glyph" name="lucideTriangleAlert" />
       } @default {
-      <path class="andes-result__glyph" d="M36 33v14" />
-      <path class="andes-result__glyph" d="M36 25h.01" />
+      <ng-icon class="andes-result__glyph" name="lucideInfo" />
       } }
-    </svg>
+    </span>
     } } }
   </div>
 

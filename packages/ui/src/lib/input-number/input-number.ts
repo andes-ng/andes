@@ -19,6 +19,11 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import clsx from 'clsx';
 
 import {
+  andesIdRefs,
+  injectAndesFieldBinding,
+} from '../form-field/field-binding';
+
+import {
   addDecimals,
   clampDecimal,
   compareDecimals,
@@ -129,8 +134,10 @@ export class AndesInputNumber implements ControlValueAccessor {
 
   /** Two-way value; `null` is empty. A `string` is accepted too and read as a decimal. */
   readonly value = model<AndesInputNumberValue>(null);
-  readonly size = input<AndesInputNumberSize>('md');
-  readonly variant = input<AndesInputNumberVariant>('outlined');
+  /** `md` unless set, or the enclosing `andesForm`'s `size`. */
+  readonly size = input<AndesInputNumberSize | undefined>(undefined);
+  /** `outlined` unless set, or the enclosing `andesForm`'s `variant`. */
+  readonly variant = input<AndesInputNumberVariant | undefined>(undefined);
   readonly status = input<AndesInputNumberStatus | undefined>(undefined);
   readonly mode = input<AndesInputNumberMode>('input');
   readonly disabled = input(false, { transform: booleanAttribute });
@@ -221,10 +228,45 @@ export class AndesInputNumber implements ControlValueAccessor {
   private readonly disabledByForm = signal(false);
   protected readonly uid = `andes-input-number-${nextId++}`;
 
-  protected readonly controlId = computed(() => this.id() ?? this.uid);
+  /** The enclosing form field and form: id, ARIA, status, size, variant and disabled. */
+  protected readonly field = injectAndesFieldBinding();
+
+  /** The size in effect: `size`, else the form's, else `md`. */
+  readonly resolvedSize = computed<AndesInputNumberSize>(
+    () => this.size() ?? this.field.size() ?? 'md',
+  );
+
+  /** The variant in effect: `variant`, else the form's, else `outlined`. */
+  readonly resolvedVariant = computed<AndesInputNumberVariant>(
+    () => this.variant() ?? this.field.variant() ?? 'outlined',
+  );
+
+  /** The status in effect: `status`, else the enclosing field's error or warning. */
+  readonly resolvedStatus = computed<AndesInputNumberStatus | undefined>(
+    () => this.status() ?? this.field.status(),
+  );
+
+  protected readonly controlId = computed(
+    () => this.id() ?? this.field.id() ?? this.uid,
+  );
+
+  /** `aria-labelledby`, else the field's label - unless an `aria-label` names it. */
+  protected readonly labelledBy = computed(
+    () =>
+      this.ariaLabelledby() ??
+      (this.ariaLabel() ? undefined : this.field.labelledBy()),
+  );
+
+  protected readonly describedBy = computed(() =>
+    andesIdRefs(this.ariaDescribedby(), this.field.describedBy()),
+  );
+
+  protected readonly isRequired = computed(
+    () => this.required() || this.field.required(),
+  );
 
   protected readonly isDisabled = computed(
-    () => this.disabled() || this.disabledByForm(),
+    () => this.disabled() || this.disabledByForm() || this.field.disabled(),
   );
 
   private readonly effectiveLocale = computed(
@@ -289,7 +331,10 @@ export class AndesInputNumber implements ControlValueAccessor {
   });
 
   protected readonly isInvalid = computed(
-    () => this.ariaInvalid() || this.status() === 'error' || this.outOfRange(),
+    () =>
+      this.ariaInvalid() ||
+      this.resolvedStatus() === 'error' ||
+      this.outOfRange(),
   );
 
   protected readonly atMin = computed(() => {
@@ -345,7 +390,7 @@ export class AndesInputNumber implements ControlValueAccessor {
   protected readonly groupClasses = computed(() =>
     clsx(
       'andes-input-number-group',
-      `andes-input-number-group--${this.size()}`,
+      `andes-input-number-group--${this.resolvedSize()}`,
       this.isDisabled() && 'andes-input-number-group--disabled',
     ),
   );
@@ -353,11 +398,11 @@ export class AndesInputNumber implements ControlValueAccessor {
   protected readonly wrapperClasses = computed(() =>
     clsx(
       'andes-input-number',
-      `andes-input-number--${this.size()}`,
-      `andes-input-number--${this.variant()}`,
+      `andes-input-number--${this.resolvedSize()}`,
+      `andes-input-number--${this.resolvedVariant()}`,
       this.isSpinner() && 'andes-input-number--spinner',
       this.isInvalid() && 'andes-input-number--invalid',
-      this.status() === 'warning' &&
+      this.resolvedStatus() === 'warning' &&
         !this.isInvalid() &&
         'andes-input-number--warning',
       this.isDisabled() && 'andes-input-number--disabled',

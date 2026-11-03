@@ -174,17 +174,18 @@
         <ng-container
           *ngTemplateOutlet="emptyTemplate; context: emptyContext(list)"
         />
+        } @else { @if (list.search() !== '') {
+        <andes-empty preset="select" [description]="noMatchText()" />
+        } @else if (emptyTextTemplate(); as emptyTemplate) {
+        <ng-template #emptyDescription>
+          <ng-container
+            *ngTemplateOutlet="emptyTemplate; context: emptyContext(list)"
+          />
+        </ng-template>
+        <andes-empty preset="select" [description]="emptyDescription" />
         } @else {
-        <svg
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-          focusable="false"
-          class="andes-transfer__empty-icon"
-        >
-          <path d="M3 13h5l1.5 3h5L16 13h5M5.5 5h13L21 13v6H3v-6z" />
-        </svg>
-        <span>{{ list.search() !== '' ? noMatchText() : emptyText() }}</span>
-        }
+        <andes-empty preset="select" [description]="emptyTextValue()" />
+        } }
       </div>
       }
     </div>

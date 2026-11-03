@@ -18,6 +18,8 @@ import {
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import clsx from 'clsx';
 
+import { AndesEmpty } from '../empty/empty';
+
 /** One entry of `dataSource`. `data` is free for the `render` template to read. */
 export interface AndesTransferItem {
   readonly key: string;
@@ -126,7 +128,7 @@ interface ListState {
 
 @Component({
   selector: 'andes-transfer',
-  imports: [NgTemplateOutlet],
+  imports: [AndesEmpty, NgTemplateOutlet],
   templateUrl: './transfer.html',
   styleUrl: './transfer.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -188,7 +190,15 @@ export class AndesTransfer implements ControlValueAccessor {
   readonly empty = input<TemplateRef<AndesTransferEmptyContext> | undefined>(
     undefined,
   );
-  readonly emptyText = input('No data');
+  /**
+   * The message of an empty list: text or a template (which gets the same context as `empty`).
+   * It is shown in an `andes-empty` of the `select` preset - the simple picture, small - so left
+   * unset it is "No data" and follows `provideAndesEmpty()`.
+   */
+  readonly emptyText = input<
+    string | TemplateRef<AndesTransferEmptyContext> | undefined
+  >(undefined);
+  /** The message of a list whose search matches nothing, in the same `andes-empty`. */
   readonly noMatchText = input('No results');
   readonly itemUnit = input('item');
   readonly itemsUnit = input('items');
@@ -404,6 +414,15 @@ export class AndesTransfer implements ControlValueAccessor {
       ? `Move selected to ${titles[1]}`
       : `Move selected to ${titles[0]}`;
   }
+
+  protected readonly emptyTextValue = computed(() => {
+    const text = this.emptyText();
+    return typeof text === 'string' ? text : undefined;
+  });
+  protected readonly emptyTextTemplate = computed(() => {
+    const text = this.emptyText();
+    return text instanceof TemplateRef ? text : null;
+  });
 
   protected emptyContext(list: ListState): AndesTransferEmptyContext {
     return {

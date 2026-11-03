@@ -2,6 +2,7 @@ import { signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import type { Meta, StoryObj } from '@storybook/angular';
 
+import { AndesEmptyProvider } from '../empty/empty-config';
 import { AndesTransfer, type AndesTransferItem } from './transfer';
 
 const text =
@@ -196,6 +197,34 @@ export const Templates: Story = {
         <andes-transfer aria-label="Products" [dataSource]="productItems" [(targetKeys)]="chosenProducts" [render]="productRow" />
         <andes-transfer aria-label="Warehouses, with footer" [dataSource]="warehouseItems" [(targetKeys)]="chosenFooter" [footer]="listFooter" />
         <andes-transfer aria-label="Warehouses, empty state" [dataSource]="warehouseItems" [(targetKeys)]="chosenAll" [empty]="nothing" />
+      </div>
+    `,
+  }),
+};
+
+/**
+ * An empty list is an `andes-empty` - the simple picture, small, with Ant Design's 35px picture
+ * and 8px margin - centred in the list. A provider sets the message for every empty state under
+ * it ("Data Not Found", as in Ant's ConfigProvider example), `emptyText` sets one list's message
+ * (text or a template), and a search that matches nothing shows `noMatchText` the same way.
+ */
+export const EmptyState: Story = {
+  render: () => ({
+    moduleMetadata: { imports: [AndesEmptyProvider] },
+    props: {
+      warehouseItems: warehouses,
+      none: [] as AndesTransferItem[],
+      chosen: signal<readonly string[]>([]),
+      chosenNone: signal<readonly string[]>([]),
+      chosenData: signal<readonly string[]>([]),
+    },
+    template: `
+      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <andes-transfer aria-label="Default empty state" [dataSource]="none" [(targetKeys)]="chosenNone" />
+        <div [andesEmptyProvider]="{ description: 'Data Not Found' }">
+          <andes-transfer aria-label="Data Not Found, from a provider" [dataSource]="none" [(targetKeys)]="chosenData" />
+        </div>
+        <andes-transfer aria-label="Own empty text and no-match text" showSearch emptyText="No warehouse assigned yet" noMatchText="No warehouse matches" [dataSource]="warehouseItems" [(targetKeys)]="chosen" />
       </div>
     `,
   }),

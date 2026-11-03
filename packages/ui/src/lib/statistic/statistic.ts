@@ -7,6 +7,8 @@ import {
   input,
   TemplateRef,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideArrowDown, lucideArrowUp } from '@ng-icons/lucide';
 
 import { AndesStatisticValue, formatStatisticValue } from './statistic-format';
 
@@ -62,7 +64,8 @@ export const ANDES_STATISTIC_DEFAULT_LABELS: Required<AndesStatisticLabels> = {
  */
 @Component({
   selector: 'andes-statistic',
-  imports: [NgTemplateOutlet],
+  viewProviders: [provideIcons({ lucideArrowDown, lucideArrowUp })],
+  imports: [NgIcon, NgTemplateOutlet],
   templateUrl: './statistic.html',
   styleUrl: './statistic.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

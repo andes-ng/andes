@@ -355,7 +355,10 @@ describe('AndesStatistic', () => {
       expect(root.getAttribute('data-tone')).toBe('good');
       expect(root.classList.contains('andes-statistic--up')).toBe(true);
       expect(root.classList.contains('andes-statistic--good')).toBe(true);
-      expect(q('.andes-statistic__trend-icon')).toBeTruthy();
+      expect(
+        q('.andes-statistic__trend-icon')?.getAttribute('aria-hidden'),
+      ).toBe('true');
+      expect(q('.andes-statistic__trend-icon svg')).toBeTruthy();
       expect(q('.andes-statistic__value')?.textContent).toContain('Increase');
     });
 

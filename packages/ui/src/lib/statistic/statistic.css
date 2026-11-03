@@ -94,15 +94,15 @@
 
 /* Trend */
 
+/* The arrow is lucide's, in an `ng-icon` 1rem square. Its strokes keep the 1.75px weight the
+   arrow was drawn with at 16px, which is 2.625 units of lucide's 24-unit grid. */
 .andes-statistic__trend-icon {
+  --ng-icon__size: 1rem;
+  --ng-icon__stroke-width: 2.625;
+
+  display: inline-flex;
+  flex: none;
   align-self: center;
-  inline-size: 1rem;
-  block-size: 1rem;
-  fill: none;
-  stroke: currentcolor;
-  stroke-width: 1.75;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
 :host([data-tone='good']) .andes-statistic__value {

@@ -13,18 +13,11 @@
     <span class="andes-statistic__skeleton" aria-hidden="true"></span>
     <span class="andes-statistic__sr">{{ resolvedLabels().loading }}</span>
     } @else { @if (trend(); as trend) { @if (trendIcon()) {
-    <svg
+    <ng-icon
       class="andes-statistic__trend-icon"
-      viewBox="0 0 16 16"
       aria-hidden="true"
-      focusable="false"
-    >
-      @if (trend === 'up') {
-      <path d="M8 13V3m0 0L3.5 7.5M8 3l4.5 4.5" />
-      } @else {
-      <path d="M8 3v10m0 0L3.5 8.5M8 13l4.5-4.5" />
-      }
-    </svg>
+      [name]="trend === 'up' ? 'lucideArrowUp' : 'lucideArrowDown'"
+    />
     }
     <span class="andes-statistic__sr">{{ resolvedLabels()[trend] }}: </span>
     }

@@ -17,6 +17,8 @@ import {
   untracked,
   viewChildren,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideChevronLeft } from '@ng-icons/lucide';
 
 import { AndesSplitterPanel } from './splitter-panel';
 import {
@@ -96,7 +98,8 @@ const DEFAULT_HANDLE_LENGTH = 1;
  */
 @Component({
   selector: 'andes-splitter',
-  imports: [NgTemplateOutlet],
+  viewProviders: [provideIcons({ lucideChevronLeft })],
+  imports: [NgIcon, NgTemplateOutlet],
   templateUrl: './splitter.html',
   styleUrl: './splitter.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

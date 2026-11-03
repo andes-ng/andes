@@ -516,14 +516,14 @@ describe('AndesSplitter', () => {
 
     it('points the chevron towards where the pane goes', () => {
       const { root, handle, refresh } = createHost(collapsible);
-      const svg = () =>
-        root.querySelector<SVGElement>('.andes-splitter__collapse svg');
+      const chevron = () =>
+        root.querySelector<HTMLElement>('.andes-splitter__collapse ng-icon');
 
-      expect(svg()?.style.rotate).toBe('0deg');
+      expect(chevron()?.style.rotate).toBe('0deg');
 
       key(handle(), 'Enter');
       refresh();
-      expect(svg()?.style.rotate).toBe('180deg');
+      expect(chevron()?.style.rotate).toBe('180deg');
     });
 
     it('collapses with the handle button', () => {

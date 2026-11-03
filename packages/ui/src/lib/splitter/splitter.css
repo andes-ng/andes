@@ -194,8 +194,12 @@
   color: var(--andes-color-foreground);
 }
 
-/* The chevron points at the inline start; the template rotates it towards where the pane goes. */
-.andes-splitter__collapse svg {
+/* The chevron is lucide's, in a 10px `ng-icon` (a flex box, so its svg never sits on a text
+   baseline) 3.4 wide, which at 10px is the 1.4px stroke the old chevron had. It points at the
+   inline start; the template rotates it towards where the pane goes. */
+.andes-splitter__chevron {
+  display: flex;
+  --ng-icon__stroke-width: 3.4;
   transition: rotate var(--andes-motion-duration-mid, 150ms)
     var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1));
 }
@@ -233,7 +237,7 @@
   .andes-splitter__handle,
   .andes-splitter__grip,
   .andes-splitter__collapse,
-  .andes-splitter__collapse svg {
+  .andes-splitter__chevron {
     transition: none;
   }
 }

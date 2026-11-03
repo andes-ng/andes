@@ -692,6 +692,12 @@
   padding-block: 0.75rem;
 }
 
+/* A template of the host's own (an andes-empty, say) brings its own spacing. */
+.andes-tree__empty[data-custom] {
+  display: block;
+  padding: 0;
+}
+
 .andes-tree__empty > .andes-tree__empty-icon {
   width: 1.75rem;
   height: 1.75rem;

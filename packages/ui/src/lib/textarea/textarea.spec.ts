@@ -880,10 +880,14 @@ describe('AndesTextarea', () => {
 
     it('draws the shared glyph: a filled disc with the "x" knocked out of it', () => {
       const { button } = createLabelHost();
-      const glyph = button().querySelector('svg.andes-textarea__clear-glyph');
-      expect(glyph?.querySelector('circle')).toBeTruthy();
+      // Lucide's circle-x, registered by the textarea: no provideIcons in this test bed.
+      const glyph = button().querySelector(
+        'ng-icon.andes-textarea__clear-glyph',
+      );
+      expect(glyph?.getAttribute('name')).toBe('lucideCircleX');
+      expect(glyph?.querySelector('svg circle')).toBeTruthy();
       expect(css()).toMatch(
-        /\.andes-textarea__clear-glyph path\s*{[^}]*stroke: var\(--andes-color-background\);/,
+        /\.andes-textarea__clear-glyph ::ng-deep path\s*{[^}]*stroke: var\(--andes-color-background\);/,
       );
     });
 

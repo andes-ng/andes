@@ -9,8 +9,7 @@
   /* `secondary`, not `muted`: in the dark theme muted is the exact color of
      --andes-color-card (#1e293b), so an initials or icon avatar inside a card
      vanished into it. secondary stays distinct from both the page and a card
-     in either theme, and is the same fill AndesSkeleton draws its avatar
-     placeholder in, so nothing changes tone when the real avatar loads. */
+     in either theme. */
   /* `--andes-avatar-background` / `--andes-avatar-foreground` recolor one
      avatar or a whole group (they inherit), e.g. a brand color per team. */
   background-color: var(

@@ -31,6 +31,13 @@ import {
 } from '@angular/core';
 import { NG_VALUE_ACCESSOR, type ControlValueAccessor } from '@angular/forms';
 import clsx from 'clsx';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideCalendar,
+  lucideCircleX,
+  lucideClock,
+  lucideX,
+} from '@ng-icons/lucide';
 
 import { AndesButton } from '../button/button';
 import {
@@ -585,7 +592,11 @@ function coerceYear(value: unknown): number | undefined {
  */
 @Component({
   selector: 'andes-date-picker',
+  viewProviders: [
+    provideIcons({ lucideClock, lucideCalendar, lucideCircleX, lucideX }),
+  ],
   imports: [
+    NgIcon,
     AndesButton,
     AndesCalendar,
     AndesDatePickerOverflow,

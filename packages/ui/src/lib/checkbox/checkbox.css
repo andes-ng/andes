@@ -248,6 +248,12 @@
       var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1));
 }
 
+/* The default tick and dash are lucide glyphs; as a flex box the `ng-icon` lays its svg out
+   edge to edge, never on a text baseline. */
+ng-icon.andes-checkbox__icon {
+  display: flex;
+}
+
 /* A `checkedIcon` / `indeterminateIcon` template: the consumer's glyph fills the same area as
    the default one. It carries the consumer's encapsulation attribute, hence `::ng-deep`. */
 .andes-checkbox__icon--custom {

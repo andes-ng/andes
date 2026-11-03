@@ -2,6 +2,8 @@ import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideX } from '@ng-icons/lucide';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesAvatar, AndesAvatarFallback } from '../avatar';
@@ -301,6 +303,10 @@ export const DefaultValue: Story = {
  */
 export const Clearable: Story = {
   render: () => ({
+    moduleMetadata: {
+      imports: [NgIcon],
+      providers: [provideIcons({ lucideX })],
+    },
     props: { people: PEOPLE },
     template: `
       <div style="display: flex; flex-direction: column; gap: 1rem; width: 26rem; padding-bottom: 12rem;">
@@ -308,9 +314,7 @@ export const Clearable: Story = {
         <andes-mentions allowClear type="input" [options]="people" value="Single line @maria.soto" aria-label="Reply" />
         <andes-mentions allowClear [clearIcon]="icon" [rows]="2" [options]="people" value="With a custom icon" aria-label="Note" />
         <ng-template #icon>
-          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-            <path d="M3 3l10 10M13 3L3 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          </svg>
+          <ng-icon name="lucideX" aria-hidden="true" />
         </ng-template>
       </div>
     `,

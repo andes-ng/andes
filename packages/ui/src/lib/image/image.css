@@ -250,6 +250,13 @@
   outline-offset: -2px;
 }
 
+/* The lucide icons, 1em square; as a flex box the `ng-icon` lays its svg out edge to edge,
+   never on a text baseline. */
+.andes-image__icon {
+  display: inline-flex;
+  flex: none;
+}
+
 .andes-image__mask-icon {
   font-size: 1rem;
 }

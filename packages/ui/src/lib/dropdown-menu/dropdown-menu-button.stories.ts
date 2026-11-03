@@ -4,6 +4,7 @@ import {
   lucideExternalLink,
   lucidePlus,
   lucideCopy,
+  lucideEllipsis,
   lucideLink,
   lucideMail,
   lucidePencil,
@@ -34,6 +35,7 @@ const ICONS = provideIcons({
   lucideExternalLink,
   lucidePlus,
   lucideCopy,
+  lucideEllipsis,
   lucideLink,
   lucideMail,
   lucidePencil,
@@ -64,7 +66,7 @@ export const DropdownButton: Story = {
     },
     props: { last: '' },
     template: `
-      <ng-template #dots><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" style="display: block; width: 1em; height: 1em;"><circle cx="5" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="19" cy="12" r="1.5" /></svg></ng-template>
+      <ng-template #dots><ng-icon name="lucideEllipsis" aria-hidden="true" /></ng-template>
       <div>
         <p style="${NOTE}">Last action: <strong>{{ last || '-' }}</strong></p>
         <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
@@ -124,7 +126,7 @@ export const DropdownButtonStates: Story = {
     },
     template: `
       <ng-template #moreIcon><ng-icon name="lucidePlus" /></ng-template>
-      <ng-template #dots><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" style="display: block; width: 1em; height: 1em;"><circle cx="5" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="19" cy="12" r="1.5" /></svg></ng-template>
+      <ng-template #dots><ng-icon name="lucideEllipsis" aria-hidden="true" /></ng-template>
       <div style="display: grid; gap: 1rem; justify-items: start;">
         <div style="display: flex; gap: 1rem; align-items: center;">
           <andes-dropdown-button size="sm" [items]="items">Small</andes-dropdown-button>

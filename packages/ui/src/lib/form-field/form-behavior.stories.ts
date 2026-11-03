@@ -14,6 +14,12 @@ import {
   type CdkDragDrop,
   CdkDropList,
 } from '@angular/cdk/drag-drop';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideCircleMinus,
+  lucideGripVertical,
+  lucidePlus,
+} from '@ng-icons/lucide';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
@@ -21,7 +27,6 @@ import { AndesInput } from '../input/input';
 import { AndesForm } from './form';
 import { AndesFormError } from './form-error';
 import { AndesFormField } from './form-field';
-import { AndesFormIcon } from './form-icons';
 import { LIST_ROW_STYLE } from './form-list-demo';
 import type {
   AndesFormInvalidSubmit,
@@ -38,8 +43,11 @@ const moduleMetadata = {
     AndesFormField,
     AndesFormError,
     AndesButton,
-    AndesFormIcon,
+    NgIcon,
     AndesInput,
+  ],
+  providers: [
+    provideIcons({ lucideCircleMinus, lucideGripVertical, lucidePlus }),
   ],
 };
 
@@ -264,14 +272,14 @@ export const DynamicRows: Story = {
               <andes-form-field [label]="i === 0 ? 'Notify' : undefined" class="demo-row" cdkDrag>
                 <div class="demo-inline">
                   <andes-input [formControlName]="i" type="email" placeholder="name@company.com" />
-                  <span class="demo-quiet demo-grip" cdkDragHandle role="img" [attr.aria-label]="'Move email ' + (i + 1)" style="display: inline-flex; padding: 0.25rem;"><andes-form-icon name="grip" /></span>
-                  <andes-button class="demo-remove" variant="ghost" size="icon" [aria-label]="'Remove email ' + (i + 1)" (click)="remove(i)"><andes-form-icon name="minus-circle" /></andes-button>
+                  <span class="demo-quiet demo-grip" cdkDragHandle role="img" [attr.aria-label]="'Move email ' + (i + 1)" style="display: inline-flex; padding: 0.25rem;"><ng-icon name="lucideGripVertical" /></span>
+                  <andes-button class="demo-remove" variant="ghost" size="icon" [aria-label]="'Remove email ' + (i + 1)" (click)="remove(i)"><ng-icon name="lucideCircleMinus" strokeWidth="1.5" /></andes-button>
                 </div>
               </andes-form-field>
             }
           </div>
           <andes-form-field [label]="emails.length === 0 ? 'Notify' : undefined">
-            <andes-button variant="dashed" fullWidth (click)="add()"><andes-form-icon name="plus" /> Add email</andes-button>
+            <andes-button variant="dashed" fullWidth (click)="add()"><ng-icon name="lucidePlus" /> Add email</andes-button>
             <andes-form-error [control]="emails" [errorMessages]="{ required: 'Add at least one email.' }" />
           </andes-form-field>
           <andes-form-field>

@@ -1,4 +1,6 @@
 import { signal } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideCheck, lucideX } from '@ng-icons/lucide';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
@@ -74,12 +76,16 @@ export const DescriptionAndLabelPosition: Story = {
  */
 export const TrackContentAndIcons: Story = {
   render: () => ({
+    moduleMetadata: {
+      imports: [NgIcon],
+      providers: [provideIcons({ lucideCheck, lucideX })],
+    },
     template: `
       <ng-template #tick>
-        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3.5 8.5 6.5 11.5 12.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+        <ng-icon name="lucideCheck" aria-hidden="true" />
       </ng-template>
       <ng-template #cross>
-        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 4 12 12M12 4 4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
+        <ng-icon name="lucideX" aria-hidden="true" />
       </ng-template>
       <ng-template #sun><span aria-hidden="true">&#9728;</span></ng-template>
       <ng-template #moon><span aria-hidden="true">&#9790;</span></ng-template>

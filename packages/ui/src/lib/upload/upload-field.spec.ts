@@ -243,7 +243,9 @@ describe('AndesUpload field variant', () => {
       expect(field()?.getAttribute('data-status')).toBe('error');
       expect(field()?.querySelector('[role="progressbar"]')).toBeNull();
       expect(text()?.textContent).toContain('Server said no');
-      expect(text()?.querySelector('andes-upload-icon')).not.toBeNull();
+      expect(
+        text()?.querySelector('ng-icon[name="lucideCircleAlert"] svg'),
+      ).not.toBeNull();
     });
   });
 

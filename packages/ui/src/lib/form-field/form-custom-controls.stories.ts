@@ -16,6 +16,8 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideMinus, lucidePlus } from '@ng-icons/lucide';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
@@ -23,7 +25,6 @@ import { AndesInputNumber } from '../input-number/input-number';
 import { AndesForm } from './form';
 import { AndesFormControl } from './form-control';
 import { AndesFormField } from './form-field';
-import { AndesFormIcon } from './form-icons';
 import { andesIdRefs, injectAndesFieldBinding } from './field-binding';
 
 /** Shared look for the small result panels the stories below print into. */
@@ -46,8 +47,9 @@ const BOX_STYLE = `
  */
 @Component({
   selector: 'andes-story-stepper',
-  imports: [AndesButton, AndesFormIcon],
+  imports: [AndesButton, NgIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  viewProviders: [provideIcons({ lucideMinus, lucidePlus })],
   providers: [
     {
       provide: NG_VALUE_ACCESSOR,
@@ -74,7 +76,7 @@ const BOX_STYLE = `
       aria-label="Decrease"
       [disabled]="isDisabled()"
       (click)="step(-1)"
-      ><andes-form-icon name="minus"
+      ><ng-icon name="lucideMinus"
     /></andes-button>
     <!-- A native, labelable <input> on purpose: the story shows a custom control putting the
          field's id and ARIA on its own native element. -->
@@ -96,7 +98,7 @@ const BOX_STYLE = `
       aria-label="Increase"
       [disabled]="isDisabled()"
       (click)="step(1)"
-      ><andes-form-icon name="plus"
+      ><ng-icon name="lucidePlus"
     /></andes-button>
   `,
 })

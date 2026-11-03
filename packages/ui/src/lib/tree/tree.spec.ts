@@ -5,9 +5,11 @@ import { join } from 'node:path';
 
 import { Component, signal, viewChild } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
+import { lucideSquareMinus, lucideSquarePlus } from '@ng-icons/lucide';
 import { Subject } from 'rxjs';
 
 import { declaredValue, toPx } from '../../testing/computed-style';
+import { lucideName } from '../../testing/lucide';
 import { AndesTree } from './tree';
 import { AndesTreeNodeTemplate } from './tree-node-template';
 import { andesMoveTreeNode } from './tree-utils';
@@ -810,12 +812,16 @@ describe('AndesTree', () => {
         expect(checkbox(node(fixture, 'Estante X')).classList).toContain(
           'andes-check-motion',
         );
-        expect(
-          checkbox(node(fixture, 'Estante X')).querySelector('svg')?.classList,
-        ).toContain('andes-check-motion__tick');
-        expect(
-          checkbox(node(fixture, 'Pasillo 1')).querySelector('svg')?.classList,
-        ).toContain('andes-check-motion__dash');
+        const tick = checkbox(node(fixture, 'Estante X')).querySelector(
+          'ng-icon',
+        );
+        expect(tick?.classList).toContain('andes-check-motion__tick');
+        expect(tick?.getAttribute('name')).toBe('lucideCheck');
+        const dash = checkbox(node(fixture, 'Pasillo 1')).querySelector(
+          'ng-icon',
+        );
+        expect(dash?.classList).toContain('andes-check-motion__dash');
+        expect(dash?.getAttribute('name')).toBe('lucideMinus');
       });
 
       it('plays the uncheck ring and drops every hook once the ring has played', () => {
@@ -1365,15 +1371,29 @@ describe('AndesTree', () => {
       expect(last.hasAttribute('data-line')).toBe(false);
     });
 
-    it('draws the boxed +/- at 14px and marks leaf rows for their longer tick', () => {
+    it('draws the boxed +/- with a 14px square and marks leaf rows for their longer tick', () => {
       const fixture = setup((h) => {
         h.showLine.set(true);
         h.expanded.set(['a', 'a1']);
       });
-      const box = switcher(node(fixture, 'Almacén central')).querySelector(
-        '.andes-tree__box',
-      ) as SVGElement;
-      expect(box.getAttribute('viewBox')).toBe('0 0 14 14');
+      const box = (title: string) =>
+        switcher(node(fixture, title)).querySelector('ng-icon.andes-tree__box');
+      // Lucide's square-minus / square-plus, open and closed.
+      const squares = { lucideSquareMinus, lucideSquarePlus };
+      expect(lucideName(box('Almacén central'), squares)).toBe(
+        'lucideSquareMinus',
+      );
+      expect(lucideName(box('Sucursal norte'), squares)).toBe(
+        'lucideSquarePlus',
+      );
+      // Lucide's square fills 18 of its 24 units: a box a third wider draws it at `--_box`.
+      expect(
+        declaredValue(
+          cssText(),
+          '.andes-tree__switcher > .andes-tree__box',
+          'width',
+        ),
+      ).toBe('calc(var(--_box) * 4 / 3)');
       expect(row(node(fixture, 'Estante X')).hasAttribute('data-leaf')).toBe(
         true,
       );
@@ -1438,7 +1458,10 @@ describe('AndesTree', () => {
         h.showLeafIcon.set(true);
         h.expanded.set(['a', 'a1']);
       });
-      expect(leafIcon(fixture, 'Estante X')?.tagName.toLowerCase()).toBe('svg');
+      const icon = leafIcon(fixture, 'Estante X');
+      expect(icon?.tagName.toLowerCase()).toBe('ng-icon');
+      expect(icon?.getAttribute('name')).toBe('lucideFile');
+      expect(icon?.querySelector('svg')).toBeTruthy();
       expect(
         row(node(fixture, 'Estante X')).hasAttribute('data-leaf-icon'),
       ).toBe(true);
@@ -1974,9 +1997,9 @@ describe('AndesTree', () => {
         expect(declaredValue(css, '.andes-tree__handle', 'height')).toBe(
           'var(--_title-height)',
         );
-        expect(declaredValue(css, '.andes-tree__handle > svg', 'width')).toBe(
-          'var(--_box)',
-        );
+        expect(
+          declaredValue(css, '.andes-tree__handle > ng-icon', 'width'),
+        ).toBe('var(--_box)');
         expect(declaredValue(css, '.andes-tree__handle', 'cursor')).toBe(
           'grab',
         );

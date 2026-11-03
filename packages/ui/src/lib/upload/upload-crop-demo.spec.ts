@@ -179,7 +179,13 @@ describe('UploadCropDialog (story helper)', () => {
     for (const control of toolbar.querySelectorAll('button, [role="radio"]')) {
       expect(control.textContent?.trim()).toBe('');
     }
-    expect(toolbar.querySelectorAll('svg').length).toBeGreaterThanOrEqual(8);
+    // Each control's glyph is a lucide icon, registered by the dialog itself.
+    const icons = [...toolbar.querySelectorAll('ng-icon')];
+    expect(icons.length).toBeGreaterThanOrEqual(8);
+    for (const icon of icons) {
+      expect(icon.getAttribute('name')?.startsWith('lucide')).toBe(true);
+      expect(icon.querySelector('svg')).not.toBeNull();
+    }
   });
 
   it('names every control and gives it a tooltip', async () => {

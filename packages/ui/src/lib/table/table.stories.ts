@@ -18,6 +18,8 @@ import { moduleMetadata } from '@storybook/angular';
 import { AndesButton } from '../button/button';
 import { AndesInput } from '../input/input';
 import { AndesInputNumber } from '../input-number/input-number';
+import { AndesEmpty } from '../empty/empty';
+import { AndesEmptyProvider } from '../empty/empty-config';
 import {
   AndesTable,
   type AndesTableRowSelectEvent,
@@ -2440,7 +2442,11 @@ const meta: Meta<AndesTable> = {
   tags: ['autodocs'],
   // The demo components above are shared with the other table story files.
   excludeStories: /^(TABLE_PARTS|AndesTable\w+Demo)$/,
-  decorators: [moduleMetadata({ imports: TABLE_PARTS })],
+  decorators: [
+    moduleMetadata({
+      imports: [...TABLE_PARTS, AndesEmpty, AndesEmptyProvider],
+    }),
+  ],
   argTypes: {
     bordered: { control: 'boolean' },
     density: {
@@ -2566,6 +2572,64 @@ export const States: Story = {
           <tbody andesTableBody>
             <tr andesTableRow><td andesTableCell>INV-001</td><td andesTableCell>Acme</td><td andesTableCell align="end">250.00</td></tr>
             <tr andesTableRow><td andesTableCell>INV-002</td><td andesTableCell>Globex</td><td andesTableCell align="end">150.00</td></tr>
+          </tbody>
+        </andes-table>
+      </div>
+    `,
+  }),
+};
+
+/**
+ * The body of a table with no rows is an `andes-empty` - the simple picture and "No data", with
+ * Ant Design's 32px above and below - in a single cell that spans every column. As in Ant's
+ * ConfigProvider example, a provider sets the message for every empty state under it ("Data Not
+ * Found" here); projected content replaces the whole state, and a projected `andes-empty` keeps
+ * the picture with a message of its own.
+ */
+export const EmptyState: Story = {
+  render: () => ({
+    template: `
+      <div style="display: grid; gap: 2rem; width: min(32rem, calc(100vw - 2rem));">
+        <andes-table bordered>
+          <caption andesTableCaption>Default: the simple picture and "No data"</caption>
+          <thead andesTableHeader>
+            <tr andesTableRow><th andesTableHead>Name</th><th andesTableHead>Age</th></tr>
+          </thead>
+          <tbody andesTableBody>
+            <tr andesTableRow><td andesTableCell colspan="2"><andes-table-empty /></td></tr>
+          </tbody>
+        </andes-table>
+        <div [andesEmptyProvider]="{ description: 'Data Not Found' }">
+          <andes-table bordered>
+            <caption andesTableCaption>Data Not Found, from a provider</caption>
+            <thead andesTableHeader>
+              <tr andesTableRow><th andesTableHead>Name</th><th andesTableHead>Age</th></tr>
+            </thead>
+            <tbody andesTableBody>
+              <tr andesTableRow><td andesTableCell colspan="2"><andes-table-empty /></td></tr>
+            </tbody>
+          </andes-table>
+        </div>
+        <andes-table bordered>
+          <caption andesTableCaption>A picture with its own message</caption>
+          <thead andesTableHeader>
+            <tr andesTableRow><th andesTableHead>Name</th><th andesTableHead>Age</th></tr>
+          </thead>
+          <tbody andesTableBody>
+            <tr andesTableRow>
+              <td andesTableCell colspan="2">
+                <andes-table-empty><andes-empty preset="table" description="No people match these filters" /></andes-table-empty>
+              </td>
+            </tr>
+          </tbody>
+        </andes-table>
+        <andes-table bordered>
+          <caption andesTableCaption>Projected content replaces it</caption>
+          <thead andesTableHeader>
+            <tr andesTableRow><th andesTableHead>Name</th><th andesTableHead>Age</th></tr>
+          </thead>
+          <tbody andesTableBody>
+            <tr andesTableRow><td andesTableCell colspan="2"><andes-table-empty>Data Not Found</andes-table-empty></td></tr>
           </tbody>
         </andes-table>
       </div>

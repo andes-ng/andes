@@ -95,13 +95,10 @@
 
 /* Empty state */
 
+/* The default is an `andes-empty`, which brings its own size and margins (the simple picture,
+   32px above and below like Ant's table); the host only has to span the cell. */
 :host(.andes-table-empty) {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--andes-space-2);
-  /* 32px above and below: the state reads as a calm block, not a cramped row. */
-  padding-block: calc(var(--andes-space-4) * 2);
+  display: block;
   color: var(--andes-color-muted-foreground);
   font-family: var(--andes-font-family), sans-serif;
   font-size: 0.875rem;
@@ -111,21 +108,9 @@
   white-space: normal;
 }
 
-/* Lighter than the message, so the text stays the first thing read. */
-.andes-table-empty__icon {
-  display: block;
-  width: 2.5rem;
-  height: 2.5rem;
-  background-color: currentcolor;
-  opacity: 0.5;
-  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M22 12h-6l-2 3h-4l-2-3H2'/><path d='M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z'/></svg>");
-  mask-position: center;
-  mask-repeat: no-repeat;
-  mask-size: contain;
-  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M22 12h-6l-2 3h-4l-2-3H2'/><path d='M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z'/></svg>");
-  -webkit-mask-position: center;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-size: contain;
+/* Projected content replaces the `andes-empty`; plain text gets the same 32px of air. */
+:host(.andes-table-empty:not(:has(> andes-empty))) {
+  padding-block: calc(var(--andes-space-4) * 2);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -117,7 +117,7 @@ export class AndesMessageService extends AndesToastQueue<AndesMessageConfig> {
   protected toToastConfig(config: AndesMessageConfig): AndesToastConfig {
     const { content, contentTemplate, type, classNames, styles, ...rest } =
       config;
-    // On a message the text is the one text part, which Ant calls `title`.
+    // On a message the text is the one text part, which a notification calls `title`.
     return {
       ...rest,
       classNames: classNames && {

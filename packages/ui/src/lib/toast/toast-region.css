@@ -11,7 +11,7 @@
  * --_toast-lift is the direction the stack grows in: -1 (upwards) from a bottom edge, 1
  * (downwards) from a top edge.
  *
- * Motion follows Ant Design: 200ms on an ease-in-out curve, and a card slides in from (and back
+ * Motion: 200ms on an ease-in-out curve, and a card slides in from (and back
  * out to) 64px beyond its side edge - sideways in a corner, vertically at an edge centre -
  * while fading. --andes-toast-duration overrides the 200ms.
  */

@@ -1,60 +1,44 @@
 import { signal } from '@angular/core';
 import type { Meta, StoryObj } from '@storybook/angular';
 
-import { AndesButton } from '../button/button';
-import { AndesCheckbox } from '../checkbox/checkbox';
-import { ANDES_ALERT_DIALOG_IMPORTS, AndesAlertDialog } from './alert-dialog';
+import {
+  about,
+  NOTHING_YET,
+  resultLine,
+  shared,
+  withDescription,
+  withDialogKit,
+} from '../../testing/dialog-story-kit';
+import type { AndesAlertDialog } from './alert-dialog';
 
-/**
- * Each story fills `result` from the dialog's own handlers, so what the user chose is
- * visible after the dialog has gone. The triggers are `<andes-button>`s: the directive
- * moves the ARIA state it keeps in sync onto the real button inside.
+/*
+ * Guards for the answer an alert dialog asks for. Gating parts (`andes-alert-dialog-confirm-phrase`,
+ * `-acknowledge`, `-countdown`) keep the action unavailable until their requirement is met; the
+ * action itself can hold, wait for a request and retry; the icon, the impact summary and the third
+ * answer shape what the user sees. Every part is composable and optional.
  */
-const STYLES = `
-  <style>
-    .sb-row { display: flex; flex-wrap: wrap; gap: var(--andes-space-2); }
-    .sb-result {
-      margin: var(--andes-space-3) 0 0;
-      font-family: var(--andes-font-family), sans-serif;
-      font-size: 0.875rem;
-      color: var(--andes-color-muted-foreground);
-    }
-    .sb-result strong { color: var(--andes-color-foreground); font-weight: 600; }
-  </style>
-`;
-
-const IMPORTS = [ANDES_ALERT_DIALOG_IMPORTS, AndesButton, AndesCheckbox];
 
 const meta: Meta<AndesAlertDialog> = {
   title: 'Feedback/Alert Dialog/Patterns',
-  component: AndesAlertDialog,
-  parameters: {
-    docs: {
-      description: {
-        component:
-          'Guards for the answer an alert dialog asks for. Gating parts (`andes-alert-dialog-confirm-phrase`, `-acknowledge`, `-countdown`) keep the action unavailable until their requirement is met; the action itself can hold, wait for a request and retry; `tone`, the icon, the impact summary and the third answer shape what the user sees. Every part is composable and optional.',
-      },
-    },
-  },
+  decorators: [withDescription, withDialogKit],
+  parameters: { layout: 'padded' },
 };
 
 export default meta;
 
 type Story = StoryObj<AndesAlertDialog>;
 
-/**
- * A field that must be typed before the action unlocks (GitHub's "type the repository
- * name"). The phrase sits in a chip one click selects; a wrong entry is only flagged
- * once it can no longer become the phrase; Enter confirms a matching one.
- */
+/** Type to confirm. */
 export const TypeToConfirm: Story = {
+  name: 'Type to confirm',
+  parameters: about(
+    'A field that must be typed before the action unlocks,, such as the name of the repository: the phrase sits in a chip one click selects, a wrong entry is flagged only once it can no longer become the phrase, and Enter confirms a matching one.',
+  ),
   render: () => {
-    const result = signal('Nothing yet.');
+    const result = signal(NOTHING_YET);
     return {
-      moduleMetadata: { imports: IMPORTS },
-      props: { result },
+      props: { ...shared, result },
       template: `
-        ${STYLES}
         <andes-alert-dialog initialFocus="input" (cancelled)="result.set('Cancelled.')">
           <andes-button danger andesAlertDialogTrigger>Delete project</andes-button>
 
@@ -80,24 +64,23 @@ export const TypeToConfirm: Story = {
           </andes-alert-dialog-content>
         </andes-alert-dialog>
 
-        <p class="sb-result">Result: <strong>{{ result() }}</strong></p>
+        ${resultLine}
       `,
     };
   },
 };
 
-/**
- * Case-insensitive, pasting refused, and the label in the user's language: `{phrase}`
- * marks where the chip goes. The usual "type DELETE" confirmation.
- */
+/** Type to confirm, strict. */
 export const TypeToConfirmStrict: Story = {
+  name: 'Type to confirm, strict',
+  parameters: about(
+    'The strict form is case-insensitive, refuses pasting and speaks the user’s language, with {phrase} marking where the chip goes in the label, which is the usual type DELETE confirmation.',
+  ),
   render: () => {
-    const result = signal('Nothing yet.');
+    const result = signal(NOTHING_YET);
     return {
-      moduleMetadata: { imports: IMPORTS },
-      props: { result },
+      props: { ...shared, result },
       template: `
-        ${STYLES}
         <andes-alert-dialog (cancelled)="result.set('Cancelled.')">
           <andes-button danger andesAlertDialogTrigger>Delete all backups</andes-button>
 
@@ -130,24 +113,23 @@ export const TypeToConfirmStrict: Story = {
           </andes-alert-dialog-content>
         </andes-alert-dialog>
 
-        <p class="sb-result">Result: <strong>{{ result() }}</strong></p>
+        ${resultLine}
       `,
     };
   },
 };
 
-/**
- * "I understand this cannot be undone": one checkbox per consequence, each of which has to
- * be ticked. Pressing the unavailable action shakes it and reads out what is missing.
- */
+/** Acknowledge checkbox. */
 export const AcknowledgeCheckbox: Story = {
+  name: 'Acknowledge checkbox',
+  parameters: about(
+    'One checkbox per consequence, each of which has to be ticked before the action unlocks, and pressing the unavailable action shakes it and reads out what is missing.',
+  ),
   render: () => {
-    const result = signal('Nothing yet.');
+    const result = signal(NOTHING_YET);
     return {
-      moduleMetadata: { imports: IMPORTS },
-      props: { result },
+      props: { ...shared, result },
       template: `
-        ${STYLES}
         <andes-alert-dialog (cancelled)="result.set('Cancelled.')">
           <andes-button danger andesAlertDialogTrigger>Delete workspace</andes-button>
 
@@ -177,25 +159,23 @@ export const AcknowledgeCheckbox: Story = {
           </andes-alert-dialog-content>
         </andes-alert-dialog>
 
-        <p class="sb-result">Result: <strong>{{ result() }}</strong></p>
+        ${resultLine}
       `,
     };
   },
 };
 
-/**
- * The action unlocks after a pause, with a visible count and a thin progress bar. Screen
- * readers hear the wait when it starts and when it ends, not every second. The countdown
- * restarts each time the dialog opens.
- */
+/** Countdown. */
 export const Countdown: Story = {
+  name: 'Countdown',
+  parameters: about(
+    'The action unlocks after a pause with a visible count and a thin progress bar, screen readers hear the wait when it starts and when it ends rather than every second, and the countdown restarts each time the dialog opens.',
+  ),
   render: () => {
-    const result = signal('Nothing yet.');
+    const result = signal(NOTHING_YET);
     return {
-      moduleMetadata: { imports: IMPORTS },
-      props: { result },
+      props: { ...shared, result },
       template: `
-        ${STYLES}
         <andes-alert-dialog (cancelled)="result.set('Cancelled.')">
           <andes-button danger andesAlertDialogTrigger>Drop database</andes-button>
 
@@ -221,25 +201,23 @@ export const Countdown: Story = {
           </andes-alert-dialog-content>
         </andes-alert-dialog>
 
-        <p class="sb-result">Result: <strong>{{ result() }}</strong></p>
+        ${resultLine}
       `,
     };
   },
 };
 
-/**
- * Press and hold the action (mouse, touch, or Space/Enter held down) while a fill sweeps
- * across it. Letting go early cancels. A screen reader that can only "click" gets a
- * cancellable countdown of the same length instead of an action it cannot perform.
- */
+/** Hold to confirm. */
 export const HoldToConfirm: Story = {
+  name: 'Hold to confirm',
+  parameters: about(
+    'Press and hold the action with the mouse, a finger or Space or Enter held down while a fill sweeps across it, letting go early cancels, and a screen reader that can only click gets a cancellable countdown of the same length.',
+  ),
   render: () => {
-    const result = signal('Nothing yet.');
+    const result = signal(NOTHING_YET);
     return {
-      moduleMetadata: { imports: IMPORTS },
-      props: { result },
+      props: { ...shared, result },
       template: `
-        ${STYLES}
         <andes-alert-dialog (cancelled)="result.set('Cancelled.')">
           <andes-button danger andesAlertDialogTrigger>Empty trash</andes-button>
 
@@ -263,24 +241,24 @@ export const HoldToConfirm: Story = {
           </andes-alert-dialog-content>
         </andes-alert-dialog>
 
-        <p class="sb-result">Result: <strong>{{ result() }}</strong></p>
+        ${resultLine}
       `,
     };
   },
 };
 
-/**
- * `[confirm]` takes the request. The dialog stays open with the action busy, Cancel and
- * Escape are out of reach while it runs, and a failure shows inline so the same button
- * retries. The first attempt here fails; the second succeeds.
- */
+/** Async with recovery. */
 export const AsyncWithRecovery: Story = {
+  name: 'Async with recovery',
+  parameters: about(
+    'confirm takes the request: the dialog stays open with the action busy, Cancel and Escape are out of reach while it runs, and a failure shows inline so the same button retries, which the first attempt here does.',
+  ),
   render: () => {
-    const result = signal('Nothing yet.');
+    const result = signal(NOTHING_YET);
     let attempts = 0;
     return {
-      moduleMetadata: { imports: IMPORTS },
       props: {
+        ...shared,
         result,
         reset: () => (attempts = 0),
         remove: () => {
@@ -299,7 +277,6 @@ export const AsyncWithRecovery: Story = {
         },
       },
       template: `
-        ${STYLES}
         <andes-alert-dialog (opened)="reset()" (cancelled)="result.set('Cancelled.')">
           <andes-button danger andesAlertDialogTrigger>Delete project</andes-button>
 
@@ -322,25 +299,23 @@ export const AsyncWithRecovery: Story = {
           </andes-alert-dialog-content>
         </andes-alert-dialog>
 
-        <p class="sb-result">Result: <strong>{{ result() }}</strong></p>
+        ${resultLine}
       `,
     };
   },
 };
 
-/**
- * Three honest answers instead of two. The secondary action sits at the start edge, away
- * from the Cancel/Save pair, and the dialog opens with focus on Save: the safe choice
- * here is the one that loses nothing.
- */
+/** Unsaved changes. */
 export const UnsavedChanges: Story = {
+  name: 'Unsaved changes',
+  parameters: about(
+    'Three honest answers instead of two, with the secondary action at the start edge away from the Cancel and Save pair, and focus on Save because the safe choice here is the one that loses nothing.',
+  ),
   render: () => {
-    const result = signal('Nothing yet.');
+    const result = signal(NOTHING_YET);
     return {
-      moduleMetadata: { imports: IMPORTS },
-      props: { result },
+      props: { ...shared, result },
       template: `
-        ${STYLES}
         <andes-alert-dialog tone="warning" initialFocus="action">
           <andes-button andesAlertDialogTrigger>Close editor</andes-button>
 
@@ -372,104 +347,23 @@ export const UnsavedChanges: Story = {
           </andes-alert-dialog-content>
         </andes-alert-dialog>
 
-        <p class="sb-result">Result: <strong>{{ result() }}</strong></p>
+        ${resultLine}
       `,
     };
   },
 };
 
-/**
- * `tone` draws the icon of the question: danger, warning, info or success. It is the same
- * filled disc `andes-alert` and the dialog service draw, with a cross, an exclamation mark,
- * an "i" or a check cut out of it, so the tone never rests on colour alone; the surface
- * itself stays neutral.
- */
-export const Tones: Story = {
-  render: () => {
-    const result = signal('Nothing yet.');
-    return {
-      moduleMetadata: { imports: IMPORTS },
-      props: {
-        result,
-        tones: [
-          {
-            tone: 'danger',
-            trigger: 'Danger',
-            title: 'Remove this member?',
-            text: 'Maria Quispe loses access to every project at once.',
-            action: 'Remove member',
-            variant: 'danger',
-          },
-          {
-            tone: 'warning',
-            trigger: 'Warning',
-            title: 'Publish with 3 broken links?',
-            text: 'Visitors will land on error pages until the links are fixed.',
-            action: 'Publish anyway',
-            variant: 'primary',
-          },
-          {
-            tone: 'info',
-            trigger: 'Info',
-            title: 'A new version is available',
-            text: 'Reload to get 4.2. Unsaved forms keep their drafts.',
-            action: 'Reload now',
-            variant: 'primary',
-          },
-          {
-            tone: 'success',
-            trigger: 'Success',
-            title: 'Ready to ship?',
-            text: 'All 214 checks passed. Release 4.2 goes live to every region.',
-            action: 'Ship release',
-            variant: 'primary',
-          },
-        ],
-      },
-      template: `
-        ${STYLES}
-        <div class="sb-row">
-          @for (item of tones; track item.tone) {
-            <andes-alert-dialog [tone]="item.tone" (cancelled)="result.set('Cancelled the ' + item.tone + ' dialog.')">
-              <andes-button andesAlertDialogTrigger>{{ item.trigger }}</andes-button>
-
-              <andes-alert-dialog-content *andesAlertDialogContent>
-                <div andesAlertDialogHeader>
-                  <andes-alert-dialog-icon />
-                  <h2 andesAlertDialogTitle>{{ item.title }}</h2>
-                  <p andesAlertDialogDescription>{{ item.text }}</p>
-                </div>
-
-                <div andesAlertDialogFooter>
-                  <andes-button variant="secondary" andesAlertDialogCancel>Cancel</andes-button>
-                  <andes-button
-                    [variant]="item.variant"
-                    andesAlertDialogAction
-                    (click)="result.set(item.action + ' confirmed.')"
-                  >{{ item.action }}</andes-button>
-                </div>
-              </andes-alert-dialog-content>
-            </andes-alert-dialog>
-          }
-        </div>
-
-        <p class="sb-result">Result: <strong>{{ result() }}</strong></p>
-      `,
-    };
-  },
-};
-
-/**
- * A concrete scope rather than a vague warning: what will be touched, with counts. Past
- * `maxVisible` rows the rest sit behind a control, so a long list does not push the
- * actions off screen.
- */
+/** Impact summary. */
 export const ImpactSummary: Story = {
+  name: 'Impact summary',
+  parameters: about(
+    'A concrete scope instead of a vague warning, what will be touched with counts, and past maxVisible rows the rest sit behind a control so a long list does not push the actions off screen.',
+  ),
   render: () => {
-    const result = signal('Nothing yet.');
+    const result = signal(NOTHING_YET);
     return {
-      moduleMetadata: { imports: IMPORTS },
       props: {
+        ...shared,
         result,
         items: [
           { label: 'Files', count: 128 },
@@ -481,7 +375,6 @@ export const ImpactSummary: Story = {
         ],
       },
       template: `
-        ${STYLES}
         <andes-alert-dialog tone="danger" (cancelled)="result.set('Cancelled.')">
           <andes-button danger andesAlertDialogTrigger>Delete organization</andes-button>
 
@@ -511,24 +404,24 @@ export const ImpactSummary: Story = {
           </andes-alert-dialog-content>
         </andes-alert-dialog>
 
-        <p class="sb-result">Result: <strong>{{ result() }}</strong></p>
+        ${resultLine}
       `,
     };
   },
 };
 
-/**
- * "Don't ask me again" needs no part of its own: the library checkbox sits in the body
- * and the action's handler reads it. Here the choice is kept in a signal; a real app
- * would write it to its settings before closing.
- */
+/** Don’t ask again. */
 export const DontAskAgain: Story = {
+  name: 'Don’t ask again',
+  parameters: about(
+    'No part of its own is needed: the library checkbox sits in the body and the action’s handler reads it, kept here in a signal where a real app would write it to its settings before closing.',
+  ),
   render: () => {
-    const result = signal('Nothing yet.');
+    const result = signal(NOTHING_YET);
     const skip = signal(false);
     return {
-      moduleMetadata: { imports: IMPORTS },
       props: {
+        ...shared,
         result,
         skip,
         archive: () =>
@@ -539,7 +432,6 @@ export const DontAskAgain: Story = {
           ),
       },
       template: `
-        ${STYLES}
         <andes-alert-dialog (cancelled)="result.set('Cancelled.')">
           <andes-button andesAlertDialogTrigger>Archive project</andes-button>
 
@@ -560,26 +452,23 @@ export const DontAskAgain: Story = {
           </andes-alert-dialog-content>
         </andes-alert-dialog>
 
-        <p class="sb-result">Result: <strong>{{ result() }}</strong></p>
+        ${resultLine}
       `,
     };
   },
 };
 
-/**
- * Small guards against an accidental answer. `armDelay` ignores the action for 300 ms
- * after the dialog opens, so an Enter still held down from the trigger cannot confirm it;
- * `initialFocus="cancel"` puts focus on the safe choice; while the request runs a second
- * click does nothing. Try opening it with the keyboard and pressing Enter at once.
- */
+/** Accident guards. */
 export const AccidentGuards: Story = {
+  name: 'Accident guards',
+  parameters: about(
+    'armDelay ignores the action for 300 ms after the dialog opens so an Enter still held down from the trigger cannot confirm it, initialFocus="cancel" puts focus on the safe choice, and a second click does nothing while the request runs.',
+  ),
   render: () => {
-    const result = signal('Nothing yet.');
+    const result = signal(NOTHING_YET);
     return {
-      moduleMetadata: { imports: IMPORTS },
-      props: { result },
+      props: { ...shared, result },
       template: `
-        ${STYLES}
         <andes-alert-dialog initialFocus="cancel" (cancelled)="result.set('Cancelled.')">
           <andes-button danger andesAlertDialogTrigger>Revoke access</andes-button>
 
@@ -603,23 +492,24 @@ export const AccidentGuards: Story = {
           </andes-alert-dialog-content>
         </andes-alert-dialog>
 
-        <p class="sb-result">Result: <strong>{{ result() }}</strong></p>
+        ${resultLine}
       `,
     };
   },
 };
 
-/**
- * Everything together for the most destructive thing an app does: a danger tone, the
- * scope, a phrase to type and a request that can fail and be retried.
- */
+/** Danger zone. */
 export const DangerZone: Story = {
+  name: 'Danger zone',
+  parameters: about(
+    'Everything together for the most destructive thing an application does: a danger tone, the scope, a phrase to type and a request that can fail and be retried.',
+  ),
   render: () => {
-    const result = signal('Nothing yet.');
+    const result = signal(NOTHING_YET);
     let attempts = 0;
     return {
-      moduleMetadata: { imports: IMPORTS },
       props: {
+        ...shared,
         result,
         items: [
           { label: 'Projects', count: 9 },
@@ -643,7 +533,6 @@ export const DangerZone: Story = {
         },
       },
       template: `
-        ${STYLES}
         <andes-alert-dialog
           tone="danger"
           size="lg"
@@ -675,7 +564,7 @@ export const DangerZone: Story = {
           </andes-alert-dialog-content>
         </andes-alert-dialog>
 
-        <p class="sb-result">Result: <strong>{{ result() }}</strong></p>
+        ${resultLine}
       `,
     };
   },

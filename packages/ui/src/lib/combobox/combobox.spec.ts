@@ -261,8 +261,10 @@ describe('AndesCombobox', () => {
       type('zzz');
 
       const empty = panel()?.querySelector('.andes-combobox-empty');
-      const icon = empty?.querySelector('svg.andes-combobox-empty__icon');
-      expect(icon).toBeTruthy();
+      // Lucide's inbox, registered by the directive itself: no provideIcons in this test bed.
+      const icon = empty?.querySelector('ng-icon.andes-combobox-empty__icon');
+      expect(icon?.getAttribute('name')).toBe('lucideInbox');
+      expect(icon?.querySelector('svg')).toBeTruthy();
       // Decorative: the role="status" live region must announce the message only.
       expect(icon?.getAttribute('aria-hidden')).toBe('true');
       // ...and above it, not in place of it.

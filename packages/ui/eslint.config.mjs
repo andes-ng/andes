@@ -20,7 +20,11 @@ export default [
             '@angular/forms',
             'rxjs',
           ],
-          ignoredFiles: ['{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}'],
+          ignoredFiles: [
+            '{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}',
+            // Helpers for the stories and specs: not part of the library build (tsconfig.lib.json).
+            '{projectRoot}/src/testing/**',
+          ],
         },
       ],
     },

@@ -18,6 +18,10 @@ import {
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import clsx from 'clsx';
 
+import {
+  andesIdRefs,
+  injectAndesFieldBinding,
+} from '../form-field/field-binding';
 import type {
   AndesInputSize,
   AndesInputStatus,
@@ -109,10 +113,14 @@ export class AndesInputOtp implements ControlValueAccessor {
    * or a template receives the index of the cell the separator follows.
    */
   readonly separator = input<AndesInputOtpSeparator | undefined>(undefined);
-  readonly size = input<AndesInputSize>('md');
-  readonly variant = input<AndesInputVariant>('outlined');
+  /** `md` unless set, or the enclosing `andesForm`'s `size`. */
+  readonly size = input<AndesInputSize | undefined>(undefined);
+  /** `outlined` unless set, or the enclosing `andesForm`'s `variant`. */
+  readonly variant = input<AndesInputVariant | undefined>(undefined);
   readonly status = input<AndesInputStatus | undefined>(undefined);
   readonly disabled = input(false, { transform: booleanAttribute });
+  /** Announces every cell as required (`aria-required`); also set by a required field. */
+  readonly required = input(false, { transform: booleanAttribute });
   readonly autocomplete = input('one-time-code');
   readonly inputMode = input<string>('text');
   readonly id = input<string | undefined>(undefined);
@@ -140,6 +148,41 @@ export class AndesInputOtp implements ControlValueAccessor {
 
   private readonly disabledByForm = signal(false);
 
+  /** The enclosing form field and form: id, ARIA, status, size, variant and disabled. */
+  protected readonly field = injectAndesFieldBinding();
+
+  /** The size in effect: `size`, else the form's, else `md`. */
+  readonly resolvedSize = computed<AndesInputSize>(
+    () => this.size() ?? this.field.size() ?? 'md',
+  );
+
+  /** The variant in effect: `variant`, else the form's, else `outlined`. */
+  readonly resolvedVariant = computed<AndesInputVariant>(
+    () => this.variant() ?? this.field.variant() ?? 'outlined',
+  );
+
+  /** The status in effect: `status`, else the enclosing field's error or warning. */
+  readonly resolvedStatus = computed<AndesInputStatus | undefined>(
+    () => this.status() ?? this.field.status(),
+  );
+
+  /** `id` (on the first cell), else the enclosing field's control id. */
+  protected readonly controlId = computed(() => this.id() ?? this.field.id());
+
+  protected readonly labelledBy = computed(
+    () =>
+      this.ariaLabelledby() ??
+      (this.ariaLabel() ? undefined : this.field.labelledBy()),
+  );
+
+  protected readonly describedBy = computed(() =>
+    andesIdRefs(this.ariaDescribedby(), this.field.describedBy()),
+  );
+
+  protected readonly isRequired = computed(
+    () => this.required() || this.field.required(),
+  );
+
   /**
    * The per-cell source of truth. It re-derives from `value` only when `value` is changed from
    * outside (binding, form control, `length`) - a user clearing a middle cell leaves a hole here
@@ -159,11 +202,11 @@ export class AndesInputOtp implements ControlValueAccessor {
   });
 
   protected readonly isDisabled = computed(
-    () => this.disabled() || this.disabledByForm(),
+    () => this.disabled() || this.disabledByForm() || this.field.disabled(),
   );
 
   protected readonly isInvalid = computed(
-    () => this.ariaInvalid() || this.status() === 'error',
+    () => this.ariaInvalid() || this.resolvedStatus() === 'error',
   );
 
   protected readonly maskCharacter = computed(() => {
@@ -177,10 +220,10 @@ export class AndesInputOtp implements ControlValueAccessor {
   protected readonly classes = computed(() =>
     clsx(
       'andes-input-otp',
-      `andes-input-otp--${this.size()}`,
-      `andes-input-otp--${this.variant()}`,
+      `andes-input-otp--${this.resolvedSize()}`,
+      `andes-input-otp--${this.resolvedVariant()}`,
       this.isInvalid() && 'andes-input-otp--invalid',
-      this.status() === 'warning' &&
+      this.resolvedStatus() === 'warning' &&
         !this.isInvalid() &&
         'andes-input-otp--warning',
       this.isDisabled() && 'andes-input-otp--disabled',

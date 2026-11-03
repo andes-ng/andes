@@ -57,3 +57,13 @@
     var(--andes-avatar-box, 2rem) * var(--andes-avatar-icon-scale, 0.66)
   );
 }
+
+/* An `<ng-icon>` (the lucide icons) wraps its svg in a 1em host that the svg takes its size
+   from: `display: contents` drops the wrapper from layout and the wrapper carries the same
+   share of the avatar as its icon size, as in avatar-icon.css. */
+:host ::ng-deep ng-icon {
+  display: contents;
+  --ng-icon__size: calc(
+    var(--andes-avatar-box, 2rem) * var(--andes-avatar-icon-scale, 0.66)
+  );
+}

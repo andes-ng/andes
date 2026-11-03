@@ -22,9 +22,7 @@
       (pointerleave)="stopRepeat()"
       (click)="onHandlerClick($event, 'down')"
     >
-      <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-        <path d="M3.5 8h9" />
-      </svg>
+      <ng-icon name="lucideMinus" />
     </button>
     }
     <span class="andes-input-number__prefix">
@@ -44,8 +42,8 @@
       [attr.placeholder]="placeholder()"
       [attr.inputmode]="resolvedInputmode()"
       [attr.aria-label]="ariaLabel()"
-      [attr.aria-labelledby]="ariaLabelledby()"
-      [attr.aria-describedby]="ariaDescribedby()"
+      [attr.aria-labelledby]="labelledBy()"
+      [attr.aria-describedby]="describedBy()"
       [attr.aria-invalid]="isInvalid() || null"
       [attr.aria-readonly]="readOnly() || null"
       [attr.aria-valuemin]="ariaMin()"
@@ -53,7 +51,7 @@
       [attr.aria-valuenow]="ariaNow()"
       [attr.aria-valuetext]="ariaText()"
       [disabled]="isDisabled()"
-      [required]="required()"
+      [required]="isRequired()"
       [readOnly]="readOnly()"
       [value]="text()"
       (beforeinput)="onBeforeInput($event)"
@@ -83,9 +81,7 @@
       (pointerleave)="stopRepeat()"
       (click)="onHandlerClick($event, 'up')"
     >
-      <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-        <path d="M3.5 8h9M8 3.5v9" />
-      </svg>
+      <ng-icon name="lucidePlus" />
     </button>
     } @if (showStepper()) {
     <span class="andes-input-number__stepper" data-slot="input-number-stepper">
@@ -104,9 +100,7 @@
         (pointerleave)="stopRepeat()"
         (click)="onHandlerClick($event, 'up')"
       >
-        <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false">
-          <path d="M3 7.25 6 4.25l3 3" />
-        </svg>
+        <ng-icon name="lucideChevronUp" />
       </button>
       <button
         type="button"
@@ -123,9 +117,7 @@
         (pointerleave)="stopRepeat()"
         (click)="onHandlerClick($event, 'down')"
       >
-        <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false">
-          <path d="M3 4.75 6 7.75l3-3" />
-        </svg>
+        <ng-icon name="lucideChevronDown" />
       </button>
     </span>
     }

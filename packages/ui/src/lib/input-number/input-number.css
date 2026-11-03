@@ -254,16 +254,16 @@
   border-top: 1px solid var(--andes-color-border);
 }
 
-.andes-input-number__step svg {
+/* The steppers' glyphs are lucide icons in an `ng-icon`: as a flex box its svg never sits on a
+   text baseline, so the glyph fills the icon box exactly. */
+ng-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.andes-input-number__step ng-icon {
   width: 0.75rem;
   height: 0.75rem;
-  flex-shrink: 0;
-  overflow: visible;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
 .andes-input-number__step:hover:not(:disabled) {
@@ -327,13 +327,9 @@
   border-inline-start: 1px solid var(--andes-color-border);
 }
 
-.andes-input-number__spin svg {
+.andes-input-number__spin ng-icon {
   width: 1em;
   height: 1em;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.5;
-  stroke-linecap: round;
 }
 
 .andes-input-number__spin:hover:not(:disabled) {

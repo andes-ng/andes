@@ -17,6 +17,8 @@ import {
   viewChild,
 } from '@angular/core';
 import clsx from 'clsx';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideChevronDown, lucideCircleX, lucideX } from '@ng-icons/lucide';
 
 import { AndesSelectOverflow } from './select-overflow';
 import {
@@ -43,7 +45,9 @@ const RESPONSIVE_SEARCH_RESERVE = 20;
  */
 @Component({
   selector: 'andes-select-trigger',
+  viewProviders: [provideIcons({ lucideX, lucideCircleX, lucideChevronDown })],
   imports: [
+    NgIcon,
     AndesOverlayContentPrimitive,
     AndesOverlayTriggerPrimitive,
     AndesSelectOverflow,
@@ -74,7 +78,7 @@ export class AndesSelectTrigger {
   protected readonly classes = computed(() =>
     clsx(
       'andes-select__trigger',
-      `andes-select__trigger--${this.select.size()}`,
+      `andes-select__trigger--${this.select.resolvedSize()}`,
       this.select.invalid() && 'andes-select__trigger--invalid',
     ),
   );
@@ -83,7 +87,7 @@ export class AndesSelectTrigger {
   protected readonly describedBy = computed(
     () =>
       [
-        this.select.ariaDescribedby(),
+        this.select.describedBy(),
         this.select.selectionSummary() ? this.select.summaryId : undefined,
       ]
         .filter(Boolean)

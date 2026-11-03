@@ -1,4 +1,11 @@
 import { FormsModule } from '@angular/forms';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideFlag,
+  lucideLoaderCircle,
+  lucideSun,
+  lucideX,
+} from '@ng-icons/lucide';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 
 import {
@@ -18,7 +25,14 @@ import { fieldGrid } from '../../testing/story-layout';
 // `placeholders`...). The picker is imported through a decorator instead.
 const meta: Meta<AndesDatePicker> = {
   title: 'Data Entry/Date Picker/Extras',
-  decorators: [moduleMetadata({ imports: [AndesDatePicker] })],
+  decorators: [
+    moduleMetadata({
+      imports: [AndesDatePicker, NgIcon],
+      providers: [
+        provideIcons({ lucideFlag, lucideLoaderCircle, lucideSun, lucideX }),
+      ],
+    }),
+  ],
   parameters: { layout: 'padded' },
 };
 
@@ -318,10 +332,10 @@ export const PrefixAndSuffix: Story = {
     template: `
       <ng-template #label><span style="font-size: 0.875rem;">Due</span></ng-template>
       <ng-template #flag>
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 22V4M4 4h13l-2 4 2 4H4" /></svg>
+        <ng-icon name="lucideFlag" size="14" aria-hidden="true" />
       </ng-template>
       <ng-template #sun>
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>
+        <ng-icon name="lucideSun" size="16" aria-hidden="true" />
       </ng-template>
       <div style="${fieldGrid('20rem')} min-height: 26rem;">
         @for (type of types; track type) {
@@ -368,10 +382,10 @@ export const ClearableReadOnlyLoading: Story = {
     ],
     template: `
       <ng-template #clear>
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+        <ng-icon name="lucideX" size="14" aria-hidden="true" />
       </ng-template>
       <ng-template #spinner>
-        <svg class="story-spinner" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.2-8.6" /></svg>
+        <ng-icon class="story-spinner" name="lucideLoaderCircle" size="16" aria-hidden="true" />
       </ng-template>
       <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 22rem)); gap: 0.75rem 1.5rem; align-items: start; align-content: start; min-height: 26rem;">
         <p [style]="caption">allowClear off, single</p>

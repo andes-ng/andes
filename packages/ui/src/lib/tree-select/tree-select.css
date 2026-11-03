@@ -486,7 +486,14 @@
   outline-offset: 1px;
 }
 
-.andes-tree-select__tag-remove svg {
+/* Every icon is a lucide glyph in an `ng-icon`; as a flex box its svg never sits on a text
+   baseline, so the glyph fills the icon box exactly. */
+ng-icon {
+  display: inline-flex;
+  flex: none;
+}
+
+.andes-tree-select__tag-remove ng-icon {
   width: 0.75em;
   height: 0.75em;
 }
@@ -526,7 +533,7 @@
   transform: rotate(180deg);
 }
 
-.andes-tree-select__chevron svg {
+.andes-tree-select__chevron ng-icon {
   width: 0.875em;
   height: 0.875em;
 }
@@ -584,20 +591,20 @@
   color: var(--andes-color-muted-foreground, #64748b);
 }
 
-.andes-tree-select__clear svg {
+.andes-tree-select__clear ng-icon {
   width: 0.875em;
   height: 0.875em;
 }
 
-.andes-tree-select__clear circle {
+/* Lucide's circle-x as a filled disc: the ring's 4-unit stroke takes the disc to the edge of
+   the box and the "x" is knocked out in the background colour. */
+.andes-tree-select__clear-glyph ::ng-deep circle {
   fill: currentcolor;
+  stroke-width: 4;
 }
 
-.andes-tree-select__clear path {
-  fill: none;
+.andes-tree-select__clear-glyph ::ng-deep path {
   stroke: var(--andes-color-background, #fff);
-  stroke-linecap: round;
-  stroke-width: 1.5;
 }
 
 .andes-tree-select__trigger:hover .andes-tree-select__clear,
@@ -844,6 +851,13 @@
 
 .andes-tree-select__panel-extra--footer {
   border-block-start: 1px solid var(--andes-color-border, #e2e8f0);
+}
+
+/* Plain-text empty state, as the select's panel draws it; an andes-empty brings its own margin. */
+.andes-tree-select__status {
+  padding: 0.3125rem 0.75rem;
+  color: var(--andes-color-muted-foreground);
+  text-align: center;
 }
 
 .andes-tree-select__viewport {

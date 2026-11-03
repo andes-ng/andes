@@ -45,8 +45,12 @@ export function optionalNumberAttribute(value: unknown): number | undefined {
 /** What a toggle inside a group reads from and reports to it. */
 export interface AndesToggleGroupApi {
   readonly variant: Signal<AndesToggleVariant>;
-  readonly size: Signal<AndesToggleSize>;
+  readonly size: Signal<AndesToggleSize | undefined>;
   readonly status: Signal<AndesToggleStatus | undefined>;
+  /** The group's size in effect: its own, else its form's (`undefined` for the default). */
+  readonly resolvedSize: Signal<AndesToggleSize | undefined>;
+  /** The group's status in effect: its own, else its enclosing field's error or warning. */
+  readonly resolvedStatus: Signal<AndesToggleStatus | undefined>;
   readonly isDisabled: Signal<boolean>;
   /** Nothing can be changed, but the toggles stay focusable and keep their look. */
   readonly readOnly: Signal<boolean>;

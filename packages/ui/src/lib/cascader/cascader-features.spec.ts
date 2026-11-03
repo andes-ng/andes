@@ -753,11 +753,16 @@ describe('AndesCascader features', () => {
       detect();
       expect(host.value()).toEqual([['cusco', 'wanchaq']]);
       expect(motion()).toEqual(['Cusco:indeterminate', 'Wanchaq:check']);
-      const tick = item('Wanchaq').querySelector('svg');
+      const tick = item('Wanchaq').querySelector(
+        '.andes-cascader__check ng-icon',
+      );
       expect(tick?.classList).toContain('andes-check-motion__tick');
-      expect(
-        item('Cusco').querySelector('.andes-cascader__check svg')?.classList,
-      ).toContain('andes-check-motion__dash');
+      expect(tick?.getAttribute('name')).toBe('lucideCheck');
+      const dash = item('Cusco').querySelector(
+        '.andes-cascader__check ng-icon',
+      );
+      expect(dash?.classList).toContain('andes-check-motion__dash');
+      expect(dash?.getAttribute('name')).toBe('lucideMinus');
 
       vi.advanceTimersByTime(1000);
       detect();

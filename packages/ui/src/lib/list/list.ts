@@ -23,6 +23,8 @@ import {
 } from '@angular/core';
 import clsx from 'clsx';
 
+import { AndesEmpty } from '../empty/empty';
+
 export type AndesListSize = 'sm' | 'md' | 'lg';
 export type AndesListItemLayout = 'horizontal' | 'vertical';
 export type AndesListSelectable = 'none' | 'single' | 'multiple';
@@ -81,6 +83,7 @@ function selectableAttribute(
 @Component({
   selector: 'andes-list',
   imports: [
+    AndesEmpty,
     NgTemplateOutlet,
     CdkVirtualScrollViewport,
     CdkFixedSizeVirtualScroll,
@@ -145,8 +148,14 @@ export class AndesList<T = unknown> {
     (_index, item) => item,
   );
 
-  /** Shown when there are no rows. Text or a template. */
-  readonly notFoundContent = input<string | TemplateRef<unknown>>('No data');
+  /**
+   * Shown when there are no rows: text or a template. `null` shows no empty state at all; left
+   * unset it is an `andes-empty` (the `list` preset at the default size - Ant's simple picture
+   * with 32px above and below), which follows `provideAndesEmpty()`.
+   */
+  readonly notFoundContent = input<
+    string | TemplateRef<unknown> | null | undefined
+  >(undefined);
 
   /** Setting `columns` lays the rows out as a grid. A number is a fixed count. */
   readonly columns = input<number | AndesListColumns | undefined>(undefined);
@@ -238,8 +247,12 @@ export class AndesList<T = unknown> {
 
   protected readonly notFoundTemplate = computed(() => {
     const value = this.notFoundContent();
-    return typeof value === 'string' ? null : value;
+    return value instanceof TemplateRef ? value : null;
   });
+
+  protected readonly showsDefaultEmpty = computed(
+    () => this.notFoundContent() === undefined,
+  );
 
   protected readonly classes = computed(() =>
     clsx(

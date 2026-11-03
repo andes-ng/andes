@@ -196,24 +196,15 @@
 /* --- Empty state --------------------------------------------------------------------------- */
 
 .andes-list__empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
   padding: 1.5rem 1rem;
   color: var(--andes-color-muted-foreground);
   text-align: center;
 }
 
-.andes-list__empty-icon {
-  inline-size: 2rem;
-  block-size: 2rem;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.25;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  opacity: 0.7;
+/* The default is an `andes-empty`, which brings its own margins (32px above and below); the
+   list only adds Ant's 16px around it. */
+.andes-list__empty--state {
+  padding: 1rem;
 }
 
 /* --- Loading skeleton ---------------------------------------------------------------------- */

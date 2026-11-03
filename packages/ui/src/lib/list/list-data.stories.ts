@@ -3,6 +3,7 @@ import type { Meta, StoryObj } from '@storybook/angular';
 import { moduleMetadata } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
+import { AndesEmptyProvider } from '../empty/empty-config';
 import { AndesList } from './list';
 import { AndesListItem } from './list-item';
 import { AndesListItemMeta } from './list-item-meta';
@@ -44,7 +45,12 @@ const meta: Meta<AndesList> = {
   component: AndesList,
   decorators: [
     moduleMetadata({
-      imports: [AndesListItem, AndesListItemMeta, AndesButton],
+      imports: [
+        AndesListItem,
+        AndesListItemMeta,
+        AndesButton,
+        AndesEmptyProvider,
+      ],
     }),
   ],
   parameters: { layout: 'padded' },
@@ -89,6 +95,26 @@ export const LoadingAndEmpty: Story = {
         <andes-list bordered label="Empty" [dataSource]="[]" />
         <andes-list bordered label="Empty with custom text" [dataSource]="[]" notFoundContent="Nobody matches your search" />
         <andes-list bordered label="Empty with a template" [dataSource]="[]" [notFoundContent]="nothing" />
+      </div>`,
+  }),
+};
+
+/**
+ * A list with no rows shows an `andes-empty` - Ant Design's simple picture and message with 32px
+ * above and below, inside the list's 16px. A provider sets the message for every empty state
+ * under it ("Data Not Found", as in Ant's ConfigProvider example); `notFoundContent` replaces it
+ * with text or a template, and `null` shows nothing.
+ */
+export const EmptyState: Story = {
+  render: () => ({
+    template: `
+      <div style="display: flex; flex-direction: column; gap: 1.5rem; max-width: 36rem;">
+        <andes-list bordered label="Default" [dataSource]="[]" />
+        <div [andesEmptyProvider]="{ description: 'Data Not Found' }">
+          <andes-list bordered label="Data Not Found, from a provider" [dataSource]="[]" />
+        </div>
+        <andes-list bordered label="Own text" [dataSource]="[]" notFoundContent="Nobody matches your search" />
+        <andes-list bordered label="No empty state" [dataSource]="[]" [notFoundContent]="null" />
       </div>`,
   }),
 };

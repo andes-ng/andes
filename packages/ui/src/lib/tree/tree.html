@@ -336,10 +336,11 @@
     />
     } }
   </div>
-  } @else {
+  } @else if (loading() || emptyContent() !== null) {
   <div
     class="andes-tree__empty"
     [attr.data-empty]="loading() ? null : ''"
+    [attr.data-custom]="!loading() && emptyContent() ? '' : null"
     [attr.aria-busy]="loading() ? 'true' : null"
   >
     @if (loading()) {
@@ -364,7 +365,9 @@
         stroke-linecap="round"
       />
     </svg>
-    {{ text().loading }} } @else {
+    {{ text().loading }} } @else if (emptyContent(); as content) {
+    <ng-container [ngTemplateOutlet]="content" />
+    } @else {
     <svg
       class="andes-tree__empty-icon"
       viewBox="0 0 24 24"

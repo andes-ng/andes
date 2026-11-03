@@ -302,8 +302,11 @@ describe('AndesTimeline', () => {
         'Loading',
       );
       expect(
-        last.querySelector('svg.andes-timeline-item__spinner'),
-      ).toBeTruthy();
+        last
+          .querySelector('ng-icon.andes-timeline-item__spinner')
+          ?.getAttribute('name'),
+      ).toBe('lucideLoaderCircle');
+      expect(last.querySelector('ng-icon svg')).toBeTruthy();
       expect(
         fixture.nativeElement.querySelector('ol').getAttribute('aria-busy'),
       ).toBe('true');
@@ -333,7 +336,9 @@ describe('AndesTimeline', () => {
 
       expect(pendingItem(fixture).querySelector('.pending-dot')).toBeTruthy();
       expect(
-        pendingItem(fixture).querySelector('svg.andes-timeline-item__spinner'),
+        pendingItem(fixture).querySelector(
+          'ng-icon.andes-timeline-item__spinner',
+        ),
       ).toBeNull();
     });
 

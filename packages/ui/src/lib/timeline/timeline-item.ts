@@ -8,6 +8,8 @@ import {
   input,
   TemplateRef,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideLoaderCircle } from '@ng-icons/lucide';
 
 import {
   ANDES_TIMELINE,
@@ -32,7 +34,8 @@ const SEVERITIES: readonly AndesTimelineSeverity[] = [
  */
 @Component({
   selector: 'andes-timeline-item',
-  imports: [NgTemplateOutlet],
+  viewProviders: [provideIcons({ lucideLoaderCircle })],
+  imports: [NgIcon, NgTemplateOutlet],
   templateUrl: './timeline-item.html',
   styleUrl: './timeline-item.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -99,22 +99,16 @@
 
 /* Spinner (pending) */
 
+/* The pending marker is lucide's loader circle in an `ng-icon` 1rem square, spinning. Its
+   strokes keep the 2px weight the ring was drawn with at 16px (3 units of the 24-unit grid). */
 .andes-timeline-item__spinner {
-  inline-size: 1rem;
-  block-size: 1rem;
-  fill: none;
-  stroke-width: 3;
+  --ng-icon__size: 1rem;
+  --ng-icon__stroke-width: 3;
+
+  display: inline-flex;
+  flex: none;
+  color: var(--_andes-timeline-color);
   animation: andes-timeline-spin 1.2s linear infinite;
-}
-
-.andes-timeline-item__spinner-track {
-  stroke: color-mix(in srgb, var(--_andes-timeline-color) 25%, transparent);
-}
-
-.andes-timeline-item__spinner-arc {
-  stroke: var(--_andes-timeline-color);
-  stroke-linecap: round;
-  stroke-dasharray: 14 60;
 }
 
 @keyframes andes-timeline-spin {

@@ -16,19 +16,7 @@
     @if (dot(); as template) {
     <ng-container *ngTemplateOutlet="template" />
     } @else if (pending()) {
-    <svg
-      class="andes-timeline-item__spinner"
-      viewBox="0 0 24 24"
-      focusable="false"
-    >
-      <circle
-        class="andes-timeline-item__spinner-track"
-        cx="12"
-        cy="12"
-        r="9"
-      />
-      <circle class="andes-timeline-item__spinner-arc" cx="12" cy="12" r="9" />
-    </svg>
+    <ng-icon class="andes-timeline-item__spinner" name="lucideLoaderCircle" />
     } @else {
     <span class="andes-timeline-item__dot"></span>
     }

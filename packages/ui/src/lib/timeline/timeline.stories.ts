@@ -1,3 +1,10 @@
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideCircleCheck,
+  lucideClock,
+  lucideMail,
+  lucideUser,
+} from '@ng-icons/lucide';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 
 import { AndesTimeline } from './timeline';
@@ -7,7 +14,19 @@ const meta: Meta<AndesTimeline> = {
   title: 'Data Display/Timeline',
   component: AndesTimeline,
   tags: ['autodocs'],
-  decorators: [moduleMetadata({ imports: [AndesTimeline, AndesTimelineItem] })],
+  decorators: [
+    moduleMetadata({
+      imports: [AndesTimeline, AndesTimelineItem, NgIcon],
+      providers: [
+        provideIcons({
+          lucideCircleCheck,
+          lucideClock,
+          lucideMail,
+          lucideUser,
+        }),
+      ],
+    }),
+  ],
   parameters: { layout: 'padded' },
   argTypes: {
     mode: { control: 'inline-radio', options: ['start', 'end', 'alternate'] },
@@ -197,13 +216,13 @@ export const CustomDot: Story = {
         <andes-timeline-item [dot]="checkTpl" color="success" dotLabel="Resolved">Marked as resolved</andes-timeline-item>
       </andes-timeline>
       <ng-template #mailTpl>
-        <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3.5" width="12" height="9" rx="1.5"/><path d="m2.5 4.5 5.5 4 5.5-4"/></svg>
+        <ng-icon name="lucideMail" aria-hidden="true" style="font-size: 1rem" />
       </ng-template>
       <ng-template #userTpl>
-        <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5.5" r="2.5"/><path d="M3 13c.6-2.4 2.6-3.5 5-3.5s4.4 1.1 5 3.5"/></svg>
+        <ng-icon name="lucideUser" aria-hidden="true" style="font-size: 1rem" />
       </ng-template>
       <ng-template #checkTpl>
-        <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="m5.5 8.2 1.8 1.8 3.2-3.5"/></svg>
+        <ng-icon name="lucideCircleCheck" aria-hidden="true" style="font-size: 1rem" />
       </ng-template>`,
   }),
 };
@@ -234,7 +253,7 @@ export const Pending: Story = {
         </andes-timeline>
       </div>
       <ng-template #clockTpl>
-        <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.2 1.4"/></svg>
+        <ng-icon name="lucideClock" aria-hidden="true" style="font-size: 1rem" />
       </ng-template>`,
   }),
 };

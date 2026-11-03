@@ -167,7 +167,7 @@ class CascaderHost {
   readonly loadData = signal<AndesCascaderLoadData | undefined>(undefined);
   readonly separator = signal(' / ');
   readonly placeholder = signal('Pick a place');
-  readonly notFound = signal<AndesCascaderNotFound>('No data');
+  readonly notFound = signal<AndesCascaderNotFound>(undefined);
   readonly loading = signal(false);
   readonly size = signal<'sm' | 'md' | 'lg'>('md');
   readonly variant = signal<
@@ -527,9 +527,9 @@ describe('AndesCascader', () => {
       open();
       expect(panel()?.textContent).toContain('No data');
       expect(document.querySelector('[role="tree"]')).toBeNull();
-      // A decorative tray above the text.
+      // A decorative picture above the text.
       const icon = panel()?.querySelector(
-        '[data-slot="cascader-empty"] .andes-cascader__empty-icon',
+        '[data-slot="cascader-empty"] andes-empty svg',
       );
       expect(icon?.getAttribute('aria-hidden')).toBe('true');
 
@@ -557,8 +557,8 @@ describe('AndesCascader', () => {
       fixture.detectChanges();
 
       expect(document.querySelector('.empty')?.textContent).toBe('Nothing yet');
-      // A custom empty state replaces the tray as well.
-      expect(document.querySelector('.andes-cascader__empty-icon')).toBeNull();
+      // A custom empty state replaces the picture as well.
+      expect(document.querySelector('andes-empty')).toBeNull();
     });
 
     it('shows a loading line in an empty panel while loading', () => {

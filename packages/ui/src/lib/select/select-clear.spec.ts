@@ -79,10 +79,12 @@ describe('AndesSelect clear button', () => {
 
   it('draws the shared glyph: a filled disc with the "x" knocked out of it', () => {
     const { clear } = setup();
-    const glyph = clear()?.querySelector('svg.andes-select__clear-glyph');
-    expect(glyph?.querySelector('circle')).toBeTruthy();
+    // Lucide's circle-x, registered by the trigger itself: no provideIcons in this test bed.
+    const glyph = clear()?.querySelector('ng-icon.andes-select__clear-glyph');
+    expect(glyph?.getAttribute('name')).toBe('lucideCircleX');
+    expect(glyph?.querySelector('svg circle')).toBeTruthy();
     expect(css('select-trigger.css')).toContain(
-      '.andes-select__clear-glyph path { fill: none; stroke: var(--andes-color-background);',
+      '.andes-select__clear-glyph ::ng-deep path { stroke: var(--andes-color-background); }',
     );
   });
 

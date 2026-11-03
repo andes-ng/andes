@@ -2,6 +2,8 @@ import { signal } from '@angular/core';
 
 import { AndesInputSearch } from './input-search';
 import type { Meta, StoryObj } from '@storybook/angular';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideArrowRight, lucideFunnel } from '@ng-icons/lucide';
 
 const meta: Meta<AndesInputSearch> = {
   title: 'Data Entry/Input/Specialized/Search',
@@ -18,6 +20,10 @@ const caption =
 /** `(searched)` fires on Enter or on the button, with the value and which of the two it was. */
 export const Search: Story = {
   render: () => ({
+    moduleMetadata: {
+      imports: [NgIcon],
+      providers: [provideIcons({ lucideArrowRight, lucideFunnel })],
+    },
     props: {
       searches: signal<string[]>([]),
       customSearches: signal<string[]>([]),
@@ -46,15 +52,11 @@ export const Search: Story = {
         }
       </div>
       <ng-template #goButton>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path>
-        </svg>
+        <ng-icon name="lucideArrowRight" aria-hidden="true" />
         Go
       </ng-template>
       <ng-template #filterIcon>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"></path>
-        </svg>
+        <ng-icon name="lucideFunnel" aria-hidden="true" />
       </ng-template>
     `,
   }),

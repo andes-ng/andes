@@ -297,7 +297,8 @@ describe('AndesCheckbox style encapsulation', () => {
       const draw = atRuleBody(css, '@keyframes andes-checkbox-draw');
       const pop = atRuleBody(css, '@keyframes andes-checkbox-pop');
 
-      expect(draw).toContain('stroke-dashoffset: 14');
+      // lucideCheck's path is 23 units long.
+      expect(draw).toContain('stroke-dashoffset: 23');
       expect(draw).toContain('stroke-dashoffset: 0');
       expect(pop).toContain('scale(1.1)');
     });

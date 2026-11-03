@@ -28,6 +28,20 @@ import {
   viewChild,
 } from '@angular/core';
 import { filter, isObservable, lastValueFrom, take } from 'rxjs';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideCheck,
+  lucideChevronRight,
+  lucideFile,
+  lucideFolder,
+  lucideFolderOpen,
+  lucideGripVertical,
+  lucideInbox,
+  lucideLoaderCircle,
+  lucideMinus,
+  lucideSquareMinus,
+  lucideSquarePlus,
+} from '@ng-icons/lucide';
 
 import { AndesTreeNodeTemplate } from './tree-node-template';
 import type {
@@ -180,7 +194,23 @@ function draggableAttribute(
  */
 @Component({
   selector: 'andes-tree',
+  viewProviders: [
+    provideIcons({
+      lucideGripVertical,
+      lucideLoaderCircle,
+      lucideSquarePlus,
+      lucideSquareMinus,
+      lucideChevronRight,
+      lucideFile,
+      lucideFolder,
+      lucideFolderOpen,
+      lucideCheck,
+      lucideMinus,
+      lucideInbox,
+    }),
+  ],
   imports: [
+    NgIcon,
     NgTemplateOutlet,
     CdkVirtualScrollViewport,
     CdkFixedSizeVirtualScroll,
@@ -331,6 +361,13 @@ export class AndesTree {
     undefined,
   );
   readonly labels = input<Partial<AndesTreeLabels>>({});
+  /**
+   * What an empty tree shows instead of the tray and the `empty` label: a template. `null`
+   * shows nothing at all (a loading tree still shows its spinner); unset keeps the tray.
+   */
+  readonly emptyContent = input<TemplateRef<unknown> | null | undefined>(
+    undefined,
+  );
   /**
    * Classes for the tree's parts: `root`, every row (`item`), its `itemIcon` and `itemTitle`.
    * They are added beside the tree's own classes; style them from a global stylesheet.

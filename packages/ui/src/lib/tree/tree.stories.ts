@@ -1,5 +1,11 @@
 import { JsonPipe } from '@angular/common';
-import type { Meta, StoryObj } from '@storybook/angular';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideChevronRight,
+  lucideCircleSmall,
+  lucideMapPin,
+} from '@ng-icons/lucide';
+import { type Meta, moduleMetadata, type StoryObj } from '@storybook/angular';
 
 import { AndesSegmented } from '../segmented/segmented';
 import { AndesSwitch } from '../switch/switch';
@@ -14,6 +20,7 @@ const TREE_IMPORTS = [
   AndesTreeNodeTemplate,
   AndesSwitch,
   AndesSegmented,
+  NgIcon,
 ];
 
 /** Panel and caption styles shared by the stories. */
@@ -34,6 +41,7 @@ const STORY_STYLES = [
   .caption { margin: 12px 0 0; color: var(--andes-color-muted-foreground); font-size: 0.75rem; line-height: 1.25rem; }
   .caption code { font-size: inherit; }
   .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 12px; }
+  .story-fill[data-filled] ::ng-deep svg { fill: currentColor; }
   `,
 ];
 
@@ -153,6 +161,13 @@ const meta: Meta<AndesTree> = {
   title: 'Data Display/Tree/Basics/Tree',
   component: AndesTree,
   tags: ['autodocs'],
+  decorators: [
+    moduleMetadata({
+      providers: [
+        provideIcons({ lucideChevronRight, lucideCircleSmall, lucideMapPin }),
+      ],
+    }),
+  ],
   argTypes: {
     nodes: { control: false },
     expandedKeys: { control: false },
@@ -454,14 +469,14 @@ export const Icons: Story = {
         </div>
         <div class="panel" style="width: 300px;">
           <ng-template #pin let-selected="selected">
-            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-              <path
-                d="M8 14.5s4.5-4.2 4.5-7.75a4.5 4.5 0 0 0-9 0C3.5 10.3 8 14.5 8 14.5Z"
-                stroke="currentColor"
-                stroke-linejoin="round"
-                [attr.fill]="selected ? 'currentColor' : 'none'"
-              />
-            </svg>
+            <ng-icon
+              class="story-fill"
+              name="lucideMapPin"
+              size="16"
+              strokeWidth="1.5"
+              [attr.data-filled]="selected ? '' : null"
+              aria-hidden="true"
+            />
           </ng-template>
           <andes-tree
             aria-label="Ubicaciones con icono propio"
@@ -580,9 +595,7 @@ export const DataAndContent: Story = {
         </div>
         <div class="panel" style="width: 300px;">
           <ng-template #plus>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path d="M6 3.5 10.5 8 6 12.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
+            <ng-icon name="lucideChevronRight" size="16" aria-hidden="true" />
           </ng-template>
           <andes-tree aria-label="Ubicaciones" [nodes]="flatNodes" [(expandedKeys)]="flatExpanded" [switcherIcon]="plus" />
         </div>
@@ -627,9 +640,7 @@ export const Lines: Story = {
           />
         </div>
         <ng-template #dot>
-          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-            <circle cx="7" cy="7" r="2.5" fill="currentColor" />
-          </svg>
+          <ng-icon class="story-fill" name="lucideCircleSmall" size="14" data-filled aria-hidden="true" />
         </ng-template>
         <andes-tree
           aria-label="Almacenes con líneas"

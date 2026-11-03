@@ -10,6 +10,8 @@ import {
   inject,
   ViewEncapsulation,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideChevronRight } from '@ng-icons/lucide';
 
 import { AndesDropdownMenuRoot } from './dropdown-menu-root';
 import { AndesDropdownMenuSub } from './dropdown-menu-sub';
@@ -29,7 +31,8 @@ import { AndesDropdownMenuLevel } from './dropdown-menu-types';
  */
 @Component({
   selector: 'andes-dropdown-menu-sub-trigger',
-  imports: [NgTemplateOutlet],
+  viewProviders: [provideIcons({ lucideChevronRight })],
+  imports: [NgIcon, NgTemplateOutlet],
   hostDirectives: [
     AndesOverlayTriggerPrimitive,
     {
@@ -46,17 +49,10 @@ import { AndesDropdownMenuLevel } from './dropdown-menu-types';
           *ngTemplateOutlet="icon; context: { $implicit: sub.isOpen() }"
         />
       } @else {
-        <svg
+        <ng-icon
           class="andes-dropdown-menu__chevron"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="m9 18 6-6-6-6" />
-        </svg>
+          name="lucideChevronRight"
+        />
       }
     </span>
   `,

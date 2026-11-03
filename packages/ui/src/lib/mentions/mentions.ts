@@ -29,6 +29,8 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import clsx from 'clsx';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideCircleX } from '@ng-icons/lucide';
 
 import {
   andesMentionsDefaultFilter,
@@ -173,7 +175,9 @@ let nextId = 0;
  */
 @Component({
   selector: 'andes-mentions',
+  viewProviders: [provideIcons({ lucideCircleX })],
   imports: [
+    NgIcon,
     NgTemplateOutlet,
     AndesOverlayContentPrimitive,
     AndesMentionsField,

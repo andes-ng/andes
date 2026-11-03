@@ -19,6 +19,8 @@ import {
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import clsx from 'clsx';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideCircleX } from '@ng-icons/lucide';
 
 import {
   andesIdRefs,
@@ -92,7 +94,8 @@ let nextId = 0;
 
 @Component({
   selector: 'andes-textarea',
-  imports: [NgTemplateOutlet],
+  viewProviders: [provideIcons({ lucideCircleX })],
+  imports: [NgIcon, NgTemplateOutlet],
   templateUrl: './textarea.html',
   styleUrl: './textarea.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

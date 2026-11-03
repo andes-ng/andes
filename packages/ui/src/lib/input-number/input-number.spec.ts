@@ -1275,7 +1275,9 @@ describe('AndesInputNumber', () => {
 
       expect(stepper).toContain('inset-inline-end: 0');
       expect(stepper).toContain('opacity: 0');
-      expect(rule('.andes-input-number__step svg')).toContain('width: 0.75rem');
+      expect(rule('.andes-input-number__step ng-icon')).toContain(
+        'width: 0.75rem',
+      );
       expect(css()).toMatch(
         /\.andes-input-number:hover \.andes-input-number__stepper,\s*\.andes-input-number:focus-within \.andes-input-number__stepper\s*{\s*opacity: 1/,
       );

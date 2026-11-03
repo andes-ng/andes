@@ -537,9 +537,15 @@ describe('AndesCheckbox custom icons', () => {
     const root = fixture.nativeElement as HTMLElement;
 
     expect(root.querySelector('.andes-checkbox__icon--custom')).toBeNull();
-    expect(
-      root.querySelector('path[d="M3.5 8.5L6.5 11.5L12.5 4.5"]'),
-    ).not.toBeNull();
+    // Lucide's check and minus, registered by the checkbox: no provideIcons in this test bed.
+    const check = root.querySelector('ng-icon.andes-checkbox__icon--check');
+    const dash = root.querySelector(
+      'ng-icon.andes-checkbox__icon--indeterminate',
+    );
+    expect(check?.getAttribute('name')).toBe('lucideCheck');
+    expect(check?.querySelector('svg path')).not.toBeNull();
+    expect(dash?.getAttribute('name')).toBe('lucideMinus');
+    expect(dash?.querySelector('svg path')).not.toBeNull();
   });
 
   it('keeps the custom glyph decorative (inside the aria-hidden box)', () => {

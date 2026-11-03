@@ -16,6 +16,15 @@ import {
   viewChild,
 } from '@angular/core';
 import { NG_VALUE_ACCESSOR, type ControlValueAccessor } from '@angular/forms';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideCheck,
+  lucideChevronRight,
+  lucideCopy,
+  lucideMinus,
+  lucidePipette,
+  lucidePlus,
+} from '@ng-icons/lucide';
 
 import { AndesButton, type AndesButtonSize } from '../button/button';
 import { provideAndesFieldBoundary } from '../form-field/field-binding';
@@ -69,6 +78,7 @@ let nextUniqueId = 0;
 @Component({
   selector: 'andes-color-picker-panel',
   imports: [
+    NgIcon,
     AndesButton,
     AndesColorAngle,
     AndesColorArea,
@@ -84,7 +94,17 @@ let nextUniqueId = 0;
   changeDetection: ChangeDetectionStrategy.OnPush,
   // Its hex field, number fields and format select are parts of one control: the enclosing
   // form field labels the picker, never them.
-  viewProviders: [provideAndesFieldBoundary()],
+  viewProviders: [
+    provideIcons({
+      lucidePlus,
+      lucideMinus,
+      lucidePipette,
+      lucideCheck,
+      lucideCopy,
+      lucideChevronRight,
+    }),
+    provideAndesFieldBoundary(),
+  ],
   providers: [
     {
       provide: NG_VALUE_ACCESSOR,

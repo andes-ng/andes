@@ -2,6 +2,16 @@
   display: block;
 }
 
+/* The control's icons are lucide glyphs in an `ng-icon`, 1em square in the thinner 1.75 stroke
+   the control is drawn with; as a flex box the svg never sits on a text baseline. */
+.andes-upload__icon {
+  display: inline-flex;
+  flex: none;
+  width: 1em;
+  height: 1em;
+  --ng-icon__stroke-width: 1.75;
+}
+
 .andes-upload {
   --_andes-upload-card-size: var(--andes-upload-card-size, 6.375rem);
   --_andes-upload-ease: var(
@@ -996,6 +1006,17 @@
    up smoothly. Cards scale and fade instead, because animating the size of a wrapping tile
    would reflow its neighbours on every frame. */
 @media (prefers-reduced-motion: no-preference) {
+  /* The loader turns while a file is sending. */
+  .andes-upload__spin {
+    animation: andes-upload-spin 1s linear infinite;
+  }
+
+  @keyframes andes-upload-spin {
+    to {
+      rotate: 360deg;
+    }
+  }
+
   .andes-upload[data-animate] .andes-upload__item--enter {
     display: grid;
     animation: andes-upload-row-in var(--andes-motion-duration-slow, 200ms)

@@ -33,6 +33,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NG_VALUE_ACCESSOR, type ControlValueAccessor } from '@angular/forms';
 
+import { AndesEmpty } from '../empty/empty';
 import { AndesSelectOverflow } from '../select/select-overflow';
 import { matchTriggerWidthAttribute } from '../select/select-state';
 import {
@@ -211,6 +212,7 @@ function toKeys(
   selector: 'andes-tree-select',
   imports: [
     NgTemplateOutlet,
+    AndesEmpty,
     AndesTree,
     AndesOverlayContentPrimitive,
     AndesSelectOverflow,
@@ -389,6 +391,14 @@ export class AndesTreeSelect
     TemplateRef<AndesTreeSelectPanelContext> | undefined
   >(undefined);
   readonly labels = input<Partial<AndesTreeSelectLabels>>({});
+  /**
+   * What the panel shows when there is nothing to pick: text or a template. `null` shows
+   * nothing at all; left unset it shows an `andes-empty` (the `select` preset, which follows
+   * `provideAndesEmpty()`) with the `empty` label as its message when one is given.
+   */
+  readonly notFoundContent = input<
+    string | TemplateRef<unknown> | null | undefined
+  >(undefined);
 
   readonly id = input<string | undefined>(undefined);
   readonly name = input<string | undefined>(undefined);
@@ -462,6 +472,19 @@ export class AndesTreeSelect
     ...DEFAULT_LABELS,
     ...this.labels(),
   }));
+
+  protected readonly notFoundText = computed(() => {
+    const content = this.notFoundContent();
+    return typeof content === 'string' ? content : null;
+  });
+
+  protected readonly notFoundTemplate = computed(() => {
+    const content = this.notFoundContent();
+    return content instanceof TemplateRef ? content : null;
+  });
+
+  /** The message of the default empty state: the `empty` label, when one was given. */
+  protected readonly emptyDescription = computed(() => this.labels().empty);
 
   protected readonly multiMode = computed(
     () => this.multiple() || this.checkable(),

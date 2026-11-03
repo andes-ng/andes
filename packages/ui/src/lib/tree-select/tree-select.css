@@ -846,6 +846,13 @@
   border-block-start: 1px solid var(--andes-color-border, #e2e8f0);
 }
 
+/* Plain-text empty state, as the select's panel draws it; an andes-empty brings its own margin. */
+.andes-tree-select__status {
+  padding: 0.3125rem 0.75rem;
+  color: var(--andes-color-muted-foreground);
+  text-align: center;
+}
+
 .andes-tree-select__viewport {
   box-sizing: border-box;
   min-height: 0;

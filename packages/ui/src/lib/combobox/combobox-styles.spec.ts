@@ -30,11 +30,12 @@ describe('AndesCombobox styles', () => {
     });
 
     it('draws a muted disc with the "x" knocked out, darkening on hover, with a focus ring', () => {
+      // Lucide's circle-x, filled: the ring's 4-unit stroke takes the disc to the box's edge.
       expect(css).toContain(
-        '.andes-combobox-clear__icon circle { fill: currentColor; }',
+        '.andes-combobox-clear__icon circle { fill: currentColor; stroke-width: 4; }',
       );
       expect(css).toContain(
-        '.andes-combobox-clear__icon path { fill: none; stroke: var(--andes-color-background);',
+        '.andes-combobox-clear__icon path { stroke: var(--andes-color-background); }',
       );
       expect(css).toContain(
         '.andes-combobox-clear:hover { color: var(--andes-color-muted-foreground); }',

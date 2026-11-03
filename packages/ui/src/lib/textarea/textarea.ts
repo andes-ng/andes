@@ -19,6 +19,13 @@ import {
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import clsx from 'clsx';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideCircleX } from '@ng-icons/lucide';
+
+import {
+  andesIdRefs,
+  injectAndesFieldBinding,
+} from '../form-field/field-binding';
 
 export type AndesTextareaSize = 'sm' | 'md' | 'lg';
 export type AndesTextareaResize = 'none' | 'vertical' | 'horizontal' | 'both';
@@ -87,7 +94,8 @@ let nextId = 0;
 
 @Component({
   selector: 'andes-textarea',
-  imports: [NgTemplateOutlet],
+  viewProviders: [provideIcons({ lucideCircleX })],
+  imports: [NgIcon, NgTemplateOutlet],
   templateUrl: './textarea.html',
   styleUrl: './textarea.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -116,8 +124,10 @@ export class AndesTextarea implements ControlValueAccessor {
     viewChild.required<ElementRef<HTMLTextAreaElement>>('textareaEl');
 
   readonly value = model('');
-  readonly size = input<AndesTextareaSize>('md');
-  readonly variant = input<AndesTextareaVariant>('outlined');
+  /** `md` unless set, or the enclosing `andesForm`'s `size`. */
+  readonly size = input<AndesTextareaSize | undefined>(undefined);
+  /** `outlined` unless set, or the enclosing `andesForm`'s `variant`. */
+  readonly variant = input<AndesTextareaVariant | undefined>(undefined);
   readonly status = input<AndesTextareaStatus | undefined>(undefined);
   readonly disabled = input(false, { transform: booleanAttribute });
   readonly readonly = input(false, { transform: booleanAttribute });
@@ -201,15 +211,49 @@ export class AndesTextarea implements ControlValueAccessor {
 
   protected readonly countId = `andes-textarea-count-${nextId++}`;
 
+  /** The enclosing form field and form: id, ARIA, status, size, variant and disabled. */
+  protected readonly field = injectAndesFieldBinding();
+
+  /** The size in effect: `size`, else the form's, else `md`. */
+  readonly resolvedSize = computed<AndesTextareaSize>(
+    () => this.size() ?? this.field.size() ?? 'md',
+  );
+
+  /** The variant in effect: `variant`, else the form's, else `outlined`. */
+  readonly resolvedVariant = computed<AndesTextareaVariant>(
+    () => this.variant() ?? this.field.variant() ?? 'outlined',
+  );
+
+  /** The status in effect: `status`, else the enclosing field's error or warning. */
+  readonly resolvedStatus = computed<AndesTextareaStatus | undefined>(
+    () => this.status() ?? this.field.status(),
+  );
+
+  /** `id`, else the enclosing field's control id, so its label points here. */
+  protected readonly controlId = computed(() => this.id() ?? this.field.id());
+
+  /** `aria-labelledby`, else the field's label - unless an `aria-label` names it. */
+  protected readonly labelledBy = computed(
+    () =>
+      this.ariaLabelledby() ??
+      (this.ariaLabel() ? undefined : this.field.labelledBy()),
+  );
+
+  protected readonly isRequired = computed(
+    () => this.required() || this.field.required(),
+  );
+
   protected readonly isDisabled = computed(
-    () => this.disabled() || this.cvaDisabled(),
+    () => this.disabled() || this.cvaDisabled() || this.field.disabled(),
   );
 
   // Going past the counter's limit makes the value invalid too, so a soft `countMax` is both
   // seen and announced, not just signalled by the counter's color.
   protected readonly isInvalid = computed(
     () =>
-      this.ariaInvalid() || this.status() === 'error' || this.countExceeded(),
+      this.ariaInvalid() ||
+      this.resolvedStatus() === 'error' ||
+      this.countExceeded(),
   );
 
   protected readonly autoSizeEnabled = computed(
@@ -231,12 +275,12 @@ export class AndesTextarea implements ControlValueAccessor {
   protected readonly wrapperClasses = computed(() =>
     clsx(
       'andes-textarea-wrapper',
-      `andes-textarea-wrapper--${this.size()}`,
-      `andes-textarea-wrapper--${this.variant()}`,
+      `andes-textarea-wrapper--${this.resolvedSize()}`,
+      `andes-textarea-wrapper--${this.resolvedVariant()}`,
       `andes-textarea-wrapper--resize-${this.effectiveResize()}`,
       this.isInvalid() && 'andes-textarea-wrapper--invalid',
       !this.isInvalid() &&
-        this.status() === 'warning' &&
+        this.resolvedStatus() === 'warning' &&
         'andes-textarea-wrapper--warning',
       this.isDisabled() && 'andes-textarea-wrapper--disabled',
       this.readonly() && 'andes-textarea-wrapper--readonly',
@@ -275,9 +319,11 @@ export class AndesTextarea implements ControlValueAccessor {
 
   protected readonly describedBy = computed(
     () =>
-      [this.ariaDescribedby(), this.showCount() ? this.countId : undefined]
-        .filter(Boolean)
-        .join(' ') || null,
+      andesIdRefs(
+        this.ariaDescribedby(),
+        this.field.describedBy(),
+        this.showCount() ? this.countId : undefined,
+      ) ?? null,
   );
 
   constructor() {
@@ -287,7 +333,7 @@ export class AndesTextarea implements ControlValueAccessor {
       this.value();
       this.autoSize();
       this.rows();
-      this.size();
+      this.resolvedSize();
       this.adjustAutoSize();
     });
 

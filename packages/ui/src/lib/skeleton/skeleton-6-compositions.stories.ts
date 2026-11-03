@@ -1,32 +1,13 @@
 import { signal } from '@angular/core';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import {
-  lucideChartScatter,
-  lucideMessageSquare,
-  lucideThumbsUp,
-} from '@ng-icons/lucide';
-import {
-  moduleMetadata,
-  type Decorator,
-  type Meta,
-  type StoryObj,
-} from '@storybook/angular';
+import type { Meta, StoryObj } from '@storybook/angular';
 
-import { AndesAvatar } from '../avatar/avatar';
-import { AndesAvatarFallback } from '../avatar/avatar-fallback';
-import { AndesButton } from '../button/button';
-import { AndesInput } from '../input/input';
-import { AndesRadio } from '../radio-group/radio';
-import { AndesRadioGroup } from '../radio-group/radio-group';
-import { AndesSwitch } from '../switch/switch';
-import { AndesTag } from '../tag/tag';
+import {
+  loadedSwitch,
+  shared,
+  withDescription,
+  withSkeletonKit,
+} from '../../testing/skeleton-story-kit';
 import { AndesSkeleton } from './skeleton';
-import { AndesSkeletonAvatar } from './skeleton-avatar';
-import { AndesSkeletonButton } from './skeleton-button';
-import { AndesSkeletonImage } from './skeleton-image';
-import { AndesSkeletonInput } from './skeleton-input';
-import { AndesSkeletonNode } from './skeleton-node';
-import { AndesSkeletonText } from './skeleton-text';
 
 /*
  * Where a skeleton earns its place: compositions of the placeholders in the layouts they stand in
@@ -34,70 +15,16 @@ import { AndesSkeletonText } from './skeleton-text';
  * components and plain layout; the library has no card, list or table component yet.
  */
 
-/** Prints the story's one-sentence description above the example (this Storybook has no Docs tab). */
-const withDescription: Decorator = (story, context) => {
-  const rendered = story();
-  const description = context.parameters['docs']?.description?.story;
-  return description
-    ? {
-        ...rendered,
-        template: `<p style="max-width: 40rem; margin: 0 0 1.5rem; font-family: var(--andes-font-family), sans-serif; font-size: 0.875rem; line-height: 1.375rem; color: var(--andes-color-muted-foreground);">${description}</p>${rendered.template}`,
-      }
-    : rendered;
-};
-
 const meta: Meta<AndesSkeleton> = {
-  title: 'Feedback/Skeleton/Examples/Patterns',
+  title: 'Feedback/Skeleton/Compositions',
   component: AndesSkeleton,
-  decorators: [
-    withDescription,
-    moduleMetadata({
-      imports: [
-        AndesAvatar,
-        AndesAvatarFallback,
-        AndesButton,
-        AndesInput,
-        AndesRadio,
-        AndesRadioGroup,
-        AndesSkeletonAvatar,
-        AndesSkeletonButton,
-        AndesSkeletonImage,
-        AndesSkeletonInput,
-        AndesSkeletonNode,
-        AndesSkeletonText,
-        AndesSwitch,
-        AndesTag,
-        NgIcon,
-      ],
-      providers: [
-        provideIcons({
-          lucideChartScatter,
-          lucideMessageSquare,
-          lucideThumbsUp,
-        }),
-      ],
-    }),
-  ],
+  decorators: [withDescription, withSkeletonKit],
   parameters: { layout: 'padded' },
 };
 
 export default meta;
 
 type Story = StoryObj<AndesSkeleton>;
-
-const font = 'font-family: var(--andes-font-family), sans-serif;';
-const text = `${font} font-size: 0.875rem; line-height: 1.375rem; color: var(--andes-color-foreground);`;
-const muted = `${font} font-size: 0.875rem; line-height: 1.375rem; color: var(--andes-color-muted-foreground);`;
-const strong = `${font} font-size: 0.875rem; line-height: 1.375rem; font-weight: 600; color: var(--andes-color-foreground);`;
-const heading = `${font} margin: 0; font-size: 1rem; line-height: 1.5rem; font-weight: 600; color: var(--andes-color-foreground);`;
-const card =
-  'padding: 1.5rem; border: 1px solid var(--andes-color-border); border-radius: var(--andes-radius-lg); background: var(--andes-color-card);';
-const hairline = 'border-top: 1px solid var(--andes-color-border);';
-
-/** The switch above every example: loading (off) or the real content (on). */
-const loadedSwitch = `<andes-switch [checked]="loaded()" (checkedChange)="loaded.set($event)">Loaded</andes-switch>`;
-
-const shared = { text, muted, strong, heading, card, hairline };
 
 /** A profile card: avatar, name, three lines of bio and the two actions. */
 export const ProfileCard: Story = {
@@ -189,7 +116,7 @@ const customers = [
 ];
 
 /** The body of a data table: rows of an avatar with two lines, a tag and a figure. */
-export const DataTableBody: Story = {
+export const TableBody: Story = {
   parameters: {
     docs: {
       description: {
@@ -198,7 +125,7 @@ export const DataTableBody: Story = {
       },
     },
   },
-  name: 'Data table body',
+  name: 'Table body',
   render: () => ({
     props: { ...shared, loaded: signal(false), customers, rows: [1, 2, 3, 4] },
     template: `
@@ -419,7 +346,7 @@ export const FormFields: Story = {
       },
     },
   },
-  name: 'Form',
+  name: 'Form fields',
   render: () => ({
     props: {
       ...shared,
@@ -561,278 +488,6 @@ export const ChatList: Story = {
             </div>
           }
         </div>
-      </div>
-    `,
-  }),
-};
-
-/**
- * The same refresh, with and without `delay`. A fast refresh flashes the placeholder in the first
- * column and never shows it in the second; a slow one shows it in both, after the delay in the second.
- */
-export const DelayedPlaceholder: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          'The same refresh, with and without delay: a fast refresh flashes the placeholder in the first column and never shows it in the second (delay is 300ms); a slow refresh shows it in both, after the delay in the second.',
-      },
-    },
-  },
-  name: 'Delayed placeholder',
-  render: () => {
-    const loading = signal(false);
-    const latency = signal<number>(120);
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    return {
-      props: {
-        ...shared,
-        loading,
-        latency,
-        reload() {
-          loading.set(true);
-          clearTimeout(timer);
-          timer = setTimeout(() => loading.set(false), latency());
-        },
-      },
-      template: `
-      <div style="display: flex; flex-direction: column; gap: 1.25rem; max-width: 44rem;">
-        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 1rem;" [style]="text">
-          <andes-button variant="secondary" [disabled]="loading()" (click)="reload()">Reload</andes-button>
-          <span>Latency</span>
-          <andes-radio-group aria-label="Latency" optionType="button" [value]="latency()" (valueChange)="latency.set($event ?? 120)">
-            <andes-radio [value]="120">Fast (120ms)</andes-radio>
-            <andes-radio [value]="1500">Slow (1.5s)</andes-radio>
-          </andes-radio-group>
-        </div>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1.5rem;">
-          <div>
-            <p [style]="muted" style="margin: 0 0 0.75rem;">No delay</p>
-            <andes-skeleton [loading]="loading()" active avatar [paragraph]="{ rows: 2 }">
-              <div [style]="text"><strong>Loaded profile</strong><br />Everything is here.</div>
-            </andes-skeleton>
-          </div>
-          <div>
-            <p [style]="muted" style="margin: 0 0 0.75rem;">delay 300ms</p>
-            <andes-skeleton [loading]="loading()" [delay]="300" active avatar [paragraph]="{ rows: 2 }">
-              <div [style]="text"><strong>Loaded profile</strong><br />Everything is here.</div>
-            </andes-skeleton>
-          </div>
-        </div>
-      </div>
-    `,
-    };
-  },
-};
-
-/** Load, then crossfade to the content. */
-export const CrossfadeToContent: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          'Load, then crossfade: keepContent holds the real content in the page, invisible, so the placeholder takes its room and nothing jumps; flipping the switch fades the content in over the placeholder.',
-      },
-    },
-  },
-  name: 'Crossfade to content',
-  render: () => ({
-    props: { ...shared, loaded: signal(false) },
-    template: `
-      <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 26rem;">
-        ${loadedSwitch}
-        <div [style]="card">
-          <andes-skeleton [loading]="!loaded()" keepContent active avatar [paragraph]="{ rows: 2 }" loadedLabel="Profile loaded">
-            <div style="display: flex; gap: 1rem;" [style]="text">
-              <andes-avatar size="lg"><andes-avatar-fallback>LM</andes-avatar-fallback></andes-avatar>
-              <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                <span [style]="strong">Lucía Mendoza</span>
-                <span [style]="text">
-                  Designs calm interfaces for busy teams. Currently building the design system
-                  behind the company's mobile apps, and the documentation that goes with it.
-                </span>
-              </div>
-            </div>
-          </andes-skeleton>
-        </div>
-      </div>
-    `,
-  }),
-};
-
-/** Text lines on their own, for places a whole skeleton is too much. */
-export const TextLines: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          'Text lines on their own: andes-skeleton-text draws any number of 16px lines, ending a block of three or more on a shorter one, or taking the width of each line from an array.',
-      },
-    },
-  },
-  name: 'Text lines',
-  render: () => ({
-    props: { ...shared },
-    template: `
-      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 2rem; max-width: 48rem;">
-        <div><p [style]="muted" style="margin: 0 0 0.75rem;">One line</p><andes-skeleton-text active /></div>
-        <div><p [style]="muted" style="margin: 0 0 0.75rem;">lines = 3</p><andes-skeleton-text active [lines]="3" /></div>
-        <div><p [style]="muted" style="margin: 0 0 0.75rem;">width = [100%, 80%, 45%]</p><andes-skeleton-text active [lines]="3" [width]="['100%', '80%', '45%']" /></div>
-        <div><p [style]="muted" style="margin: 0 0 0.75rem;">round</p><andes-skeleton-text active round [lines]="3" /></div>
-        <div><p [style]="muted" style="margin: 0 0 0.75rem;">pulse</p><andes-skeleton-text animation="pulse" [lines]="3" /></div>
-      </div>
-    `,
-  }),
-};
-
-/** Colours through two custom properties. */
-export const Theming: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          'Colours: --andes-skeleton-color and --andes-skeleton-highlight-color set on any ancestor recolour the fill and the shimmer band of every placeholder inside it.',
-      },
-    },
-  },
-  render: () => ({
-    props: { ...shared },
-    template: `
-      <div style="display: flex; flex-direction: column; gap: 1.5rem; max-width: 26rem;">
-        <div>
-          <p [style]="muted" style="margin: 0 0 0.75rem;">Default</p>
-          <andes-skeleton active avatar />
-        </div>
-        <div style="--andes-skeleton-color: #dbeafe; --andes-skeleton-highlight-color: #93c5fd;">
-          <p [style]="muted" style="margin: 0 0 0.75rem;">Blue</p>
-          <andes-skeleton active avatar />
-        </div>
-        <div style="padding: 1rem; border-radius: var(--andes-radius-lg); background: #0f172a; --andes-skeleton-color: rgba(255, 255, 255, 0.12); --andes-skeleton-highlight-color: rgba(255, 255, 255, 0.28);">
-          <p style="margin: 0 0 0.75rem; color: #94a3b8;" [style]="font">On a dark surface</p>
-          <andes-skeleton active avatar />
-        </div>
-      </div>
-    `,
-  }),
-};
-
-/** The dark theme. */
-export const DarkMode: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          'The dark theme: the fill is the foreground colour at 12% (6% on the light theme) and the shimmer band at 18%, so the placeholders read on the page, on a card and on a popover alike.',
-      },
-    },
-  },
-  globals: { theme: 'dark' },
-  name: 'Dark mode',
-  render: () => ({
-    props: { ...shared },
-    template: `
-      <div style="display: flex; flex-direction: column; gap: 1.5rem; max-width: 26rem;">
-        <andes-skeleton active avatar [paragraph]="{ rows: 3 }" />
-        <div [style]="card" style="display: flex; flex-direction: column; gap: 1rem;">
-          <andes-skeleton active avatar />
-          <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <andes-skeleton-button active />
-            <andes-skeleton-avatar active />
-            <andes-skeleton-input active />
-          </div>
-          <andes-skeleton-image active width="100%" height="6rem" />
-        </div>
-      </div>
-    `,
-  }),
-};
-
-/** A right-to-left document. */
-export const RightToLeft: Story = {
-  parameters: {
-    dir: 'rtl',
-    docs: {
-      description: {
-        story:
-          'A right-to-left document: the layout mirrors, and the shimmer sweeps with the reading direction, from right to left (Ant Design keeps its left-to-right sweep).',
-      },
-    },
-  },
-  name: 'Right to left',
-  render: () => ({
-    props: { ...shared },
-    template: `
-      <div style="display: flex; flex-direction: column; gap: 1.5rem; max-width: 26rem;">
-        <andes-skeleton active avatar [paragraph]="{ rows: 3 }" />
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <andes-skeleton-button active />
-          <andes-skeleton-avatar active />
-          <andes-skeleton-input active />
-        </div>
-        <andes-skeleton-text active [lines]="3" />
-      </div>
-    `,
-  }),
-};
-
-/** Reduced motion. */
-export const ReducedMotion: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          'Reduced motion: when the operating system asks for less motion (prefers-reduced-motion: reduce), every animation stops and the placeholders stand still as plain fills, and kept content appears without a fade. Turn the setting on, or emulate it in the browser tools, and these three stop.',
-      },
-    },
-  },
-  name: 'Reduced motion',
-  render: () => ({
-    props: { ...shared },
-    template: `
-      <div style="display: flex; flex-direction: column; gap: 1.5rem; max-width: 26rem;">
-        <div><p [style]="muted" style="margin: 0 0 0.75rem;">shimmer</p><andes-skeleton animation="shimmer" avatar /></div>
-        <div><p [style]="muted" style="margin: 0 0 0.75rem;">pulse</p><andes-skeleton animation="pulse" avatar /></div>
-        <div><p [style]="muted" style="margin: 0 0 0.75rem;">none</p><andes-skeleton animation="none" avatar /></div>
-      </div>
-    `,
-  }),
-};
-
-/** What assistive technology gets. */
-export const Accessibility: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          'What assistive technology gets: the bars are hidden from it, and one visually hidden status says Loading while the placeholder shows (loadingLabel) and, with loadedLabel, that the content is ready. The status stays in the page for good, which is what makes screen readers announce the change.',
-      },
-    },
-  },
-  render: () => ({
-    props: { ...shared, loaded: signal(false) },
-    template: `
-      <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 26rem;">
-        ${loadedSwitch}
-        <andes-skeleton
-          [loading]="!loaded()"
-          active
-          avatar
-          loadingLabel="Loading your profile"
-          loadedLabel="Your profile has loaded"
-        >
-          <div style="display: flex; gap: 1rem;" [style]="text">
-            <andes-avatar size="lg"><andes-avatar-fallback>LM</andes-avatar-fallback></andes-avatar>
-            <div style="display: flex; flex-direction: column;">
-              <span [style]="strong">Lucía Mendoza</span>
-              <span [style]="muted">Product designer, Lima</span>
-            </div>
-          </div>
-        </andes-skeleton>
-        <ul [style]="muted" style="margin: 0; padding-inline-start: 1.25rem;">
-          <li>The bars are aria-hidden; the host is not aria-busy, so the status is not held back.</li>
-          <li>The status is a polite, atomic live region (role="status").</li>
-          <li>Announced while loading: "Loading your profile". After it: "Your profile has loaded".</li>
-        </ul>
       </div>
     `,
   }),

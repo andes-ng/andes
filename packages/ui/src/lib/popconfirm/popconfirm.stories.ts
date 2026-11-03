@@ -1,3 +1,5 @@
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideInfo } from '@ng-icons/lucide';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
@@ -129,7 +131,10 @@ export const States: Story = {
 /** `icon` takes a template; `null` removes it. */
 export const CustomIcon: Story = {
   render: () => ({
-    moduleMetadata: { imports },
+    moduleMetadata: {
+      imports: [...imports, NgIcon],
+      providers: [provideIcons({ lucideInfo })],
+    },
     template: `
       <div style="padding: 10rem 4rem 4rem; display: flex; gap: 2rem;">
         <andes-popconfirm title="Send the invoice?" description="The customer is emailed right away." [icon]="info" okText="Send">
@@ -139,9 +144,7 @@ export const CustomIcon: Story = {
           <andes-button variant="outline" andesPopconfirmTrigger>No icon</andes-button>
         </andes-popconfirm>
         <ng-template #info>
-          <svg viewBox="0 0 16 16" width="1em" height="1em" fill="currentColor" fill-rule="evenodd" style="color: var(--andes-color-info);">
-            <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1Zm-.75 5.75h1.5v5h-1.5v-5ZM8 3.75a.875.875 0 1 1 0 1.75.875.875 0 0 1 0-1.75Z" />
-          </svg>
+          <ng-icon name="lucideInfo" style="color: var(--andes-color-info);" />
         </ng-template>
       </div>
     `,

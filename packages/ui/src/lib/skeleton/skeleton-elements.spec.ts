@@ -644,7 +644,12 @@ describe('rowWidths', () => {
   });
 
   it('applies an array row by row, falling back to 61% for a missing last entry', () => {
-    expect(rowWidths(4, ['90%', 80])).toEqual(['90%', '80px', undefined, '61%']);
+    expect(rowWidths(4, ['90%', 80])).toEqual([
+      '90%',
+      '80px',
+      undefined,
+      '61%',
+    ]);
   });
 
   it('copes with zero, negative and fractional counts', () => {

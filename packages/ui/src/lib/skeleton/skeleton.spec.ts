@@ -799,8 +799,7 @@ describe('AndesSkeleton (timing, kept content and announcements)', () => {
       placeholder: () =>
         root.querySelector('[data-slot="skeleton"]') as HTMLElement | null,
       content: () => root.querySelector('.real-content') as HTMLElement | null,
-      status: () =>
-        root.querySelector('[role="status"]') as HTMLElement | null,
+      status: () => root.querySelector('[role="status"]') as HTMLElement | null,
       tick: (ms: number) => {
         vi.advanceTimersByTime(ms);
         fixture.detectChanges();
@@ -965,8 +964,7 @@ describe('AndesSkeleton (timing, kept content and announcements)', () => {
         'andes-skeleton-stack__content--hidden',
       );
       expect(
-        placeholder()?.closest('.andes-skeleton-stack__placeholder')
-          ?.classList,
+        placeholder()?.closest('.andes-skeleton-stack__placeholder')?.classList,
       ).toContain('andes-skeleton-stack__placeholder--leaving');
 
       tick(200);
@@ -1007,8 +1005,7 @@ describe('AndesSkeleton (timing, kept content and announcements)', () => {
 
       expect(placeholder()).not.toBeNull();
       expect(
-        placeholder()?.closest('.andes-skeleton-stack__placeholder')
-          ?.classList,
+        placeholder()?.closest('.andes-skeleton-stack__placeholder')?.classList,
       ).not.toContain('andes-skeleton-stack__placeholder--leaving');
       expect(
         content()?.closest('.andes-skeleton-stack__content')?.classList,

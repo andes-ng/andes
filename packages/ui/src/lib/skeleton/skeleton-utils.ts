@@ -31,7 +31,8 @@ export function rowWidths(
         ? toCssSize(width)
         : undefined;
     return (
-      rowWidth ?? (count >= 3 && index === count - 1 ? LAST_ROW_WIDTH : undefined)
+      rowWidth ??
+      (count >= 3 && index === count - 1 ? LAST_ROW_WIDTH : undefined)
     );
   });
 }

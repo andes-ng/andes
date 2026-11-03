@@ -36,9 +36,7 @@ describe('AndesSkeletonText', () => {
     readonly classNames = signal<AndesSkeletonElementClassNames | undefined>(
       undefined,
     );
-    readonly styles = signal<AndesSkeletonElementStyles | undefined>(
-      undefined,
-    );
+    readonly styles = signal<AndesSkeletonElementStyles | undefined>(undefined);
   }
 
   function render(setup: (host: Host) => void = () => undefined) {
@@ -167,9 +165,9 @@ describe('AndesSkeletonText', () => {
       expect(declaredValue(css, ':host', 'display')).toBe('flex');
       expect(declaredValue(css, ':host', 'flex-direction')).toBe('column');
       expect(declaredValue(css, ':host', 'gap')).toBe('1rem');
-      expect(
-        declaredValue(css, '.andes-skeleton-text__line', 'height'),
-      ).toBe('1rem');
+      expect(declaredValue(css, '.andes-skeleton-text__line', 'height')).toBe(
+        '1rem',
+      );
     });
 
     it('rounds a round block to a capsule', () => {

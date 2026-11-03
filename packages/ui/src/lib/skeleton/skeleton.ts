@@ -249,7 +249,9 @@ export class AndesSkeleton {
     () => this.shown() || this.leaving(),
   );
 
-  protected readonly isLeaving = computed(() => this.leaving() && !this.shown());
+  protected readonly isLeaving = computed(
+    () => this.leaving() && !this.shown(),
+  );
 
   private shownSince = 0;
 

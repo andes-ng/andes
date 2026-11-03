@@ -16,6 +16,14 @@ import {
   viewChild,
   type WritableSignal,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideCircleAlert,
+  lucideCircleCheck,
+  lucideCircleX,
+  lucideInfo,
+  lucideX,
+} from '@ng-icons/lucide';
 
 import type { AndesButtonVariant } from '../button/button';
 import {
@@ -27,7 +35,7 @@ import {
   AndesAlertDialogTitle,
 } from './alert-dialog';
 import { AndesDialogActions } from './dialog-actions';
-import { ANDES_DIALOG_STATUS_GLYPHS } from './dialog-status-glyph';
+import { ANDES_DIALOG_STATUS_ICONS } from './dialog-status-icons';
 import type {
   AndesDialogAutoFocusButton,
   AndesDialogButtonProps,
@@ -218,15 +226,15 @@ export class AndesDialogMethodRef {
   }
 }
 
-// `confirm` shares the exclamation glyph with `warning`: both ask
-// for attention. The glyphs are the ones `andes-alert` and the alert dialog's tone icon
-// draw, each cut out of a full-size disc.
-const METHOD_ICON_PATHS: Record<AndesDialogMethodKind, string> = {
-  confirm: ANDES_DIALOG_STATUS_GLYPHS.warning,
-  warning: ANDES_DIALOG_STATUS_GLYPHS.warning,
-  error: ANDES_DIALOG_STATUS_GLYPHS.danger,
-  info: ANDES_DIALOG_STATUS_GLYPHS.info,
-  success: ANDES_DIALOG_STATUS_GLYPHS.success,
+// `confirm` shares the exclamation icon with `warning`: both ask for attention. The icons are
+// the lucide ones `andes-alert` and the alert dialog's tone icon draw, each a disc whose mark
+// the stylesheet cuts out.
+const METHOD_ICONS: Record<AndesDialogMethodKind, string> = {
+  confirm: ANDES_DIALOG_STATUS_ICONS.warning,
+  warning: ANDES_DIALOG_STATUS_ICONS.warning,
+  error: ANDES_DIALOG_STATUS_ICONS.danger,
+  info: ANDES_DIALOG_STATUS_ICONS.info,
+  success: ANDES_DIALOG_STATUS_ICONS.success,
 };
 
 /**
@@ -238,8 +246,18 @@ const METHOD_ICON_PATHS: Record<AndesDialogMethodKind, string> = {
  */
 @Component({
   selector: 'andes-dialog-method',
+  viewProviders: [
+    provideIcons({
+      lucideCircleAlert,
+      lucideCircleCheck,
+      lucideCircleX,
+      lucideInfo,
+      lucideX,
+    }),
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    NgIcon,
     AndesAlertDialog,
     AndesAlertDialogContent,
     AndesAlertDialogContentTemplate,
@@ -287,14 +305,10 @@ const METHOD_ICON_PATHS: Record<AndesDialogMethodKind, string> = {
               @if (cfg.icon) {
                 <ng-container *ngTemplateOutlet="cfg.icon" />
               } @else {
-                <svg
+                <ng-icon
                   class="andes-dialog__method-glyph"
-                  viewBox="0 0 24 24"
-                  focusable="false"
-                >
-                  <circle cx="12" cy="12" r="12" />
-                  <path [attr.d]="iconPath()" />
-                </svg>
+                  [name]="iconName()"
+                />
               }
             </span>
           }
@@ -354,14 +368,7 @@ const METHOD_ICON_PATHS: Record<AndesDialogMethodKind, string> = {
             @if (cfg.closeIcon; as closeIcon) {
               <ng-container *ngTemplateOutlet="closeIcon" />
             } @else {
-              <svg
-                class="andes-dialog__close-icon"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <path d="M6 6 18 18M18 6 6 18" />
-              </svg>
+              <ng-icon class="andes-dialog__close-icon" name="lucideX" />
             }
           </button>
         }
@@ -404,9 +411,7 @@ export class AndesDialogMethod {
       .join(' ');
   });
 
-  protected readonly iconPath = computed(
-    () => METHOD_ICON_PATHS[this.ref().kind],
-  );
+  protected readonly iconName = computed(() => METHOD_ICONS[this.ref().kind]);
 
   /** Accessible name when no title is given, so the alertdialog is never unnamed. */
   protected readonly defaultLabel = computed(() => {

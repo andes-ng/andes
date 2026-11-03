@@ -5,12 +5,19 @@ import {
   inject,
   input,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideCircleAlert,
+  lucideCircleCheck,
+  lucideCircleX,
+  lucideInfo,
+} from '@ng-icons/lucide';
 
 import {
   AndesAlertDialogState,
   type AndesAlertDialogTone,
 } from './alert-dialog-state';
-import { ANDES_DIALOG_STATUS_GLYPHS } from './dialog-status-glyph';
+import { ANDES_DIALOG_STATUS_ICONS } from './dialog-status-icons';
 
 /**
  * Why an asynchronous confirmation failed, shown inline above the actions so the user
@@ -24,6 +31,8 @@ import { ANDES_DIALOG_STATUS_GLYPHS } from './dialog-status-glyph';
  */
 @Component({
   selector: 'andes-alert-dialog-error',
+  viewProviders: [provideIcons({ lucideCircleAlert })],
+  imports: [NgIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: 'andes-alert-dialog__error',
@@ -32,15 +41,11 @@ import { ANDES_DIALOG_STATUS_GLYPHS } from './dialog-status-glyph';
   },
   template: `
     @if (state.error(); as message) {
-      <svg
+      <ng-icon
         class="andes-alert-dialog__error-icon"
-        viewBox="0 0 24 24"
         aria-hidden="true"
-        focusable="false"
-      >
-        <circle cx="12" cy="12" r="12" />
-        <path [attr.d]="glyph" />
-      </svg>
+        [name]="icon"
+      />
       <span class="andes-alert-dialog__error-text">
         {{ message }}
         @if (hint(); as text) {
@@ -57,7 +62,7 @@ export class AndesAlertDialogError {
   readonly hint = input('You can try again.');
 
   /** The exclamation mark of the shared status discs. */
-  protected readonly glyph = ANDES_DIALOG_STATUS_GLYPHS.warning;
+  protected readonly icon = ANDES_DIALOG_STATUS_ICONS.warning;
 }
 
 /**
@@ -75,6 +80,15 @@ export class AndesAlertDialogError {
  */
 @Component({
   selector: 'andes-alert-dialog-icon',
+  viewProviders: [
+    provideIcons({
+      lucideCircleAlert,
+      lucideCircleCheck,
+      lucideCircleX,
+      lucideInfo,
+    }),
+  ],
+  imports: [NgIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: 'andes-alert-dialog__icon',
@@ -83,11 +97,8 @@ export class AndesAlertDialogError {
     '[attr.data-tone]': 'resolved()',
   },
   template: `
-    @if (glyph(); as d) {
-      <svg viewBox="0 0 24 24" focusable="false">
-        <circle class="andes-alert-dialog__icon-disc" cx="12" cy="12" r="12" />
-        <path class="andes-alert-dialog__icon-glyph" [attr.d]="d" />
-      </svg>
+    @if (icon(); as name) {
+      <ng-icon [name]="name" />
     }
   `,
 })
@@ -101,8 +112,8 @@ export class AndesAlertDialogIcon {
     () => this.tone() ?? this.state?.tone() ?? null,
   );
 
-  protected readonly glyph = computed(() => {
+  protected readonly icon = computed(() => {
     const tone = this.resolved();
-    return tone ? ANDES_DIALOG_STATUS_GLYPHS[tone] : null;
+    return tone ? ANDES_DIALOG_STATUS_ICONS[tone] : null;
   });
 }

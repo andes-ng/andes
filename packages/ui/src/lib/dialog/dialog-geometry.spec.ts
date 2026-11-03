@@ -1,6 +1,15 @@
 import { ApplicationRef, Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { readFileSync } from 'node:fs';
+import {
+  lucideCircleAlert,
+  lucideCircleCheck,
+  lucideCircleX,
+  lucideInfo,
+  lucideX,
+} from '@ng-icons/lucide';
+
+import { lucideName } from '../../testing/lucide';
 
 import { declaredValue, toPx } from '../../testing/computed-style';
 import { ANDES_DIALOG_IMPORTS } from './dialog';
@@ -514,14 +523,24 @@ describe('dialog fullscreen, maximize and mask class', () => {
   });
 });
 
+/** Which lucide icon an `ng-icon` bound with `[name]` drew (the input is not an attribute). */
+const iconName = (icon: Element | null | undefined) =>
+  lucideName(icon, {
+    lucideCircleAlert,
+    lucideCircleCheck,
+    lucideCircleX,
+    lucideInfo,
+    lucideX,
+  });
+
 describe('service dialogs: status icons', () => {
-  /** The cut-out glyph path each kind draws on its disc. */
-  const GLYPHS = {
-    confirm: 'M12 6.75v6.5M12 17.25h.01',
-    warning: 'M12 6.75v6.5M12 17.25h.01',
-    error: 'M8.6 8.6l6.8 6.8M15.4 8.6l-6.8 6.8',
-    info: 'M12 11v6.25M12 7.25h.01',
-    success: 'M7.7 12.7l2.6 3 6.1-7',
+  /** The lucide icon each kind draws as its disc. */
+  const ICONS = {
+    confirm: 'lucideCircleAlert',
+    warning: 'lucideCircleAlert',
+    error: 'lucideCircleX',
+    info: 'lucideInfo',
+    success: 'lucideCircleCheck',
   } as const;
 
   beforeAll(() => {
@@ -542,19 +561,20 @@ describe('service dialogs: status icons', () => {
     ];
   });
 
-  it.each(Object.keys(GLYPHS) as (keyof typeof GLYPHS)[])(
-    'draws %s as a full-size disc with its glyph cut out',
+  it.each(Object.keys(ICONS) as (keyof typeof ICONS)[])(
+    'draws %s as a lucide disc icon',
     async (kind) => {
       const service = TestBed.inject(AndesDialogService);
       service[kind]({ title: 'Title' });
       await TestBed.inject(ApplicationRef).whenStable();
 
-      const svg = document.querySelector(
-        '[data-slot="dialog-method-icon"] > svg',
+      const icon = document.querySelector(
+        '[data-slot="dialog-method-icon"] > ng-icon',
       );
-      expect(svg?.classList).toContain('andes-dialog__method-glyph');
-      expect(svg?.querySelector('circle')?.getAttribute('r')).toBe('12');
-      expect(svg?.querySelector('path')?.getAttribute('d')).toBe(GLYPHS[kind]);
+      expect(icon?.classList).toContain('andes-dialog__method-glyph');
+      expect(iconName(icon)).toBe(ICONS[kind]);
+      expect(icon?.querySelector('svg')).not.toBeNull();
+      expect(icon?.querySelector('circle')).not.toBeNull();
 
       service.destroyAll();
     },
@@ -562,14 +582,13 @@ describe('service dialogs: status icons', () => {
 
   it('fills the disc with the status colour and cuts the glyph out in the surface colour', () => {
     expect(
-      declaredValue(
-        css,
-        '.andes-dialog__method-icon > svg.andes-dialog__method-glyph',
-        'fill',
-      ),
+      declaredValue(css, '.andes-dialog__method-glyph circle', 'fill'),
     ).toBe('currentcolor');
     expect(
-      declaredValue(css, '.andes-dialog__method-glyph > path', 'stroke'),
+      declaredValue(css, '.andes-dialog__method-glyph path', 'stroke'),
+    ).toBe('var(--andes-color-popover)');
+    expect(
+      declaredValue(css, '.andes-dialog__method-glyph line', 'stroke'),
     ).toBe('var(--andes-color-popover)');
   });
 });

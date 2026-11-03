@@ -470,20 +470,26 @@ ng-icon.andes-dialog__close-icon {
   stroke-linejoin: round;
 }
 
-/* The built-in icon is a disc in the status colour (`currentcolor`) with the glyph cut
-   out of it by stroking in the surface colour, so one icon works on a light and a dark
-   surface alike. */
-.andes-dialog__method-icon > svg.andes-dialog__method-glyph {
-  fill: currentcolor;
-  stroke: none;
+/* The built-in icon is lucide's circle icon in the status colour (`currentcolor`): its circle
+   is filled and its marks (paths, or the lines of the exclamation mark) are stroked in the
+   surface colour, so one icon works on a light and a dark surface alike. Where the browser
+   lets CSS set the radius, the disc grows to the edge of the box. */
+ng-icon.andes-dialog__method-glyph {
+  display: flex;
+  width: 100%;
+  height: 100%;
 }
 
-.andes-dialog__method-glyph > path {
+.andes-dialog__method-glyph circle {
+  r: 11px;
+  fill: currentcolor;
+}
+
+.andes-dialog__method-glyph path,
+.andes-dialog__method-glyph line {
   fill: none;
   stroke: var(--andes-color-popover);
   stroke-width: 2.2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
 .andes-dialog--method-info .andes-dialog__method-icon {

@@ -58,23 +58,28 @@
   color: var(--andes-alert-tone);
 }
 
-.andes-alert-dialog__icon svg {
+.andes-alert-dialog__icon ng-icon {
+  display: flex;
   inline-size: 100%;
   block-size: 100%;
 }
 
 /* A solid disc in the tone colour with the glyph knocked out in the surface colour, as
-   `andes-alert` draws its severities, so one icon works on a light and a dark surface. */
-.andes-alert-dialog__icon-disc {
+   `andes-alert` draws its severities, so one icon works on a light and a dark surface. The
+   icon is lucide's circle icon: its circle is filled, its marks (paths, or the lines of the
+   exclamation mark) are stroked in the surface colour. Where the browser lets CSS set the
+   radius, the disc grows to the edge of the slot; elsewhere it keeps lucide's own size. */
+.andes-alert-dialog__icon ng-icon circle,
+.andes-alert-dialog__error-icon circle {
+  r: 11px;
   fill: currentcolor;
 }
 
-.andes-alert-dialog__icon-glyph {
+.andes-alert-dialog__icon ng-icon path,
+.andes-alert-dialog__icon ng-icon line {
   fill: none;
   stroke: var(--andes-color-popover);
   stroke-width: 2.2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
 /* Room for the icon beside the title and description. The header is already a sticky
@@ -349,20 +354,17 @@
 
 .andes-alert-dialog__error-icon {
   flex-shrink: 0;
+  display: flex;
   inline-size: 1rem;
   block-size: 1rem;
   margin-block-start: 0.1875rem;
 }
 
-.andes-alert-dialog__error-icon circle {
-  fill: currentcolor;
-}
-
-.andes-alert-dialog__error-icon path {
+.andes-alert-dialog__error-icon path,
+.andes-alert-dialog__error-icon line {
   fill: none;
   stroke: var(--andes-color-popover);
   stroke-width: 2.2;
-  stroke-linecap: round;
 }
 
 /* --------------------------------------------------------------- reduced motion */

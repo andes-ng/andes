@@ -3,9 +3,16 @@ import { ApplicationRef, Component, signal, viewChild } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { readFileSync } from 'node:fs';
 import { vi } from 'vitest';
+import {
+  lucideCircleAlert,
+  lucideCircleCheck,
+  lucideCircleX,
+  lucideInfo,
+} from '@ng-icons/lucide';
 
 import { AndesButton } from '../button/button';
 import { declaredValue } from '../../testing/computed-style';
+import { lucideName } from '../../testing/lucide';
 import {
   ANDES_ALERT_DIALOG_IMPORTS,
   AndesAlertDialog,
@@ -14,8 +21,17 @@ import {
 } from './alert-dialog';
 import { matchesConfirmPhrase } from './alert-dialog-confirm-phrase';
 import type { AndesAlertDialogImpactItem } from './alert-dialog-impact';
-import { ANDES_DIALOG_STATUS_GLYPHS } from './dialog-status-glyph';
+import { ANDES_DIALOG_STATUS_ICONS } from './dialog-status-icons';
 import { AndesDialogService } from './dialog.service';
+
+/** Which lucide icon an `ng-icon` bound with `[name]` drew (the input is not an attribute). */
+const iconName = (icon: Element | null | undefined) =>
+  lucideName(icon, {
+    lucideCircleAlert,
+    lucideCircleCheck,
+    lucideCircleX,
+    lucideInfo,
+  });
 
 /**
  * jsdom reports zero geometry for every element, which makes CDK's
@@ -832,9 +848,10 @@ describe('asynchronous confirmation', () => {
     expect(errorPart().hidden).toBe(false);
     expect(errorPart().textContent).toContain('Network down');
     expect(errorPart().textContent).toContain('You can try again.');
-    expect(errorPart().querySelector('path')?.getAttribute('d')).toBe(
-      ANDES_DIALOG_STATUS_GLYPHS.warning,
+    expect(iconName(errorPart().querySelector('ng-icon'))).toBe(
+      ANDES_DIALOG_STATUS_ICONS.warning,
     );
+    expect(errorPart().querySelector('ng-icon svg')).not.toBeNull();
     expect(live().textContent).toBe('Network down');
 
     click(action());
@@ -1401,21 +1418,19 @@ describe('three-way answer and tone', () => {
     }
   });
 
-  it('draws every tone as a full-size disc, as the alert and the service do', async () => {
+  it('draws every tone as a lucide disc icon, as the alert and the service do', async () => {
     const { fixture, host } = await setup();
 
     for (const tone of ['danger', 'warning', 'info', 'success'] as const) {
       host.tone.set(tone);
       fixture.detectChanges();
 
-      const svg = inDialog('#icon svg');
-      expect(svg.getAttribute('viewBox')).toBe('0 0 24 24');
-      expect(svg.querySelector('circle')?.getAttribute('r')).toBe('12');
-      expect(svg.querySelector('circle')?.getAttribute('cx')).toBe('12');
-      expect(svg.querySelector('circle')?.getAttribute('cy')).toBe('12');
-      expect(
-        svg.querySelector('.andes-alert-dialog__icon-glyph')?.getAttribute('d'),
-      ).toBe(ANDES_DIALOG_STATUS_GLYPHS[tone]);
+      const icon = inDialog('#icon ng-icon');
+      expect(iconName(icon)).toBe(ANDES_DIALOG_STATUS_ICONS[tone]);
+      expect(icon.querySelector('svg')?.getAttribute('viewBox')).toBe(
+        '0 0 24 24',
+      );
+      expect(icon.querySelector('circle')).not.toBeNull();
     }
   });
 
@@ -1426,16 +1441,13 @@ describe('three-way answer and tone', () => {
     for (const tone of ['danger', 'warning', 'info', 'success'] as const) {
       host.tone.set(tone);
       fixture.detectChanges();
-      glyphs.add(
-        inDialog('#icon .andes-alert-dialog__icon-glyph').getAttribute('d') ??
-          '',
-      );
+      glyphs.add(iconName(inDialog('#icon ng-icon')) ?? '');
     }
 
     expect(glyphs.size).toBe(4);
   });
 
-  it('draws the same glyphs as the dialog service icons', async () => {
+  it('draws the same icons as the dialog service', async () => {
     const service = TestBed.inject(AndesDialogService);
     const seen = new Map<string, string>();
 
@@ -1444,18 +1456,18 @@ describe('three-way answer and tone', () => {
       await TestBed.inject(ApplicationRef).whenStable();
       seen.set(
         kind,
-        document
-          .querySelector('[data-slot="dialog-method-icon"] path')
-          ?.getAttribute('d') ?? '',
+        iconName(
+          document.querySelector('[data-slot="dialog-method-icon"] ng-icon'),
+        ) ?? '',
       );
       service.destroyAll();
     }
 
     expect(Object.fromEntries(seen)).toEqual({
-      error: ANDES_DIALOG_STATUS_GLYPHS.danger,
-      warning: ANDES_DIALOG_STATUS_GLYPHS.warning,
-      info: ANDES_DIALOG_STATUS_GLYPHS.info,
-      success: ANDES_DIALOG_STATUS_GLYPHS.success,
+      error: ANDES_DIALOG_STATUS_ICONS.danger,
+      warning: ANDES_DIALOG_STATUS_ICONS.warning,
+      info: ANDES_DIALOG_STATUS_ICONS.info,
+      success: ANDES_DIALOG_STATUS_ICONS.success,
     });
   });
 });
@@ -1596,11 +1608,14 @@ describe('alert-dialog-patterns.css', () => {
     expect(declaredValue(css, '.andes-alert-dialog__icon', 'block-size')).toBe(
       '1.375rem',
     );
-    expect(declaredValue(css, '.andes-alert-dialog__icon-disc', 'fill')).toBe(
-      'currentcolor',
-    );
     expect(
-      declaredValue(css, '.andes-alert-dialog__icon-glyph', 'stroke'),
+      declaredValue(css, '.andes-alert-dialog__icon ng-icon circle', 'fill'),
+    ).toBe('currentcolor');
+    expect(
+      declaredValue(css, '.andes-alert-dialog__icon ng-icon path', 'stroke'),
+    ).toBe('var(--andes-color-popover)');
+    expect(
+      declaredValue(css, '.andes-alert-dialog__icon ng-icon line', 'stroke'),
     ).toBe('var(--andes-color-popover)');
   });
 

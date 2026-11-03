@@ -3,17 +3,17 @@
     #textareaEl
     data-slot="textarea"
     class="andes-textarea__control"
-    [attr.data-size]="size()"
-    [attr.id]="id()"
+    [attr.data-size]="resolvedSize()"
+    [attr.id]="controlId()"
     [attr.name]="name()"
     [rows]="autoSizeEnabled() ? 1 : rows()"
     [attr.placeholder]="placeholder()"
     [attr.maxlength]="maxLength()"
     [disabled]="isDisabled()"
     [readOnly]="readonly()"
-    [required]="required()"
+    [required]="isRequired()"
     [attr.aria-label]="ariaLabel()"
-    [attr.aria-labelledby]="ariaLabelledby()"
+    [attr.aria-labelledby]="labelledBy()"
     [attr.aria-describedby]="describedBy()"
     [attr.aria-invalid]="isInvalid() || null"
     [value]="value()"
@@ -36,15 +36,7 @@
     @if (clearIcon(); as icon) {
     <ng-container [ngTemplateOutlet]="icon" />
     } @else {
-    <svg
-      class="andes-textarea__clear-glyph"
-      viewBox="0 0 16 16"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <circle cx="8" cy="8" r="8" />
-      <path d="M5.5 5.5l5 5m0-5-5 5" />
-    </svg>
+    <ng-icon class="andes-textarea__clear-glyph" name="lucideCircleX" />
     }
   </button>
   }

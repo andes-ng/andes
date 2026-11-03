@@ -382,9 +382,9 @@ export abstract class AndesSelectState {
   abstract readonly showLoadingRow: Signal<boolean>;
   /** Whether the panel shows its empty state. */
   abstract readonly showEmpty: Signal<boolean>;
-  /** Content of the empty state. */
+  /** Content of the empty state; `undefined` is the default `andes-empty`. */
   abstract readonly notFoundContent: Signal<
-    string | TemplateRef<unknown> | null
+    string | TemplateRef<unknown> | null | undefined
   >;
   /** Maximum height of the panel in px. */
   abstract readonly listHeight: Signal<number>;

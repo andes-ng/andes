@@ -359,10 +359,13 @@ export class AndesSelect
   readonly maxTagTextLength = input<number | undefined, unknown>(undefined, {
     transform: optionalNumber,
   });
-  /** Empty-state content. `null` renders no empty state at all. */
-  readonly notFoundContent = input<string | TemplateRef<unknown> | null>(
-    'No data',
-  );
+  /**
+   * Empty-state content: text or a template. `null` renders no empty state at all; left
+   * unset it shows an `andes-empty` (the `select` preset), which follows `provideAndesEmpty()`.
+   */
+  readonly notFoundContent = input<
+    string | TemplateRef<unknown> | null | undefined
+  >(undefined);
 
   /**
    * Options as data - an alternative (or an addition) to projected items. Entries are

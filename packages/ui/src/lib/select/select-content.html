@@ -113,7 +113,9 @@
       <div class="andes-select__status" data-slot="select-empty">
         @if (notFoundTemplate(); as template) {
         <ng-container [ngTemplateOutlet]="template" />
-        } @else { {{ notFoundText() }} }
+        } @else if (notFoundText() !== null) { {{ notFoundText() }} } @else {
+        <andes-empty preset="select" />
+        }
       </div>
       }
     </div>

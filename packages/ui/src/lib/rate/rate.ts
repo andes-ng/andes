@@ -28,6 +28,10 @@ import {
 } from '@angular/forms';
 
 import {
+  andesIdRefs,
+  injectAndesFieldBinding,
+} from '../form-field/field-binding';
+import {
   AndesRateCharacter,
   AndesRateCharacterContext,
 } from './rate-character';
@@ -109,8 +113,8 @@ function normalizeValue(value: unknown, count: number): number {
     '[attr.data-readonly]': 'readonly() ? "" : null',
     '[attr.data-disabled]': 'isDisabled() ? "" : null',
     '[style.--andes-rate-size]': 'cssSize()',
-    '[attr.data-status]': 'status() ?? null',
-    '[attr.data-required]': 'required() ? "" : null',
+    '[attr.data-status]': 'resolvedStatus() ?? null',
+    '[attr.data-required]': 'isRequired() ? "" : null',
     '[style.--andes-rate-color]': 'activeColor() ?? null',
     '[style.--andes-rate-empty-color]': 'emptyColor() ?? null',
     // The hidden input carries the name, not this wrapper (a static `name` stays a plain attr).
@@ -142,7 +146,8 @@ export class AndesRate implements ControlValueAccessor, Validator {
   readonly readonly = input(false, { transform: booleanAttribute });
   readonly disabled = input(false, { transform: booleanAttribute });
   /** `sm` 16px, `md` 20px (default), `lg` 28px, a pixel number, or a CSS length. */
-  readonly size = input<AndesRateSize>('md');
+  /** `md` unless set, or the enclosing `andesForm`'s `size`. */
+  readonly size = input<AndesRateSize | undefined>(undefined);
   /**
    * Draws something other than the star: text (an emoji, a letter), a template, or a function
    * returning text for a position. An `<ng-template andesRateCharacter>` child works too.
@@ -236,8 +241,38 @@ export class AndesRate implements ControlValueAccessor, Validator {
     });
   }
 
+  /** The enclosing form field and form: id, ARIA, status, size and disabled. */
+  protected readonly field = injectAndesFieldBinding();
+
+  /** The size in effect: `size`, else the form's, else `md`. */
+  readonly resolvedSize = computed<AndesRateSize>(
+    () => this.size() ?? this.field.size() ?? 'md',
+  );
+
+  /** The status in effect: `status`, else the enclosing field's error or warning. */
+  readonly resolvedStatus = computed<AndesRateStatus | undefined>(
+    () => this.status() ?? this.field.status(),
+  );
+
+  protected readonly controlId = computed(() => this.id() ?? this.field.id());
+
+  /** `aria-labelledby`, else the field's label - unless an `aria-label` names the rating. */
+  protected readonly labelledBy = computed(
+    () =>
+      this.ariaLabelledby() ??
+      (this.ariaLabel() ? undefined : this.field.labelledBy()),
+  );
+
+  protected readonly describedBy = computed(() =>
+    andesIdRefs(this.ariaDescribedby(), this.field.describedBy()),
+  );
+
+  protected readonly isRequired = computed(
+    () => this.required() || this.field.required(),
+  );
+
   protected readonly isDisabled = computed(
-    () => this.disabled() || this.cvaDisabled(),
+    () => this.disabled() || this.cvaDisabled() || this.field.disabled(),
   );
   protected readonly interactive = computed(
     () => !this.isDisabled() && !this.readonly(),
@@ -287,16 +322,16 @@ export class AndesRate implements ControlValueAccessor, Validator {
 
   protected readonly formValue = computed(() => String(this.current()));
   protected readonly invalid = computed(
-    () => this.ariaInvalid() || this.status() === 'error',
+    () => this.ariaInvalid() || this.resolvedStatus() === 'error',
   );
 
   protected readonly presetSize = computed(() => {
-    const size = this.size();
+    const size = this.resolvedSize();
     return size === 'sm' || size === 'md' || size === 'lg' ? size : null;
   });
 
   protected readonly cssSize = computed(() => {
-    const size = this.size();
+    const size = this.resolvedSize();
     if (typeof size === 'number') {
       return Number.isFinite(size) && size > 0 ? `${size}px` : null;
     }

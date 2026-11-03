@@ -1,0 +1,578 @@
+/*
+ * AndesDialogContent renders with ViewEncapsulation.None: the parts inside a dialog
+ * (header, title, footer, close controls) are consumer markup projected from the
+ * consumer's own view, so an encapsulated stylesheet could never reach them. Every
+ * class is namespaced `andes-dialog*` to make that safe.
+ */
+
+.andes-dialog {
+  /* 20px above and below, 24px at the sides: the modal padding Ant Design uses. The
+     inline step is 24px, which the token scale does not have (it stops at 20px,
+     --andes-space-5), so it is composed from tokens rather than hard-coded. Held as
+     custom properties because the close control and the header's close-clearance are
+     derived from them below. They measure from the surface's outer edge, so the 1px
+     border is taken out of the scroll box's own padding and of the close control's inset:
+     text lands exactly 24px in, as it does in Ant Design's borderless modal. */
+  --andes-dialog-border-width: 1px;
+  --andes-dialog-padding-block: var(--andes-space-5);
+  --andes-dialog-padding-inline: calc(
+    var(--andes-space-5) + var(--andes-space-1)
+  );
+  /* Rhythm between the dialog's own parts: 8px from the header to what follows it, and
+     12px from the body down to the footer (the footer's own margin makes up the 4px the
+     flex gap does not cover). */
+  --andes-dialog-gap: var(--andes-space-2);
+  --andes-dialog-footer-gap: var(--andes-space-3);
+  /* Room a focus indicator needs around a control: a 2px ring, or a 2px outline offset
+     by 2px. The pinned header and footer mask the scrolling body, but they must stop
+     this short of the control next to them or they paint over its halo. */
+  --andes-dialog-ring-room: var(--andes-space-1);
+  /* The built-in "x" (and the maximize control beside it): a 32px hit area with a 16px
+     glyph, 12px from the corner. */
+  --andes-dialog-close-size: 2rem;
+  --andes-dialog-close-inset: var(--andes-space-3);
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;
+  max-height: calc(100dvh - var(--andes-space-4) * 2);
+  /* The surface itself never scrolls - `__viewport` does. That keeps the close control,
+     which is absolutely positioned against this box, from scrolling out of the dialog
+     along with the content. `hidden` also clips the viewport to the rounded corners. */
+  overflow: hidden;
+  border: var(--andes-dialog-border-width) solid var(--andes-color-border);
+  border-radius: var(--andes-radius-lg);
+  /* `popover`, not `card`/`background` - both reference libraries reserve the popover
+     surface tokens for floating layers. */
+  background-color: var(--andes-color-popover);
+  color: var(--andes-color-popover-foreground);
+  font-family: var(--andes-font-family), sans-serif;
+  /* Body copy at the component text scale (14px/22px), so projected paragraphs do not
+     inherit a 16px page size. */
+  font-size: var(--andes-text-font-size, 0.875rem);
+  line-height: var(--andes-text-line-height, 1.375rem);
+  /* A fixed dark ink rather than one derived from --andes-color-foreground, for the same
+     reason --andes-color-overlay is black-based: a shadow is cast light, not themed ink.
+     Deriving it from the foreground turned this into a white halo in the dark theme,
+     where that token is #f8fafc. The three layers are Ant Design's modal elevation.
+     Dark-theme separation comes from the surface being
+     lighter than the scrim plus the 1px border, which is how both references do it. */
+  box-shadow:
+    0 6px 16px 0 rgb(0 0 0 / 8%),
+    0 3px 6px -4px rgb(0 0 0 / 12%),
+    0 9px 28px 8px rgb(0 0 0 / 5%);
+}
+
+/* The scrolling region. Split out from the surface so that a long dialog scrolls its
+   body while the close control, the header and the footer stay put. */
+.andes-dialog__viewport {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--andes-dialog-gap);
+  /* Without this a flex item refuses to shrink below its content height, so the surface
+     would grow past `max-height` instead of scrolling. */
+  min-height: 0;
+  box-sizing: border-box;
+  overflow-y: auto;
+  /* Reaching the end of the dialog must not start scrolling the page behind it. */
+  overscroll-behavior: contain;
+  padding: max(
+      0px,
+      calc(var(--andes-dialog-padding-block) - var(--andes-dialog-border-width))
+    )
+    max(
+      0px,
+      calc(
+        var(--andes-dialog-padding-inline) - var(--andes-dialog-border-width)
+      )
+    );
+}
+
+/* Sizes. Neither reference library exposes an enum, but a scale keeps consumers off
+   magic widths; every step still collapses to the viewport on a narrow screen. `md` is
+   520px, the width of an Ant Design modal. */
+.andes-dialog--sm {
+  max-width: 24rem;
+}
+
+.andes-dialog--md {
+  max-width: 32.5rem;
+}
+
+.andes-dialog--lg {
+  max-width: 42rem;
+}
+
+.andes-dialog--xl {
+  max-width: 56rem;
+}
+
+/* An explicit `width`, including its per-breakpoint object form. The
+   component writes one custom property per breakpoint, already resolved so each one
+   inherits the nearest smaller breakpoint given; the rules below only pick the one for
+   the current viewport. Doubled class so it outranks any size step.
+   `width: 100%` on the surface still caps it at the pane, so a large value can never
+   overflow a narrow screen. */
+.andes-dialog.andes-dialog--custom-width {
+  max-width: var(--andes-dialog-width-xs);
+}
+
+@media (width >= 36rem) {
+  .andes-dialog.andes-dialog--custom-width {
+    max-width: var(--andes-dialog-width-sm);
+  }
+}
+
+@media (width >= 48rem) {
+  .andes-dialog.andes-dialog--custom-width {
+    max-width: var(--andes-dialog-width-md);
+  }
+}
+
+@media (width >= 62rem) {
+  .andes-dialog.andes-dialog--custom-width {
+    max-width: var(--andes-dialog-width-lg);
+  }
+}
+
+@media (width >= 75rem) {
+  .andes-dialog.andes-dialog--custom-width {
+    max-width: var(--andes-dialog-width-xl);
+  }
+}
+
+@media (width >= 100rem) {
+  .andes-dialog.andes-dialog--custom-width {
+    max-width: var(--andes-dialog-width-xxl);
+  }
+}
+
+@media (width >= 120rem) {
+  .andes-dialog.andes-dialog--custom-width {
+    max-width: var(--andes-dialog-width-xxxl);
+  }
+}
+
+/* `[centered]="false"`: parked near the top so the surface does not jump as its
+   content grows. 100px on a tall screen,
+   shrinking with the viewport and never below the pane's own gutter. The pane rule
+   further down applies the same offset; the height cap here has to subtract it. */
+.andes-dialog--top {
+  max-height: calc(
+    100dvh - clamp(var(--andes-space-4), 12.5dvh, 6.25rem) -
+      var(--andes-space-4)
+  );
+}
+
+/* `fullscreen`: the surface fills the pane edge to edge, square-cornered. Doubled class
+   so it outranks any size step. */
+.andes-dialog.andes-dialog--fullscreen {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  border-radius: 0;
+}
+
+.andes-dialog__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--andes-space-2);
+}
+
+/* Clearance for the built-in close control, applied only where one is actually
+   rendered. Applying it unconditionally made a `[showCloseButton]="false"` dialog wrap
+   its copy against 20px of reserved gutter that nothing occupied. The control's box reaches in past the content
+   edge by its size plus its inset minus the padding; the step clears that and leaves a
+   visible gap beside it. */
+.andes-dialog:has(> .andes-dialog__close) .andes-dialog__header {
+  padding-inline-end: calc(
+    var(--andes-dialog-close-size) + var(--andes-dialog-close-inset) -
+      var(--andes-dialog-padding-inline) + var(--andes-space-2)
+  );
+}
+
+/* The maximize control sits beside the "x", one hit area further in. */
+.andes-dialog--maximizable:has(> .andes-dialog__close) .andes-dialog__header {
+  padding-inline-end: calc(
+    var(--andes-dialog-close-size) * 2 + var(--andes-dialog-close-inset) -
+      var(--andes-dialog-padding-inline) + var(--andes-space-2)
+  );
+}
+
+/* Pin the header and the footer while the body between them scrolls: in a long dialog the title and the actions are exactly what the reader needs kept
+   in view, and before this both scrolled away entirely.
+
+   The sticky constraint is inset by the scrolling box's padding, so `0` already parks each
+   one the padding step away from the surface edge - no offset of its own is needed.
+
+   An opaque background alone is not enough: body text still scrolled visibly through the
+   surface padding on the outer side and through the flex gap on the inner side. Each
+   spread-less box-shadow is a copy of the part's own box offset by one of those two
+   distances, which masks both strips. At rest they paint the surface colour onto the
+   surface colour, so nothing changes until something scrolls underneath.
+
+   The inner mask stops `--andes-dialog-ring-room` short of the control beside it. A mask
+   that fills the whole gap is painted above that control and cut the bottom of its focus
+   halo off (the header's one the top), because the halo lives in exactly that gap. The
+   strip left open is only ever a clip line a few pixels further out: scrolled text still
+   disappears behind the part, it just does so slightly short of the control. */
+.andes-dialog__viewport > .andes-dialog__header {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  background-color: var(--andes-color-popover);
+  box-shadow:
+    0 calc(var(--andes-dialog-padding-block) * -1) 0 var(--andes-color-popover),
+    0 calc(var(--andes-dialog-gap) - var(--andes-dialog-ring-room)) 0
+      var(--andes-color-popover);
+}
+
+.andes-dialog__viewport > .andes-dialog__footer {
+  position: sticky;
+  inset-block-end: 0;
+  /* Tops up the flex gap to the 12px a footer sits under the body. */
+  margin-block-start: calc(
+    var(--andes-dialog-footer-gap) - var(--andes-dialog-gap)
+  );
+  z-index: 1;
+  background-color: var(--andes-color-popover);
+  box-shadow:
+    0 var(--andes-dialog-padding-block) 0 var(--andes-color-popover),
+    0
+      calc(
+        (var(--andes-dialog-footer-gap) - var(--andes-dialog-ring-room)) * -1
+      )
+      0 var(--andes-color-popover);
+}
+
+.andes-dialog__title {
+  margin: 0;
+  /* 16px, like every other surface title (drawer, card, popover): at 18px the dialog
+     heading stood out as the one oversized title in the system. */
+  font-size: 1rem;
+  /* 600, not --andes-font-weight-medium: at 500 the title carried no more weight than a
+     field label beside it. Both reference libraries set a dialog title in semibold, and
+     the token scale has no semibold step yet. */
+  font-weight: 600;
+  /* Fixed at 24px rather than a ratio, so the close control can be centred on the
+     title's first line from the same number. */
+  line-height: 1.5rem;
+  color: var(--andes-color-popover-foreground);
+}
+
+.andes-dialog__description {
+  margin: 0;
+  font-size: var(--andes-text-font-size, 0.875rem);
+  line-height: var(--andes-text-line-height, 1.375rem);
+  color: var(--andes-color-muted-foreground);
+}
+
+.andes-dialog__footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--andes-space-2);
+}
+
+/* `loading`: a skeleton stands in for the body. The header stays - it is what labels
+   the dialog - and everything else the consumer projected (body and their own footer)
+   is hidden rather than destroyed, so it reappears with its state intact. */
+/* One line on purpose (hence the prettier-ignore): a selector split at its
+   combinators is mis-scoped by Angular's style shim in Storybook. */
+/* prettier-ignore */
+.andes-dialog--loading > .andes-dialog__viewport > :not(.andes-dialog__header, .andes-dialog__skeleton) {
+  display: none;
+}
+
+/* Four 16px bars 16px apart with 16px above and below, like Ant Design's modal skeleton
+   (the header already contributes the gap above, hence the 8px top margin). */
+.andes-dialog__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--andes-space-4);
+  margin-block: var(--andes-dialog-gap) var(--andes-space-4);
+}
+
+/* Mixed from the foreground, like the close control's hover: --andes-color-muted is
+   the same value as the popover surface in the dark theme, so the bars vanished. */
+.andes-dialog__skeleton-line {
+  display: block;
+  height: 1rem;
+  border-radius: var(--andes-radius-sm);
+  background-color: color-mix(
+    in srgb,
+    var(--andes-color-foreground) 8%,
+    transparent
+  );
+  /* Slow and shallow, so the placeholder breathes rather than flashes. */
+  animation: andes-dialog-skeleton 1.8s ease-in-out infinite;
+}
+
+.andes-dialog__skeleton-line:last-child {
+  width: 61%;
+}
+
+@keyframes andes-dialog-skeleton {
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* The built-in close ("x") control and the optional maximize control beside it share
+   one box and every state below. */
+.andes-dialog__close,
+.andes-dialog__maximize {
+  position: absolute;
+  /* A 2rem hit area 12px from the corner with a 1rem glyph centred in it, the geometry
+     of Ant Design's close control. */
+  inset-block-start: calc(
+    var(--andes-dialog-close-inset) - var(--andes-dialog-border-width)
+  );
+  inset-inline-end: calc(
+    var(--andes-dialog-close-inset) - var(--andes-dialog-border-width)
+  );
+  /* Above the pinned header, which is opaque and would otherwise paint over the control:
+     both sit in this surface's stacking context, and the header raises itself to 1. */
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--andes-dialog-close-size);
+  height: var(--andes-dialog-close-size);
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--andes-radius-sm);
+  background-color: transparent;
+  color: var(--andes-color-muted-foreground);
+  /* A native <button> takes the UA font, not the surface's. */
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    background-color var(--andes-motion-duration-fast, 0.1s)
+      var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1)),
+    color var(--andes-motion-duration-fast, 0.1s)
+      var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1));
+}
+
+/* Mixed from the foreground rather than taken from --andes-color-accent, which is the
+   same value as --andes-color-popover in the dark theme (#1e293b) and so left the
+   control with no visible hover state at all on a dark surface. */
+.andes-dialog__close:hover:not(:disabled),
+.andes-dialog__maximize:hover:not(:disabled) {
+  background-color: color-mix(
+    in srgb,
+    var(--andes-color-foreground) 8%,
+    transparent
+  );
+  color: var(--andes-color-popover-foreground);
+}
+
+.andes-dialog__close:active:not(:disabled),
+.andes-dialog__maximize:active:not(:disabled) {
+  background-color: color-mix(
+    in srgb,
+    var(--andes-color-foreground) 14%,
+    transparent
+  );
+}
+
+/* `closeDisabled`: the same dimmed, not-allowed treatment AndesButton gives a disabled
+   control, so the "x" reads as present but unavailable. */
+.andes-dialog__close:disabled,
+.andes-dialog__maximize:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.andes-dialog__close:focus-visible,
+.andes-dialog__maximize:focus-visible {
+  outline: 2px solid var(--andes-color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* A consumer's `closeIcon` gets the same box as the built-in glyph. */
+.andes-dialog__close > svg:not(.andes-dialog__close-icon) {
+  width: 1rem;
+  height: 1rem;
+}
+
+.andes-dialog__close-icon {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+/* One hit area in from the corner, so it sits beside the "x" rather than under it. The
+   `end` side follows the writing direction, so RTL mirrors the pair. */
+.andes-dialog__maximize {
+  inset-inline-end: calc(
+    var(--andes-dialog-close-inset) + var(--andes-dialog-close-size) -
+      var(--andes-dialog-border-width)
+  );
+}
+
+/* On a narrow screen the actions stack and fill the width. `column-reverse` keeps the
+   DOM order - Cancel first, so the focus trap opens on the safe choice - while showing
+   the affirmative action first, which is the order both reference libraries stack a
+   dialog footer in. */
+@media (width <= 30rem) {
+  .andes-dialog__footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  /* `stretch` only reaches the flex item itself. AndesButton renders its real <button>
+     inside a non-interactive host wrapper, so the wrapper filled the row while the
+     control inside kept its intrinsic width and the stack came out ragged. Matched on
+     the interactive element rather than on the button's own classes, so a plain
+     <button> a consumer wraps themselves stacks the same way. */
+  .andes-dialog__footer > * > button,
+  .andes-dialog__footer > * > a {
+    width: 100%;
+  }
+}
+
+/* Entry motion, applied to the pane the primitive creates rather than to the surface,
+   so a consumer restyling the surface cannot lose it. */
+/* The second form matches a kept-alive surface (`destroyOnClose` off, `forceRender`),
+   which sits inside a `display: contents` adopter element. */
+/* prettier-ignore */
+.andes-overlay-pane:has(> .andes-dialog, > .andes-dialog-keep-alive > .andes-dialog) {
+  display: flex;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  /* 16px of gutter, so the surface is `100vw - 32px` on a phone, as Ant Design's is. */
+  padding: var(--andes-space-4);
+  /* Zoom and fade in, from 20% scale over 300ms on Ant Design's ease-out-circ curve: a
+     fast start that settles without overshoot. */
+  animation: andes-dialog-enter 0.3s cubic-bezier(0.08, 0.82, 0.17, 1);
+}
+
+/* Parks a `[centered]="false"` surface near the top. The CDK wrapper centres the pane
+   with inline flex alignment, which `align-self` overrides for this one item. */
+/* prettier-ignore */
+.andes-overlay-pane:has(> .andes-dialog--top, > .andes-dialog-keep-alive > .andes-dialog--top) {
+  align-self: flex-start;
+  /* 100px on a tall screen (Ant Design's `top`), shrinking with the viewport. */
+  padding-block-start: clamp(var(--andes-space-4), 12.5dvh, 6.25rem);
+}
+
+/* `fullscreen`: the pane gives up its gutter and fills the layer, and the surface
+   follows it. */
+/* prettier-ignore */
+.andes-overlay-pane:has(> .andes-dialog--fullscreen, > .andes-dialog-keep-alive > .andes-dialog--fullscreen) {
+  height: 100%;
+  padding: 0;
+}
+
+.andes-dialog-keep-alive {
+  display: contents;
+}
+
+/* The CDK's prebuilt stylesheet fades every backdrop over 400ms, so the scrim kept
+   darkening for well over a tenth of a second after the dialog had finished arriving.
+   Ant Design's mask fades linearly over 200ms, which lands inside the surface's own entry.
+   Scoped to the class the dialog root passes as `backdropClass`, so no other
+   overlay's timing changes.
+
+   The scrim is a flat 45% black, also as in Ant Design, in both themes: the primitive
+   paints it from `--andes-color-overlay`, which resolves on the backdrop element, so
+   re-pointing the token here recolours this scrim alone. `--andes-dialog-mask` is the
+   consumer hook: any CSS background value (a gradient, say), usually set from a
+   `maskClass`. */
+.andes-dialog-backdrop {
+  --andes-color-overlay: var(--andes-dialog-mask, rgb(0 0 0 / 45%));
+
+  transition-duration: 0.2s;
+  transition-timing-function: linear;
+}
+
+/* Exit motion. While the overlay primitive plays a close it marks the pane, its
+   children and the scrim with `data-andes-closing` and waits for the animations below
+   before detaching (on a branch whose primitive does not do that yet, the attribute
+   never appears and the close stays instant). The surface mirrors its entry - a fade
+   and a shrink back to 20% - over 200ms on Ant Design's ease-in-out-circ curve, so a
+   dismissal is quicker than the arrival. `forwards` holds the last frame until the pane
+   is removed, so the surface cannot flash back to full opacity for a frame in between. */
+/* prettier-ignore */
+.andes-overlay-pane[data-andes-closing]:has(> .andes-dialog, > .andes-dialog-keep-alive > .andes-dialog) {
+  pointer-events: none;
+  animation: andes-dialog-exit 0.2s cubic-bezier(0.78, 0.14, 0.15, 0.86) forwards;
+}
+
+/* The scrim lifts in the same window, so the page is never left dimmed behind a surface
+   that has already gone. */
+.andes-dialog-backdrop[data-andes-closing] {
+  pointer-events: none;
+  animation: andes-dialog-scrim-exit 0.2s linear forwards;
+}
+
+/* `maskBlur`: frosts the page behind the scrim as well as dimming it. 4px keeps the
+   page recognisable - the point is focus, not hiding what the dialog is about. */
+.andes-dialog-backdrop--blur {
+  backdrop-filter: blur(4px);
+}
+
+@keyframes andes-dialog-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes andes-dialog-exit {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+}
+
+@keyframes andes-dialog-scrim-exit {
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* prettier-ignore */
+  .andes-overlay-pane:has(> .andes-dialog, > .andes-dialog-keep-alive > .andes-dialog) {
+    animation: none;
+  }
+
+  /* No exit either: with nothing running the primitive detaches at once. */
+  /* prettier-ignore */
+  .andes-overlay-pane[data-andes-closing]:has(> .andes-dialog, > .andes-dialog-keep-alive > .andes-dialog) {
+    animation: none;
+  }
+
+  .andes-dialog-backdrop[data-andes-closing] {
+    animation: none;
+  }
+
+  .andes-dialog__skeleton-line {
+    animation: none;
+  }
+
+  .andes-dialog-backdrop {
+    transition: none;
+  }
+}

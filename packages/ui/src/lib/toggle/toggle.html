@@ -1,0 +1,31 @@
+<button
+  type="button"
+  class="andes-toggle__button"
+  data-slot="toggle-button"
+  [attr.aria-pressed]="isPressed()"
+  [attr.aria-label]="ariaLabel()"
+  [attr.id]="controlId() ?? null"
+  [attr.aria-labelledby]="labelledBy() ?? null"
+  [attr.aria-describedby]="describedBy() ?? null"
+  [attr.data-required]="isRequired() ? '' : null"
+  [attr.title]="tooltip() ?? null"
+  [attr.tabindex]="tabIndex()"
+  [attr.data-motion]="motion()"
+  [disabled]="isDisabled()"
+  (click)="onClick()"
+  (blur)="onBlur()"
+  (animationend)="onMotionEnd($event)"
+  (animationcancel)="onMotionCancel($event)"
+>
+  <span class="andes-toggle__icon" aria-hidden="true"
+    >@if (iconStart(); as startTemplate) {
+    <ng-container *ngTemplateOutlet="startTemplate" />
+    }<ng-content select="[slot=icon-start]"
+  /></span>
+  <span class="andes-toggle__label"><ng-content /></span>
+  <span class="andes-toggle__icon" aria-hidden="true"
+    >@if (iconEnd(); as endTemplate) {
+    <ng-container *ngTemplateOutlet="endTemplate" />
+    }<ng-content select="[slot=icon-end]"
+  /></span>
+</button>

@@ -1,0 +1,109 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+import { Component, signal, TemplateRef, viewChild } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+
+import { AndesEmptyProvider } from '../empty/empty-config';
+import { AndesCascader } from './cascader';
+
+@Component({
+  imports: [AndesCascader, AndesEmptyProvider],
+  template: `
+    <ng-template #slot><b data-test="slot">Nothing here</b></ng-template>
+    <section [andesEmptyProvider]="config()">
+      <andes-cascader
+        aria-label="Empty"
+        [options]="[]"
+        [open]="true"
+        [notFoundContent]="notFound()"
+      />
+    </section>
+  `,
+})
+class EmptyCascaderHost {
+  readonly slot = viewChild.required<TemplateRef<unknown>>('slot');
+  readonly notFound = signal<string | TemplateRef<unknown> | null | undefined>(
+    undefined,
+  );
+  readonly config = signal<{ description?: string; image?: 'default' }>({});
+}
+
+describe('AndesCascader not-found content', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  function setup() {
+    const fixture = TestBed.createComponent(EmptyCascaderHost);
+    fixture.detectChanges();
+    const status = () =>
+      document.querySelector<HTMLElement>('[data-slot="cascader-empty"]');
+    return { fixture, host: fixture.componentInstance, status };
+  }
+
+  it('shows an andes-empty of the select preset by default', () => {
+    const { status } = setup();
+    const empty = status()?.querySelector('andes-empty');
+
+    expect(empty?.getAttribute('data-size')).toBe('small');
+    expect(empty?.getAttribute('data-image')).toBe('simple');
+    expect(empty?.textContent?.trim()).toBe('No data');
+  });
+
+  it('marks the empty panel so it is as wide as the field', () => {
+    setup();
+    const panel = document.querySelector<HTMLElement>(
+      '[data-slot="cascader-panel"]',
+    );
+
+    expect(panel?.hasAttribute('data-empty')).toBe(true);
+  });
+
+  it('gives an empty panel the anchor width as its minimum (cascader.css)', () => {
+    const css = readFileSync(
+      join(process.cwd(), 'packages/ui/src/lib/cascader/cascader.css'),
+      'utf8',
+    ).replace(/\s+/g, ' ');
+
+    expect(css).toContain(
+      '.andes-cascader__panel[data-search], .andes-cascader__panel[data-empty] { min-width: var(--andes-cascader-anchor-width, 0); }',
+    );
+  });
+
+  it('follows the empty state provider', () => {
+    const { fixture, host, status } = setup();
+    host.config.set({ description: 'Data Not Found', image: 'default' });
+    fixture.detectChanges();
+    const empty = status()?.querySelector('andes-empty');
+
+    expect(empty?.textContent?.trim()).toBe('Data Not Found');
+    expect(empty?.getAttribute('data-image')).toBe('default');
+  });
+
+  it('keeps plain text as plain text', () => {
+    const { fixture, host, status } = setup();
+    host.notFound.set('Nothing matches');
+    fixture.detectChanges();
+
+    expect(status()?.querySelector('andes-empty')).toBeNull();
+    expect(status()?.textContent?.trim()).toBe('Nothing matches');
+  });
+
+  it('renders a template instead', () => {
+    const { fixture, host, status } = setup();
+    host.notFound.set(host.slot());
+    fixture.detectChanges();
+
+    expect(status()?.querySelector('[data-test="slot"]')).not.toBeNull();
+    expect(status()?.querySelector('andes-empty')).toBeNull();
+  });
+
+  it('shows nothing for null', () => {
+    const { fixture, host, status } = setup();
+    host.notFound.set(null);
+    fixture.detectChanges();
+
+    expect(status()).toBeNull();
+  });
+});

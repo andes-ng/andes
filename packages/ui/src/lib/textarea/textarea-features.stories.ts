@@ -1,4 +1,6 @@
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideCircleX } from '@ng-icons/lucide';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import {
@@ -94,7 +96,10 @@ export const CustomCount: Story = {
  */
 export const ClearButton: Story = {
   render: () => ({
-    moduleMetadata: { imports: [ReactiveFormsModule] },
+    moduleMetadata: {
+      imports: [ReactiveFormsModule, NgIcon],
+      providers: [provideIcons({ lucideCircleX })],
+    },
     props: {
       small: 'Small',
       medium: 'Medium',
@@ -112,9 +117,7 @@ export const ClearButton: Story = {
       <andes-textarea clearable clearLabel="Borrar" [(value)]="localized" aria-label="Localized" />
       <andes-textarea clearable [clearIcon]="clearIcon" [(value)]="iconText" [rows]="1" aria-label="Custom icon" />
       <ng-template #clearIcon>
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm3.7 12.3-1.4 1.4L12 13.4l-2.3 2.3-1.4-1.4 2.3-2.3-2.3-2.3 1.4-1.4 2.3 2.3 2.3-2.3 1.4 1.4-2.3 2.3 2.3 2.3Z" />
-        </svg>
+        <ng-icon name="lucideCircleX" aria-hidden="true" />
       </ng-template>
       <div>
         <andes-textarea clearable [formControl]="control" [rows]="2" aria-label="Message" (cleared)="clearedCount = clearedCount + 1" />

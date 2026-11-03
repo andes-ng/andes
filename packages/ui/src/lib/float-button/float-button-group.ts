@@ -15,6 +15,8 @@ import {
   TemplateRef,
   viewChild,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucidePlus, lucideX } from '@ng-icons/lucide';
 
 import { AndesFloatButton } from './float-button';
 import {
@@ -52,7 +54,8 @@ const HOVER_CLOSE_DELAY_MS = 120;
  */
 @Component({
   selector: 'andes-float-button-group',
-  imports: [NgTemplateOutlet, AndesFloatButton],
+  viewProviders: [provideIcons({ lucidePlus, lucideX })],
+  imports: [NgIcon, NgTemplateOutlet, AndesFloatButton],
   templateUrl: './float-button-group.html',
   styleUrl: './float-button-group.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

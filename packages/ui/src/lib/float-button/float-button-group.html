@@ -15,16 +15,7 @@
   /></span>
   } @else {
   <span class="andes-float-button-group__swap">
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.75"
-      stroke-linecap="round"
-      aria-hidden="true"
-    >
-      <path d="M4 4l8 8M12 4l-8 8" />
-    </svg>
+    <ng-icon class="andes-float-button-group__icon" name="lucideX" aria-hidden="true" />
   </span>
   } } @else { @if (triggerIcon(); as openTemplate) {
   <span class="andes-float-button-group__swap"
@@ -32,30 +23,15 @@
   /></span>
   } @else {
   <span class="andes-float-button-group__swap">
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.75"
-      stroke-linecap="round"
-      aria-hidden="true"
-    >
-      <path d="M8 3v10M3 8h10" />
-    </svg>
+    <ng-icon class="andes-float-button-group__icon" name="lucidePlus" aria-hidden="true" />
   </span>
   } } } @else {
-  <svg
-    class="andes-float-button-group__glyph"
+  <ng-icon
+    class="andes-float-button-group__icon andes-float-button-group__glyph"
     [class.andes-float-button-group__glyph--open]="open()"
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="1.75"
-    stroke-linecap="round"
+    name="lucidePlus"
     aria-hidden="true"
-  >
-    <path d="M8 3v10M3 8h10" />
-  </svg>
+  />
   }
 </andes-float-button>
 <div

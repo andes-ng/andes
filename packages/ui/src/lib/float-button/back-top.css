@@ -2,6 +2,13 @@
   display: contents;
 }
 
+/* The default arrow is a lucide glyph in an `ng-icon`, 1em of the button's icon size, in the
+   heavier stroke the old arrow was drawn with; as a flex box its svg never sits on a baseline. */
+.andes-back-top__icon {
+  display: flex;
+  --ng-icon__stroke-width: 2.5;
+}
+
 /* Fade, rise and grow in 200ms; leaving is quicker. Hidden, the button is inert and cannot be
    hit by the pointer. */
 .andes-back-top__button {

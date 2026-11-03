@@ -13,6 +13,8 @@ import {
   signal,
   untracked,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideArrowUp } from '@ng-icons/lucide';
 
 import { AndesFloatButton } from './float-button';
 import {
@@ -66,7 +68,8 @@ function ease(t: number): number {
  */
 @Component({
   selector: 'andes-back-top',
-  imports: [AndesFloatButton],
+  viewProviders: [provideIcons({ lucideArrowUp })],
+  imports: [NgIcon, AndesFloatButton],
   templateUrl: './back-top.html',
   styleUrl: './back-top.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

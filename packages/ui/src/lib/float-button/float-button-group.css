@@ -222,6 +222,14 @@
     visibility 0s linear 0s;
 }
 
+/* The default plus and cross are lucide glyphs in an `ng-icon`, 1em of the button's icon size, in
+   the heavier stroke the old marks were drawn with; as a flex box the svg never sits on a
+   baseline. */
+.andes-float-button-group__icon {
+  display: flex;
+  --ng-icon__stroke-width: 2.5;
+}
+
 /* The default plus turns a quarter-eighth to become the close cross, instead of swapping. */
 .andes-float-button-group__glyph {
   transition: transform 200ms cubic-bezier(0.2, 0, 0, 1);

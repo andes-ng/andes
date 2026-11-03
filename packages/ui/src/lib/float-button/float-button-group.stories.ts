@@ -5,11 +5,7 @@ import {
   lucideMail,
   lucideMessageSquare,
 } from '@ng-icons/lucide';
-import {
-  moduleMetadata,
-  type Meta,
-  type StoryObj,
-} from '@storybook/angular';
+import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 
 import { AndesFloatButton } from './float-button';
 import { AndesFloatButtonGroup } from './float-button-group';

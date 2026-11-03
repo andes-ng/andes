@@ -17,9 +17,9 @@ export * from './lib/accordion';
 
 export * from './lib/avatar';
 
-// @slot badge
+export * from './lib/badge';
 
-// @slot breadcrumb
+export * from './lib/breadcrumb';
 
 export * from './lib/button';
 
@@ -53,21 +53,21 @@ export * from './lib/dialog';
 
 // @slot drawer
 
-// @slot dropdown-menu
+export * from './lib/dropdown-menu';
 
-// @slot empty
+export * from './lib/empty';
 
 // @slot flex
 
 // @slot float-button
 
-// @slot form-field
+export * from './lib/form-field';
 
 // @slot grid
 
 // @slot hover-card
 
-// @slot image
+export * from './lib/image';
 
 export * from './lib/input';
 
@@ -91,7 +91,7 @@ export * from './lib/mentions';
 
 // @slot pagination
 
-// @slot palette
+export * from './lib/palette';
 
 // @slot popconfirm
 
@@ -115,7 +115,7 @@ export * from './lib/select';
 
 // @slot sheet
 
-// @slot skeleton
+export * from './lib/skeleton';
 
 export * from './lib/slider';
 
@@ -135,7 +135,7 @@ export * from './lib/switch';
 
 // @slot tabs
 
-// @slot tag
+export * from './lib/tag';
 
 export * from './lib/textarea';
 
@@ -145,7 +145,7 @@ export * from './lib/textarea';
 
 export * from './lib/toggle';
 
-// @slot tooltip
+export * from './lib/tooltip';
 
 // @slot tour
 
@@ -157,6 +157,6 @@ export * from './lib/tree-select';
 
 // @slot typography
 
-// @slot upload
+export * from './lib/upload';
 
 // @slot watermark

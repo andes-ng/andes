@@ -332,6 +332,13 @@ export class AndesTree {
   );
   readonly labels = input<Partial<AndesTreeLabels>>({});
   /**
+   * What an empty tree shows instead of the tray and the `empty` label: a template. `null`
+   * shows nothing at all (a loading tree still shows its spinner); unset keeps the tray.
+   */
+  readonly emptyContent = input<TemplateRef<unknown> | null | undefined>(
+    undefined,
+  );
+  /**
    * Classes for the tree's parts: `root`, every row (`item`), its `itemIcon` and `itemTitle`.
    * They are added beside the tree's own classes; style them from a global stylesheet.
    */

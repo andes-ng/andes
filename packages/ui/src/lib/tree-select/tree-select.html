@@ -5,7 +5,7 @@
   box's click handler is a pointer convenience, and all keys are handled on the combobox, so
   it needs neither a tab stop nor a key handler of its own in that case.
 -->
-<!-- eslint-disable @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+<!-- eslint-disable @angular-eslint/template/interactive-supports-focus -->
 <div
   #box
   class="andes-tree-select__trigger"
@@ -353,6 +353,17 @@
       class="andes-tree-select__viewport"
       [style.max-height.px]="virtualScroll() ? null : panelHeight()"
     >
+      <ng-template #emptyState>
+        <div data-slot="tree-select-empty">
+          @if (notFoundText() !== null) {
+          <div class="andes-tree-select__status">{{ notFoundText() }}</div>
+          } @else if (notFoundTemplate(); as template) {
+          <ng-container [ngTemplateOutlet]="template" />
+          } @else {
+          <andes-empty preset="select" [description]="emptyDescription()" />
+          }
+        </div>
+      </ng-template>
       <andes-tree
         blockNode
         [aria-label]="ariaLabel()"
@@ -380,6 +391,7 @@
         [virtualScroll]="virtualScroll()"
         [height]="panelHeight()"
         [labels]="treeLabels()"
+        [emptyContent]="notFoundContent() === null ? null : emptyState"
         [nodeTemplate]="nodeTemplate()?.template"
         (nodeSelect)="onTreeSelect($event)"
         (nodeCheck)="onTreeCheck($event)"

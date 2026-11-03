@@ -165,6 +165,32 @@ export function declaredValue(
   return found;
 }
 
+/**
+ * Returns the body of the first top-level at-rule whose prelude reads `prelude` (whitespace
+ * collapsed, comments ignored), such as `'@media (prefers-reduced-motion: reduce)'` or
+ * `'@container card (max-width: 30rem)'`. jsdom evaluates neither media nor container queries,
+ * so a spec checks the rules declared inside one by passing this body to {@link declaredValue}.
+ * Throws when there is no such block, so a renamed query fails loudly.
+ */
+export function atRuleBody(css: string, prelude: string): string {
+  const wanted = collapse(prelude);
+  const text = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  let preludeStart = 0;
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === ';') {
+      preludeStart = i + 1;
+    } else if (text[i] === '{') {
+      const close = matchingBrace(text, i);
+      if (collapse(text.slice(preludeStart, i)) === wanted) {
+        return text.slice(i + 1, close);
+      }
+      i = close;
+      preludeStart = close + 1;
+    }
+  }
+  throw new Error(`No "${prelude}" block in the stylesheet`);
+}
+
 // ------------------------------------------------------------------ internals
 
 interface Quantity {

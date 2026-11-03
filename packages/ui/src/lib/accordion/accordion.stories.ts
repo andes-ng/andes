@@ -1,3 +1,10 @@
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideChartLine,
+  lucideMinus,
+  lucidePackage,
+  lucidePlus,
+} from '@ng-icons/lucide';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
@@ -252,14 +259,13 @@ export const ActiveKey: Story = {
  */
 export const ExpandIcon: Story = {
   render: () => ({
-    moduleMetadata: { imports: PARTS },
+    moduleMetadata: {
+      imports: [...PARTS, NgIcon],
+      providers: [provideIcons({ lucideMinus, lucidePlus })],
+    },
     template: `
       <ng-template #plusMinus let-active>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-             stroke-width="2" stroke-linecap="round">
-          <line x1="5" y1="12" x2="19" y2="12" />
-          @if (!active) { <line x1="12" y1="5" x2="12" y2="19" /> }
-        </svg>
+        <ng-icon size="16" [name]="active ? 'lucideMinus' : 'lucidePlus'" />
       </ng-template>
       <div style="${WIDTH} display: grid; gap: 1.5rem;">
         <andes-accordion bordered [expandIcon]="plusMinus">${FAQ_ITEMS}</andes-accordion>
@@ -328,17 +334,16 @@ export const ExtraAndArrow: Story = {
 /** A leading icon projected inside the trigger. */
 export const HeaderIcon: Story = {
   render: () => ({
-    moduleMetadata: { imports: PARTS },
+    moduleMetadata: {
+      imports: [...PARTS, NgIcon],
+      providers: [provideIcons({ lucideChartLine, lucidePackage })],
+    },
     template: `
       <andes-accordion bordered [activeKey]="['sales']" style="${WIDTH}">
         <andes-accordion-item value="sales">
           <andes-accordion-trigger>
             <span style="display: flex; align-items: center; gap: 0.5rem;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M3 3v18h18" />
-                <path d="M7 14l4-4 3 3 5-6" />
-              </svg>
+              <ng-icon name="lucideChartLine" size="16" aria-hidden="true" />
               Sales report
             </span>
           </andes-accordion-trigger>
@@ -347,11 +352,7 @@ export const HeaderIcon: Story = {
         <andes-accordion-item value="stock">
           <andes-accordion-trigger>
             <span style="display: flex; align-items: center; gap: 0.5rem;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M21 8l-9-5-9 5 9 5 9-5z" />
-                <path d="M3 8v8l9 5 9-5V8" />
-              </svg>
+              <ng-icon name="lucidePackage" size="16" aria-hidden="true" />
               Stock levels
             </span>
           </andes-accordion-trigger>

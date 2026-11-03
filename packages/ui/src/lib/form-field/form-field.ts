@@ -1,0 +1,765 @@
+import {
+  booleanAttribute,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  contentChild,
+  DestroyRef,
+  effect,
+  forwardRef,
+  inject,
+  input,
+  signal,
+  TemplateRef,
+  ViewEncapsulation,
+} from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import {
+  type AbstractControl,
+  type ValidationErrors,
+  Validators,
+  type ValidatorFn,
+} from '@angular/forms';
+import type { Subscription } from 'rxjs';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideCircleAlert,
+  lucideCircleCheck,
+  lucideCircleX,
+  lucideLoaderCircle,
+} from '@ng-icons/lucide';
+
+import { resolveAndesFormErrorMessages } from './form-error-messages';
+import {
+  ANDES_FORM,
+  ANDES_FORM_DESCRIPTION,
+  ANDES_FORM_ERROR,
+  ANDES_FORM_ERROR_MESSAGES,
+  ANDES_FORM_FIELD,
+  ANDES_FORM_LABEL,
+  type AndesFormColumn,
+  type AndesFormControlApi,
+  type AndesFormErrorMessages,
+  type AndesFormFeedbackIconContext,
+  type AndesFormFieldApi,
+  type AndesFormFieldChildApi,
+  type AndesFormLabelAlign,
+  type AndesFormLayout,
+  type AndesFormClassNames,
+  type AndesFormMessageMode,
+  type AndesFormPart,
+  type AndesFormRequiredMark,
+  type AndesFormRequiredMarkContext,
+  type AndesFormRequiredMarkPosition,
+  type AndesFormShowErrorsOn,
+  type AndesFormStyles,
+  type AndesFormValidateStatus,
+} from './form-field-tokens';
+import { AndesFormLabel } from './form-label';
+import { ANDES_FORM_LOCALE, ANDES_FORM_LOCALE_EN } from './form-locale';
+import { AndesValidators } from './form-validators';
+
+let nextFieldId = 0;
+
+/** Most to least severe - a field aggregating several statuses reports the first present. */
+const STATUS_PRIORITY: readonly AndesFormValidateStatus[] = [
+  'error',
+  'warning',
+  'validating',
+  'success',
+];
+
+/** Default label column: 8 of 24, i.e. one third. */
+const DEFAULT_LABEL_COL = 8;
+
+/** `undefined` stays `undefined` (meaning "inherit from the form"); anything else is coerced
+ *  like a boolean attribute, so `colon="false"` and `[colon]="false"` both work. */
+function optionalBoolean(value: unknown): boolean | undefined {
+  return value === undefined || value === null
+    ? undefined
+    : booleanAttribute(value);
+}
+
+/** A negative or non-numeric delay is no delay. */
+function optionalDelay(value: unknown): number | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  const delay = Number(value);
+  return Number.isFinite(delay) && delay > 0 ? delay : 0;
+}
+
+function toTrack(column: AndesFormColumn): string {
+  return typeof column === 'number'
+    ? `${Math.round((column / 24) * 1e6) / 1e4}%`
+    : column;
+}
+
+/**
+ * Layout/label/error-display wrapper around a single form control, built as a thin shell
+ * around Angular's own Reactive Forms (`FormGroup`/`FormControl`/`Validators`) rather than a
+ * self-contained validation engine, since Angular already owns that concern.
+ *
+ * Composition inside `<andes-form-field>`:
+ * - `<andes-form-label>` - optional (or use the `label` input); renders a real `<label>`
+ *   wired to the control via `for`/`id`, and carrying an id of its own ({@link labelId}) so a
+ *   wrapper component that only accepts `aria-labelledby` can still be named by it. Always
+ *   placed in the label column, wherever it was authored.
+ * - the control itself, carrying `andesFormControl` alongside `formControlName` /
+ *   `[formControl]` / `[(ngModel)]` - a native `<input>`/`<select>`/`<textarea>`, or any
+ *   `ControlValueAccessor` component from this library or elsewhere.
+ * - `<andes-form-description>` - optional static help text.
+ * - `<andes-form-error>` - optional hand-written error; only rendered while the field is in
+ *   the `error` status. Without one, the field renders the messages for the control's actual
+ *   `ValidationErrors` itself (see {@link validationMessages}).
+ *
+ * `id`/`for`/`aria-describedby`/`aria-invalid`/`aria-required` are all derived here (or on
+ * `AndesFormControl`) and picked up by the nested parts through DI (see
+ * `form-field-tokens.ts` for why that's token-based rather than a direct class reference) -
+ * no id needs to be hand-authored or coordinated by hand for a native form control. See
+ * `AndesFormControl`'s class comment for components.
+ *
+ * Layout, label column width, colon, required mark and error messages default from an
+ * enclosing `AndesForm` (`[andesForm]`), and each has a same-named input here that wins.
+ */
+@Component({
+  selector: 'andes-form-field',
+  viewProviders: [
+    provideIcons({
+      lucideCircleCheck,
+      lucideCircleAlert,
+      lucideCircleX,
+      lucideLoaderCircle,
+    }),
+  ],
+  exportAs: 'andesFormField',
+  imports: [NgIcon, AndesFormLabel, NgTemplateOutlet],
+  templateUrl: './form-field.html',
+  styleUrl: './form-field.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  // form-field.css has to reach three sibling components' templates and the consumer's own
+  // projected control, none of which carry this component's emulated-encapsulation scope
+  // attribute - see the header comment in form-field.css for the full rationale.
+  encapsulation: ViewEncapsulation.None,
+  host: {
+    '[attr.hidden]': 'isHidden() ? "" : null',
+    // The `id` input names the control; left on the host too, it would duplicate the id.
+    '[attr.id]': 'null',
+  },
+  providers: [
+    {
+      provide: ANDES_FORM_FIELD,
+      useExisting: forwardRef(() => AndesFormField),
+    },
+  ],
+})
+export class AndesFormField implements AndesFormFieldApi {
+  private readonly autoId = `andes-form-field-${nextFieldId++}`;
+  private readonly form = inject(ANDES_FORM, { optional: true });
+  private readonly providedMessages = inject(ANDES_FORM_ERROR_MESSAGES, {
+    optional: true,
+  });
+  private readonly locale = inject(ANDES_FORM_LOCALE, { optional: true });
+  /** The field this one is nested in, if any - only meaningful for a `noStyle` field. */
+  private readonly parent = inject(ANDES_FORM_FIELD, {
+    optional: true,
+    skipSelf: true,
+  });
+
+  /** Optional explicit id for the control/label pair. Generated when omitted: from the form's
+   *  `name` and the control path (`signup_address_city`) when the form has a `name`, else a
+   *  unique `andes-form-field-<n>`. */
+  readonly id = input<string | undefined>(undefined);
+
+  /**
+   * What the label's `for` points at. Leave unset for the control (the field's id); give
+   * another id to label something else, or `null` to render a label with no `for` at all - for
+   * a field whose content is not one labelable control.
+   */
+  readonly htmlFor = input<string | null | undefined>(undefined);
+
+  /** Label text - shorthand for projecting an `<andes-form-label>`, which wins when both are
+   *  given. Also what `{label}` interpolates to in error messages. */
+  readonly label = input<string | undefined>(undefined);
+
+  /**
+   * Manual status override. Leave unset to derive it from the control:
+   * nothing until the user interacts (touched/dirty) or the form is submitted, then
+   * `validating` while an async validator is pending, `error` while invalid, `success` once
+   * valid. `''` forces "no status". `warning` is only ever manual - Angular validators have no
+   * non-blocking severity.
+   */
+  readonly validateStatus = input<AndesFormValidateStatus | '' | undefined>(
+    undefined,
+  );
+
+  /** Show a status icon at the trailing edge of the control. */
+  readonly hasFeedback = input(false, { transform: booleanAttribute });
+
+  /** Replaces the generated validation messages with this text; coloured by the current
+   *  status. */
+  readonly help = input<string | undefined>(undefined);
+
+  /** Secondary text rendered below the control and any messages. */
+  readonly extra = input<string | undefined>(undefined);
+
+  /** Help text behind an info icon next to the label - a string, or a template for rich
+   *  content (keep it to non-interactive content: the bubble only opens on hover/focus). */
+  readonly tooltip = input<string | TemplateRef<void> | undefined>(undefined);
+
+  /** Accessible name of the tooltip's trigger button. Defaults to the provided locale's
+   *  (`provideAndesFormLocale()`), else `More information`. */
+  readonly tooltipLabel = input(
+    this.locale?.tooltipLabel ?? ANDES_FORM_LOCALE_EN.tooltipLabel,
+  );
+
+  /** Forces the required mark on or off, instead of detecting `Validators.required`. Purely
+   *  visual - it does not add a validator. */
+  readonly required = input<boolean | undefined, unknown>(undefined, {
+    transform: optionalBoolean,
+  });
+
+  /** Overrides the form's `requiredMark` for this field. */
+  readonly requiredMark = input<AndesFormRequiredMark | undefined>(undefined);
+
+  /** Overrides the form's `requiredMarkPosition` for this field: the asterisk before the
+   *  label text (`start`, the default) or after it (`end`). */
+  readonly requiredMarkPosition = input<
+    AndesFormRequiredMarkPosition | undefined
+  >(undefined);
+
+  /** Overrides the form's `colon` for this field. */
+  readonly colon = input<boolean | undefined, unknown>(undefined, {
+    transform: optionalBoolean,
+  });
+
+  readonly layout = input<AndesFormLayout | undefined>(undefined);
+  readonly labelAlign = input<AndesFormLabelAlign | undefined>(undefined);
+  readonly labelCol = input<AndesFormColumn | undefined>(undefined);
+  readonly wrapperCol = input<AndesFormColumn | undefined>(undefined);
+  readonly labelWrap = input<boolean | undefined, unknown>(undefined, {
+    transform: optionalBoolean,
+  });
+
+  /** Error messages for this field only; merged over the form's and the provided ones. */
+  readonly errorMessages = input<AndesFormErrorMessages | undefined>(undefined);
+
+  /** Overrides the form's `messageMode` - every failing validator's message, or the first. */
+  readonly messageMode = input<AndesFormMessageMode | undefined>(undefined);
+
+  /**
+   * Paths (from the form root, as `FormGroup.get()` takes them) of the controls whose changes
+   * re-validate this field's control: a validator on it that reads another control's value
+   * (`matchField('password')` on the confirmation) runs again when that control changes.
+   * Reactive and template-driven forms only; signal forms re-validate on their own.
+   */
+  readonly dependsOn = input<string | readonly string[] | undefined>(undefined);
+
+  /**
+   * Milliseconds to wait after the control's last change before its async validators run (`0`
+   * runs them at once). The field is `validating` meanwhile, and a change inside the window
+   * cancels the wait, so a username check asks the server once the user stops typing. Overrides
+   * the form's `validateDebounce`. Applies to the async validators the control has when it
+   * binds, for reactive and template-driven forms; signal forms have their own `debounce()`.
+   */
+  readonly validateDebounce = input<number | undefined, unknown>(undefined, {
+    transform: optionalDelay,
+  });
+
+  /** Classes for the parts of this field - `root`, `label`, `control`, `help`, `extra` and
+   *  `error` - added to the form's. */
+  readonly classNames = input<AndesFormClassNames>({});
+
+  /** Inline styles for the same parts as {@link classNames}, over the form's. */
+  readonly styles = input<AndesFormStyles>({});
+
+  /** Overrides the form's `showErrorsOn` - when this field starts showing its status. */
+  readonly showErrorsOn = input<AndesFormShowErrorsOn | undefined>(undefined);
+
+  /**
+   * Non-blocking checks, run against the control's value with the same `ValidatorFn`
+   * signature as `Validators.*`. Their errors never touch the control's validity (the form
+   * still submits); they put the field in the `warning` status and are shown through the same
+   * message maps as errors, while there is no error to show.
+   */
+  readonly warningValidators = input<
+    ValidatorFn | readonly ValidatorFn[] | null
+  >(null);
+
+  /** Custom `hasFeedback` icons - a template rendered with the status as `$implicit`.
+   *  Overrides the form's `feedbackIcons`. */
+  readonly feedbackIcons = input<
+    TemplateRef<AndesFormFeedbackIconContext> | undefined
+  >(undefined);
+
+  /**
+   * Hide the whole field (`hidden` attribute on the host) while keeping its control
+   * registered - it still takes part in the form's value and validity. Use `@if` instead to
+   * take a field out of the form entirely.
+   */
+  readonly hidden = input(false, { transform: booleanAttribute });
+
+  /**
+   * Render no chrome at all - no label, no messages, no layout - only the projected control,
+   * which still gets status/aria wiring. Nested inside another field, its status and messages
+   * surface on that parent instead, which is how several controls share one label (`<andes-form-field label="Phone"><andes-form-field noStyle>...`).
+   */
+  readonly noStyle = input(false, { transform: booleanAttribute });
+
+  /**
+   * Error keys of the control's parent group (or array) that this field shows as its own - the
+   * usual home of a cross-field validator: `{ validators: matchPasswords }` on the group
+   * reports `{ mismatch: true }`, and the confirmation field shows it with
+   * `groupErrors="mismatch"`. A string is a single key; an array lists several.
+   */
+  readonly groupErrors = input<string | readonly string[] | undefined>(
+    undefined,
+  );
+
+  private readonly controls = signal<readonly AndesFormControlApi[]>([]);
+  private readonly children = signal<readonly AndesFormFieldChildApi[]>([]);
+
+  protected readonly controlApi = computed(() => this.controls()[0]);
+
+  /** The control the field labels and describes - the first one registered. */
+  readonly primaryControl = this.controlApi;
+
+  /** `hidden`, or a signal forms schema hiding the control. */
+  protected readonly isHidden = computed(
+    () => this.hidden() || (this.controlApi()?.hidden() ?? false),
+  );
+
+  protected readonly projectedLabel = contentChild(ANDES_FORM_LABEL, {
+    descendants: true,
+  });
+  protected readonly descriptionPresent = contentChild(ANDES_FORM_DESCRIPTION, {
+    descendants: true,
+  });
+  protected readonly errorPresent = contentChild(ANDES_FORM_ERROR, {
+    descendants: true,
+  });
+
+  readonly controlId = computed(() => {
+    const id = this.id();
+    if (id !== undefined) {
+      return id;
+    }
+    const name = this.form?.name();
+    const path = this.controlApi()?.path();
+    return name && path ? `${name}_${path.replace(/\./g, '_')}` : this.autoId;
+  });
+
+  readonly labelFor = computed(() => {
+    const target = this.htmlFor();
+    return target === undefined ? this.controlId() : target;
+  });
+  readonly labelId = computed(() => `${this.controlId()}-label`);
+  readonly descriptionId = computed(() => `${this.controlId()}-description`);
+  readonly errorId = computed(() => `${this.controlId()}-error`);
+  /** Id of the generated-messages / `help` block. */
+  readonly helpId = computed(() => `${this.controlId()}-help`);
+  readonly extraId = computed(() => `${this.controlId()}-extra`);
+
+  protected readonly hasLabel = computed(
+    () => !!this.projectedLabel() || !!this.label(),
+  );
+
+  /**
+   * The `<andes-form-label>`'s own element id, or `undefined` when no label was authored -
+   * shaped to be bound straight through `[aria-labelledby]`.
+   *
+   * It names a control whose focusable element is not labelable (a `role="slider"` thumb, a
+   * `role="radiogroup"`), which `for`/`id` cannot reach. Returns `undefined` rather than a
+   * dangling id when there is no label, so a template binding it unconditionally never emits
+   * `aria-labelledby` pointing at nothing.
+   */
+  readonly labelledBy = computed(() =>
+    this.hasLabel() ? this.labelId() : undefined,
+  );
+
+  /** The `groupErrors` keys present on the control's parent group, or `null`. */
+  private readonly adoptedGroupErrors = computed<ValidationErrors | null>(
+    () => {
+      const keys = this.groupErrors();
+      const errors = this.controlApi()?.parentErrors();
+      if (!keys || !errors) {
+        return null;
+      }
+      const picked = (typeof keys === 'string' ? [keys] : keys).filter((key) =>
+        Object.hasOwn(errors, key),
+      );
+      return picked.length > 0
+        ? Object.fromEntries(picked.map((key) => [key, errors[key]]))
+        : null;
+    },
+  );
+
+  /** The errors the field reports: the control's own, then the adopted group errors. */
+  private readonly fieldErrors = computed<ValidationErrors | null>(() => {
+    const own = this.controlApi()?.errors() ?? null;
+    const group = this.adoptedGroupErrors();
+    return own || group ? { ...own, ...group } : null;
+  });
+
+  /** Whether the control is invalid on its own or through an adopted group error. */
+  private readonly fieldInvalid = computed(
+    () => !!this.adoptedGroupErrors() || !!this.controlApi()?.showError(),
+  );
+
+  /** Errors of the `warningValidators`, run against the control's current value. */
+  private readonly warningErrors = computed(() => {
+    const validators = this.warningValidators();
+    const control = this.controlApi();
+    const target = control?.control();
+    if (!validators || !control || !target) {
+      return null;
+    }
+    // Read the value signal so the warnings re-run on every change.
+    control.value();
+    const validator = Array.isArray(validators)
+      ? Validators.compose([...validators])
+      : (validators as ValidatorFn);
+    return validator?.(target) ?? null;
+  });
+
+  /** Status derived from this field's own control plus any `noStyle` children. */
+  private readonly derivedStatus = computed<AndesFormValidateStatus | null>(
+    () => {
+      const statuses = this.children()
+        .filter((child) => child.noStyle())
+        .map((child) => child.status());
+      const control = this.controlApi();
+      if (control?.interacted()) {
+        statuses.push(
+          control.pending()
+            ? 'validating'
+            : this.fieldInvalid()
+              ? 'error'
+              : this.warningErrors()
+                ? 'warning'
+                : control.valid()
+                  ? 'success'
+                  : null,
+        );
+      }
+      return STATUS_PRIORITY.find((s) => statuses.includes(s)) ?? null;
+    },
+  );
+
+  readonly status = computed<AndesFormValidateStatus | null>(() => {
+    const override = this.validateStatus();
+    return override === undefined ? this.derivedStatus() : override || null;
+  });
+
+  /** `true` while the field is in the `error` status - by default once the registered
+   *  control is invalid *and* the user has interacted with it (touched, dirty or the form
+   *  was submitted). The same gate `AndesFormError` uses to decide whether to render, and
+   *  `AndesFormControl` uses for its own `aria-invalid`. */
+  readonly showError = computed(() => this.status() === 'error');
+
+  /**
+   * Display strings for the control's current `ValidationErrors` (plus those of any `noStyle`
+   * children), resolved through this field's `errorMessages`, then the form's, then
+   * `provideAndesFormErrorMessages`, then the built-in defaults. Empty unless the control is
+   * actually showing its error.
+   */
+  readonly validationMessages = computed<readonly string[]>(() => {
+    const control = this.controlApi();
+    const own =
+      control?.interacted() && this.status() === 'error'
+        ? resolveAndesFormErrorMessages(
+            this.fieldErrors(),
+            [
+              this.errorMessages(),
+              this.form?.errorMessages(),
+              this.providedMessages,
+            ],
+            this.label(),
+          )
+        : [];
+    const nested = this.children()
+      .filter((child) => child.noStyle())
+      .flatMap((child) => child.errorMessages());
+    return [...own, ...nested];
+  });
+
+  /** Display strings for the `warningValidators` (plus those of any `noStyle` children),
+   *  resolved like {@link validationMessages}. Empty unless the field is in `warning`. */
+  readonly warningMessages = computed<readonly string[]>(() => {
+    const control = this.controlApi();
+    const own =
+      control?.interacted() && this.status() === 'warning'
+        ? resolveAndesFormErrorMessages(
+            this.warningErrors(),
+            [
+              this.errorMessages(),
+              this.form?.errorMessages(),
+              this.providedMessages,
+            ],
+            this.label(),
+          )
+        : [];
+    const nested = this.children()
+      .filter((child) => child.noStyle())
+      .flatMap((child) => child.warningMessages());
+    return [...own, ...nested];
+  });
+
+  /** What the help slot shows: the `help` text, else the generated messages - unless an
+   *  `<andes-form-error>` was authored, which then owns error display on its own. */
+  protected readonly helpMessages = computed<readonly string[]>(() => {
+    const help = this.help();
+    if (help !== undefined) {
+      return help ? [help] : [];
+    }
+    const messages = this.showError()
+      ? this.errorPresent()
+        ? []
+        : this.validationMessages()
+      : this.status() === 'warning'
+        ? this.warningMessages()
+        : [];
+    // Two validators can resolve to the same text; it is shown once, and the text is what each
+    // line is tracked (and animated in) by.
+    const unique = [...new Set(messages)];
+    return this.resolvedMessageMode() === 'first' ? unique.slice(0, 1) : unique;
+  });
+
+  /** Generated errors interrupt (`alert`); generated warnings are announced politely. */
+  protected readonly helpRole = computed(() =>
+    this.help() !== undefined ? null : this.showError() ? 'alert' : 'status',
+  );
+
+  readonly resolvedLayout = computed<AndesFormLayout>(
+    () => this.layout() ?? this.form?.layout() ?? 'vertical',
+  );
+
+  protected readonly resolvedLabelAlign = computed<AndesFormLabelAlign>(
+    () => this.labelAlign() ?? this.form?.labelAlign() ?? 'right',
+  );
+
+  protected readonly resolvedLabelWrap = computed(
+    () => this.labelWrap() ?? this.form?.labelWrap() ?? false,
+  );
+
+  /** `grid-template-columns` for `horizontal` layout; `null` (no inline style) otherwise. */
+  protected readonly gridColumns = computed(() => {
+    if (this.resolvedLayout() !== 'horizontal' || this.noStyle()) {
+      return null;
+    }
+    const label = this.labelCol() ?? this.form?.labelCol() ?? DEFAULT_LABEL_COL;
+    const wrapper = this.wrapperCol() ?? this.form?.wrapperCol();
+    return `${toTrack(label)} ${wrapper === undefined ? 'minmax(0, 1fr)' : toTrack(wrapper)}`;
+  });
+
+  /** The icon to draw for `hasFeedback`, or `null`. */
+  protected readonly feedbackIcon = computed(() =>
+    this.hasFeedback() && !this.noStyle() ? this.status() : null,
+  );
+
+  protected readonly feedbackTemplate = computed(
+    () => this.feedbackIcons() ?? this.form?.feedbackIcons() ?? null,
+  );
+
+  protected readonly resolvedValidateDebounce = computed(
+    () => this.validateDebounce() ?? this.form?.validateDebounce() ?? 0,
+  );
+
+  protected readonly resolvedMessageMode = computed<AndesFormMessageMode>(
+    () => this.messageMode() ?? this.form?.messageMode() ?? 'all',
+  );
+
+  readonly resolvedShowErrorsOn = computed<AndesFormShowErrorsOn>(
+    () => this.showErrorsOn() ?? this.form?.showErrorsOn() ?? 'interacted',
+  );
+
+  /** The control's form path (`data-path` on the field root) - what `scrollToField` finds
+   *  the field by. */
+  protected readonly controlPath = computed(
+    () => this.controlApi()?.path() ?? null,
+  );
+
+  readonly isRequired = computed(
+    () => this.required() ?? this.controlApi()?.markedRequired() ?? false,
+  );
+
+  private readonly resolvedRequiredMark = computed<AndesFormRequiredMark>(
+    () => this.requiredMark() ?? this.form?.requiredMark() ?? true,
+  );
+
+  readonly resolvedRequiredMarkPosition =
+    computed<AndesFormRequiredMarkPosition>(
+      () =>
+        this.requiredMarkPosition() ??
+        this.form?.requiredMarkPosition() ??
+        'start',
+    );
+
+  readonly showRequiredMark = computed(
+    () => this.resolvedRequiredMark() === true && this.isRequired(),
+  );
+
+  readonly showOptionalMark = computed(
+    () => this.resolvedRequiredMark() === 'optional' && !this.isRequired(),
+  );
+
+  readonly requiredMarkTemplate = computed(() => {
+    const mark = this.resolvedRequiredMark();
+    return mark instanceof TemplateRef
+      ? (mark as TemplateRef<AndesFormRequiredMarkContext>)
+      : null;
+  });
+
+  readonly optionalText = computed(
+    () =>
+      this.form?.optionalText() ??
+      this.locale?.optionalText ??
+      ANDES_FORM_LOCALE_EN.optionalText,
+  );
+
+  /** The colon is a horizontal-layout device only; stacked labels don't need a separator. */
+  readonly showColon = computed(
+    () =>
+      this.resolvedLayout() === 'horizontal' &&
+      (this.colon() ?? this.form?.colon() ?? true),
+  );
+
+  protected readonly hasMessages = computed(
+    () =>
+      !!this.descriptionPresent() ||
+      (!!this.errorPresent() && this.showError()) ||
+      this.helpMessages().length > 0 ||
+      !!this.extra(),
+  );
+
+  /** The classes of a part: the form's for it, then this field's own. */
+  partClass(part: AndesFormPart): string {
+    // The form's `root` is the form element itself, not a default for its fields' roots.
+    const inherited =
+      part === 'root' ? undefined : this.form?.classNames()[part];
+    return [inherited, this.classNames()[part]].filter(Boolean).join(' ');
+  }
+
+  /** The inline styles of a part: the form's for it, overridden by this field's own. */
+  partStyle(part: AndesFormPart): Record<string, string | number> | null {
+    const own = this.styles()[part];
+    const inherited = part === 'root' ? undefined : this.form?.styles()[part];
+    return own || inherited ? { ...inherited, ...own } : null;
+  }
+
+  /** Which part the generated messages block is: `error` while it lists validation errors,
+   *  otherwise `help` (the `help` text and the warnings). */
+  protected readonly messagesPart = computed<AndesFormPart>(() =>
+    this.help() === undefined && this.showError() ? 'error' : 'help',
+  );
+
+  readonly describedBy = computed(() => {
+    // A noStyle field renders no messages of its own - they surface on the parent field - so
+    // its control is described by whatever describes the parent's.
+    if (this.noStyle() && this.parent) {
+      return this.parent.describedBy();
+    }
+    const ids: string[] = [];
+    if (this.descriptionPresent()) {
+      ids.push(this.descriptionId());
+    }
+    if (this.errorPresent() && this.showError()) {
+      ids.push(this.errorId());
+    }
+    if (this.helpMessages().length > 0) {
+      ids.push(this.helpId());
+    }
+    if (this.extra()) {
+      ids.push(this.extraId());
+    }
+    return ids.length > 0 ? ids.join(' ') : undefined;
+  });
+
+  constructor() {
+    const child: AndesFormFieldChildApi = {
+      noStyle: this.noStyle,
+      status: this.status,
+      errorMessages: this.validationMessages,
+      warningMessages: this.warningMessages,
+    };
+    const unregister = this.parent?.registerChild(child);
+    if (unregister) {
+      inject(DestroyRef).onDestroy(unregister);
+    }
+    effect((onCleanup) => {
+      const subscriptions = this.watchDependencies();
+      onCleanup(() => subscriptions.forEach((s) => s.unsubscribe()));
+    });
+    effect((onCleanup) => {
+      onCleanup(this.debounceAsyncValidators());
+    });
+  }
+
+  /**
+   * Wraps the control's async validators so they wait `validateDebounce` ms after the last
+   * change. Angular cancels the running async validation when the value changes again, which
+   * drops the wait. Returns the callback that puts the original validators back - unless the
+   * consumer replaced them meanwhile.
+   */
+  private debounceAsyncValidators(): () => void {
+    const delay = this.resolvedValidateDebounce();
+    const control = this.controlApi()?.control() as
+      (AbstractControl & { events?: unknown }) | null | undefined;
+    // Signal forms' stand-in control has no events: it debounces with its own `debounce()`.
+    if (!delay || !control?.events || !control.asyncValidator) {
+      return () => undefined;
+    }
+    const original = control.asyncValidator;
+    const wrapped = AndesValidators.debounceAsync(original, delay);
+    control.setAsyncValidators(wrapped);
+    return () => {
+      if (control.asyncValidator === wrapped) {
+        control.setAsyncValidators(original);
+      }
+    };
+  }
+
+  /** Whether this field is re-validating its control right now - stops two fields that depend
+   *  on each other from re-validating one another forever. */
+  private revalidating = false;
+
+  private watchDependencies(): Subscription[] {
+    const paths = this.dependsOn();
+    const control = this.controlApi()?.control() as
+      (AbstractControl & { events?: unknown }) | null | undefined;
+    // Signal forms' stand-in control has no events: its validation is reactive already.
+    if (!paths || !control?.events) {
+      return [];
+    }
+    return (typeof paths === 'string' ? [paths] : paths).flatMap((path) => {
+      const dependency = control.root.get(path);
+      return dependency
+        ? [
+            dependency.valueChanges.subscribe(() => {
+              if (this.revalidating) {
+                return;
+              }
+              this.revalidating = true;
+              try {
+                control.updateValueAndValidity();
+              } finally {
+                this.revalidating = false;
+              }
+            }),
+          ]
+        : [];
+    });
+  }
+
+  registerControl(control: AndesFormControlApi): () => void {
+    this.controls.update((list) => [...list, control]);
+    return () =>
+      this.controls.update((list) => list.filter((c) => c !== control));
+  }
+
+  registerChild(child: AndesFormFieldChildApi): () => void {
+    this.children.update((list) => [...list, child]);
+    return () =>
+      this.children.update((list) => list.filter((c) => c !== child));
+  }
+}

@@ -10,7 +10,10 @@ import { AndesQrCode, type AndesQrCodeStatus } from './qr-code';
 */
 @Component({
   imports: [AndesQrCode],
-  template: `<andes-qr-code value="https://andes.example" [status]="status()" />`,
+  template: `<andes-qr-code
+    value="https://andes.example"
+    [status]="status()"
+  />`,
 })
 class Host {
   readonly status = signal<AndesQrCodeStatus>('active');

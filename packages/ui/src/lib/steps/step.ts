@@ -11,6 +11,8 @@ import {
   TemplateRef,
   viewChild,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideCheck, lucideX } from '@ng-icons/lucide';
 
 import {
   ANDES_STEPS,
@@ -30,7 +32,8 @@ type StepMarker = 'custom' | 'number' | 'check' | 'cross' | 'dot' | 'none';
  */
 @Component({
   selector: 'andes-step',
-  imports: [NgTemplateOutlet],
+  viewProviders: [provideIcons({ lucideCheck, lucideX })],
+  imports: [NgIcon, NgTemplateOutlet],
   templateUrl: './step.html',
   styleUrl: './step.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

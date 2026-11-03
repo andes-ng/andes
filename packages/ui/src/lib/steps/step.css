@@ -147,14 +147,15 @@ button.andes-step__trigger:disabled {
   font-size: 0.75rem;
 }
 
+/* The check and the cross are lucide icons in an `ng-icon`. The strokes keep the weight the
+   marker was drawn with: 1.75px at 16px, which is 2.625 units of lucide's 24-unit grid. */
 .andes-step__glyph {
+  --ng-icon__stroke-width: 2.625;
+
+  display: inline-flex;
+  flex: none;
   inline-size: 1rem;
   block-size: 1rem;
-  fill: none;
-  stroke: currentcolor;
-  stroke-width: 1.75;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
 :host([data-size='small']) .andes-step__glyph {

@@ -26,13 +26,9 @@
     @switch (marker()) { @case ('custom') {
     <ng-container *ngTemplateOutlet="icon() ?? null; context: iconContext()" />
     } @case ('check') {
-    <svg class="andes-step__glyph" viewBox="0 0 16 16" focusable="false">
-      <path d="M3.5 8.5l3 3 6-6.5" />
-    </svg>
+    <ng-icon class="andes-step__glyph" name="lucideCheck" />
     } @case ('cross') {
-    <svg class="andes-step__glyph" viewBox="0 0 16 16" focusable="false">
-      <path d="M4.5 4.5l7 7m0-7l-7 7" />
-    </svg>
+    <ng-icon class="andes-step__glyph" name="lucideX" />
     } @case ('number') {
     <span class="andes-step__number">{{ index() + 1 }}</span>
     } } @if (ringPercent() !== null) {

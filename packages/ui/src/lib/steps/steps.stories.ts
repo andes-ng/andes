@@ -1,3 +1,5 @@
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideCheck, lucidePackage, lucideTruck } from '@ng-icons/lucide';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
@@ -9,7 +11,10 @@ const meta: Meta<AndesSteps> = {
   component: AndesSteps,
   tags: ['autodocs'],
   decorators: [
-    moduleMetadata({ imports: [AndesSteps, AndesStep, AndesButton] }),
+    moduleMetadata({
+      imports: [AndesSteps, AndesStep, AndesButton, NgIcon],
+      providers: [provideIcons({ lucideCheck, lucidePackage, lucideTruck })],
+    }),
   ],
   parameters: { layout: 'padded' },
   argTypes: {
@@ -274,11 +279,9 @@ export const CustomContent: Story = {
       </andes-steps>
       <ng-template #titleTpl><span><strong>Warehouse</strong> <em>(Lima)</em></span></ng-template>
       <ng-template #iconTpl let-status let-index="index">
-        <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-          @if (index === 0) { <path d="M2.5 5.5 8 2.5l5.5 3v5L8 13.5l-5.5-3z" /> }
-          @else if (index === 1) { <path d="M1.5 4h8v6h-8zM9.5 6.5h3l2 2V10h-5" /> }
-          @else { <path d="M3 8.5l3.5 3.5L13 5" /> }
-        </svg>
+        @if (index === 0) { <ng-icon name="lucidePackage" aria-hidden="true" style="font-size: 1rem" /> }
+        @else if (index === 1) { <ng-icon name="lucideTruck" aria-hidden="true" style="font-size: 1rem" /> }
+        @else { <ng-icon name="lucideCheck" aria-hidden="true" style="font-size: 1rem" /> }
       </ng-template>`,
   }),
 };

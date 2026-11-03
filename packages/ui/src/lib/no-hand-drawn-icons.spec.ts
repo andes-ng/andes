@@ -13,6 +13,8 @@ const LIB = 'packages/ui/src/lib';
 const ILLUSTRATIONS: readonly string[] = [
   // The two Empty illustrations (the default box scene and the simple tray).
   'empty/empty.html',
+  // The progress ring around the current step's marker: a gauge drawn from a circle's arc.
+  'steps/step.html',
 ];
 
 /** What drawing an SVG by hand looks like, in a template or through `Renderer2`. */

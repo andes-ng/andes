@@ -271,17 +271,20 @@ describe('AndesSteps', () => {
       );
     });
 
-    it('shows an inline svg check for finished and cross for error', () => {
+    it("shows lucide's check for finished and its x for error", () => {
       const { fixture, host, items } = create();
+      const glyph = (index: number) =>
+        items()[index].querySelector('ng-icon.andes-step__glyph');
 
-      expect(items()[0].querySelector('svg.andes-step__glyph')).toBeTruthy();
+      expect(glyph(0)?.getAttribute('name')).toBe('lucideCheck');
+      expect(glyph(0)?.querySelector('svg')).toBeTruthy();
       expect(items()[0].querySelector('.andes-step__number')).toBeNull();
 
       host.status.set('error');
       flush(fixture);
 
-      const path = items()[1].querySelector('svg.andes-step__glyph path');
-      expect(path?.getAttribute('d')).toContain('m0-7');
+      expect(glyph(1)?.getAttribute('name')).toBe('lucideX');
+      expect(glyph(1)?.querySelector('svg')).toBeTruthy();
     });
 
     it('renders a custom icon template with status, index and current', () => {

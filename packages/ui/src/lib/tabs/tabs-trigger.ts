@@ -15,6 +15,8 @@ import {
   TemplateRef,
   viewChild,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideX } from '@ng-icons/lucide';
 import clsx from 'clsx';
 
 import { ANDES_TABS, AndesTabsTriggerRef } from './tabs-types';
@@ -43,7 +45,8 @@ import { ANDES_TABS, AndesTabsTriggerRef } from './tabs-types';
  */
 @Component({
   selector: 'andes-tabs-trigger',
-  imports: [AndesListNavigationItem, NgTemplateOutlet],
+  viewProviders: [provideIcons({ lucideX })],
+  imports: [AndesListNavigationItem, NgIcon, NgTemplateOutlet],
   hostDirectives: [CdkDrag],
   templateUrl: './tabs-trigger.html',
   styleUrl: './tabs-trigger.css',

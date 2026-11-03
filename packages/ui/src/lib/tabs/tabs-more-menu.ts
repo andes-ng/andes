@@ -17,6 +17,8 @@ import {
   output,
   signal,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideX } from '@ng-icons/lucide';
 
 import type { AndesTabsMoreTab } from './tabs-types';
 
@@ -40,7 +42,8 @@ let nextMoreMenuId = 0;
  */
 @Component({
   selector: 'andes-tabs-more-menu',
-  imports: [AndesListNavigationItem, NgTemplateOutlet],
+  viewProviders: [provideIcons({ lucideX })],
+  imports: [AndesListNavigationItem, NgIcon, NgTemplateOutlet],
   providers: [AndesListNavigation],
   templateUrl: './tabs-more-menu.html',
   styleUrl: './tabs-more-menu.css',

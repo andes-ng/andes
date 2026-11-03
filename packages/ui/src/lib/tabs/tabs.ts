@@ -31,6 +31,13 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideChevronLeft,
+  lucideChevronRight,
+  lucideEllipsis,
+  lucidePlus,
+} from '@ng-icons/lucide';
 import clsx from 'clsx';
 
 import { AndesTabsContent, AndesTabsContentLazy } from './tabs-content';
@@ -128,7 +135,16 @@ function sameInkBar(a: InkBarGeometry | null, b: InkBarGeometry | null) {
  */
 @Component({
   selector: 'andes-tabs',
+  viewProviders: [
+    provideIcons({
+      lucideChevronLeft,
+      lucideChevronRight,
+      lucideEllipsis,
+      lucidePlus,
+    }),
+  ],
   imports: [
+    NgIcon,
     NgTemplateOutlet,
     CdkScrollable,
     AndesOverlayTriggerPrimitive,

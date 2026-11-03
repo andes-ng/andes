@@ -262,11 +262,11 @@
 /* A horizontal bar scrolls toward the inline start/end, so its chevrons mirror with the
    reading direction (`scrollByPage` already flips the scroll itself). Declared before the
    vertical rule below, which has the same specificity and must win in a vertical bar. */
-.andes-tabs__scroll:dir(rtl) svg {
+.andes-tabs__scroll:dir(rtl) .andes-tabs__icon-glyph {
   transform: scaleX(-1);
 }
 
-.andes-tabs__bar--vertical .andes-tabs__scroll svg {
+.andes-tabs__bar--vertical .andes-tabs__scroll .andes-tabs__icon-glyph {
   transform: rotate(90deg);
 }
 
@@ -282,9 +282,10 @@
   opacity: 0.35;
 }
 
-.andes-tabs__scroll svg,
-.andes-tabs__more svg,
-.andes-tabs__add svg {
+/* The default glyphs are lucide icons in an `ng-icon`: a flex box, so the svg never sits on a
+   text baseline. */
+.andes-tabs__icon-glyph {
+  display: flex;
   width: 1rem;
   height: 1rem;
 }

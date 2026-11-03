@@ -190,7 +190,8 @@
   color: var(--andes-color-foreground);
 }
 
-.andes-tabs-more__remove svg {
+.andes-tabs-more__remove-icon {
+  display: flex;
   width: 0.875rem;
   height: 0.875rem;
 }

@@ -191,10 +191,16 @@
   color: var(--andes-color-foreground);
 }
 
-.andes-tabs__remove svg,
+.andes-tabs__remove-icon,
 .andes-tabs__remove ::ng-deep svg {
   width: 0.875rem;
   height: 0.875rem;
+}
+
+/* The default cross is lucide's "x" in an `ng-icon`: a flex box, so the svg never sits on a
+   text baseline. */
+.andes-tabs__remove-icon {
+  display: flex;
 }
 
 /* ---- Dragging (draggable Tabs) ------------------------------------------------------------ */

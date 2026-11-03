@@ -19,16 +19,7 @@
       [disabled]="!canScrollPrev()"
       (click)="scrollByPage(-1)"
     >
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <path d="m15 18-6-6 6-6" />
-      </svg>
+      <ng-icon class="andes-tabs__icon-glyph" name="lucideChevronLeft" />
     </button>
     }
 
@@ -77,16 +68,7 @@
       [disabled]="!canScrollNext()"
       (click)="scrollByPage(1)"
     >
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <path d="m9 18 6-6-6-6" />
-      </svg>
+      <ng-icon class="andes-tabs__icon-glyph" name="lucideChevronRight" />
     </button>
     } @if (showMore()) {
     <!-- Unlike the arrows, a real control: its menu (and search) helps keyboard users too. -->
@@ -102,19 +84,7 @@
       @if (moreIcon(); as icon) {
       <ng-container [ngTemplateOutlet]="icon" />
       } @else {
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
-        <circle cx="12" cy="12" r="1" />
-        <circle cx="19" cy="12" r="1" />
-        <circle cx="5" cy="12" r="1" />
-      </svg>
+      <ng-icon class="andes-tabs__icon-glyph" name="lucideEllipsis" />
       }
     </button>
     } @if (showAdd()) {
@@ -127,18 +97,7 @@
       @if (addIcon(); as icon) {
       <ng-container [ngTemplateOutlet]="icon" />
       } @else {
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M5 12h14" />
-        <path d="M12 5v14" />
-      </svg>
+      <ng-icon class="andes-tabs__icon-glyph" name="lucidePlus" />
       }
     </button>
     }

@@ -1,7 +1,15 @@
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideChartLine,
+  lucideHouse,
+  lucideTrash2,
+  lucideUserRound,
+} from '@ng-icons/lucide';
 import { provideRouter, RouterLink, withHashLocation } from '@angular/router';
 import {
   applicationConfig,
   type Meta,
+  moduleMetadata,
   type StoryObj,
 } from '@storybook/angular';
 import { action } from 'storybook/actions';
@@ -21,6 +29,7 @@ import type {
 } from './breadcrumb-items';
 
 const imports = [
+  NgIcon,
   AndesBreadcrumb,
   AndesBreadcrumbList,
   AndesBreadcrumbItem,
@@ -33,34 +42,30 @@ const imports = [
 const meta: Meta<AndesBreadcrumb> = {
   title: 'Navigation/Breadcrumb/Basics/Items',
   component: AndesBreadcrumb,
+  decorators: [
+    moduleMetadata({
+      providers: [
+        provideIcons({
+          lucideChartLine,
+          lucideHouse,
+          lucideTrash2,
+          lucideUserRound,
+        }),
+      ],
+    }),
+  ],
 };
 
 export default meta;
 
 type Story = StoryObj<AndesBreadcrumb>;
 
-/** Inline 24x24 stroke icons shared by the icon stories (any `<svg>` or icon component works). */
+/** Lucide icons shared by the icon stories (any `ng-icon`, icon component or SVG works). */
 const ICON_TEMPLATES = `
-  <ng-template #homeIcon>
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M3 10.5 12 3l9 7.5" /><path d="M5 9.5V21h14V9.5" />
-    </svg>
-  </ng-template>
-  <ng-template #userIcon>
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" />
-    </svg>
-  </ng-template>
-  <ng-template #chartIcon>
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M3 3v18h18" /><path d="m7 14 4-4 3 3 5-6" />
-    </svg>
-  </ng-template>
-  <ng-template #trashIcon>
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M6 6l1 15h10l1-15" />
-    </svg>
-  </ng-template>
+  <ng-template #homeIcon><ng-icon name="lucideHouse" /></ng-template>
+  <ng-template #userIcon><ng-icon name="lucideUserRound" /></ng-template>
+  <ng-template #chartIcon><ng-icon name="lucideChartLine" /></ng-template>
+  <ng-template #trashIcon><ng-icon name="lucideTrash2" /></ng-template>
 `;
 
 /**

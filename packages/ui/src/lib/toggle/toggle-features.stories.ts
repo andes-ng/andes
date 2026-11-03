@@ -1,16 +1,36 @@
-import type { Meta, StoryObj } from '@storybook/angular';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideBold,
+  lucideChevronDown,
+  lucideItalic,
+  lucideStar,
+} from '@ng-icons/lucide';
+import { type Meta, moduleMetadata, type StoryObj } from '@storybook/angular';
 
 import { AndesToggle } from './toggle';
 import { AndesToggleGroup } from './toggle-group';
 
-const bold = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 2.5h4a2.5 2.5 0 0 1 0 5h-4zM4.5 7.5h4.5a2.5 2.5 0 0 1 0 5H4.5z"/></svg>`;
-const italic = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2.5H6.5M9.5 13.5H6M9.8 2.5 6.2 13.5"/></svg>`;
-const star = `<ng-template #starIcon><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z"/></svg></ng-template>`;
-const caret = `<ng-template #caretIcon><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></ng-template>`;
+const bold = `<ng-icon name="lucideBold" aria-hidden="true" />`;
+const italic = `<ng-icon name="lucideItalic" aria-hidden="true" />`;
+const star = `<ng-template #starIcon><ng-icon name="lucideStar" /></ng-template>`;
+const caret = `<ng-template #caretIcon><ng-icon name="lucideChevronDown" /></ng-template>`;
 
 const meta: Meta<AndesToggle> = {
   title: 'Data Entry/Toggle/Basics/Features',
   component: AndesToggle,
+  decorators: [
+    moduleMetadata({
+      imports: [NgIcon],
+      providers: [
+        provideIcons({
+          lucideBold,
+          lucideChevronDown,
+          lucideItalic,
+          lucideStar,
+        }),
+      ],
+    }),
+  ],
   tags: ['autodocs'],
 };
 

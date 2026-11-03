@@ -12,6 +12,8 @@ import {
   TemplateRef,
   ViewEncapsulation,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideChevronDown } from '@ng-icons/lucide';
 
 import {
   AndesButton,
@@ -64,7 +66,9 @@ const CARET_SIZES: Readonly<Record<AndesButtonSize, AndesButtonSize>> = {
  */
 @Component({
   selector: 'andes-dropdown-button',
+  viewProviders: [provideIcons({ lucideChevronDown })],
   imports: [
+    NgIcon,
     NgTemplateOutlet,
     AndesButton,
     AndesDropdownMenuContent,
@@ -98,17 +102,7 @@ const CARET_SIZES: Readonly<Record<AndesButtonSize, AndesButtonSize>> = {
       @if (icon(); as caretIcon) {
         <ng-container *ngTemplateOutlet="caretIcon" />
       } @else {
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <path d="m6 9 6 6 6-6" />
-        </svg>
+        <ng-icon name="lucideChevronDown" />
       }
     </andes-button>
     <ng-template #menuTemplate>

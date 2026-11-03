@@ -474,17 +474,16 @@
   outline-offset: 1px;
 }
 
-.andes-date-picker__tag-remove svg {
-  width: 0.75em;
-  height: 0.75em;
+/* Every icon is a lucide glyph in an `ng-icon`; as a flex box its svg never sits on a text
+   baseline, so the glyph fills the icon box exactly. */
+ng-icon {
+  display: inline-flex;
+  flex: none;
 }
 
-.andes-date-picker__tag-remove svg path {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.andes-date-picker__tag-remove ng-icon {
+  width: 0.75em;
+  height: 0.75em;
 }
 
 /* The "+ N" tag is a button opening the popover of the hidden dates. */
@@ -677,17 +676,9 @@
   color: var(--andes-color-muted-foreground);
 }
 
-.andes-date-picker__icon svg {
+.andes-date-picker__icon ng-icon {
   width: 1em;
   height: 1em;
-}
-
-.andes-date-picker__icon svg path {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
 /*
@@ -733,21 +724,20 @@
   outline-offset: calc((1em - 1.5rem) / 2 + 2px);
 }
 
-.andes-date-picker__clear svg {
+.andes-date-picker__clear ng-icon {
   width: 1em;
   height: 1em;
-  flex-shrink: 0;
 }
 
-.andes-date-picker__clear-glyph circle {
+/* Lucide's circle-x as a filled disc: the ring's 4-unit stroke takes the disc to the edge of
+   the box and the "x" is knocked out in the background colour. */
+.andes-date-picker__clear-glyph ::ng-deep circle {
   fill: currentColor;
+  stroke-width: 4;
 }
 
-.andes-date-picker__clear-glyph path {
-  fill: none;
+.andes-date-picker__clear-glyph ::ng-deep path {
   stroke: var(--andes-color-background);
-  stroke-width: 1.5;
-  stroke-linecap: round;
 }
 
 /* A custom `clearIcon` comes from the consumer's template, outside this component's
@@ -1277,11 +1267,12 @@
 
   /* The disc and its knocked-out "x" are fills and strokes, which would otherwise both turn
      into the text color and blot out the "x". */
-  .andes-date-picker__clear-glyph circle {
+  .andes-date-picker__clear-glyph ::ng-deep circle {
     fill: ButtonText;
+    stroke: ButtonText;
   }
 
-  .andes-date-picker__clear-glyph path {
+  .andes-date-picker__clear-glyph ::ng-deep path {
     stroke: Canvas;
   }
 

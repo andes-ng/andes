@@ -8,6 +8,8 @@ import {
   model,
   ViewEncapsulation,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideCheck } from '@ng-icons/lucide';
 
 import { AndesDropdownMenuRoot } from './dropdown-menu-root';
 import { AndesDropdownMenuLevel } from './dropdown-menu-types';
@@ -29,6 +31,8 @@ import { AndesDropdownMenuLevel } from './dropdown-menu-types';
  */
 @Component({
   selector: 'andes-dropdown-menu-checkbox-item',
+  viewProviders: [provideIcons({ lucideCheck })],
+  imports: [NgIcon],
   hostDirectives: [
     {
       directive: AndesListNavigationItem,
@@ -38,16 +42,7 @@ import { AndesDropdownMenuLevel } from './dropdown-menu-types';
   template: `
     <span class="andes-dropdown-menu__indicator" aria-hidden="true">
       @if (checked()) {
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="M20 6 9 17l-5-5" />
-        </svg>
+        <ng-icon name="lucideCheck" />
       }
     </span>
     <ng-content />

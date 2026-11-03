@@ -26,7 +26,6 @@ import type {
   AndesImagePreviewConfig,
   AndesImagePreviewItem,
 } from '../image/image-types';
-import type { AndesUploadIconName } from './upload-icon';
 import {
   formatFileSize,
   formatMessage,
@@ -138,7 +137,8 @@ export interface AndesUploadItemView {
   readonly status: AndesUploadStatus;
   readonly percent: number;
   readonly thumb: string | undefined;
-  readonly icon: AndesUploadIconName;
+  /** The lucide icon of the row: a paperclip, image, file or the turning loader. */
+  readonly icon: string;
   readonly caption: string;
   /** `showUploadList.extra` for this file. */
   readonly extra: string;
@@ -1987,14 +1987,14 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
 
     const disabled = this.isDisabled();
     // A failed file keeps its icon and turns red, like Ant's; the message is the tooltip.
-    const icon: AndesUploadIconName =
+    const icon =
       status === 'uploading'
-        ? 'loading'
+        ? 'lucideLoaderCircle'
         : this.listType() === 'text'
-          ? 'paperclip'
+          ? 'lucidePaperclip'
           : picture
-            ? 'image'
-            : 'file';
+            ? 'lucideImage'
+            : 'lucideFile';
 
     const ctx: AndesUploadItemContext = {
       $implicit: file,

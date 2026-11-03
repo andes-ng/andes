@@ -1,5 +1,7 @@
 import { signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideThumbsUp } from '@ng-icons/lucide';
 import { moduleMetadata } from '@storybook/angular';
 import type { Meta, StoryObj } from '@storybook/angular';
 
@@ -11,7 +13,10 @@ const meta: Meta<AndesRate> = {
   component: AndesRate,
   tags: ['autodocs'],
   decorators: [
-    moduleMetadata({ imports: [AndesRateCharacter, ReactiveFormsModule] }),
+    moduleMetadata({
+      imports: [AndesRateCharacter, ReactiveFormsModule, NgIcon],
+      providers: [provideIcons({ lucideThumbsUp })],
+    }),
   ],
   parameters: { layout: 'padded' },
   argTypes: {
@@ -230,6 +235,8 @@ export const CustomCharacter: Story = {
     props: {
       letters: (index: number) => 'ABCDE'[index],
     },
+    // The filled thumb is painted solid; the icon's own SVG sits inside the ng-icon host.
+    styles: ['.story-thumb[data-filled] ::ng-deep svg { fill: currentColor; }'],
     template: `
       <div style="${col}">
         <andes-rate [value]="3" character="♥" size="lg" color="var(--andes-color-danger)" aria-label="Hearts" />
@@ -239,9 +246,7 @@ export const CustomCharacter: Story = {
         </andes-rate>
         <andes-rate [value]="3" size="lg" aria-label="Thumbs">
           <ng-template andesRateCharacter let-filled="filled">
-            <svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [attr.fill]="filled ? 'currentColor' : 'none'" aria-hidden="true">
-              <path d="M7 10v11M15 5.9 14 10h5.8a2 2 0 0 1 1.9 2.5l-1.7 7a2 2 0 0 1-1.9 1.5H7V10l4-8a3 3 0 0 1 4 3.9Z" />
-            </svg>
+            <ng-icon class="story-thumb" name="lucideThumbsUp" size="100%" [attr.data-filled]="filled ? '' : null" aria-hidden="true" />
           </ng-template>
         </andes-rate>
       </div>`,

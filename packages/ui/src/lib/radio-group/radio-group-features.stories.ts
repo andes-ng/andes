@@ -5,6 +5,8 @@ import { AndesInput } from '../input/input';
 import { AndesRadio } from './radio';
 import { AndesRadioGroup } from './radio-group';
 import type { Meta, StoryObj } from '@storybook/angular';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideCheck, lucideStar } from '@ng-icons/lucide';
 
 const meta: Meta<AndesRadioGroup> = {
   title: 'Data Entry/RadioGroup/Basics/Features',
@@ -402,14 +404,17 @@ export const Columns: Story = {
 
 /**
  * `indicator` replaces the dot of the checked radio with your own glyph: a context-free
- * `<ng-template>` (typically an `<svg>` in `currentColor`, the primary color) sized from the
+ * `<ng-template>` (typically an `ng-icon` in `currentColor`, the primary color) sized from the
  * circle. Set it on the group for every radio, or on one radio. `[showIndicator]="false"`
  * hides the circle altogether - the native input stays the keyboard stop and the label (or
  * card) the click target; a button segment never draws one.
  */
 export const Indicator: Story = {
   render: () => ({
-    moduleMetadata: { imports: [AndesRadio] },
+    moduleMetadata: {
+      imports: [AndesRadio, NgIcon],
+      providers: [provideIcons({ lucideCheck, lucideStar })],
+    },
     props: { mood: 'good' },
     template: `
       <div style="display: flex; flex-direction: column; gap: 1.25rem;">
@@ -424,10 +429,10 @@ export const Indicator: Story = {
           <andes-radio value="great">Great</andes-radio>
         </andes-radio-group>
         <ng-template #check>
-          <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3.5 8.5L6.5 11.5L12.5 4.5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          <ng-icon name="lucideCheck" strokeWidth="3" aria-hidden="true" />
         </ng-template>
         <ng-template #star>
-          <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1l2.1 4.6 5 .5-3.8 3.4 1.1 4.9L8 11.8 3.6 14.4l1.1-4.9L.9 6.1l5-.5z" /></svg>
+          <ng-icon name="lucideStar" aria-hidden="true" />
         </ng-template>
       </div>
     `,

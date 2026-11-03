@@ -270,6 +270,12 @@ a.andes-tag:focus-visible {
   transition: opacity 0.15s ease;
 }
 
+/* The default close glyph is lucide's "x" in an `ng-icon`, 1em (10px) square; as a flex box
+   its svg never sits on a text baseline. */
+.andes-tag__close > ng-icon {
+  display: inline-flex;
+}
+
 .andes-tag__icon:not(:empty) ~ .andes-tag__close {
   margin-inline-start: 0.4375rem;
 }

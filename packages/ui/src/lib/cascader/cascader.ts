@@ -32,6 +32,15 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NG_VALUE_ACCESSOR, type ControlValueAccessor } from '@angular/forms';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideCheck,
+  lucideChevronDown,
+  lucideChevronRight,
+  lucideCircleX,
+  lucideMinus,
+  lucideX,
+} from '@ng-icons/lucide';
 
 import { AndesEmpty } from '../empty/empty';
 import { AndesSelectOverflow } from '../select/select-overflow';
@@ -209,7 +218,18 @@ interface Column {
  */
 @Component({
   selector: 'andes-cascader',
+  viewProviders: [
+    provideIcons({
+      lucideX,
+      lucideCircleX,
+      lucideChevronDown,
+      lucideCheck,
+      lucideMinus,
+      lucideChevronRight,
+    }),
+  ],
   imports: [
+    NgIcon,
     AndesEmpty,
     AndesOverlayContentPrimitive,
     AndesOverlayTriggerPrimitive,

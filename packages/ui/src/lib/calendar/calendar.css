@@ -129,17 +129,12 @@
     var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1));
 }
 
-.andes-calendar__nav svg {
+/* The default chevrons are lucide glyphs; as a flex box the `ng-icon` lays its svg out edge
+   to edge, never on a text baseline. */
+.andes-calendar__nav ng-icon {
+  display: inline-flex;
   width: 0.875rem;
   height: 0.875rem;
-}
-
-.andes-calendar__nav svg path {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
 /* The default chevrons point left for "previous" and right for "next", which is backwards in a
@@ -147,7 +142,7 @@
    consumer's own and is left alone. */
 /* `:host-context` rather than a plain ancestor selector: the emulated encapsulation tags every
    part of a selector, and the element carrying `dir` is not one of this component's. */
-:host-context([dir='rtl']) .andes-calendar__nav svg {
+:host-context([dir='rtl']) .andes-calendar__nav ng-icon {
   scale: -1 1;
 }
 

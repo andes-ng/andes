@@ -1,17 +1,25 @@
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
-import type { Meta, StoryObj } from '@storybook/angular';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideBold, lucideItalic, lucideUnderline } from '@ng-icons/lucide';
+import { type Meta, moduleMetadata, type StoryObj } from '@storybook/angular';
 
 import { AndesToggle } from './toggle';
 
-const bold = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 2.5h4a2.5 2.5 0 0 1 0 5h-4zM4.5 7.5h4.5a2.5 2.5 0 0 1 0 5H4.5z"/></svg>`;
+const bold = `<ng-icon name="lucideBold" aria-hidden="true" />`;
 
-const italic = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2.5H6.5M9.5 13.5H6M9.8 2.5 6.2 13.5"/></svg>`;
+const italic = `<ng-icon name="lucideItalic" aria-hidden="true" />`;
 
-const underline = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 2.5v5a3.5 3.5 0 0 0 7 0v-5M3 14h10"/></svg>`;
+const underline = `<ng-icon name="lucideUnderline" aria-hidden="true" />`;
 
 const meta: Meta<AndesToggle> = {
   title: 'Data Entry/Toggle/Basics/Toggle',
   component: AndesToggle,
+  decorators: [
+    moduleMetadata({
+      imports: [NgIcon],
+      providers: [provideIcons({ lucideBold, lucideItalic, lucideUnderline })],
+    }),
+  ],
   tags: ['autodocs'],
   argTypes: {
     variant: { control: 'inline-radio', options: ['default', 'outline'] },

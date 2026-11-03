@@ -28,6 +28,20 @@ import {
   viewChild,
 } from '@angular/core';
 import { filter, isObservable, lastValueFrom, take } from 'rxjs';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideCheck,
+  lucideChevronRight,
+  lucideFile,
+  lucideFolder,
+  lucideFolderOpen,
+  lucideGripVertical,
+  lucideInbox,
+  lucideLoaderCircle,
+  lucideMinus,
+  lucideSquareMinus,
+  lucideSquarePlus,
+} from '@ng-icons/lucide';
 
 import { AndesTreeNodeTemplate } from './tree-node-template';
 import type {
@@ -180,7 +194,23 @@ function draggableAttribute(
  */
 @Component({
   selector: 'andes-tree',
+  viewProviders: [
+    provideIcons({
+      lucideGripVertical,
+      lucideLoaderCircle,
+      lucideSquarePlus,
+      lucideSquareMinus,
+      lucideChevronRight,
+      lucideFile,
+      lucideFolder,
+      lucideFolderOpen,
+      lucideCheck,
+      lucideMinus,
+      lucideInbox,
+    }),
+  ],
   imports: [
+    NgIcon,
     NgTemplateOutlet,
     CdkVirtualScrollViewport,
     CdkFixedSizeVirtualScroll,

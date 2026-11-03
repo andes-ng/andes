@@ -21,6 +21,13 @@ import {
   type ValidatorFn,
 } from '@angular/forms';
 import type { Subscription } from 'rxjs';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideCircleAlert,
+  lucideCircleCheck,
+  lucideCircleX,
+  lucideLoaderCircle,
+} from '@ng-icons/lucide';
 
 import { resolveAndesFormErrorMessages } from './form-error-messages';
 import {
@@ -117,8 +124,16 @@ function toTrack(column: AndesFormColumn): string {
  */
 @Component({
   selector: 'andes-form-field',
+  viewProviders: [
+    provideIcons({
+      lucideCircleCheck,
+      lucideCircleAlert,
+      lucideCircleX,
+      lucideLoaderCircle,
+    }),
+  ],
   exportAs: 'andesFormField',
-  imports: [AndesFormLabel, NgTemplateOutlet],
+  imports: [NgIcon, AndesFormLabel, NgTemplateOutlet],
   templateUrl: './form-field.html',
   styleUrl: './form-field.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

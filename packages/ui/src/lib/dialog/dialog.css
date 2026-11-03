@@ -413,10 +413,14 @@
 .andes-dialog__close-icon {
   width: 1rem;
   height: 1rem;
-  fill: none;
-  stroke: currentcolor;
-  stroke-width: 2;
-  stroke-linecap: round;
+}
+
+/* Lucide glyphs in an `ng-icon`; as a flex box its svg never sits on a text baseline.
+   `ng-icon.` beats the icon's own host rule, which this unencapsulated sheet would only tie. */
+ng-icon.andes-dialog__close-icon {
+  display: inline-flex;
+  width: 1rem;
+  height: 1rem;
 }
 
 /* One hit area in from the corner, so it sits beside the "x" rather than under it. The

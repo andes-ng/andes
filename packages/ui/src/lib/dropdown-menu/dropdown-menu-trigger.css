@@ -1,0 +1,19 @@
+/*
+ * Loaded with `AndesDropdownMenu` itself (`ViewEncapsulation.None`), because the trigger
+ * is there before the panel's own stylesheet, `dropdown-menu.css`, is (it loads with the
+ * first panel part, on open). Every selector is keyed off the trigger directive's own
+ * attribute, so nothing else in the library is touched.
+ *
+ * A trailing Lucide chevron (`<ng-icon slot="icon-end" name="lucideChevronDown" />`)
+ * draws only the middle half of its 24-unit box (`m6 9 6 6 6-6`), so at the button's 1em
+ * it leaves 3.5px of empty box on each side: the visible gap to the label was ~11.5px and
+ * the visible right inset ~18.5px, where Ant Design's `Button v` has 8px and 15px (the
+ * same as its left padding). The icon is drawn at 1.25rem - a 10px-wide glyph, near Ant's
+ * 11-13px one - and pulls its box in by the 5px of empty space on each side of the
+ * glyph, so the glyph itself sits exactly one flex gap from the label and one button
+ * padding from the edge.
+ */
+[andesDropdownMenuTrigger] ng-icon[slot='icon-end'][name*='hevron' i] {
+  font-size: 1.25rem;
+  margin-inline: -0.3125rem;
+}

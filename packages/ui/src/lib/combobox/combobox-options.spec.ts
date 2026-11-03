@@ -514,7 +514,7 @@ describe('AndesCombobox (data-driven options mode)', () => {
       const empty = panel()?.querySelector('.andes-combobox-empty');
       expect(empty?.textContent?.trim()).toBe('No results found.');
       expect(
-        empty?.querySelector('svg.andes-combobox-empty__icon'),
+        empty?.querySelector('ng-icon.andes-combobox-empty__icon svg'),
       ).toBeTruthy();
     });
 

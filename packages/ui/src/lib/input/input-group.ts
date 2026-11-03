@@ -60,19 +60,19 @@ export class AndesInputGroup {
 
   /** The fields' common size, which sets the row's corner radius; `md` when they differ. */
   protected readonly fieldSize = computed<AndesInputSize>(() => {
-    const sizes = new Set(this.fields().map((field) => field.size()));
+    const sizes = new Set(this.fields().map((field) => field.resolvedSize()));
     return sizes.size === 1 ? [...sizes][0] : 'md';
   });
 
   protected readonly hasInvalid = computed(() =>
     this.fields().some(
-      (field) => field.status() === 'error' || field.ariaInvalid(),
+      (field) => field.resolvedStatus() === 'error' || field.ariaInvalid(),
     ),
   );
 
   protected readonly hasWarning = computed(
     () =>
       !this.hasInvalid() &&
-      this.fields().some((field) => field.status() === 'warning'),
+      this.fields().some((field) => field.resolvedStatus() === 'warning'),
   );
 }

@@ -15,6 +15,10 @@ import { ControlValueAccessor } from '@angular/forms';
 import clsx from 'clsx';
 
 import type { AndesButtonSize } from '../button/button';
+import {
+  andesIdRefs,
+  injectAndesFieldBinding,
+} from '../form-field/field-binding';
 
 export type AndesInputSize = 'sm' | 'md' | 'lg';
 export type AndesInputVariant =
@@ -109,8 +113,10 @@ export abstract class AndesInputBase implements ControlValueAccessor {
   >('nativeInput', { read: ElementRef });
 
   readonly value = model('');
-  readonly size = input<AndesInputSize>('md');
-  readonly variant = input<AndesInputVariant>('outlined');
+  /** `md` unless set, or the enclosing `andesForm`'s `size`. */
+  readonly size = input<AndesInputSize | undefined>(undefined);
+  /** `outlined` unless set, or the enclosing `andesForm`'s `variant`. */
+  readonly variant = input<AndesInputVariant | undefined>(undefined);
   readonly status = input<AndesInputStatus | undefined>(undefined);
   readonly disabled = input(false, { transform: booleanAttribute });
   readonly required = input(false, { transform: booleanAttribute });
@@ -177,6 +183,38 @@ export abstract class AndesInputBase implements ControlValueAccessor {
 
   private readonly disabledByForm = signal(false);
 
+  /** The enclosing form field and form: id, ARIA, status, size, variant and disabled. */
+  protected readonly field = injectAndesFieldBinding();
+
+  /** The size in effect: `size`, else the form's, else `md`. */
+  readonly resolvedSize = computed<AndesInputSize>(
+    () => this.size() ?? this.field.size() ?? 'md',
+  );
+
+  /** The variant in effect: `variant`, else the form's, else `outlined`. */
+  readonly resolvedVariant = computed<AndesInputVariant>(
+    () => this.variant() ?? this.field.variant() ?? 'outlined',
+  );
+
+  /** The status in effect: `status`, else the enclosing field's error or warning. */
+  readonly resolvedStatus = computed<AndesInputStatus | undefined>(
+    () => this.status() ?? this.field.status(),
+  );
+
+  /** `id`, else the enclosing field's control id, so its label points here. */
+  protected readonly controlId = computed(() => this.id() ?? this.field.id());
+
+  /** `aria-labelledby`, else the field's label - unless an `aria-label` names the input. */
+  protected readonly labelledBy = computed(
+    () =>
+      this.ariaLabelledby() ??
+      (this.ariaLabel() ? undefined : this.field.labelledBy()),
+  );
+
+  protected readonly isRequired = computed(
+    () => this.required() || this.field.required(),
+  );
+
   protected readonly countId = `andes-input-count-${nextId++}`;
 
   /** The native `type` attribute - each variant decides it (plain type, password toggle, search). */
@@ -196,7 +234,7 @@ export abstract class AndesInputBase implements ControlValueAccessor {
   protected readonly variantClass: string | undefined = undefined;
 
   protected readonly isDisabled = computed(
-    () => this.disabled() || this.disabledByForm(),
+    () => this.disabled() || this.disabledByForm() || this.field.disabled(),
   );
 
   /**
@@ -205,7 +243,9 @@ export abstract class AndesInputBase implements ControlValueAccessor {
    */
   protected readonly isInvalid = computed(
     () =>
-      this.ariaInvalid() || this.status() === 'error' || this.countExceeded(),
+      this.ariaInvalid() ||
+      this.resolvedStatus() === 'error' ||
+      this.countExceeded(),
   );
 
   protected readonly showClear = computed(
@@ -249,15 +289,17 @@ export abstract class AndesInputBase implements ControlValueAccessor {
   // "3 / 20" on focus, appended after (never replacing) whatever the consumer described it by.
   protected readonly describedBy = computed(
     () =>
-      [this.ariaDescribedby(), this.showCount() ? this.countId : undefined]
-        .filter(Boolean)
-        .join(' ') || null,
+      andesIdRefs(
+        this.ariaDescribedby(),
+        this.field.describedBy(),
+        this.showCount() ? this.countId : undefined,
+      ) ?? null,
   );
 
   // The button's size class picks its icon/label style; input.css then sizes it from the field
   // (the row's height, font-size and radius), so it lines up whatever the button's own scale.
   protected readonly searchButtonSize = computed<AndesButtonSize>(() => {
-    const size = this.size();
+    const size = this.resolvedSize();
     const button = this.searchButton();
     if (button?.label || button?.content) {
       return size;
@@ -272,13 +314,13 @@ export abstract class AndesInputBase implements ControlValueAccessor {
   protected readonly groupClasses = computed(() =>
     clsx(
       'andes-input-group',
-      `andes-input-group--${this.size()}`,
-      `andes-input-group--${this.variant()}`,
+      `andes-input-group--${this.resolvedSize()}`,
+      `andes-input-group--${this.resolvedVariant()}`,
       this.searchButton() && 'andes-input-group--search',
       // Includes going over `countMax`: it is a soft limit, so the error border, the red
       // counter and `aria-invalid` are what tell the user - typing is never blocked.
       this.isInvalid() && 'andes-input-group--invalid',
-      this.status() === 'warning' &&
+      this.resolvedStatus() === 'warning' &&
         !this.isInvalid() &&
         'andes-input-group--warning',
       this.isDisabled() && 'andes-input-group--disabled',
@@ -289,7 +331,7 @@ export abstract class AndesInputBase implements ControlValueAccessor {
   protected readonly wrapperClasses = computed(() =>
     clsx(
       'andes-input-wrapper',
-      `andes-input-wrapper--${this.size()}`,
+      `andes-input-wrapper--${this.resolvedSize()}`,
       this.variantClass,
     ),
   );

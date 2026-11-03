@@ -7,7 +7,7 @@
     [id]="select.panelId"
     [attr.dir]="select.panelDirection()"
     [attr.data-cursor]="select.cursorVisible() ? '' : null"
-    [attr.data-size]="select.size()"
+    [attr.data-size]="select.resolvedSize()"
     [attr.data-side]="side() ?? select.placementSide()"
     [attr.data-match-trigger-width]="matchesTrigger() ? '' : null"
     [style.width.px]="fixedWidth()"
@@ -37,8 +37,8 @@
         [id]="select.listboxId"
         [attr.aria-multiselectable]="select.isMultiple() || null"
         [attr.aria-busy]="select.loading() || null"
-        [attr.aria-labelledby]="select.ariaLabelledby()"
-        [attr.aria-label]="select.ariaLabelledby() ? null : select.ariaLabel()"
+        [attr.aria-labelledby]="select.labelledBy()"
+        [attr.aria-label]="select.labelledBy() ? null : select.ariaLabel()"
       >
         @if (select.tagCandidate(); as candidate) {
         <andes-select-item custom [value]="candidate" [label]="candidate"

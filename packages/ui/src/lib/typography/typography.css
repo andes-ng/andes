@@ -254,14 +254,12 @@
   color: var(--andes-color-foreground);
 }
 
-.andes-typography__action svg {
+/* The copy, copied and edit glyphs are lucide icons in an `ng-icon`; as a flex box the svg
+   never sits on a text baseline, so it fills its 14px box exactly. */
+.andes-typography__action ng-icon {
+  display: flex;
   inline-size: 0.875rem;
   block-size: 0.875rem;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
 .andes-typography__action--done,

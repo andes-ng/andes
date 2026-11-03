@@ -34,16 +34,11 @@
 }
 
 .andes-link__external {
-  display: inline-block;
+  display: inline-flex;
   inline-size: 0.875em;
   block-size: 0.875em;
   margin-inline-start: 0.2em;
   vertical-align: -0.1em;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
 @media (prefers-reduced-motion: reduce) {

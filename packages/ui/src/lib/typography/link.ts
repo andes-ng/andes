@@ -7,6 +7,8 @@ import {
   model,
   output,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideArrowUpRight } from '@ng-icons/lucide';
 
 import { AndesText } from './text';
 import {
@@ -25,7 +27,8 @@ import {
  */
 @Component({
   selector: 'andes-link',
-  imports: [AndesText],
+  viewProviders: [provideIcons({ lucideArrowUpRight })],
+  imports: [NgIcon, AndesText],
   templateUrl: './link.html',
   styleUrl: './link.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

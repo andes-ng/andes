@@ -17,15 +17,11 @@
     [attr.role]="disabled() ? 'link' : null"
     [attr.aria-disabled]="disabled() || null"
     (click)="onClick($event)"
-    ><ng-content />@if (external()) {<svg
+    ><ng-content />@if (external()) {<ng-icon
       class="andes-link__external"
-      viewBox="0 0 24 24"
-      role="img"
+      name="lucideArrowUpRight"
       [attr.aria-label]="externalLabel()"
-    >
-      <path d="M7 17 17 7" />
-      <path d="M8 7h9v9" />
-    </svg>
+    />
     }</a
   >
 </andes-text>

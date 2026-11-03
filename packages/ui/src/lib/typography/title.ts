@@ -6,8 +6,10 @@ import {
   input,
   numberAttribute,
 } from '@angular/core';
+import { NgIcon } from '@ng-icons/core';
 
 import { AndesTypographyBase } from './typography-base';
+import { TYPOGRAPHY_ICONS } from './typography-icons';
 import { AndesTypographyTag } from './typography-types';
 
 export type AndesTitleLevel = 1 | 2 | 3 | 4 | 5;
@@ -23,7 +25,8 @@ function levelAttribute(value: unknown): AndesTitleLevel {
  */
 @Component({
   selector: 'andes-title',
-  imports: [NgTemplateOutlet],
+  viewProviders: [TYPOGRAPHY_ICONS],
+  imports: [NgIcon, NgTemplateOutlet],
   templateUrl: './typography.html',
   styleUrl: './typography.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

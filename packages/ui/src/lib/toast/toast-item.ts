@@ -14,6 +14,15 @@ import {
   RendererStyleFlags2,
   viewChild,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideCircleCheck,
+  lucideCircleX,
+  lucideInfo,
+  lucideLoaderCircle,
+  lucideTriangleAlert,
+  lucideX,
+} from '@ng-icons/lucide';
 
 import { AndesButton } from '../button/button';
 import type {
@@ -58,7 +67,17 @@ interface DragState {
  */
 @Component({
   selector: 'andes-toast-item',
-  imports: [NgTemplateOutlet, AndesButton],
+  viewProviders: [
+    provideIcons({
+      lucideCircleCheck,
+      lucideCircleX,
+      lucideInfo,
+      lucideLoaderCircle,
+      lucideTriangleAlert,
+      lucideX,
+    }),
+  ],
+  imports: [NgIcon, NgTemplateOutlet, AndesButton],
   templateUrl: './toast-item.html',
   styleUrl: './toast-item.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

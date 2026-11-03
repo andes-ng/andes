@@ -160,22 +160,34 @@
   height: 100%;
 }
 
-.andes-toast__shape {
-  fill: currentColor;
+/* The built-in status icons are lucide's, in an `ng-icon` that fills the slot. */
+.andes-toast__status,
+.andes-toast__spinner {
+  display: flex;
+  width: 100%;
+  height: 100%;
 }
 
-.andes-toast__glyph {
+/* A solid shape with its glyph knocked out in the card colour: the circle of lucide's circle
+   icons is filled, the glyph paths are stroked in the surface colour. The triangle icon has
+   no circle: its first path is the shape, filled and stroked in the accent so the corners
+   stay round. */
+.andes-toast__status ::ng-deep circle {
+  fill: currentcolor;
+}
+
+.andes-toast__status ::ng-deep path {
   fill: none;
   stroke: var(--_toast-surface);
-  stroke-width: 1.75;
+}
+
+.andes-toast__status--triangle ::ng-deep path:first-child {
+  fill: currentcolor;
+  stroke: currentcolor;
 }
 
 .andes-toast__spinner {
   animation: andes-toast-spin 1s linear infinite;
-}
-
-.andes-toast__spinner-track {
-  opacity: 0.2;
 }
 
 .andes-toast__content {
@@ -335,6 +347,13 @@
 }
 
 .andes-toast__close svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+/* The built-in cross is lucide's, in an `ng-icon` the size of the glyph box. */
+.andes-toast__close-x {
+  display: flex;
   width: 0.875rem;
   height: 0.875rem;
 }

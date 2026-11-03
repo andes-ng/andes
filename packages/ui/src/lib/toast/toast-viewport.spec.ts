@@ -198,14 +198,17 @@ describe('AndesToastViewport', () => {
     expect(items(fixture)[0].querySelector('.andes-toast__close')).toBeNull();
   });
 
-  it('draws the default close icon as an SVG, not a text glyph', () => {
+  it("draws the default close icon as lucide's x, not a text glyph", () => {
     const { fixture, service } = createHost();
 
     service.show({ message: 'Closable' });
     fixture.detectChanges();
 
     const close = items(fixture)[0].querySelector('.andes-toast__close');
-    expect(close?.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+    const icon = close?.querySelector('ng-icon');
+    expect(icon?.getAttribute('name')).toBe('lucideX');
+    expect(icon?.getAttribute('aria-hidden')).toBe('true');
+    expect(icon?.querySelector('svg')).not.toBeNull();
     expect(close?.textContent?.trim()).toBe('');
   });
 

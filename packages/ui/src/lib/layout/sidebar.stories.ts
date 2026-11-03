@@ -1,5 +1,14 @@
 import { signal } from '@angular/core';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideChartColumn,
+  lucideHouse,
+  lucidePackage,
+  lucideSettings,
+  lucideShoppingCart,
+  lucideUsers,
+} from '@ng-icons/lucide';
 
 import { AndesButton } from '../button/button';
 import { AndesInput } from '../input/input';
@@ -21,26 +30,14 @@ import {
 import { AndesSidebarProvider } from './sidebar-provider';
 import { AndesSidebarTrigger } from './sidebar-trigger';
 
-const ICON = (path: string) =>
-  `<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
-const HOME = ICON(
-  '<path d="M2.5 7.5 8 3l5.5 4.5V13a.5.5 0 0 1-.5.5H3a.5.5 0 0 1-.5-.5z"/><path d="M6.5 13.5v-4h3v4"/>',
-);
-const BOX = ICON(
-  '<path d="m8 2 5.5 3v6L8 14l-5.5-3V5z"/><path d="M2.5 5 8 8l5.5-3M8 8v6"/>',
-);
-const CART = ICON(
-  '<path d="M2 2.5h1.7l1.4 7h6.3l1.1-4.8H4.3"/><circle cx="6" cy="12.8" r=".9"/><circle cx="11" cy="12.8" r=".9"/>',
-);
-const CHART = ICON(
-  '<path d="M3 13.5V3M3 13.5h10.5"/><path d="M6 11V8M9 11V5M12 11V7"/>',
-);
-const USERS = ICON(
-  '<circle cx="6" cy="5.5" r="2.2"/><path d="M2 13c.4-2.2 2-3.4 4-3.4s3.6 1.2 4 3.4"/><path d="M10.5 3.6a2.2 2.2 0 0 1 0 3.8M12 9.8c1 .5 1.8 1.5 2 3.2"/>',
-);
-const GEAR = ICON(
-  '<circle cx="8" cy="8" r="2"/><path d="M8 2v1.5M8 12.5V14M2 8h1.5M12.5 8H14M3.8 3.8l1 1M11.2 11.2l1 1M12.2 3.8l-1 1M4.8 11.2l-1 1"/>',
-);
+/** The demos' icons are lucide, at 16px, through `ng-icon` (each story registers them). */
+const ICON = (name: string) => `<ng-icon name="${name}" size="16" />`;
+const HOME = ICON('lucideHouse');
+const BOX = ICON('lucidePackage');
+const CART = ICON('lucideShoppingCart');
+const CHART = ICON('lucideChartColumn');
+const USERS = ICON('lucideUsers');
+const GEAR = ICON('lucideSettings');
 
 const STYLES = `
   .stage { height: 30rem; border: 1px solid var(--andes-color-border); border-radius: var(--andes-radius-lg); overflow: hidden; }
@@ -125,7 +122,18 @@ const meta: Meta<AndesSidebar> = {
   tags: ['autodocs'],
   decorators: [
     moduleMetadata({
+      providers: [
+        provideIcons({
+          lucideChartColumn,
+          lucideHouse,
+          lucidePackage,
+          lucideSettings,
+          lucideShoppingCart,
+          lucideUsers,
+        }),
+      ],
       imports: [
+        NgIcon,
         AndesSidebarProvider,
         AndesSidebarInset,
         AndesSidebarTrigger,

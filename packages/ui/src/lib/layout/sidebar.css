@@ -386,7 +386,8 @@
   pointer-events: none;
 }
 
-.andes-sidebar-menu-button__control > svg {
+.andes-sidebar-menu-button__control > svg,
+.andes-sidebar-menu-button__control > ng-icon {
   flex: none;
   width: 1rem;
   height: 1rem;
@@ -455,6 +456,12 @@
 
 .andes-sidebar-trigger {
   display: inline-flex;
+}
+
+/* The default panel icon is lucide's, in an `ng-icon`: a flex box, so its svg never sits on a
+   text baseline. */
+.andes-sidebar-trigger__icon {
+  display: flex;
 }
 
 .andes-sidebar-trigger__button {

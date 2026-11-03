@@ -1,5 +1,12 @@
 import { signal } from '@angular/core';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideChartColumn,
+  lucideHouse,
+  lucidePackage,
+  lucideSettings,
+} from '@ng-icons/lucide';
 
 import { AndesLayout } from './layout';
 import { AndesLayoutContent } from './layout-content';
@@ -7,20 +14,12 @@ import { AndesLayoutFooter } from './layout-footer';
 import { AndesLayoutHeader } from './layout-header';
 import { AndesLayoutSider } from './layout-sider';
 
-const ICON = (path: string) =>
-  `<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
-const HOME = ICON(
-  '<path d="M2.5 7.5 8 3l5.5 4.5V13a.5.5 0 0 1-.5.5H3a.5.5 0 0 1-.5-.5z"/><path d="M6.5 13.5v-4h3v4"/>',
-);
-const BOX = ICON(
-  '<path d="m8 2 5.5 3v6L8 14l-5.5-3V5z"/><path d="M2.5 5 8 8l5.5-3M8 8v6"/>',
-);
-const CHART = ICON(
-  '<path d="M3 13.5V3M3 13.5h10.5"/><path d="M6 11V8M9 11V5M12 11V7"/>',
-);
-const GEAR = ICON(
-  '<circle cx="8" cy="8" r="2"/><path d="M8 2v1.5M8 12.5V14M2 8h1.5M12.5 8H14M3.8 3.8l1 1M11.2 11.2l1 1M12.2 3.8l-1 1M4.8 11.2l-1 1"/>',
-);
+/** The demos' icons are lucide, at 16px, through `ng-icon` (each story registers them). */
+const ICON = (name: string) => `<ng-icon name="${name}" size="16" />`;
+const HOME = ICON('lucideHouse');
+const BOX = ICON('lucidePackage');
+const CHART = ICON('lucideChartColumn');
+const GEAR = ICON('lucideSettings');
 
 const NAV = `
   <nav class="nav" aria-label="Sections">
@@ -40,7 +39,7 @@ const STYLES = `
   .nav__item:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
   .nav__item--active { font-weight: 500; background: color-mix(in srgb, currentColor 12%, transparent); }
   .nav__item:focus-visible { outline: 2px solid var(--andes-color-focus-ring); outline-offset: -2px; }
-  .nav svg { flex: none; }
+  .nav ng-icon { display: flex; flex: none; }
   andes-layout-sider[data-collapsed] .label { display: none; }
   andes-layout-sider[data-collapsed] .nav__item { justify-content: center; padding: 0; }
   .tall { height: 60rem; }
@@ -59,7 +58,16 @@ const meta: Meta<AndesLayout> = {
   tags: ['autodocs'],
   decorators: [
     moduleMetadata({
+      providers: [
+        provideIcons({
+          lucideChartColumn,
+          lucideHouse,
+          lucidePackage,
+          lucideSettings,
+        }),
+      ],
       imports: [
+        NgIcon,
         AndesLayoutHeader,
         AndesLayoutContent,
         AndesLayoutFooter,

@@ -5,15 +5,19 @@ import {
   input,
   ViewEncapsulation,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucidePanelLeft } from '@ng-icons/lucide';
 
 import { AndesSidebarProvider } from './sidebar-provider';
 
 /**
  * The button that opens and closes the sidebar (the overlay on mobile, the desktop state
- * otherwise). Shows a panel icon; project your own content to replace it.
+ * otherwise). Shows lucide's panel icon; project your own content to replace it.
  */
 @Component({
   selector: 'andes-sidebar-trigger',
+  viewProviders: [provideIcons({ lucidePanelLeft })],
+  imports: [NgIcon],
   template: `
     <button
       type="button"
@@ -24,20 +28,11 @@ import { AndesSidebarProvider } from './sidebar-provider';
       (click)="provider.toggle()"
     >
       <ng-content>
-        <svg
-          viewBox="0 0 16 16"
-          width="16"
-          height="16"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <rect x="2" y="2.5" width="12" height="11" rx="2" />
-          <path d="M6 2.5v11" />
-        </svg>
+        <ng-icon
+          class="andes-sidebar-trigger__icon"
+          name="lucidePanelLeft"
+          size="16"
+        />
       </ng-content>
     </button>
   `,

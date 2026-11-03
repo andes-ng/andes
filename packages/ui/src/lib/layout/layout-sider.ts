@@ -14,6 +14,8 @@ import {
   TemplateRef,
   untracked,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideChevronLeft } from '@ng-icons/lucide';
 
 import {
   AndesLayoutBreakpoint,
@@ -45,7 +47,8 @@ let nextSiderId = 0;
  */
 @Component({
   selector: 'andes-layout-sider',
-  imports: [NgTemplateOutlet],
+  viewProviders: [provideIcons({ lucideChevronLeft })],
+  imports: [NgIcon, NgTemplateOutlet],
   templateUrl: './layout-sider.html',
   styleUrl: './layout-sider.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

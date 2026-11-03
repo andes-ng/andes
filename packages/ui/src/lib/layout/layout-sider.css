@@ -141,8 +141,12 @@
   background: var(--_hover);
 }
 
+/* Lucide's chevron in an `ng-icon`: a flex box, so its svg never sits on a text baseline, and
+   2.25 wide, which at 16px is the 1.5px stroke the old arrow was drawn with. */
 .arrow {
+  display: flex;
   flex: none;
+  --ng-icon__stroke-width: 2.25;
 }
 
 .arrow[data-pointing='end'] {

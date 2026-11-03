@@ -824,7 +824,9 @@ button.andes-cascader__combobox {
   }
 }
 
-.andes-cascader__panel[data-search] {
+/* A search and an empty panel are as wide as the field, like Ant's. */
+.andes-cascader__panel[data-search],
+.andes-cascader__panel[data-empty] {
   min-width: var(--andes-cascader-anchor-width, 0);
 }
 

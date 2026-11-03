@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { Component, signal, TemplateRef, viewChild } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
@@ -46,6 +49,26 @@ describe('AndesCascader not-found content', () => {
     expect(empty?.getAttribute('data-size')).toBe('small');
     expect(empty?.getAttribute('data-image')).toBe('simple');
     expect(empty?.textContent?.trim()).toBe('No data');
+  });
+
+  it('marks the empty panel so it is as wide as the field', () => {
+    setup();
+    const panel = document.querySelector<HTMLElement>(
+      '[data-slot="cascader-panel"]',
+    );
+
+    expect(panel?.hasAttribute('data-empty')).toBe(true);
+  });
+
+  it('gives an empty panel the anchor width as its minimum (cascader.css)', () => {
+    const css = readFileSync(
+      join(process.cwd(), 'packages/ui/src/lib/cascader/cascader.css'),
+      'utf8',
+    ).replace(/\s+/g, ' ');
+
+    expect(css).toContain(
+      '.andes-cascader__panel[data-search], .andes-cascader__panel[data-empty] { min-width: var(--andes-cascader-anchor-width, 0); }',
+    );
   });
 
   it('follows the empty state provider', () => {

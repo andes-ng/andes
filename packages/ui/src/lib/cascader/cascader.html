@@ -415,6 +415,7 @@
     [attr.dir]="panelDirection()"
     [attr.data-side]="side()"
     [attr.data-search]="searching() ? '' : null"
+    [attr.data-empty]="showNotFound() ? '' : null"
     [style.--andes-cascader-anchor-width.px]="anchorWidth()"
     (mousedown)="onPanelMousedown($event)"
     (keydown)="onPanelKeydown($event)"

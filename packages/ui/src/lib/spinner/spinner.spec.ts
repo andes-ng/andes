@@ -78,9 +78,12 @@ describe('AndesSpinner', () => {
     expect(host.querySelector('[data-slot="spinner-label"]')).toBeNull();
   });
 
-  it('draws the ring by default and switches to dots and bars', () => {
+  it("draws lucide's loader circle by default and switches to dots and bars", () => {
     const { fixture, host } = create();
-    expect(host.querySelector('svg circle.andes-spinner__arc')).not.toBeNull();
+    const ring = host.querySelector('ng-icon.andes-spinner__ring');
+    expect(ring?.getAttribute('name')).toBe('lucideLoaderCircle');
+    expect(ring?.querySelector('svg')).not.toBeNull();
+    expect(host.querySelector('.andes-spinner__arc')).toBeNull();
 
     fixture.componentInstance.variant.set('dots');
     fixture.detectChanges();

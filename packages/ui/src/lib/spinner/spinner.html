@@ -11,7 +11,8 @@
   <span class="andes-spinner__bar"></span>
   <span class="andes-spinner__bar"></span>
   <span class="andes-spinner__bar"></span>
-  } @default {
+  } @default { @if (determinate()) {
+  <!-- A gauge: the arc is computed from the percentage, so it is drawn, not an icon. -->
   <svg class="andes-spinner__ring" viewBox="0 0 32 32" focusable="false">
     <circle class="andes-spinner__track" cx="16" cy="16" [attr.r]="radius" />
     <circle
@@ -23,7 +24,9 @@
       [attr.stroke-opacity]="resolvedPercent() === 0 ? 0 : null"
     />
   </svg>
-  } }
+  } @else {
+  <ng-icon class="andes-spinner__ring" name="lucideLoaderCircle" />
+  } } }
 </span>
 @if (resolvedPercent() !== undefined) {
 <span

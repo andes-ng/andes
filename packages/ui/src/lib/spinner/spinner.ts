@@ -6,6 +6,8 @@ import {
   input,
   signal,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideLoaderCircle } from '@ng-icons/lucide';
 
 export type AndesSpinnerVariant = 'ring' | 'dots' | 'bars';
 export type AndesSpinnerSizePreset = 'sm' | 'md' | 'lg';
@@ -54,6 +56,8 @@ export function spinnerPercentAttribute(
  */
 @Component({
   selector: 'andes-spinner',
+  viewProviders: [provideIcons({ lucideLoaderCircle })],
+  imports: [NgIcon],
   templateUrl: './spinner.html',
   styleUrl: './spinner.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -143,13 +147,9 @@ export class AndesSpinner {
   protected readonly circumference = RING_CIRCUMFERENCE;
   protected readonly radius = RING_RADIUS;
 
-  /** `stroke-dasharray` of the ring's arc: a quarter turn, or the determinate fraction. */
+  /** `stroke-dasharray` of the determinate gauge's arc: the filled fraction of the ring. */
   protected readonly dash = computed(() => {
-    const percent = this.resolvedPercent();
-    const length =
-      percent === undefined
-        ? RING_CIRCUMFERENCE * 0.28
-        : (RING_CIRCUMFERENCE * percent) / 100;
+    const length = (RING_CIRCUMFERENCE * (this.resolvedPercent() ?? 0)) / 100;
     return `${length.toFixed(2)} ${RING_CIRCUMFERENCE.toFixed(2)}`;
   });
 }

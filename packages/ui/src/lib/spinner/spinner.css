@@ -39,6 +39,15 @@
   animation: andes-spinner-turn 1s linear infinite;
 }
 
+/* The indeterminate ring is lucide's loader circle in an `ng-icon` that fills the indicator,
+   its strokes the same proportion of the box as the gauge's (3.5 of 32 is 2.625 of 24). */
+ng-icon.andes-spinner__ring {
+  --ng-icon__size: 100%;
+  --ng-icon__stroke-width: 2.625;
+
+  display: flex;
+}
+
 .andes-spinner__track {
   stroke: var(
     --andes-spinner-track-color,

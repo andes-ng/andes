@@ -13,6 +13,8 @@ const LIB = 'packages/ui/src/lib';
 const ILLUSTRATIONS: readonly string[] = [
   // The two Empty illustrations (the default box scene and the simple tray).
   'empty/empty.html',
+  // The determinate gauge of Spinner: an arc computed from the percentage, not an icon.
+  'spinner/spinner.html',
 ];
 
 /** What drawing an SVG by hand looks like, in a template or through `Renderer2`. */

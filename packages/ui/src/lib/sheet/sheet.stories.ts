@@ -1,3 +1,5 @@
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideChevronRight } from '@ng-icons/lucide';
 import type { Meta, StoryObj } from '@storybook/angular';
 
 import { AndesButton } from '../button/button';
@@ -230,12 +232,13 @@ export const Loading: Story = {
  */
 export const ExtraAndCloseIcon: Story = {
   render: () => ({
-    moduleMetadata: { imports },
+    moduleMetadata: {
+      imports: [...imports, NgIcon],
+      providers: [provideIcons({ lucideChevronRight })],
+    },
     template: `
       <ng-template #chevron>
-        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
-          <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
+        <ng-icon name="lucideChevronRight" size="16" />
       </ng-template>
       <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
         <andes-sheet [closeIcon]="chevron" closeLabel="Collapse panel">

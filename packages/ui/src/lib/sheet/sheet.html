@@ -25,14 +25,7 @@
       @if (closeIcon(); as icon) {
       <ng-container [ngTemplateOutlet]="icon" />
       } @else {
-      <svg
-        class="andes-sheet__close-icon"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <path d="M6 6 18 18M18 6 6 18" />
-      </svg>
+      <ng-icon class="andes-sheet__close-icon" name="lucideX" />
       }
     </button>
     }

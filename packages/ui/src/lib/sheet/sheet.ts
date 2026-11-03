@@ -5,6 +5,8 @@ import {
 } from '@andes-ng/primitives';
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideX } from '@ng-icons/lucide';
 
 import {
   ANDES_EDGE_PANEL,
@@ -55,8 +57,10 @@ export type AndesSheetSide = AndesOverlayEdge;
  */
 @Component({
   selector: 'andes-sheet',
+  viewProviders: [provideIcons({ lucideX })],
   imports: [
     AndesOverlayContentPrimitive,
+    NgIcon,
     NgTemplateOutlet,
     AndesEdgePanelLazyOutlet,
   ],

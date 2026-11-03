@@ -221,18 +221,18 @@
 }
 
 /* A consumer's `closeIcon` gets the same box as the built-in glyph. */
-.andes-sheet__close > svg:not(.andes-sheet__close-icon) {
+.andes-sheet__close > svg,
+.andes-sheet__close > ng-icon:not(.andes-sheet__close-icon) {
   width: 1rem;
   height: 1rem;
 }
 
+/* The built-in glyph is lucide's "x" in an `ng-icon`: a flex box, so its svg never sits on a
+   text baseline. */
 .andes-sheet__close-icon {
+  display: flex;
   width: 1rem;
   height: 1rem;
-  fill: none;
-  stroke: currentcolor;
-  stroke-width: 2;
-  stroke-linecap: round;
 }
 
 /* `resizable`: a strip along the panel's inner edge. Its line shows on hover,

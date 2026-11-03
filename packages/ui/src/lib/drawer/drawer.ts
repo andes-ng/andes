@@ -5,6 +5,8 @@ import {
 } from '@andes-ng/primitives';
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideX } from '@ng-icons/lucide';
 
 import {
   ANDES_EDGE_PANEL,
@@ -52,8 +54,10 @@ import {
  */
 @Component({
   selector: 'andes-drawer',
+  viewProviders: [provideIcons({ lucideX })],
   imports: [
     AndesOverlayContentPrimitive,
+    NgIcon,
     NgTemplateOutlet,
     AndesEdgePanelLazyOutlet,
   ],

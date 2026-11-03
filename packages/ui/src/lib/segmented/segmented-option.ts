@@ -19,7 +19,9 @@ let nextOptionId = 0;
  * `[slot=icon]` element or the `icon` template input.
  *
  * ```html
- * <andes-segmented-option value="map"><svg slot="icon" ... /> Map</andes-segmented-option>
+ * <andes-segmented-option value="map">
+ *   <ng-icon slot="icon" name="lucideMap" /> Map
+ * </andes-segmented-option>
  * ```
  *
  * `description` adds a muted second line, linked to the radio with `aria-describedby`; when any
@@ -39,7 +41,7 @@ let nextOptionId = 0;
     'data-slot': 'segmented-option',
     '[attr.data-state]': "checked() ? 'checked' : 'unchecked'",
     '[attr.data-disabled]': "isDisabled() ? '' : null",
-    '[attr.data-size]': 'group.size()',
+    '[attr.data-size]': 'group.resolvedSize()',
     '[attr.data-readonly]': "group.readOnly() ? '' : null",
     '[attr.data-described]': "group.hasDescription() ? '' : null",
   },

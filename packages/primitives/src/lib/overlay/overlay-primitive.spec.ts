@@ -20,7 +20,11 @@ import {
   AndesOverlayPrimitive,
   provideAndesOverlay,
 } from './overlay-primitive';
-import { andesConnectedPositions } from './overlay-positioning';
+import {
+  andesConnectedPosition,
+  andesConnectedPositions,
+  andesPlacedSide,
+} from './overlay-positioning';
 import { AndesOverlayTriggerPrimitive } from './overlay-trigger-primitive';
 
 /**
@@ -94,6 +98,7 @@ function withScrollableDocument() {
         id="trigger"
         andesOverlayTrigger
         [ariaAttachment]="ariaAttachment()"
+        [attr.aria-describedby]="describedBy()"
         (click)="toggle()"
       >
         Open
@@ -115,6 +120,7 @@ class OverlayHost {
   readonly ariaAttachment = signal<'expanded' | 'described-by' | 'none'>(
     'expanded',
   );
+  readonly describedBy = signal<string | null>(null);
 
   toggle(): void {
     this.overlay.toggle(this.content());
@@ -289,6 +295,70 @@ describe('AndesOverlayPrimitive', () => {
       expect(backdrop()?.style.getPropertyValue('z-index')).toBe(
         hostWrapper()?.style.getPropertyValue('z-index'),
       );
+    });
+
+    describe('an overlay opened from inside another overlay', () => {
+      const zIndexOf = (host: HTMLElement | null) =>
+        Number.parseInt(
+          (host?.style.getPropertyValue('z-index') ?? '').replace(
+            /^var\(.*,\s*(\d+)\)$/,
+            '$1',
+          ),
+          10,
+        );
+
+      function openFrom(outerPreset: 'dialog' | 'drawer', innerPreset: 'menu') {
+        const outer = createHost(andesOverlayPreset(outerPreset));
+        outer.host.open();
+        outer.fixture.detectChanges();
+        const inner = createHost(andesOverlayPreset(innerPreset));
+        inner.overlay.registerAnchor(outer.element('first'));
+        inner.host.open();
+        inner.fixture.detectChanges();
+        return { outer, inner };
+      }
+
+      it('stacks a dropdown-layer panel above the modal dialog its anchor sits in', () => {
+        const { outer, inner } = openFrom('dialog', 'menu');
+
+        expect(zIndexOf(inner.hostWrapper())).toBeGreaterThan(
+          zIndexOf(outer.hostWrapper()),
+        );
+      });
+
+      it('stacks it above a drawer too', () => {
+        const { outer, inner } = openFrom('drawer', 'menu');
+
+        expect(zIndexOf(inner.hostWrapper())).toBeGreaterThan(
+          zIndexOf(outer.hostWrapper()),
+        );
+      });
+
+      it('keeps the layer token when the anchor is not inside an overlay', () => {
+        const { fixture, host, hostWrapper } = createHost(
+          andesOverlayPreset('menu'),
+        );
+        host.open();
+        fixture.detectChanges();
+
+        expect(hostWrapper()?.style.getPropertyValue('z-index')).toBe(
+          'var(--andes-z-index-dropdown, 1000)',
+        );
+      });
+
+      it('keeps the layer token when it is already above the overlay it is opened from', () => {
+        const outer = createHost(andesOverlayPreset('drawer'));
+        outer.host.open();
+        outer.fixture.detectChanges();
+        const inner = createHost(andesOverlayPreset('tooltip'));
+        inner.overlay.registerAnchor(outer.element('first'));
+        inner.host.open();
+        inner.fixture.detectChanges();
+
+        expect(inner.hostWrapper()?.style.getPropertyValue('z-index')).toBe(
+          'var(--andes-z-index-tooltip, 1070)',
+        );
+      });
     });
 
     it('re-applies the layer when reconfigured while open', () => {
@@ -648,6 +718,35 @@ describe('AndesOverlayPrimitive', () => {
       expect(overlay.isOpen()).toBe(false);
     });
 
+    it('closes on a click on the page root, below a body shorter than the window', () => {
+      const { fixture, host, overlay } = createHost(
+        andesOverlayPreset('popover'),
+      );
+      const reasons: AndesOverlayCloseReason[] = [];
+      overlay.closed.subscribe((reason) => reasons.push(reason));
+      host.open();
+      fixture.detectChanges();
+
+      clickOn(document.documentElement);
+      fixture.detectChanges();
+
+      expect(overlay.isOpen()).toBe(false);
+      expect(reasons).toEqual(['outside-click']);
+    });
+
+    it('lets a click on the page root pass when the overlay opts out of outside clicks', () => {
+      const { fixture, host, overlay } = createHost(
+        andesOverlayPreset('alert-dialog'),
+      );
+      host.open();
+      fixture.detectChanges();
+
+      clickOn(document.documentElement);
+      fixture.detectChanges();
+
+      expect(overlay.isOpen()).toBe(true);
+    });
+
     it('reports "outside-click" as the close reason', () => {
       const { fixture, host, overlay, outside } = createHost(
         andesOverlayPreset('popover'),
@@ -806,6 +905,230 @@ describe('AndesOverlayPrimitive', () => {
       scroll(fixture.nativeElement as HTMLElement);
 
       expect(update).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * jsdom has no layout, so these give the anchor (`#trigger`) and the CDK pane fixed
+   * boxes and the document a 1024x768 viewport, and read back where CDK put the pane.
+   */
+  describe('leaving with an anchor scrolled out of view', () => {
+    const VIEWPORT = { width: 1024, height: 768 };
+    const PANE = { width: 300, height: 300 };
+    /** Below or above the field only, like the field-attached lists. */
+    const POPOVER: Partial<AndesOverlayConfig> = {
+      ...andesOverlayPreset('popover'),
+      positioning: {
+        kind: 'anchored',
+        side: 'bottom',
+        align: 'start',
+        sideOffset: 8,
+        crossSideFallback: false,
+      },
+    };
+    let anchorBox: { top: number; left: number; width: number; height: number };
+
+    function box(left: number, top: number, width: number, height: number) {
+      return {
+        x: left,
+        y: top,
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+        toJSON: () => ({}),
+      } as DOMRect;
+    }
+
+    beforeEach(() => {
+      anchorBox = { top: 100, left: 16, width: 200, height: 32 };
+      vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(
+        function (this: Element) {
+          if (this.id === 'trigger') {
+            const { top, left, width, height } = anchorBox;
+            return box(left, top, width, height);
+          }
+          if (
+            this instanceof HTMLElement &&
+            this.classList.contains('cdk-overlay-pane')
+          ) {
+            // Where CDK's inline styles put it; at the origin while it measures.
+            const { top, left } = paneBox(this);
+            return box(left, top, PANE.width, PANE.height);
+          }
+          return box(0, 0, 0, 0);
+        },
+      );
+      for (const [prop, value] of [
+        ['clientWidth', VIEWPORT.width],
+        ['clientHeight', VIEWPORT.height],
+      ] as const) {
+        Object.defineProperty(document.documentElement, prop, {
+          configurable: true,
+          get: () => value,
+        });
+      }
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+      for (const prop of ['clientWidth', 'clientHeight']) {
+        delete (document.documentElement as unknown as Record<string, unknown>)[
+          prop
+        ];
+      }
+    });
+
+    /** The pane's laid-out box, from the inline styles CDK wrote. */
+    function paneBox(pane: HTMLElement) {
+      const translate = (axis: 'X' | 'Y') => {
+        const pattern =
+          axis === 'X'
+            ? /translateX\((-?[\d.]+)px\)/g
+            : /translateY\((-?[\d.]+)px\)/g;
+        return [...pane.style.transform.matchAll(pattern)].reduce(
+          (sum, match) => sum + Number(match[1]),
+          0,
+        );
+      };
+      const top = pane.style.top
+        ? parseFloat(pane.style.top)
+        : pane.style.bottom
+          ? VIEWPORT.height - parseFloat(pane.style.bottom) - PANE.height
+          : 0;
+      const left = pane.style.left
+        ? parseFloat(pane.style.left)
+        : pane.style.right
+          ? VIEWPORT.width - parseFloat(pane.style.right) - PANE.width
+          : 0;
+      return {
+        top: top + translate('Y'),
+        bottom: top + translate('Y') + PANE.height,
+        left: left + translate('X'),
+      };
+    }
+
+    function openAt(
+      config: Partial<AndesOverlayConfig>,
+      anchor: Partial<typeof anchorBox>,
+    ) {
+      const created = createHost(config);
+      created.host.open();
+      anchorBox = { ...anchorBox, ...anchor };
+      created.overlay.updatePosition();
+      created.fixture.detectChanges();
+      const pane = created.pane();
+      if (!pane) {
+        throw new Error('the overlay did not open');
+      }
+      return { ...created, paneElement: pane };
+    }
+
+    function scrollAnchorTo(
+      overlay: AndesOverlayPrimitive,
+      anchor: Partial<typeof anchorBox>,
+    ) {
+      anchorBox = { ...anchorBox, ...anchor };
+      overlay.updatePosition();
+    }
+
+    it('scrolls a pane out through the top with its anchor instead of pinning it', () => {
+      const { overlay, paneElement } = openAt(POPOVER, { top: 100 });
+      expect(paneBox(paneElement).top).toBe(140);
+
+      scrollAnchorTo(overlay, { top: -100 });
+
+      // Still 8px below the anchor's bottom edge (-68), not pushed to the viewport top.
+      expect(paneBox(paneElement).top).toBe(-60);
+    });
+
+    it('scrolls a pane out through the bottom on the side it was on', () => {
+      const { overlay, paneElement } = openAt(POPOVER, { top: 600 });
+      // No room below: flipped above the anchor.
+      expect(paneBox(paneElement).bottom).toBe(592);
+
+      scrollAnchorTo(overlay, { top: 900 });
+
+      // Above its anchor still, below the viewport rather than pushed up into it.
+      expect(paneBox(paneElement).bottom).toBe(892);
+    });
+
+    it('still pushes the pane into view while the anchor is partly visible', () => {
+      const { overlay, paneElement } = openAt(POPOVER, { top: 100 });
+
+      // A tall anchor running off the bottom edge: no room above (292px) or below it,
+      // so CDK pushes the pane down from -8 to the viewport margin, as before.
+      scrollAnchorTo(overlay, { top: 300, height: 600 });
+
+      expect(paneBox(paneElement).top).toBe(0);
+    });
+
+    it('keeps the horizontal containment near a side edge as the anchor leaves', () => {
+      const { overlay, paneElement } = openAt(
+        {
+          ...andesOverlayPreset('menu'),
+          positioning: {
+            kind: 'anchored',
+            side: 'bottom',
+            align: 'start',
+            crossSideFallback: false,
+          },
+        },
+        { top: 100, left: 900, width: 100 },
+      );
+      const inView = paneBox(paneElement).left;
+      expect(inView).toBeLessThan(900);
+
+      scrollAnchorTo(overlay, { top: -200 });
+
+      expect(paneBox(paneElement).top).toBeLessThan(0);
+      expect(paneBox(paneElement).left).toBe(inView);
+    });
+
+    it('takes a tooltip along with its anchor too', () => {
+      const { overlay, paneElement } = openAt(andesOverlayPreset('tooltip'), {
+        top: 400,
+        left: 400,
+      });
+      expect(paneBox(paneElement).bottom).toBe(394);
+
+      scrollAnchorTo(overlay, { top: -400 });
+
+      expect(paneBox(paneElement).bottom).toBe(-406);
+    });
+
+    it('stays open and puts the pane back next to the anchor when it returns', () => {
+      const { overlay, paneElement, trigger } = openAt(POPOVER, { top: 100 });
+
+      scrollAnchorTo(overlay, { top: -500 });
+      scrollAnchorTo(overlay, { top: 200 });
+
+      expect(overlay.isOpen()).toBe(true);
+      expect(trigger().getAttribute('aria-expanded')).toBe('true');
+      expect(paneBox(paneElement).top).toBe(240);
+    });
+
+    it('leaves a locked position to CDK, which already moves it with the anchor', () => {
+      const { overlay, paneElement } = openAt(
+        {
+          ...POPOVER,
+          positioning: {
+            kind: 'anchored',
+            side: 'bottom',
+            align: 'start',
+            sideOffset: 8,
+            crossSideFallback: false,
+            lockPosition: true,
+          },
+        },
+        { top: 100 },
+      );
+
+      scrollAnchorTo(overlay, { top: -100 });
+
+      expect(paneBox(paneElement).top).toBe(-60);
     });
   });
 
@@ -1451,6 +1774,23 @@ describe('AndesOverlayPrimitive', () => {
       ]);
     });
 
+    it('keeps left and right physical in a right-to-left layout', () => {
+      const edges = (side: 'left' | 'right', rtl: boolean) => {
+        const position = andesConnectedPosition(side, 'center', 8, 0, rtl);
+        return `${position.originX}/${position.overlayX}/${position.offsetX}`;
+      };
+
+      // The CDK's `start` is the left edge in LTR and the right edge in RTL.
+      expect(edges('right', false)).toBe('end/start/8');
+      expect(edges('right', true)).toBe('start/end/8');
+      expect(edges('left', false)).toBe('start/end/-8');
+      expect(edges('left', true)).toBe('end/start/-8');
+      // The vertical sides and the alignment stay logical.
+      expect(andesConnectedPosition('top', 'start', 8, 0, true).originX).toBe(
+        'start',
+      );
+    });
+
     it('lets an explicit size win over the positioning-implied one', () => {
       const { fixture, host, pane } = createHost({
         ...andesOverlayPreset('drawer'),
@@ -1474,6 +1814,47 @@ describe('AndesOverlayPrimitive', () => {
         'end/top',
         'start/top',
       ]);
+    });
+
+    it('reads the side back from every connected position it builds', () => {
+      for (const side of ['top', 'bottom', 'left', 'right'] as const) {
+        for (const align of ['start', 'center', 'end'] as const) {
+          expect(
+            andesPlacedSide(andesConnectedPosition(side, align, 4, 0)),
+          ).toBe(side);
+        }
+      }
+    });
+
+    it('marks an anchored pane and its panel with the side it was placed on', async () => {
+      const { fixture, host, overlay, pane } = createHost(
+        andesOverlayPreset('popover'),
+      );
+      expect(overlay.placedSide()).toBeNull();
+      host.open();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(overlay.placedSide()).toBe('bottom');
+      expect(pane()?.getAttribute('data-placed-side')).toBe('bottom');
+      expect(pane()?.firstElementChild?.getAttribute('data-placed-side')).toBe(
+        'bottom',
+      );
+
+      overlay.close();
+      fixture.detectChanges();
+      expect(overlay.placedSide()).toBeNull();
+    });
+
+    it('leaves a centered overlay without a placed side', () => {
+      const { fixture, host, overlay, pane } = createHost(
+        andesOverlayPreset('dialog'),
+      );
+      host.open();
+      fixture.detectChanges();
+
+      expect(overlay.placedSide()).toBeNull();
+      expect(pane()?.hasAttribute('data-placed-side')).toBe(false);
     });
 
     it('stays above or below the anchor when cross-side fallback is off', () => {
@@ -1559,6 +1940,43 @@ describe('AndesOverlayPrimitive', () => {
       expect(trigger().hasAttribute('aria-expanded')).toBe(false);
       expect(trigger().hasAttribute('aria-haspopup')).toBe(false);
       expect(content()?.getAttribute('role')).toBe('tooltip');
+    });
+
+    it('keeps the trigger`s own aria-describedby on an expanded trigger', () => {
+      const { fixture, host, trigger } = createHost(
+        andesOverlayPreset('dialog'),
+      );
+      host.describedBy.set('hint');
+      fixture.detectChanges();
+
+      expect(trigger().getAttribute('aria-describedby')).toBe('hint');
+
+      host.open();
+      fixture.detectChanges();
+      host.describedBy.set('hint error');
+      fixture.detectChanges();
+
+      expect(trigger().getAttribute('aria-describedby')).toBe('hint error');
+    });
+
+    it('adds the tooltip to the trigger`s own description, and takes it out on close', () => {
+      const { fixture, host, overlay, trigger } = createHost(
+        andesOverlayPreset('tooltip'),
+      );
+      host.ariaAttachment.set('described-by');
+      host.describedBy.set('hint');
+      fixture.detectChanges();
+      host.open();
+      fixture.detectChanges();
+
+      expect(trigger().getAttribute('aria-describedby')).toBe(
+        `hint ${overlay.contentId}`,
+      );
+
+      overlay.close();
+      fixture.detectChanges();
+
+      expect(trigger().getAttribute('aria-describedby')).toBe('hint');
     });
 
     it('wires no ARIA at all when the consumer opts out', () => {

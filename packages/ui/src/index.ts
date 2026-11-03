@@ -17,19 +17,19 @@ export * from './lib/accordion';
 
 export * from './lib/avatar';
 
-// @slot badge
+export * from './lib/badge';
 
-// @slot breadcrumb
+export * from './lib/breadcrumb';
 
 export * from './lib/button';
 
-// @slot calendar
+export * from './lib/calendar';
 
 // @slot card
 
 // @slot carousel
 
-// @slot cascader
+export * from './lib/cascader';
 
 export * from './lib/checkbox';
 
@@ -43,31 +43,31 @@ export * from './lib/combobox';
 
 // @slot context-menu
 
-// @slot date-picker
+export * from './lib/date-picker';
 
 // @slot descriptions
 
-// @slot dialog
+export * from './lib/dialog';
 
 // @slot divider
 
 // @slot drawer
 
-// @slot dropdown-menu
+export * from './lib/dropdown-menu';
 
-// @slot empty
+export * from './lib/empty';
 
 // @slot flex
 
 // @slot float-button
 
-// @slot form-field
+export * from './lib/form-field';
 
 // @slot grid
 
 // @slot hover-card
 
-// @slot image
+export * from './lib/image';
 
 export * from './lib/input';
 
@@ -81,7 +81,7 @@ export * from './lib/input-number';
 
 // @slot masonry
 
-// @slot mentions
+export * from './lib/mentions';
 
 // @slot menu
 
@@ -93,7 +93,7 @@ export * from './lib/org-chart';
 
 // @slot pagination
 
-// @slot palette
+export * from './lib/palette';
 
 // @slot popconfirm
 
@@ -117,7 +117,7 @@ export * from './lib/select';
 
 // @slot sheet
 
-// @slot skeleton
+export * from './lib/skeleton';
 
 export * from './lib/slider';
 
@@ -137,7 +137,7 @@ export * from './lib/switch';
 
 // @slot tabs
 
-// @slot tag
+export * from './lib/tag';
 
 export * from './lib/textarea';
 
@@ -147,18 +147,18 @@ export * from './lib/textarea';
 
 export * from './lib/toggle';
 
-// @slot tooltip
+export * from './lib/tooltip';
 
 // @slot tour
 
 // @slot transfer
 
-// @slot tree
+export * from './lib/tree';
 
-// @slot tree-select
+export * from './lib/tree-select';
 
 // @slot typography
 
-// @slot upload
+export * from './lib/upload';
 
 // @slot watermark

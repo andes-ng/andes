@@ -19,7 +19,13 @@ import {
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideCheck, lucideMinus } from '@ng-icons/lucide';
 
+import {
+  andesIdRefs,
+  injectAndesFieldBinding,
+} from '../form-field/field-binding';
 import {
   ANDES_CHECKBOX_SELECT_ALL,
   AndesCheckboxGroupState,
@@ -63,9 +69,12 @@ export interface AndesCheckboxChange {
 
 @Component({
   selector: 'andes-checkbox',
-  imports: [NgTemplateOutlet],
+  viewProviders: [provideIcons({ lucideCheck, lucideMinus })],
+  imports: [NgIcon, NgTemplateOutlet],
   templateUrl: './checkbox.html',
-  styleUrl: './checkbox.css',
+  // The motion last, where its rules sat at the end of checkbox.css: with its keyframes, in
+  // the sheet the tree and the cascader share.
+  styleUrls: ['./checkbox.css', './check-motion.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     // Forwarded to the native input in the template instead - a screen reader never sees
@@ -206,9 +215,9 @@ export class AndesCheckbox implements ControlValueAccessor {
   });
 
   /**
-   * Replaces the default tick. A context-free template whose `<svg>` is sized to the box's
-   * glyph area and drawn in `currentColor` (the primary foreground), like AndesInput's
-   * `clearIcon`. Unset, it takes the enclosing group's `checkedIcon`.
+   * Replaces the default tick. A context-free template whose icon (an `ng-icon`) is sized to
+   * the box's glyph area and drawn in `currentColor` (the primary foreground), like
+   * AndesInput's `clearIcon`. Unset, it takes the enclosing group's `checkedIcon`.
    */
   readonly checkedIcon = input<TemplateRef<unknown> | undefined>(undefined);
 
@@ -326,6 +335,21 @@ export class AndesCheckbox implements ControlValueAccessor {
   private readonly formDisabled = signal(false);
 
   /**
+   * The enclosing form field and form. A checkbox inside a group leaves the field to the
+   * group (`field: false`) and only follows the form's size and disabled.
+   */
+  protected readonly field = injectAndesFieldBinding({
+    field: this.group === null,
+  });
+
+  /** `id`, else the enclosing field's control id, so its label toggles this checkbox. */
+  protected readonly controlId = computed(() => this.id() ?? this.field.id());
+
+  protected readonly isRequired = computed(
+    () => this.required() || this.field.required(),
+  );
+
+  /**
    * The checkbox's own disabled state: its input, its form control, or the group's. This is
    * what the group's aggregate sees - never the `maxCount` disabling below, which is temporary
    * and must not make select-all think the item is out of reach.
@@ -334,6 +358,7 @@ export class AndesCheckbox implements ControlValueAccessor {
     () =>
       this.disabled() ||
       this.formDisabled() ||
+      this.field.disabled() ||
       (this.group?.disabled() ?? false),
   );
 
@@ -352,11 +377,12 @@ export class AndesCheckbox implements ControlValueAccessor {
     () => this.readOnly() || (this.group?.readOnly() ?? false),
   );
 
-  protected readonly effectiveSize = computed(
-    () => this.size() ?? this.group?.size() ?? 'md',
+  /** The size in effect: its own, the group's, the form's, else `md`. */
+  readonly resolvedSize = computed(
+    () => this.size() ?? this.group?.size() ?? this.field.size() ?? 'md',
   );
   protected readonly effectiveStatus = computed(
-    () => this.status() ?? this.group?.status(),
+    () => this.status() ?? this.group?.status() ?? this.field.status(),
   );
   protected readonly effectiveVariant = computed(
     () => this.variant() ?? this.group?.variant() ?? 'default',
@@ -410,16 +436,20 @@ export class AndesCheckbox implements ControlValueAccessor {
       this.ariaLabelledby() ??
       (this.hasDescription() && this.hasLabelText() && !this.ariaLabel()
         ? this.labelTextId
-        : undefined),
+        : undefined) ??
+      // With no text of its own, the checkbox is named by the field's label.
+      (this.hasLabelText() || this.ariaLabel()
+        ? undefined
+        : this.field.labelledBy()),
   );
 
-  protected readonly effectiveDescribedby = computed(() => {
-    const ids = [
+  protected readonly effectiveDescribedby = computed(() =>
+    andesIdRefs(
       this.ariaDescribedby(),
       this.hasDescription() ? this.descriptionId : undefined,
-    ].filter((id): id is string => !!id);
-    return ids.length > 0 ? ids.join(' ') : undefined;
-  });
+      this.field.describedBy(),
+    ),
+  );
 
   /** See `AndesCheckboxMotion`. */
   protected readonly motion = signal<AndesCheckboxMotion | null>(null);

@@ -1,24 +1,48 @@
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import type { Meta, StoryObj } from '@storybook/angular';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideAlignCenter,
+  lucideAlignLeft,
+  lucideAlignRight,
+  lucideBold,
+  lucideItalic,
+  lucideUnderline,
+} from '@ng-icons/lucide';
+import { type Meta, moduleMetadata, type StoryObj } from '@storybook/angular';
 
 import { AndesToggle } from './toggle';
 import { AndesToggleGroup } from './toggle-group';
 
-const bold = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 2.5h4a2.5 2.5 0 0 1 0 5h-4zM4.5 7.5h4.5a2.5 2.5 0 0 1 0 5H4.5z"/></svg>`;
+const bold = `<ng-icon name="lucideBold" aria-hidden="true" />`;
 
-const italic = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2.5H6.5M9.5 13.5H6M9.8 2.5 6.2 13.5"/></svg>`;
+const italic = `<ng-icon name="lucideItalic" aria-hidden="true" />`;
 
-const underline = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 2.5v5a3.5 3.5 0 0 0 7 0v-5M3 14h10"/></svg>`;
+const underline = `<ng-icon name="lucideUnderline" aria-hidden="true" />`;
 
-const left = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2 3.5h12M2 6.5h8M2 9.5h12M2 12.5h8"/></svg>`;
+const left = `<ng-icon name="lucideAlignLeft" aria-hidden="true" />`;
 
-const center = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2 3.5h12M4 6.5h8M2 9.5h12M4 12.5h8"/></svg>`;
+const center = `<ng-icon name="lucideAlignCenter" aria-hidden="true" />`;
 
-const right = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2 3.5h12M6 6.5h8M2 9.5h12M6 12.5h8"/></svg>`;
+const right = `<ng-icon name="lucideAlignRight" aria-hidden="true" />`;
 
 const meta: Meta<AndesToggleGroup> = {
   title: 'Data Entry/Toggle/Group/ToggleGroup',
   component: AndesToggleGroup,
+  decorators: [
+    moduleMetadata({
+      imports: [NgIcon],
+      providers: [
+        provideIcons({
+          lucideAlignCenter,
+          lucideAlignLeft,
+          lucideAlignRight,
+          lucideBold,
+          lucideItalic,
+          lucideUnderline,
+        }),
+      ],
+    }),
+  ],
 };
 
 export default meta;

@@ -14,10 +14,10 @@
   ariaAttachment="none"
   data-slot="select-trigger"
   [class]="classes()"
-  [attr.data-size]="select.size()"
+  [attr.data-size]="select.resolvedSize()"
   [attr.data-mode]="select.mode()"
-  [attr.data-variant]="select.variant()"
-  [attr.data-status]="select.status() ?? null"
+  [attr.data-variant]="select.resolvedVariant()"
+  [attr.data-status]="select.resolvedStatus() ?? null"
   [attr.data-placeholder]="select.hasValue() ? null : ''"
   [attr.data-disabled]="select.isDisabled() ? '' : null"
   [attr.data-clearable]="select.showClear() ? '' : null"
@@ -70,19 +70,7 @@
           @if (select.removeIcon(); as removeIcon) {
           <ng-container [ngTemplateOutlet]="removeIcon" />
           } @else {
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            aria-hidden="true"
-          >
-            <path
-              d="M18 6 6 18M6 6l12 12"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
+          <ng-icon name="lucideX" />
           }
         </button>
         }
@@ -132,7 +120,7 @@
           data-slot="select-overflow"
           [attr.aria-label]="overflow.label()"
           [attr.dir]="overflow.direction()"
-          [attr.data-size]="select.size()"
+          [attr.data-size]="select.resolvedSize()"
           (pointerenter)="overflow.onPanelPointerEnter($event)"
           (pointerleave)="overflow.onPanelPointerLeave($event)"
           (focusin)="overflow.onPanelFocusIn($event)"
@@ -220,7 +208,7 @@
         aria-autocomplete="list"
         aria-haspopup="listbox"
         class="andes-select__combobox andes-select__input"
-        [attr.id]="select.id() ?? null"
+        [attr.id]="select.controlId() ?? null"
         [value]="select.searchValue()"
         [disabled]="select.isDisabled()"
         [attr.data-state]="select.isOpen() ? 'open' : 'closed'"
@@ -228,10 +216,10 @@
         [attr.aria-controls]="select.isOpen() ? select.listboxId : null"
         [attr.aria-activedescendant]="select.activeDescendantId()"
         [attr.aria-label]="select.ariaLabel()"
-        [attr.aria-labelledby]="select.ariaLabelledby()"
+        [attr.aria-labelledby]="select.labelledBy()"
         [attr.aria-describedby]="describedBy()"
         [attr.aria-invalid]="select.invalid() || null"
-        [attr.aria-required]="select.required() || null"
+        [attr.aria-required]="select.isRequired() || null"
         (input)="select.onSearchInput($any($event.target).value)"
         (keydown)="select.onTriggerKeydown($event)"
         (blur)="select.markAsTouched()"
@@ -244,17 +232,17 @@
       role="combobox"
       aria-haspopup="listbox"
       class="andes-select__combobox"
-      [attr.id]="select.id() ?? null"
+      [attr.id]="select.controlId() ?? null"
       [disabled]="select.isDisabled()"
       [attr.data-state]="select.isOpen() ? 'open' : 'closed'"
       [attr.data-placeholder]="select.hasValue() ? null : ''"
       [attr.aria-expanded]="select.isOpen()"
       [attr.aria-controls]="select.isOpen() ? select.listboxId : null"
       [attr.aria-label]="select.ariaLabel()"
-      [attr.aria-labelledby]="select.ariaLabelledby()"
+      [attr.aria-labelledby]="select.labelledBy()"
       [attr.aria-describedby]="describedBy()"
       [attr.aria-invalid]="select.invalid() || null"
-      [attr.aria-required]="select.required() || null"
+      [attr.aria-required]="select.isRequired() || null"
       (keydown)="select.onTriggerKeydown($event)"
       (blur)="select.markAsTouched()"
     >
@@ -283,15 +271,7 @@
       @if (select.clearIcon(); as clearIcon) {
       <ng-container [ngTemplateOutlet]="clearIcon" />
       } @else {
-      <svg
-        class="andes-select__clear-glyph"
-        viewBox="0 0 16 16"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <circle cx="8" cy="8" r="8" />
-        <path d="M5.5 5.5l5 5m0-5-5 5" />
-      </svg>
+      <ng-icon class="andes-select__clear-glyph" name="lucideCircleX" />
       }
     </button>
     } @if (select.loading()) { @if (select.loadingIcon(); as loadingIcon) {
@@ -313,14 +293,7 @@
       @if (select.suffixIcon(); as suffixIcon) {
       <ng-container [ngTemplateOutlet]="suffixIcon" />
       } @else {
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-      >
-        <path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round" />
-      </svg>
+      <ng-icon name="lucideChevronDown" />
       }
     </span>
     }

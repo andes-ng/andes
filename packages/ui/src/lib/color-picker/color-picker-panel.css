@@ -320,6 +320,13 @@
   line-height: 1.25rem;
 }
 
+/* Every icon is a lucide glyph in an `ng-icon`; as a flex box its svg never sits on a text
+   baseline, so the glyph fills the icon box exactly. */
+ng-icon {
+  display: inline-flex;
+  flex: none;
+}
+
 .andes-color-picker__group-chevron {
   width: 0.75rem;
   height: 0.75rem;

@@ -10,6 +10,8 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideUserRound } from '@ng-icons/lucide';
 
 import type { AndesAvatarFace } from './avatar-face';
 import type { AndesAvatarShape } from './avatar-group-context';
@@ -61,7 +63,8 @@ interface Row {
  */
 @Component({
   selector: 'andes-avatar-face-grid',
-  imports: [],
+  viewProviders: [provideIcons({ lucideUserRound })],
+  imports: [NgIcon],
   templateUrl: './avatar-face-grid.html',
   styleUrl: './avatar-face-grid.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

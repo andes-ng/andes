@@ -546,6 +546,13 @@
   flex-shrink: 0;
 }
 
+/* An `<ng-icon>` (the lucide icons) wraps its svg in a 1em host; `display: contents` drops the
+   wrapper from layout so the svg takes the size above, in the track and in the thumb alike. */
+.andes-switch__content ::ng-deep ng-icon,
+.andes-switch__thumb-icon ::ng-deep ng-icon {
+  display: contents;
+}
+
 /* Forced colors (Windows high contrast): author colors are replaced, which would leave an on
    track indistinguishable from an off one. Map track, thumb and card onto the system palette
    explicitly; a status keeps its own border color so it is still told apart. */

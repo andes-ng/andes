@@ -8,6 +8,8 @@ import {
   TemplateRef,
 } from '@angular/core';
 import clsx from 'clsx';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideCheck, lucideX } from '@ng-icons/lucide';
 
 export type AndesProgressVariant = 'primary' | 'success' | 'warning' | 'danger';
 
@@ -187,7 +189,8 @@ function isGradient(
 
 @Component({
   selector: 'andes-progress',
-  imports: [NgTemplateOutlet],
+  viewProviders: [provideIcons({ lucideCheck, lucideX })],
+  imports: [NgIcon, NgTemplateOutlet],
   templateUrl: './progress.html',
   styleUrl: './progress.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

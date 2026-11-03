@@ -240,30 +240,36 @@
 }
 
 .andes-progress__icon-disc {
-  fill: currentColor;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: currentColor;
 }
 
+/* The mark on the line's disc is lucide's check or x in an `ng-icon`, in the foreground colour
+   of the status. Its strokes keep the 1.75px weight the mark was drawn with at 16px. */
 .andes-progress__icon-mark {
-  fill: none;
-  stroke-width: 1.75;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  --ng-icon__size: 0.7em;
+  --ng-icon__stroke-width: 3.5;
+
+  display: flex;
+  flex: none;
 }
 
 .andes-progress__icon--success .andes-progress__icon-mark {
-  stroke: var(--andes-color-success-foreground);
+  color: var(--andes-color-success-foreground);
 }
 
 .andes-progress__icon--exception .andes-progress__icon-mark {
-  stroke: var(--andes-color-danger-foreground);
+  color: var(--andes-color-danger-foreground);
 }
 
+/* The circle's icon is the bare check or x, drawn in the status colour with 2.5-unit strokes. */
 .andes-progress__icon-stroke {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  --ng-icon__stroke-width: 2.5;
+
+  display: inline-flex;
 }
 
 /* Steps */

@@ -413,6 +413,9 @@ describe('AndesProgress (extended options)', () => {
       expect(root.classList).not.toContain('andes-progress--warning');
       expect(root.getAttribute('data-status')).toBe('success');
       expect(q('.andes-progress__icon--success')).not.toBeNull();
+      expect(
+        q('.andes-progress__icon--success ng-icon')?.getAttribute('name'),
+      ).toBe('lucideCheck');
       expect(q('.andes-progress__info')?.textContent?.trim()).toBe('');
     });
 
@@ -426,9 +429,9 @@ describe('AndesProgress (extended options)', () => {
       expect(root.classList).toContain('andes-progress--danger');
       const icon = q('.andes-progress__icon--exception');
       expect(icon).not.toBeNull();
-      expect(
-        icon?.querySelector('.andes-progress__icon-stroke'),
-      ).not.toBeNull();
+      expect(icon?.classList).toContain('andes-progress__icon-stroke');
+      expect(icon?.getAttribute('name')).toBe('lucideX');
+      expect(icon?.querySelector('svg')).not.toBeNull();
     });
 
     it('keeps the text when a format is supplied', () => {

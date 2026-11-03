@@ -61,27 +61,19 @@
     } @case ('expired') {
     <span class="andes-qr-code__message">{{ resolvedLabels().expired }}</span>
     <button type="button" class="andes-qr-code__refresh" (click)="onRefresh()">
-      <svg
+      <ng-icon
         class="andes-qr-code__glyph"
-        viewBox="0 0 24 24"
+        name="lucideRotateCw"
         aria-hidden="true"
-        focusable="false"
-      >
-        <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
-        <path d="M21 3v5h-5" />
-      </svg>
+      />
       {{ resolvedLabels().refresh }}
     </button>
     } @case ('scanned') {
-    <svg
+    <ng-icon
       class="andes-qr-code__glyph andes-qr-code__glyph--success"
-      viewBox="0 0 24 24"
+      name="lucideCircleCheckBig"
       aria-hidden="true"
-      focusable="false"
-    >
-      <path d="M21.8 10A10 10 0 1 1 17 3.34" />
-      <path d="m9 11 3 3L22 4" />
-    </svg>
+    />
     <span class="andes-qr-code__message">{{ resolvedLabels().scanned }}</span>
     } } }
   </div>

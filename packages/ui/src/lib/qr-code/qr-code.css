@@ -99,21 +99,19 @@
   animation: andes-qr-code-spin 1.1s linear infinite;
 }
 
+/* The refresh and scanned marks are lucide icons in an `ng-icon`; as a flex box the svg never
+   sits on a text baseline, so it fills its box exactly. */
 .andes-qr-code__glyph {
+  display: flex;
   width: 1rem;
   height: 1rem;
   flex: none;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
 .andes-qr-code__glyph--success {
   width: 1.75rem;
   height: 1.75rem;
-  stroke: var(--andes-color-success, #16a34a);
+  color: var(--andes-color-success, #16a34a);
 }
 
 .andes-qr-code__refresh {

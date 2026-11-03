@@ -16,6 +16,8 @@ import {
   TemplateRef,
   viewChild,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideCircleCheckBig, lucideRotateCw } from '@ng-icons/lucide';
 import clsx from 'clsx';
 
 import type { QrErrorLevel, QrMatrix } from './qr-encoder';
@@ -118,7 +120,8 @@ function loadImage(doc: Document, src: string): Promise<HTMLImageElement> {
 @Component({
   selector: 'andes-qr-code',
   exportAs: 'andesQrCode',
-  imports: [NgTemplateOutlet],
+  viewProviders: [provideIcons({ lucideCircleCheckBig, lucideRotateCw })],
+  imports: [NgIcon, NgTemplateOutlet],
   templateUrl: './qr-code.html',
   styleUrl: './qr-code.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

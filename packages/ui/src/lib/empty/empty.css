@@ -1,113 +1,187 @@
-/* The built-in illustrations take every colour from the theme tokens (a mix of the foreground
-   and the background), so they follow light and dark mode without a second set of assets.
+/* The empty state follows Ant Design's sizes: the picture is 100px tall (40px for the simple
+   illustration, 35px when small) with 8px between it and the message, 16px before the footer,
+   and 8px of side margin (32px above and below for the simple illustration, 8px when small).
+
+   The built-in illustrations take every colour from the theme tokens (a mix of the foreground
+   and the background, one mix per theme so each tone matches its Ant Design counterpart), so
+   they follow light and dark mode without a second set of assets. `light-dark()` follows the
+   `color-scheme` the tokens set on the themed element.
+
    Hooks, read with a fallback so a rule on the element is never outranked:
-     --andes-empty-image-size   height of the picture (default 96px, 56px small; simple 40/32px)
-     --andes-empty-padding      space around the whole state
+     --andes-empty-image-size   height of the picture box (default 6.25rem, 2.5rem simple,
+                                2.1875rem small)
+     --andes-empty-margin       space outside the whole state
+     --andes-empty-padding      space inside it (default none)
      --andes-empty-color        description colour (default: muted foreground)
-     --andes-empty-stroke       illustration outline colour */
+     --andes-empty-stroke       outline of the simple illustration, and the tray of the default */
 
 :host {
+  --andes-empty-tone-shadow: light-dark(
+    color-mix(
+      in srgb,
+      var(--andes-color-foreground) 6.6%,
+      var(--andes-color-background)
+    ),
+    color-mix(
+      in srgb,
+      var(--andes-color-foreground) 9.5%,
+      var(--andes-color-background)
+    )
+  );
+  --andes-empty-tone-tray: light-dark(
+    color-mix(
+      in srgb,
+      var(--andes-color-foreground) 28%,
+      var(--andes-color-background)
+    ),
+    color-mix(
+      in srgb,
+      var(--andes-color-foreground) 23.4%,
+      var(--andes-color-background)
+    )
+  );
+  --andes-empty-tone-sheet: light-dark(
+    color-mix(
+      in srgb,
+      var(--andes-color-foreground) 4.4%,
+      var(--andes-color-background)
+    ),
+    color-mix(
+      in srgb,
+      var(--andes-color-foreground) 5.5%,
+      var(--andes-color-background)
+    )
+  );
+  --andes-empty-tone-detail: light-dark(
+    color-mix(
+      in srgb,
+      var(--andes-color-foreground) 16.6%,
+      var(--andes-color-background)
+    ),
+    color-mix(
+      in srgb,
+      var(--andes-color-foreground) 15.8%,
+      var(--andes-color-background)
+    )
+  );
+  --andes-empty-tone-lip: light-dark(
+    color-mix(
+      in srgb,
+      var(--andes-color-foreground) 2.2%,
+      var(--andes-color-background)
+    ),
+    color-mix(
+      in srgb,
+      var(--andes-color-foreground) 1%,
+      var(--andes-color-background)
+    )
+  );
+
   display: block;
   box-sizing: border-box;
-  padding: var(--andes-empty-padding, 2rem 1rem);
+  margin: var(--andes-empty-margin, 0 0.5rem);
+  padding: var(--andes-empty-padding, 0);
   text-align: center;
   font-family: var(--andes-font-family), sans-serif;
   font-size: var(--andes-text-font-size, 0.875rem);
   line-height: var(--andes-text-line-height, 1.375rem);
-  color: var(--andes-empty-color, var(--andes-color-muted-foreground));
+}
+
+/* The simple illustration is the compact look: more air above and below, muted text. */
+:host([data-image='simple']) {
+  margin: var(--andes-empty-margin, 2rem 0.5rem);
+  color: var(--andes-color-muted-foreground);
 }
 
 :host([data-size='small']) {
-  padding: var(--andes-empty-padding, 0.5rem 1rem);
+  margin: var(--andes-empty-margin, 0.5rem);
+  color: var(--andes-color-muted-foreground);
 }
 
 .andes-empty__image {
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
+  block-size: var(--andes-empty-image-size, 6.25rem);
   margin-block-end: 0.5rem;
+}
+
+:host([data-image='simple']) .andes-empty__image {
+  block-size: var(--andes-empty-image-size, 2.5rem);
+}
+
+:host([data-size='small']) .andes-empty__image {
+  block-size: var(--andes-empty-image-size, 2.1875rem);
 }
 
 .andes-empty__svg {
   display: block;
-  inline-size: auto;
+  block-size: 100%;
   max-inline-size: 100%;
-  --andes-empty-stroke-fallback: color-mix(
-    in srgb,
-    var(--andes-color-foreground) 38%,
-    var(--andes-color-background)
-  );
 }
 
 .andes-empty__svg--default {
-  block-size: var(--andes-empty-image-size, 6rem);
+  inline-size: 11.5rem;
 }
 
 .andes-empty__svg--simple {
-  block-size: var(--andes-empty-image-size, 2.5rem);
-}
-
-:host([data-size='small']) .andes-empty__svg--default {
-  block-size: var(--andes-empty-image-size, 3.5rem);
-}
-
-:host([data-size='small']) .andes-empty__svg--simple {
-  block-size: var(--andes-empty-image-size, 2rem);
+  inline-size: 4rem;
 }
 
 .andes-empty__img {
   display: block;
-  block-size: var(--andes-empty-image-size, 6rem);
+  block-size: 100%;
   max-inline-size: 100%;
   object-fit: contain;
 }
 
 .andes-empty__shadow {
-  fill: color-mix(in srgb, var(--andes-color-foreground) 7%, transparent);
+  fill: var(--andes-empty-tone-shadow);
+  fill-opacity: 0.8;
 }
 
 .andes-empty__tray {
-  fill: color-mix(
-    in srgb,
-    var(--andes-color-foreground) 4%,
-    var(--andes-color-background)
-  );
-  stroke: var(--andes-empty-stroke, var(--andes-empty-stroke-fallback));
-  stroke-width: 2;
-  stroke-linejoin: round;
-  stroke-linecap: round;
+  fill: var(--andes-empty-stroke, var(--andes-empty-tone-tray));
 }
 
-.andes-empty__tray-lip {
-  fill: none;
+.andes-empty__sheet {
+  fill: var(--andes-empty-tone-sheet);
 }
 
-.andes-empty__cards {
+.andes-empty__detail {
+  fill: var(--andes-empty-tone-detail);
+}
+
+.andes-empty__mark {
   fill: var(--andes-color-background);
-  stroke: color-mix(
-    in srgb,
-    var(--andes-color-foreground) 18%,
-    var(--andes-color-background)
-  );
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
-.andes-empty__cards path {
-  fill: none;
+.andes-empty__ground {
+  fill: var(--andes-empty-tone-sheet);
 }
 
 .andes-empty__outline {
   fill: none;
-  stroke: var(--andes-empty-stroke, var(--andes-empty-stroke-fallback));
-  stroke-width: 1.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  stroke: var(--andes-empty-stroke, var(--andes-empty-tone-detail));
+  stroke-width: 1;
+}
+
+.andes-empty__outline .andes-empty__lip {
+  fill: var(--andes-empty-tone-lip);
+}
+
+.andes-empty__heading {
+  margin: 0 0 0.25rem;
+  font-size: var(--andes-font-size-md, 1rem);
+  line-height: 1.5rem;
+  font-weight: 600;
+  color: var(--andes-color-foreground);
 }
 
 .andes-empty__description {
   margin: 0;
+  color: var(--andes-empty-color, var(--andes-color-muted-foreground));
 }
 
 .andes-empty__actions {

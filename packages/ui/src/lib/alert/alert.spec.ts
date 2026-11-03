@@ -201,104 +201,78 @@ describe('AndesAlert', () => {
   });
 
   describe('severity icons', () => {
-    /** The drawn shape of the rendered glyph: its `<circle>` count plus every path's geometry. */
-    function iconShape(alert: HTMLElement) {
-      const svg = alert.querySelector(
-        '.andes-alert__icon svg',
-      ) as SVGSVGElement | null;
-      if (!svg) return null;
-      return {
-        circles: svg.querySelectorAll('circle').length,
-        paths: Array.from(svg.querySelectorAll('path')).map(
-          (p) => p.getAttribute('d') ?? '',
-        ),
-      };
+    /** The lucide icon the rendered glyph is, by the `name` of its `ng-icon`. */
+    function iconName(alert: HTMLElement) {
+      const icon = alert.querySelector('.andes-alert__icon ng-icon');
+      return icon ? icon.getAttribute('name') : null;
     }
 
-    function shapeFor(severity: AndesAlertSeverity) {
+    function nameFor(severity: AndesAlertSeverity) {
       const { fixture, alert } = createHost();
       fixture.componentInstance.severity.set(severity);
       fixture.detectChanges();
-      return iconShape(alert);
+      return iconName(alert);
     }
 
-    it('draws a check inside a disc for success', () => {
-      const shape = shapeFor('success');
+    it.each([
+      ['success', 'lucideCircleCheck'],
+      ['info', 'lucideInfo'],
+      ['warning', 'lucideCircleAlert'],
+      ['danger', 'lucideCircleX'],
+    ] as const)('draws lucide %s as %s, with its svg', (severity, name) => {
+      const { fixture, alert } = createHost();
+      fixture.componentInstance.severity.set(severity);
+      fixture.detectChanges();
 
-      expect(shape?.circles).toBe(1);
-      // A single polyline stroke: down-right into the corner, then up-right - a check mark.
-      expect(shape?.paths).toEqual(['m7.7 12.7 2.6 3 6.1-7']);
-    });
-
-    it('draws an "i" inside a disc for info', () => {
-      const shape = shapeFor('info');
-
-      expect(shape?.circles).toBe(1);
-      // The stem, then the tittle above it (a zero-length stroke with a round cap = a dot).
-      expect(shape?.paths).toEqual(['M12 11v6.25', 'M12 7.25h.01']);
-    });
-
-    it('draws an exclamation mark inside a disc for warning', () => {
-      const shape = shapeFor('warning');
-
-      // Round like the others, as in Ant Design: the "!" and the amber tell it from info.
-      expect(shape?.circles).toBe(1);
-      expect(shape?.paths).toEqual(['M12 6.75v6.5', 'M12 17.25h.01']);
-    });
-
-    it('draws an X inside a disc for danger', () => {
-      const shape = shapeFor('danger');
-
-      expect(shape?.circles).toBe(1);
-      // Two strokes crossing at the disc's centre.
-      expect(shape?.paths).toEqual(['m8.6 8.6 6.8 6.8', 'm15.4 8.6-6.8 6.8']);
+      expect(iconName(alert)).toBe(name);
+      expect(
+        alert.querySelector('.andes-alert__icon ng-icon svg'),
+      ).toBeTruthy();
     });
 
     it('draws a distinct glyph for every severity', () => {
       // Guards the @switch: a missing @case would silently fall through to the @default (info)
       // glyph, leaving two severities visually identical while every other test still passed.
-      const shapes = (['success', 'info', 'warning', 'danger'] as const).map(
-        (severity) => JSON.stringify(shapeFor(severity)),
+      const names = (['success', 'info', 'warning', 'danger'] as const).map(
+        nameFor,
       );
 
-      expect(new Set(shapes).size).toBe(4);
+      expect(new Set(names).size).toBe(4);
     });
 
-    it.each(['success', 'info', 'warning', 'danger'] as const)(
-      'fills the %s disc and cuts the mark out in the surface color',
-      (severity) => {
-        const { fixture, alert } = createHost();
-        fixture.componentInstance.severity.set(severity);
-        fixture.detectChanges();
-        const svg = alert.querySelector(
-          '.andes-alert__icon svg',
-        ) as SVGSVGElement;
-        const disc = svg.querySelector('circle') as SVGCircleElement;
-        const mark = svg.querySelector('.andes-alert__mark') as SVGGElement;
+    it('keeps the glyph hidden from assistive technology', () => {
+      const { alert } = createHost();
 
-        // The disc is the glyph's own color; every path is inside the group that the
-        // stylesheet strokes with the surface color, so no mark is left in `currentColor`.
-        expect(svg.getAttribute('fill')).toBe('currentColor');
-        expect(svg.getAttribute('viewBox')).toBe('0 0 24 24');
-        expect(disc.getAttribute('r')).toBe('12');
-        expect(svg.querySelectorAll('path')).toHaveLength(
-          mark.querySelectorAll('path').length,
-        );
-        expect(declaredValue(alertCss(), '.andes-alert__mark', 'stroke')).toBe(
-          'var(--andes-alert-surface)',
-        );
-        expect(declaredValue(alertCss(), '.andes-alert__mark', 'fill')).toBe(
-          'none',
-        );
-      },
-    );
+      expect(
+        alert.querySelector('.andes-alert__icon')?.getAttribute('aria-hidden'),
+      ).toBe('true');
+    });
+
+    it('fills the disc and cuts the mark out in the surface color', () => {
+      const css = alertCss();
+      const disc = (property: string) =>
+        declaredValue(css, '.andes-alert__glyph ::ng-deep circle', property);
+      const mark = (property: string) =>
+        declaredValue(css, '.andes-alert__glyph ::ng-deep path', property);
+      const line = (property: string) =>
+        declaredValue(css, '.andes-alert__glyph ::ng-deep line', property);
+
+      // The disc is the glyph's own color (the accent) and the mark is stroked, not filled, in
+      // the color of the surface behind the icon.
+      expect(disc('fill')).toBe('currentcolor');
+      expect(mark('fill')).toBe('none');
+      expect(mark('stroke')).toBe('var(--andes-alert-surface)');
+      // The warning icon's "!" is two lines, not paths: they are cut out the same way.
+      expect(line('fill')).toBe('none');
+      expect(line('stroke')).toBe('var(--andes-alert-surface)');
+    });
 
     it('renders no glyph at all when showIcon is false', () => {
       const { fixture, alert } = createHost();
       fixture.componentInstance.showIcon.set(false);
       fixture.detectChanges();
 
-      expect(iconShape(alert)).toBeNull();
+      expect(iconName(alert)).toBeNull();
       expect(alert.querySelectorAll('.andes-alert__icon svg')).toHaveLength(0);
     });
 
@@ -313,10 +287,7 @@ describe('AndesAlert', () => {
       fixture.componentInstance.showIcon.set(true);
       fixture.detectChanges();
 
-      expect(iconShape(alert)?.paths).toEqual([
-        'm8.6 8.6 6.8 6.8',
-        'm15.4 8.6-6.8 6.8',
-      ]);
+      expect(iconName(alert)).toBe('lucideCircleX');
     });
   });
 
@@ -1378,11 +1349,19 @@ describe('AndesAlert metrics', () => {
     );
   });
 
-  it('draws the close glyph on a 12-unit grid', () => {
+  it("draws lucide's x in a box the size of the glyph", () => {
     const { alert } = createClosableAlert();
-    const svg = alert.querySelector('.andes-alert__close svg') as SVGSVGElement;
+    const icon = alert.querySelector('.andes-alert__close ng-icon');
 
-    expect(svg.getAttribute('viewBox')).toBe('0 0 12 12');
+    expect(icon?.getAttribute('name')).toBe('lucideX');
+    expect(icon?.querySelector('svg')).toBeTruthy();
+    expect(declaredValue(css, '.andes-alert__close-x', '--ng-icon__size')).toBe(
+      'var(--andes-alert-close-glyph)',
+    );
+    // 1.3px strokes at 12px are 2.6 units of lucide's 24-unit grid.
+    expect(
+      declaredValue(css, '.andes-alert__close-x', '--ng-icon__stroke-width'),
+    ).toBe('2.6');
   });
 
   it('puts the action 8px before the close button, at the inline-end edge', () => {
@@ -1595,7 +1574,10 @@ describe('AndesAlert live region', () => {
     const fixture = TestBed.createComponent(LiveHost);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelectorAll('[role]')).toHaveLength(1);
+    // Not counting the icons: `ng-icon` carries `role="img"`, inside the aria-hidden glyph slot.
+    expect(
+      fixture.nativeElement.querySelectorAll('[role]:not(ng-icon)'),
+    ).toHaveLength(1);
   });
 
   it('leaves the close button a native button, so Enter and Space activate it', () => {

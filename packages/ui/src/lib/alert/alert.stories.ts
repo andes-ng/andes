@@ -1,3 +1,5 @@
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideBell, lucideMinus } from '@ng-icons/lucide';
 import { type Meta, moduleMetadata, type StoryObj } from '@storybook/angular';
 import { fn } from 'storybook/test';
 
@@ -8,7 +10,12 @@ const meta: Meta<AndesAlert> = {
   title: 'Feedback/Alert/Basics',
   component: AndesAlert,
   tags: ['autodocs'],
-  decorators: [moduleMetadata({ imports: [AndesButton] })],
+  decorators: [
+    moduleMetadata({
+      imports: [AndesButton, NgIcon],
+      providers: [provideIcons({ lucideBell, lucideMinus })],
+    }),
+  ],
   argTypes: {
     severity: {
       control: 'select',
@@ -120,10 +127,7 @@ export const Content: Story = {
 export const CustomIcon: Story = {
   render: () => ({
     template: `<ng-template #bell>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-          <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-        </svg>
+        <ng-icon name="lucideBell" aria-hidden="true" />
       </ng-template>
       <andes-alert severity="success" [icon]="bell">
         <span slot="title">Reminder set</span>
@@ -170,7 +174,7 @@ export const Actions: Story = {
 export const CloseButton: Story = {
   render: () => ({
     template: `<ng-template #minus>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14" /></svg>
+        <ng-icon name="lucideMinus" aria-hidden="true" />
       </ng-template>
       <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 36rem;">
         <andes-alert severity="info" closable closeLabel="Close">Default (x) close button.</andes-alert>

@@ -16,6 +16,14 @@ import {
   viewChild,
 } from '@angular/core';
 import clsx from 'clsx';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideCircleAlert,
+  lucideCircleCheck,
+  lucideCircleX,
+  lucideInfo,
+  lucideX,
+} from '@ng-icons/lucide';
 
 export type AndesAlertSeverity = 'success' | 'info' | 'warning' | 'danger';
 export type AndesAlertRole = 'alert' | 'status';
@@ -131,7 +139,16 @@ const FOCUSABLE_SELECTOR = [
 
 @Component({
   selector: 'andes-alert',
-  imports: [NgTemplateOutlet],
+  viewProviders: [
+    provideIcons({
+      lucideCircleAlert,
+      lucideCircleCheck,
+      lucideCircleX,
+      lucideInfo,
+      lucideX,
+    }),
+  ],
+  imports: [NgIcon, NgTemplateOutlet],
   templateUrl: './alert.html',
   styleUrl: './alert.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

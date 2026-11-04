@@ -176,7 +176,7 @@ export class AndesRadioGroup<T = unknown> implements ControlValueAccessor {
     transform: optionalBooleanAttribute,
   });
   /** Replaces the dot of the checked radio in every item (an item's own `indicator` wins). A
-   *  context-free template, typically an `<svg>` in `currentColor`, sized from the circle. */
+   *  context-free template, typically an `ng-icon` in `currentColor`, sized from the circle. */
   readonly indicator = input<TemplateRef<unknown> | undefined>(undefined);
   /** Equality for matching `value` against the items' values - needed for object values,
    *  where the selected object is rarely the same reference as the option (a value loaded

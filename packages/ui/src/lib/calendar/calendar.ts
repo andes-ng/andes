@@ -20,6 +20,13 @@ import {
   viewChildren,
 } from '@angular/core';
 import clsx from 'clsx';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideChevronLeft,
+  lucideChevronRight,
+  lucideChevronsLeft,
+  lucideChevronsRight,
+} from '@ng-icons/lucide';
 
 import { AndesSelect } from '../select/select';
 
@@ -349,7 +356,15 @@ const PARENT_VIEW: Readonly<
  */
 @Component({
   selector: 'andes-calendar',
-  imports: [AndesSelect, NgTemplateOutlet],
+  viewProviders: [
+    provideIcons({
+      lucideChevronLeft,
+      lucideChevronRight,
+      lucideChevronsLeft,
+      lucideChevronsRight,
+    }),
+  ],
+  imports: [NgIcon, AndesSelect, NgTemplateOutlet],
   templateUrl: './calendar.html',
   styleUrl: './calendar.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

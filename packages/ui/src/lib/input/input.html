@@ -52,15 +52,7 @@
       @if (clearIcon(); as customClearIcon) {
       <ng-container *ngTemplateOutlet="customClearIcon" />
       } @else {
-      <svg
-        class="andes-input__clear-glyph"
-        viewBox="0 0 16 16"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <circle cx="8" cy="8" r="8" />
-        <path d="M5.5 5.5l5 5m0-5-5 5" />
-      </svg>
+      <ng-icon class="andes-input__clear-glyph" name="lucideCircleX" />
       }
     </button>
     } @if (passwordToggle() !== null) {
@@ -82,41 +74,9 @@
         "
       />
       } @else if (passwordToggle()) {
-      <svg
-        data-icon="eye-off"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
-        <path
-          d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"
-        ></path>
-        <path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"></path>
-        <path
-          d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"
-        ></path>
-        <path d="m2 2 20 20"></path>
-      </svg>
+      <ng-icon data-icon="eye-off" name="lucideEyeOff" />
       } @else {
-      <svg
-        data-icon="eye"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
-        <path
-          d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"
-        ></path>
-        <circle cx="12" cy="12" r="3"></circle>
-      </svg>
+      <ng-icon data-icon="eye" name="lucideEye" />
       }
     </button>
     }
@@ -155,19 +115,7 @@
       ><ng-container *ngTemplateOutlet="button.icon"
     /></span>
     } @if (!button.label && !button.content && !button.icon) {
-    <svg
-      slot="icon-start"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="11" cy="11" r="8"></circle>
-      <path d="m21 21-4.3-4.3"></path>
-    </svg>
+    <ng-icon slot="icon-start" name="lucideSearch" />
     } @if (button.content) {
     <ng-container *ngTemplateOutlet="button.content" />
     } @else { {{ button.label }} }

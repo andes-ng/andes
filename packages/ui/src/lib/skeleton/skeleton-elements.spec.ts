@@ -293,14 +293,15 @@ describe('AndesSkeletonImage', () => {
     ).toBe('true');
   });
 
-  it('draws a filled picture mark, not an outline', () => {
+  it("draws lucide's image glyph, registered by the placeholder itself", () => {
     const { part } = render(Host);
-    const icon = part('skeleton-image').querySelector('svg') as SVGElement;
+    const icon = part('skeleton-image').querySelector('ng-icon');
 
-    expect(icon.getAttribute('viewBox')).toBe('0 0 1098 1024');
-    expect(icon.getAttribute('fill')).toBe('currentColor');
-    expect(icon.getAttribute('stroke')).toBeNull();
-    expect(icon.querySelectorAll('path')).toHaveLength(1);
+    expect(icon?.getAttribute('name')).toBe('lucideImage');
+    expect(icon?.classList).toContain('andes-skeleton-image__icon');
+    expect(icon?.querySelector('svg')?.getAttribute('viewBox')).toBe(
+      '0 0 24 24',
+    );
   });
 
   it('applies width/height and active', () => {

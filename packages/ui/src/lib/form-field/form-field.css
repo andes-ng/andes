@@ -337,6 +337,12 @@ andes-form-label {
     var(--andes-motion-ease-out, ease-out);
 }
 
+/* The lucide question-circle, 1em square. */
+.andes-form-label__tooltip-trigger > ng-icon {
+  display: inline-flex;
+  flex: none;
+}
+
 .andes-form-label__tooltip-trigger:hover,
 .andes-form-label__tooltip-trigger:focus-visible {
   color: var(--andes-color-primary-text, var(--andes-color-primary));
@@ -403,7 +409,8 @@ andes-form-label {
   inset-inline-end: calc(var(--andes-space-5) + var(--andes-space-3));
 }
 
-.andes-form-field__feedback svg {
+.andes-form-field__feedback ng-icon {
+  display: flex;
   width: 100%;
   height: 100%;
 }
@@ -426,12 +433,12 @@ andes-form-label {
   color: var(--andes-color-primary);
 }
 
-.andes-form-field__feedback[data-status='validating'] svg {
+.andes-form-field__feedback[data-status='validating'] ng-icon {
   animation: andes-form-field-spin 1s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .andes-form-field__feedback[data-status='validating'] svg {
+  .andes-form-field__feedback[data-status='validating'] ng-icon {
     animation-duration: 2.4s;
   }
 }

@@ -123,7 +123,7 @@ describe('AndesCalendar styles', () => {
       expect(
         declaredValue(
           source,
-          ":host-context([dir='rtl']) .andes-calendar__nav svg",
+          ":host-context([dir='rtl']) .andes-calendar__nav ng-icon",
           'scale',
         ),
       ).toBe('-1 1');

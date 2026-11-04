@@ -113,7 +113,14 @@
   cursor: default;
 }
 
-.andes-tree__handle > svg {
+/* Every icon is a lucide glyph in an `ng-icon`; as a flex box its svg never sits on a text
+   baseline, so the glyph fills the icon box exactly. */
+ng-icon {
+  display: inline-flex;
+  flex: none;
+}
+
+.andes-tree__handle > ng-icon {
   width: var(--_box);
   height: var(--_box);
 }
@@ -155,17 +162,21 @@
   color: var(--andes-color-foreground, #0f172a);
 }
 
-.andes-tree__switcher > svg {
+.andes-tree__switcher > ng-icon {
   width: 1rem;
   height: var(--_title-height);
 }
 
+/* Lucide's square fills 18 of its 24 units: the glyph box is a third wider than `--_box` so the
+   drawn square is exactly `--_box`, where the connector lines meet it. */
 .andes-tree__switcher > .andes-tree__box {
-  width: var(--_box);
+  width: calc(var(--_box) * 4 / 3);
+  --ng-icon__stroke-width: 1.25;
 }
 
 .andes-tree__switcher > .andes-tree__leaf-icon {
   width: var(--_box);
+  --ng-icon__stroke-width: 1.5;
 }
 
 .andes-tree__switcher > .andes-tree__spinner {
@@ -255,10 +266,9 @@
 .andes-tree__box {
   position: relative;
   z-index: 1;
-  background: var(--andes-color-background, #fff);
 }
 
-.andes-tree__box rect {
+.andes-tree__box ::ng-deep rect {
   fill: var(--andes-color-background, #fff);
 }
 
@@ -292,7 +302,7 @@
     border-color var(--andes-motion-duration-mid, 150ms) ease;
 }
 
-.andes-tree__checkbox > svg {
+.andes-tree__checkbox > ng-icon {
   width: 0.75rem;
   height: 0.75rem;
 }
@@ -357,9 +367,10 @@
   color: var(--andes-color-muted-foreground, #64748b);
 }
 
-.andes-tree__icon > svg {
+.andes-tree__icon > ng-icon {
   width: 1rem;
   height: 1rem;
+  --ng-icon__stroke-width: 1.5;
 }
 
 .andes-tree__title {
@@ -680,7 +691,7 @@
   text-align: center;
 }
 
-.andes-tree__empty > svg {
+.andes-tree__empty > ng-icon {
   width: 1rem;
   height: 1rem;
 }
@@ -701,6 +712,7 @@
 .andes-tree__empty > .andes-tree__empty-icon {
   width: 1.75rem;
   height: 1.75rem;
+  --ng-icon__stroke-width: 1.5;
   color: color-mix(
     in srgb,
     var(--andes-color-muted-foreground, #64748b) 70%,

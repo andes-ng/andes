@@ -94,11 +94,12 @@ describe('AndesDatePicker styles', () => {
     });
 
     it('draws a muted disc with the "x" knocked out, with a focus ring', () => {
+      // Lucide's circle-x, filled: the ring's 4-unit stroke takes the disc to the box's edge.
       expect(css).toContain(
-        '.andes-date-picker__clear-glyph circle { fill: currentColor; }',
+        '.andes-date-picker__clear-glyph ::ng-deep circle { fill: currentColor; stroke-width: 4; }',
       );
       expect(css).toContain(
-        '.andes-date-picker__clear-glyph path { fill: none; stroke: var(--andes-color-background);',
+        '.andes-date-picker__clear-glyph ::ng-deep path { stroke: var(--andes-color-background); }',
       );
       expect(css).toContain(
         '.andes-date-picker__clear:focus-visible { outline: 2px solid var(--andes-color-focus-ring);',
@@ -420,10 +421,18 @@ describe('AndesDatePicker styles', () => {
 
     it('keeps the knocked-out "x" of the clear button apart from its disc', () => {
       expect(
-        declaredValue(forced, '.andes-date-picker__clear-glyph circle', 'fill'),
+        declaredValue(
+          forced,
+          '.andes-date-picker__clear-glyph ::ng-deep circle',
+          'fill',
+        ),
       ).toBe('ButtonText');
       expect(
-        declaredValue(forced, '.andes-date-picker__clear-glyph path', 'stroke'),
+        declaredValue(
+          forced,
+          '.andes-date-picker__clear-glyph ::ng-deep path',
+          'stroke',
+        ),
       ).toBe('Canvas');
     });
 

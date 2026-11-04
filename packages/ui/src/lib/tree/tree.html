@@ -58,14 +58,7 @@
         [attr.data-disabled]="rowDraggable ? null : ''"
       >
         @if (rowDraggable) {
-        <svg viewBox="0 0 14 14" fill="currentColor">
-          <circle cx="4.75" cy="2.75" r="1.125" />
-          <circle cx="9.25" cy="2.75" r="1.125" />
-          <circle cx="4.75" cy="7" r="1.125" />
-          <circle cx="9.25" cy="7" r="1.125" />
-          <circle cx="4.75" cy="11.25" r="1.125" />
-          <circle cx="9.25" cy="11.25" r="1.125" />
-        </svg>
+        <ng-icon name="lucideGripVertical" />
         }
       </span>
       } @for (line of row.connectors; track $index) {
@@ -83,22 +76,7 @@
         (click)="onSwitcherClick($event, row)"
       >
         @if (isLoading(key)) {
-        <svg class="andes-tree__spinner" viewBox="0 0 16 16" fill="none">
-          <circle
-            cx="8"
-            cy="8"
-            r="6"
-            stroke="currentColor"
-            stroke-opacity="0.25"
-            stroke-width="2"
-          />
-          <path
-            d="M14 8a6 6 0 0 0-6-6"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-          />
-        </svg>
+        <ng-icon class="andes-tree__spinner" name="lucideLoaderCircle" />
         } @else if (!leaf) { @if (switcherIcon(); as switcherTpl) {
         <span class="andes-tree__chevron andes-tree__switcher-icon">
           <ng-container
@@ -107,30 +85,12 @@
           />
         </span>
         } @else if (showLine()) {
-        <svg class="andes-tree__box" viewBox="0 0 14 14" fill="none">
-          <rect
-            x="0.5"
-            y="0.5"
-            width="13"
-            height="13"
-            rx="2.5"
-            stroke="currentColor"
-          />
-          <path d="M4 7h6" stroke="currentColor" stroke-linecap="round" />
-          @if (!expanded) {
-          <path d="M7 4v6" stroke="currentColor" stroke-linecap="round" />
-          }
-        </svg>
+        <ng-icon
+          class="andes-tree__box"
+          [name]="expanded ? 'lucideSquareMinus' : 'lucideSquarePlus'"
+        />
         } @else {
-        <svg class="andes-tree__chevron" viewBox="0 0 16 16" fill="none">
-          <path
-            d="m6 3.5 4.5 4.5L6 12.5"
-            stroke="currentColor"
-            stroke-width="1.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
+        <ng-icon class="andes-tree__chevron" name="lucideChevronRight" />
         } } @else if (leafIconShown()) { @if (leafIconTemplate(); as leafTpl) {
         <span class="andes-tree__leaf-icon andes-tree__switcher-icon">
           <ng-container
@@ -139,18 +99,7 @@
           />
         </span>
         } @else {
-        <svg class="andes-tree__leaf-icon" viewBox="0 0 14 14" fill="none">
-          <path
-            d="M3.5 1.5h4.25L10.5 4.25v7.25a1 1 0 0 1-1 1h-6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1Z"
-            stroke="currentColor"
-            stroke-linejoin="round"
-          />
-          <path
-            d="M7.5 1.5v3h3"
-            stroke="currentColor"
-            stroke-linejoin="round"
-          />
-        </svg>
+        <ng-icon class="andes-tree__leaf-icon" name="lucideFile" />
         } }
       </span>
       @if (checkboxRow) {
@@ -163,24 +112,9 @@
         (click)="onCheckboxClick($event, row)"
       >
         @if (isChecked(key)) {
-        <svg class="andes-check-motion__tick" viewBox="0 0 16 16" fill="none">
-          <path
-            d="m3.5 8.5 3 3 6-6.5"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
+        <ng-icon class="andes-check-motion__tick" name="lucideCheck" />
         } @else if (isIndeterminate(key)) {
-        <svg class="andes-check-motion__dash" viewBox="0 0 16 16" fill="none">
-          <path
-            d="M4 8h8"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-          />
-        </svg>
+        <ng-icon class="andes-check-motion__dash" name="lucideMinus" />
         }
       </span>
       }
@@ -202,39 +136,11 @@
           />
           } @else if (iconGlyph(row); as glyph) { {{ glyph }} } @else if (leaf)
           {
-          <svg viewBox="0 0 16 16" fill="none">
-            <path
-              d="M4 1.75h5l3 3v8.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-10.5a1 1 0 0 1 1-1Z"
-              stroke="currentColor"
-              stroke-linejoin="round"
-            />
-            <path
-              d="M9 1.75v3h3"
-              stroke="currentColor"
-              stroke-linejoin="round"
-            />
-          </svg>
+          <ng-icon name="lucideFile" />
           } @else if (expanded) {
-          <svg viewBox="0 0 16 16" fill="none">
-            <path
-              d="M1.75 12.5V4a1 1 0 0 1 1-1h3l1.5 1.75h5a1 1 0 0 1 1 1V7"
-              stroke="currentColor"
-              stroke-linejoin="round"
-            />
-            <path
-              d="m1.75 12.5 1.7-4.6a1 1 0 0 1 .94-.65h9.35a.5.5 0 0 1 .47.67l-1.6 4.4a1 1 0 0 1-.94.65H2.75a1 1 0 0 1-1-1Z"
-              stroke="currentColor"
-              stroke-linejoin="round"
-            />
-          </svg>
+          <ng-icon name="lucideFolderOpen" />
           } @else {
-          <svg viewBox="0 0 16 16" fill="none">
-            <path
-              d="M1.75 12.5V3.75a1 1 0 0 1 1-1h3l1.5 1.75h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-10.5a1 1 0 0 1-1-1Z"
-              stroke="currentColor"
-              stroke-linejoin="round"
-            />
-          </svg>
+          <ng-icon name="lucideFolder" />
           }
         </span>
         }
@@ -344,49 +250,11 @@
     [attr.aria-busy]="loading() ? 'true' : null"
   >
     @if (loading()) {
-    <svg
-      class="andes-tree__spinner"
-      viewBox="0 0 16 16"
-      fill="none"
-      aria-hidden="true"
-    >
-      <circle
-        cx="8"
-        cy="8"
-        r="6"
-        stroke="currentColor"
-        stroke-opacity="0.25"
-        stroke-width="2"
-      />
-      <path
-        d="M14 8a6 6 0 0 0-6-6"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-      />
-    </svg>
+    <ng-icon class="andes-tree__spinner" name="lucideLoaderCircle" />
     {{ text().loading }} } @else if (emptyContent(); as content) {
     <ng-container [ngTemplateOutlet]="content" />
     } @else {
-    <svg
-      class="andes-tree__empty-icon"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-    >
-      <path
-        d="M4 13.5 6.2 5.6A1.5 1.5 0 0 1 7.64 4.5h8.72a1.5 1.5 0 0 1 1.44 1.1L20 13.5v4.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18Z"
-        stroke="currentColor"
-        stroke-width="1.5"
-        stroke-linejoin="round"
-      />
-      <path
-        d="M4 13.5h4.5l1 2h5l1-2H20"
-        stroke="currentColor"
-        stroke-width="1.5"
-        stroke-linejoin="round"
-      />
-    </svg>
+    <ng-icon class="andes-tree__empty-icon" name="lucideInbox" />
     {{ text().empty }} }
   </div>
   }

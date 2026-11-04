@@ -238,15 +238,23 @@ describe('AndesFormField - presentation features', () => {
         h.feedback.set(true),
       );
       blur();
+      // A lucide glyph per status, registered by the field itself: this test bed provides
+      // no icons, so a drawn svg proves the registration is automatic.
+      const icon = () => feedback()?.querySelector('ng-icon');
       expect(feedback()?.getAttribute('data-status')).toBe('error');
       expect(feedback()?.getAttribute('aria-hidden')).toBe('true');
-      expect(feedback()?.querySelector('svg')).not.toBeNull();
+      expect(icon()?.getAttribute('name')).toBe('lucideCircleX');
+      expect(icon()?.querySelector('svg')).not.toBeNull();
       type('Ada');
       expect(feedback()?.getAttribute('data-status')).toBe('success');
+      expect(icon()?.getAttribute('name')).toBe('lucideCircleCheck');
       update((h) => h.status.set('warning'));
       expect(feedback()?.getAttribute('data-status')).toBe('warning');
+      expect(icon()?.getAttribute('name')).toBe('lucideCircleAlert');
       update((h) => h.status.set('validating'));
       expect(feedback()?.getAttribute('data-status')).toBe('validating');
+      expect(icon()?.getAttribute('name')).toBe('lucideLoaderCircle');
+      expect(icon()?.querySelector('svg')).not.toBeNull();
       expect(root().classList).toContain('andes-form-field--has-feedback');
     });
 
@@ -533,11 +541,11 @@ describe('AndesFormField - presentation features', () => {
       expect(trigger.closest('label')).toBeNull();
       expect(trigger.type).toBe('button');
       expect(trigger.getAttribute('aria-label')).toBe('More information');
-      // The icon is drawn, not typed: a 14px question-circle that is hidden from AT.
-      expect(trigger.querySelector('svg')?.getAttribute('aria-hidden')).toBe(
-        'true',
-      );
-      expect(trigger.querySelectorAll('svg circle')).toHaveLength(1);
+      // The icon is drawn, not typed: lucide's 14px question-circle, hidden from AT.
+      const icon = trigger.querySelector('ng-icon');
+      expect(icon?.getAttribute('name')).toBe('lucideCircleQuestionMark');
+      expect(icon?.getAttribute('aria-hidden')).toBe('true');
+      expect(icon?.querySelectorAll('svg circle')).toHaveLength(1);
       // The library's tooltip renders nothing until it opens.
       expect(document.querySelector('.andes-tooltip')).toBeNull();
       // A native button would otherwise fall back to the UA font.
@@ -1113,7 +1121,7 @@ describe('AndesFormField - display timing, warnings and templates', () => {
       expect(feedback?.querySelector('.custom-icon')?.textContent).toBe(
         'error',
       );
-      expect(feedback?.querySelector('svg')).toBeNull();
+      expect(feedback?.querySelector('ng-icon')).toBeNull();
     });
 
     it('renders a tooltip template in the bubble', () => {

@@ -218,6 +218,14 @@
   inset-inline-end: var(--andes-space-3, 0.75rem);
 }
 
+/* The lucide icons, 1em square; as a flex box the `ng-icon` lays its svg out edge to edge,
+   never on a text baseline. `ng-icon.` beats the icon's own host rule, which this
+   unencapsulated stylesheet would otherwise only tie. */
+ng-icon.andes-image-preview__icon {
+  display: inline-flex;
+  flex: none;
+}
+
 /* The chevrons point toward the edge they sit on, which swaps sides in right-to-left. */
 .andes-image-preview__directional:dir(rtl) {
   transform: scaleX(-1);

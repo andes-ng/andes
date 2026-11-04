@@ -198,7 +198,7 @@ export class AndesSwitch implements ControlValueAccessor {
   readonly unCheckedChildren = input<string | TemplateRef<unknown>>('');
   /**
    * Icons drawn INSIDE the thumb while the switch is on / off: context-free templates whose
-   * `<svg>` (or text) is sized from the thumb, centered and tinted like the loading spinner.
+   * icon (an `ng-icon`, or text) is sized from the thumb, centered and tinted like the spinner.
    * Hidden while the switch is `loading` (or waiting on `beforeChange`), when the spinner
    * takes the thumb.
    */

@@ -17,6 +17,8 @@ import {
   viewChild,
 } from '@angular/core';
 import clsx from 'clsx';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideChevronDown, lucideCircleX, lucideX } from '@ng-icons/lucide';
 
 import { AndesSelectOverflow } from './select-overflow';
 import {
@@ -43,7 +45,9 @@ const RESPONSIVE_SEARCH_RESERVE = 20;
  */
 @Component({
   selector: 'andes-select-trigger',
+  viewProviders: [provideIcons({ lucideX, lucideCircleX, lucideChevronDown })],
   imports: [
+    NgIcon,
     AndesOverlayContentPrimitive,
     AndesOverlayTriggerPrimitive,
     AndesSelectOverflow,

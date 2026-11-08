@@ -33,7 +33,11 @@ import { ANDES_TABS } from './tabs-types';
   host: {
     role: 'tablist',
     '[attr.aria-orientation]': 'tabs.resolvedOrientation()',
-    '[attr.data-variant]': 'tabs.type() === "line" ? "line" : "card"',
+    '[attr.data-variant]': 'tabs.variant()',
+    '[attr.data-size]': 'tabs.size()',
+    '[attr.data-stretch]': 'tabs.stretch() ? "" : null',
+    '[class]': 'tabs.partClasses().list ?? null',
+    '[style]': 'tabs.partStyles().list ?? null',
     '[style.gap.px]': 'tabs.tabBarGutter()',
   },
   template: `<ng-content />`,

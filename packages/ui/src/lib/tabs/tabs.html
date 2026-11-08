@@ -1,5 +1,9 @@
-<div [class]="barClasses()" [style]="tabBarStyle()">
-  <div class="andes-tabs__extra andes-tabs__extra--left">
+<div [class]="barClasses()" [style]="barStyle()">
+  <div
+    class="andes-tabs__extra andes-tabs__extra--left"
+    [class]="partClasses().extra"
+    [style]="partStyles().extra"
+  >
     <ng-content select="[andesTabsExtraLeft]" />
     @if (extraLeft(); as extra) {
     <ng-container [ngTemplateOutlet]="extra" />
@@ -42,6 +46,7 @@
             [closable]="item.closable ?? true"
             [closeIcon]="item.closeIcon"
             [icon]="item.icon"
+            [ariaLabel]="item.ariaLabel"
           >
             @if (asTemplate(item.label); as label) {
             <ng-container [ngTemplateOutlet]="label" />
@@ -75,6 +80,8 @@
     <button
       type="button"
       class="andes-tabs__more"
+      [class]="partClasses().more"
+      [style]="partStyles().more"
       andesOverlayTrigger
       [attr.aria-label]="moreLabel()"
       (click)="onMoreClick()"
@@ -91,6 +98,8 @@
     <button
       type="button"
       class="andes-tabs__add"
+      [class]="partClasses().add"
+      [style]="partStyles().add"
       [attr.aria-label]="addLabel()"
       (click)="onAdd($event)"
     >
@@ -103,7 +112,11 @@
     }
   </div>
 
-  <div class="andes-tabs__extra andes-tabs__extra--right">
+  <div
+    class="andes-tabs__extra andes-tabs__extra--right"
+    [class]="partClasses().extra"
+    [style]="partStyles().extra"
+  >
     <ng-content select="[andesTabsExtraRight]" />
     @if (extraRight(); as extra) {
     <ng-container [ngTemplateOutlet]="extra" />
@@ -116,6 +129,8 @@
   <div
     andesOverlayContent
     class="andes-tabs__more-panel"
+    [class]="partClasses().moreMenu"
+    [style]="partStyles().moreMenu"
     [attr.aria-label]="moreLabel()"
     (mouseenter)="cancelMoreClose()"
     (mouseleave)="onMorePointerLeave()"
@@ -128,6 +143,8 @@
   } @else {
   <andes-tabs-more-menu
     andesOverlayContent
+    [class]="partClasses().moreMenu"
+    [style]="partStyles().moreMenu"
     [tabs]="moreTabs()"
     [search]="moreSearch()"
     [searchPlaceholder]="moreSearchPlaceholder()"
@@ -141,7 +158,11 @@
   }
 </ng-template>
 
-<div class="andes-tabs__panels">
+<div
+  class="andes-tabs__panels"
+  [class]="partClasses().panels"
+  [style]="partStyles().panels"
+>
   <ng-content />
   @if (items(); as items) { @for (item of items; track item.key) {
   <andes-tabs-content

@@ -34,8 +34,42 @@
   }
 }
 
+/* The sliding motion adds a short move toward the side the previous tab was on, mirrored
+   in right-to-left text. */
+:host(.andes-tabs-content--slide) {
+  --_slide-from: 0.75rem;
+  animation-name: andes-tabs-pane-slide;
+  animation-duration: 0.2s;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+:host(.andes-tabs-content--slide.andes-tabs-content--backward) {
+  --_slide-from: -0.75rem;
+}
+
+:host(.andes-tabs-content--slide:dir(rtl)) {
+  --_slide-from: -0.75rem;
+}
+
+:host(.andes-tabs-content--slide.andes-tabs-content--backward:dir(rtl)) {
+  --_slide-from: 0.75rem;
+}
+
+@keyframes andes-tabs-pane-slide {
+  from {
+    opacity: 0;
+    transform: translateX(var(--_slide-from));
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  :host(.andes-tabs-content--animated) {
+  :host(.andes-tabs-content--animated),
+  :host(.andes-tabs-content--slide) {
     animation: none;
   }
 }

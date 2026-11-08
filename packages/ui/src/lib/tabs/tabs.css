@@ -3,8 +3,8 @@
 :host {
   display: flex;
   flex-direction: column;
-  /* 16px between the tab bar and the panel. */
-  gap: var(--andes-space-4);
+  /* 12px between the tab bar and the panel. */
+  gap: var(--andes-space-3);
   min-width: 0;
   font-family: var(--andes-font-family), sans-serif;
   color: var(--andes-color-foreground);
@@ -58,6 +58,11 @@
   pointer-events: none;
 }
 
+.andes-tabs__bar--pill::before,
+.andes-tabs__bar--segmented::before {
+  display: none;
+}
+
 .andes-tabs__bar--bottom::before {
   inset: 0 0 auto 0;
   border-bottom: none;
@@ -109,6 +114,22 @@
 
 .andes-tabs__bar--vertical .andes-tabs__nav-group {
   flex-direction: column;
+}
+
+.andes-tabs__bar--stretch .andes-tabs__nav-group,
+.andes-tabs__bar--stretch .andes-tabs__nav-wrap,
+.andes-tabs__bar--stretch .andes-tabs__nav {
+  flex: 1 1 auto;
+}
+
+.andes-tabs__bar--stretch.andes-tabs__bar--vertical .andes-tabs__nav-group {
+  flex: 0 1 auto;
+}
+
+/* Side bars hug their tabs; the pill and segmented groups too, unless stretched. */
+.andes-tabs__bar--pill:not(.andes-tabs__bar--stretch),
+.andes-tabs__bar--segmented:not(.andes-tabs__bar--stretch) {
+  justify-content: flex-start;
 }
 
 .andes-tabs__bar--centered .andes-tabs__nav-group {
@@ -199,28 +220,28 @@
 
 .andes-tabs__ink-bar {
   position: absolute;
-  background: var(--andes-color-primary);
+  background: var(--andes-tabs-indicator-color, var(--andes-color-primary));
   pointer-events: none;
 }
 
 .andes-tabs__bar--top .andes-tabs__ink-bar {
   bottom: 0;
-  height: 2px;
+  height: var(--andes-tabs-indicator-size, 2px);
 }
 
 .andes-tabs__bar--bottom .andes-tabs__ink-bar {
   top: 0;
-  height: 2px;
+  height: var(--andes-tabs-indicator-size, 2px);
 }
 
 .andes-tabs__bar--left .andes-tabs__ink-bar {
   inset-inline-end: 0;
-  width: 2px;
+  width: var(--andes-tabs-indicator-size, 2px);
 }
 
 .andes-tabs__bar--right .andes-tabs__ink-bar {
   inset-inline-start: 0;
-  width: 2px;
+  width: var(--andes-tabs-indicator-size, 2px);
 }
 
 /* Quick and settling (no overshoot), so the indicator glides to the new tab rather than
@@ -249,14 +270,14 @@
 }
 
 .andes-tabs__scroll {
-  width: 1.75rem;
+  width: 1.5rem;
   border: none;
   background: none;
 }
 
 .andes-tabs__bar--vertical .andes-tabs__scroll {
   width: auto;
-  height: 1.75rem;
+  height: 1.5rem;
 }
 
 /* A horizontal bar scrolls toward the inline start/end, so its chevrons mirror with the

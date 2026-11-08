@@ -40,9 +40,17 @@ import {
 } from '@ng-icons/lucide';
 import clsx from 'clsx';
 
+import { resolveSemantic, toStyleMap } from '../tag/tag-semantic';
 import { AndesTabsContent, AndesTabsContentLazy } from './tabs-content';
 import { AndesTabsList } from './tabs-list';
 import { AndesTabsMoreMenu } from './tabs-more-menu';
+import {
+  AndesTabsClassNames,
+  AndesTabsSemantic,
+  AndesTabsSemanticInfo,
+  AndesTabsSemanticPart,
+  AndesTabsStyles,
+} from './tabs-semantic';
 import { AndesTabsTrigger } from './tabs-trigger';
 import {
   ANDES_TABS,
@@ -58,12 +66,14 @@ import {
   AndesTabsMoreTab,
   AndesTabsMoreTrigger,
   AndesTabsOrientation,
+  AndesTabsPaneMotion,
   AndesTabsPosition,
   AndesTabsReorderEvent,
   AndesTabsScrollEvent,
   AndesTabsSize,
   AndesTabsTriggerRef,
   AndesTabsType,
+  AndesTabsVariant,
 } from './tabs-types';
 
 let nextTabsId = 0;
@@ -89,6 +99,28 @@ function sortByDocumentOrder(
 interface InkBarGeometry {
   offset: number;
   length: number;
+}
+
+/** A `[style]`-style value (string, object or nothing) as a plain object. */
+function styleMap(
+  value: Record<string, string | number> | string | null | undefined,
+): Record<string, string | number> {
+  if (!value) {
+    return {};
+  }
+  if (typeof value !== 'string') {
+    return value;
+  }
+  const result: Record<string, string> = {};
+  for (const declaration of value.split(';')) {
+    const colon = declaration.indexOf(':');
+    if (colon > 0) {
+      result[declaration.slice(0, colon).trim()] = declaration
+        .slice(colon + 1)
+        .trim();
+    }
+  }
+  return result;
 }
 
 function sameKeys(a: readonly string[], b: readonly string[]): boolean {
@@ -166,6 +198,8 @@ function sameInkBar(a: InkBarGeometry | null, b: InkBarGeometry | null) {
   host: {
     '[attr.data-position]': 'position()',
     '[attr.data-type]': 'type()',
+    '[class]': 'partClasses().root ?? null',
+    '[style]': 'partStyles().root ?? null',
   },
 })
 export class AndesTabs implements AndesTabsContext {
@@ -173,6 +207,7 @@ export class AndesTabs implements AndesTabsContext {
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
   private readonly overlay = inject(AndesOverlayPrimitive);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   /** The active tab's value. Two-way bindable (`[(value)]`) for a controlled Tabs; when left
    * unbound, `AndesTabs` manages it itself, defaulting to the first enabled tab. A one-way
@@ -201,6 +236,28 @@ export class AndesTabs implements AndesTabsContext {
 
   /** Centers the tabs within the bar. */
   readonly centered = input(false, { transform: booleanAttribute });
+
+  /** Stretches the tabs across the whole bar, each taking an equal share of its length. */
+  readonly stretch = input(false, { transform: booleanAttribute });
+
+  /**
+   * The width of the Tabs, in px, below which a `left`/`right` bar moves to the top, so a
+   * vertical bar does not squeeze its panels on a phone or in a narrow container. `null`
+   * keeps the bar where `tabPosition` puts it. Default `480`.
+   */
+  readonly collapseBelow = input<number | null>(480);
+
+  /** Extra classes per part (`root`, `bar`, `list`, `trigger`, `indicator`, `panels`,
+   * `content`, `extra`, `more`, `moreMenu`, `add`), as an object or a function of the Tabs'
+   * props. */
+  readonly classNames = input<
+    AndesTabsSemantic<AndesTabsClassNames> | null | undefined
+  >(undefined);
+
+  /** Inline styles per part, as an object or a function of the Tabs' props. */
+  readonly styles = input<
+    AndesTabsSemantic<AndesTabsStyles> | null | undefined
+  >(undefined);
 
   /** Gap between tabs, in px. Default: the type's own spacing. */
   readonly tabBarGutter = input<number | undefined>(undefined);
@@ -294,11 +351,32 @@ export class AndesTabs implements AndesTabsContext {
   /** `draggable` only: a tab was dropped at a new index, or moved with the keyboard. */
   readonly reorder = output<AndesTabsReorderEvent>();
 
-  readonly position = computed<AndesTabsPosition>(
+  /** The Tabs' own width in px, 0 until it has been measured. */
+  private readonly hostWidth = signal(0);
+
+  private readonly requestedPosition = computed<AndesTabsPosition>(
     () =>
       this.tabPosition() ??
       (this.orientation() === 'vertical' ? 'left' : 'top'),
   );
+
+  /** Where the bar sits: the requested position, unless the Tabs are too narrow for a side bar. */
+  readonly position = computed<AndesTabsPosition>(() => {
+    const requested = this.requestedPosition();
+    const limit = this.collapseBelow();
+    const width = this.hostWidth();
+    return (requested === 'left' || requested === 'right') &&
+      limit !== null &&
+      width > 0 &&
+      width < limit
+      ? 'top'
+      : requested;
+  });
+
+  readonly variant = computed<AndesTabsVariant>(() => {
+    const type = this.type();
+    return type === 'editable-card' ? 'card' : type;
+  });
 
   readonly resolvedOrientation = computed<AndesTabsOrientation>(() =>
     this.position() === 'left' || this.position() === 'right'
@@ -310,12 +388,63 @@ export class AndesTabs implements AndesTabsContext {
 
   private readonly resolvedAnimated = computed(() => {
     const animated = this.animated();
+    const motion = (
+      pane: boolean | 'fade' | 'slide' | undefined,
+    ): AndesTabsPaneMotion =>
+      pane === 'slide' ? 'slide' : pane ? 'fade' : 'none';
     return typeof animated === 'boolean'
-      ? { inkBar: animated, tabPane: animated }
-      : { inkBar: animated.inkBar ?? true, tabPane: animated.tabPane ?? false };
+      ? { inkBar: animated, tabPane: motion(animated) }
+      : {
+          inkBar: animated.inkBar ?? true,
+          tabPane: motion(animated.tabPane),
+        };
   });
 
-  readonly tabPaneAnimated = computed(() => this.resolvedAnimated().tabPane);
+  readonly paneMotion = computed(() => this.resolvedAnimated().tabPane);
+
+  readonly tabPaneAnimated = computed(() => this.paneMotion() !== 'none');
+
+  private readonly _paneDirection = signal<'forward' | 'backward'>('forward');
+  readonly paneDirection = this._paneDirection.asReadonly();
+
+  private readonly semanticInfo = computed<AndesTabsSemanticInfo>(() => ({
+    props: {
+      type: this.type(),
+      size: this.size(),
+      position: this.position(),
+      orientation: this.resolvedOrientation(),
+      centered: this.centered(),
+      stretch: this.stretch(),
+      draggable: this.draggable(),
+      overflowing: this.overflowing(),
+    },
+  }));
+
+  /** `classNames` resolved against the current props, one joined string per part. */
+  readonly partClasses = computed(() => {
+    const resolved =
+      resolveSemantic(this.classNames(), this.semanticInfo()) ?? {};
+    const result: Partial<Record<AndesTabsSemanticPart, string>> = {};
+    for (const [part, value] of Object.entries(resolved)) {
+      const joined = clsx(value);
+      if (joined) {
+        result[part as AndesTabsSemanticPart] = joined;
+      }
+    }
+    return result;
+  });
+
+  /** `styles` resolved against the current props, one style map per part. */
+  readonly partStyles = computed(() => {
+    const resolved = resolveSemantic(this.styles(), this.semanticInfo()) ?? {};
+    const result: Partial<
+      Record<AndesTabsSemanticPart, Record<string, string> | null>
+    > = {};
+    for (const [part, value] of Object.entries(resolved)) {
+      result[part as AndesTabsSemanticPart] = toStyleMap(value);
+    }
+    return result;
+  });
 
   protected readonly showAdd = computed(
     () => this.editable() && !this.hideAdd(),
@@ -336,12 +465,24 @@ export class AndesTabs implements AndesTabsContext {
       'andes-tabs__bar',
       `andes-tabs__bar--${this.position()}`,
       this.resolvedOrientation() === 'vertical' && 'andes-tabs__bar--vertical',
-      this.type() !== 'line' && 'andes-tabs__bar--card',
+      this.variant() !== 'line' && 'andes-tabs__bar--card',
+      `andes-tabs__bar--${this.variant()}`,
       `andes-tabs__bar--${this.size()}`,
       this.centered() && 'andes-tabs__bar--centered',
+      this.stretch() && 'andes-tabs__bar--stretch',
       this.tabBarClass(),
+      this.partClasses().bar,
     ),
   );
+
+  protected readonly barStyle = computed(() => {
+    const own = this.partStyles().bar;
+    const base = this.tabBarStyle();
+    if (!own) {
+      return base;
+    }
+    return { ...styleMap(base), ...own };
+  });
 
   private readonly _triggers = signal<readonly AndesTabsTriggerRef[]>([]);
 
@@ -451,6 +592,7 @@ export class AndesTabs implements AndesTabsContext {
     clsx(
       'andes-tabs__ink-bar',
       this.resolvedAnimated().inkBar && 'andes-tabs__ink-bar--animated',
+      this.partClasses().indicator,
     ),
   );
 
@@ -459,9 +601,20 @@ export class AndesTabs implements AndesTabsContext {
     if (!ink) {
       return {};
     }
-    return this.resolvedOrientation() === 'vertical'
-      ? { top: `${ink.offset}px`, height: `${ink.length}px` }
-      : { left: `${ink.offset}px`, width: `${ink.length}px` };
+    const thickness = this.indicator()?.thickness;
+    const geometry =
+      this.resolvedOrientation() === 'vertical'
+        ? {
+            top: `${ink.offset}px`,
+            height: `${ink.length}px`,
+            ...(thickness === undefined ? {} : { width: `${thickness}px` }),
+          }
+        : {
+            left: `${ink.offset}px`,
+            width: `${ink.length}px`,
+            ...(thickness === undefined ? {} : { height: `${thickness}px` }),
+          };
+    return { ...this.partStyles().indicator, ...geometry };
   });
 
   private lastScrollPosition = 0;
@@ -519,9 +672,37 @@ export class AndesTabs implements AndesTabsContext {
       this.layoutVersion();
       this.type();
       this.size();
+      this.position();
+      this.stretch();
+      this.centered();
       this.tabBarGutter();
       this.items();
       this.measure();
+    });
+
+    // The ink bar's geometry belongs to one orientation: when the bar changes side (or
+    // collapses to the top in a narrow container) it is dropped and drawn afresh by the next
+    // measurement, instead of sliding from the old orientation's numbers.
+    effect(() => {
+      this.resolvedOrientation();
+      untracked(() => this.inkBar.set(null));
+    });
+
+    // Which way the selection moved along the bar, for the sliding panel motion.
+    let previousIndex = -1;
+    effect(() => {
+      const value = this.activeValue();
+      const index = untracked(() =>
+        this.sortedTriggers().findIndex((t) => t.value() === value),
+      );
+      if (index !== -1) {
+        if (previousIndex !== -1 && index !== previousIndex) {
+          this._paneDirection.set(
+            index > previousIndex ? 'forward' : 'backward',
+          );
+        }
+        previousIndex = index;
+      }
     });
 
     // The overflow menu hangs off the "more" button on the panels' side of the bar.
@@ -555,9 +736,12 @@ export class AndesTabs implements AndesTabsContext {
       if (typeof ResizeObserver === 'undefined') {
         return;
       }
-      const observer = new ResizeObserver(() =>
-        this.layoutVersion.update((v) => v + 1),
-      );
+      const host = this.host.nativeElement;
+      const observer = new ResizeObserver(() => {
+        this.hostWidth.set(host.getBoundingClientRect().width);
+        this.layoutVersion.update((v) => v + 1);
+      });
+      observer.observe(host);
       const scroller = this.scroller()?.nativeElement;
       const nav = this.nav()?.nativeElement;
       if (scroller) observer.observe(scroller);

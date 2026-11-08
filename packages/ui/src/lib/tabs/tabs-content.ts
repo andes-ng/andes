@@ -70,7 +70,12 @@ function optionalBoolean(value: unknown): boolean | undefined {
     '[id]': 'panelId()',
     '[attr.aria-labelledby]': 'tabId()',
     '[hidden]': '!isActive()',
+    '[class]': 'tabs.partClasses().content ?? null',
+    '[style]': 'tabs.partStyles().content ?? null',
     '[class.andes-tabs-content--animated]': 'tabs.tabPaneAnimated()',
+    '[class.andes-tabs-content--slide]': 'tabs.paneMotion() === "slide"',
+    '[class.andes-tabs-content--backward]':
+      'tabs.paneDirection() === "backward"',
   },
 })
 export class AndesTabsContent {

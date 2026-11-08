@@ -1,6 +1,8 @@
 import type { AndesListNavigationItemRef } from '@andes-ng/primitives';
 import { InjectionToken, type Signal, type TemplateRef } from '@angular/core';
 
+import type { AndesTabsSemanticPart } from './tabs-semantic';
+
 /** Which arrow keys move focus between tabs, per the WAI-ARIA Tabs pattern. */
 export type AndesTabsOrientation = 'horizontal' | 'vertical';
 
@@ -24,8 +26,11 @@ export type AndesTabsActivationMode = 'automatic' | 'manual';
  * - `editable-card` — `card`, plus a per-tab remove button and an add button in the bar.
  *   Neither adds nor removes anything itself: both only emit `(edit)`, and the consumer
  *   updates its own list of tabs in response.
+ * - `pill` — the tabs sit in a muted rounded track and the active one is raised out of it.
+ * - `segmented` — joined, outlined buttons like a radio-button group; the active one is filled.
  */
-export type AndesTabsType = 'line' | 'card' | 'editable-card';
+export type AndesTabsType =
+  'line' | 'card' | 'editable-card' | 'pill' | 'segmented';
 
 /**
  * Which side of the panels the tab bar sits on. `left`/`right` lay the bar out vertically
@@ -37,13 +42,22 @@ export type AndesTabsPosition = 'top' | 'bottom' | 'left' | 'right';
 /** Preset tab sizes, named after `AndesButton`'s scale. */
 export type AndesTabsSize = 'sm' | 'md' | 'lg';
 
+/** The visual variants the types resolve to (`editable-card` is a `card`). */
+export type AndesTabsVariant = 'line' | 'card' | 'pill' | 'segmented';
+
 /** Fine-grained form of the `animated` input. */
 export interface AndesTabsAnimated {
   /** Whether the ink bar slides between tabs. Default `true`. */
   inkBar?: boolean;
-  /** Whether a newly shown panel fades in. Default `false`. */
-  tabPane?: boolean;
+  /**
+   * How a newly shown panel enters: `true` or `'fade'` fades in, `'slide'` also moves in from
+   * the side the new tab sits on. Default `false`.
+   */
+  tabPane?: boolean | 'fade' | 'slide';
 }
+
+/** How a newly shown panel enters, once `animated` has been resolved. */
+export type AndesTabsPaneMotion = 'none' | 'fade' | 'slide';
 
 /** Customizes the `line`-type ink bar under the active tab. */
 export interface AndesTabsIndicator {
@@ -54,6 +68,8 @@ export interface AndesTabsIndicator {
   size?: number | ((origin: number) => number);
   /** Where a shorter-than-the-tab ink bar sits along the tab. Default `'center'`. */
   align?: 'start' | 'center' | 'end';
+  /** The ink bar's thickness in px. Default 2. */
+  thickness?: number;
 }
 
 /** Emitted by `(edit)` on an `editable-card` Tabs. */
@@ -126,6 +142,8 @@ export interface AndesTabsItem {
   label: string | TemplateRef<unknown>;
   /** An icon rendered before the label. */
   icon?: TemplateRef<unknown>;
+  /** The tab's accessible name, for a tab with an icon and no visible text. */
+  ariaLabel?: string;
   /** The panel's content. Always rendered lazily - see `AndesTabsContentLazy`. */
   content?: string | TemplateRef<unknown>;
   disabled?: boolean;
@@ -194,6 +212,19 @@ export interface AndesTabsContext {
   readonly editable: Signal<boolean>;
   readonly tabBarGutter: Signal<number | undefined>;
   readonly tabPaneAnimated: Signal<boolean>;
+  /** How a newly shown panel enters. */
+  readonly paneMotion: Signal<AndesTabsPaneMotion>;
+  /** Which way the selection last moved along the bar, for the `slide` panel motion. */
+  readonly paneDirection: Signal<'forward' | 'backward'>;
+  /** The visual variant the type resolves to: `line`, `card`, `pill` or `segmented`. */
+  readonly variant: Signal<AndesTabsVariant>;
+  readonly stretch: Signal<boolean>;
+  /** Resolved per-part classes from the `classNames` input. */
+  readonly partClasses: Signal<Partial<Record<AndesTabsSemanticPart, string>>>;
+  /** Resolved per-part inline styles from the `styles` input. */
+  readonly partStyles: Signal<
+    Partial<Record<AndesTabsSemanticPart, Record<string, string> | null>>
+  >;
   readonly destroyOnHidden: Signal<boolean>;
   readonly removeIcon: Signal<TemplateRef<unknown> | undefined>;
   readonly draggable: Signal<boolean>;

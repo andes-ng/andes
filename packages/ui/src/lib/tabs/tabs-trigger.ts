@@ -52,7 +52,8 @@ import { ANDES_TABS, AndesTabsTriggerRef } from './tabs-types';
   styleUrl: './tabs-trigger.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
-    '[attr.data-variant]': 'tabs.type() === "line" ? "line" : "card"',
+    '[attr.data-variant]': 'tabs.variant()',
+    '[attr.data-stretch]': 'tabs.stretch() ? "" : null',
     '[attr.data-size]': 'tabs.size()',
     '[attr.data-position]': 'tabs.position()',
     '[attr.data-orientation]': 'tabs.resolvedOrientation()',
@@ -75,6 +76,9 @@ export class AndesTabsTrigger implements AndesTabsTriggerRef, OnInit {
 
   /** An icon rendered before the label. Projecting an icon into the label works too. */
   readonly icon = input<TemplateRef<unknown> | undefined>(undefined);
+
+  /** The tab's accessible name, for a tab with an icon and no visible text. */
+  readonly ariaLabel = input<string | undefined>(undefined);
 
   /** `editable-card` only: whether this tab shows its remove button. Default `true`. */
   readonly closable = input(true, { transform: booleanAttribute });
@@ -131,7 +135,8 @@ export class AndesTabsTrigger implements AndesTabsTriggerRef, OnInit {
     clsx(
       'andes-tabs__trigger',
       this.isSelected() && 'andes-tabs__trigger--selected',
-      this.tabs.type() !== 'line' && 'andes-tabs__trigger--card',
+      this.tabs.variant() === 'card' && 'andes-tabs__trigger--card',
+      this.tabs.partClasses().trigger,
     ),
   );
 

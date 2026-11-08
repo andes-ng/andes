@@ -346,10 +346,10 @@ describe('AndesToastViewport', () => {
           declaredValue(css, '.andes-toast__close', 'inset-inline-end'),
         ).toBe('var(--_toast-pad-inline)');
         expect(declaredValue(css, '.andes-toast__close', 'width')).toBe(
-          '1.375rem',
+          '1.25rem',
         );
         expect(declaredValue(css, '.andes-toast__close', 'height')).toBe(
-          '1.375rem',
+          '1.25rem',
         );
       });
 
@@ -375,7 +375,7 @@ describe('AndesToastViewport', () => {
             ":host([data-closable]:not([data-inline-buttons], [data-flavor='message'])) .andes-toast__title",
             'padding-inline-end',
           ),
-        ).toBe('1.5rem');
+        ).toBe('1.25rem');
       });
     });
 
@@ -389,43 +389,47 @@ describe('AndesToastViewport', () => {
         'utf8',
       );
 
-      it('sizes a notification at 384px with 20px/24px padding, an 8px radius and a 24px icon', () => {
+      it('sizes a notification at 360px with 12px/16px padding, an 8px radius and a 20px icon', () => {
         expect(declaredValue(region, ':host', 'width')).toBe(
-          'var(--andes-toast-width, 24rem)',
+          'var(--andes-toast-width, 22.5rem)',
         );
         expect(declaredValue(item, ':host', '--_toast-pad-block')).toBe(
-          'calc(1.25rem - 1px)',
+          'calc(0.75rem - 1px)',
         );
         expect(declaredValue(item, ':host', '--_toast-pad-inline')).toBe(
-          'calc(1.5rem - 1px)',
+          'calc(1rem - 1px)',
         );
         expect(declaredValue(item, ':host', 'border-radius')).toBe(
           'var(--andes-toast-radius, 0.5rem)',
         );
         expect(declaredValue(item, '.andes-toast__icon', 'width')).toBe(
-          '1.5rem',
+          '1.25rem',
         );
         expect(declaredValue(item, '.andes-toast__row', 'gap')).toBe('0.75rem');
         expect(declaredValue(item, '.andes-toast__content', 'gap')).toBe(
-          '0.5rem',
+          '0.125rem',
         );
       });
 
-      it('sets a 16px/24px title over a 14px/22px description, both regular weight', () => {
+      it('sets a 14px/20px medium title over a 13px/20px description', () => {
         expect(declaredValue(item, '.andes-toast__title', 'font-size')).toBe(
-          '1rem',
+          '0.875rem',
         );
         expect(declaredValue(item, '.andes-toast__title', 'line-height')).toBe(
-          '1.5rem',
-        );
-        expect(declaredValue(item, '.andes-toast__message', 'font-size')).toBe(
-          '0.875rem',
+          '1.25rem',
         );
         expect(
           declaredValue(item, '.andes-toast__message', 'line-height'),
-        ).toBe('1.375rem');
+        ).toBe('1.25rem');
+        expect(
+          declaredValue(
+            item,
+            '.andes-toast__message--description',
+            'font-size',
+          ),
+        ).toBe('0.8125rem');
         expect(declaredValue(item, '.andes-toast__title', 'font-weight')).toBe(
-          '400',
+          '500',
         );
       });
 

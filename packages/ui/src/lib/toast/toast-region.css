@@ -23,7 +23,7 @@
   position: fixed;
   z-index: var(--andes-z-index-toast);
   box-sizing: border-box;
-  width: var(--andes-toast-width, 24rem);
+  width: var(--andes-toast-width, 22.5rem);
   max-width: calc(
     100vw - 2 * var(--_toast-offset-x, var(--_toast-offset-default))
   );

@@ -307,7 +307,7 @@ class PropertiesHost extends ToastDemo {
   protected readonly vars = computed(
     () =>
       `--andes-toast-radius: ${Number(this.radius()) || 0}px; --andes-toast-width: ${
-        Number(this.width()) || 384
+        Number(this.width()) || 360
       }px; --andes-toast-duration: ${Number(this.motion()) || 0}ms;${
         this.flat() ? ' --andes-toast-shadow: none;' : ''
       }`,

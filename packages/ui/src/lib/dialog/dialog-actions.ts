@@ -12,12 +12,22 @@ import {
   viewChild,
 } from '@angular/core';
 
-import { AndesButton, type AndesButtonVariant } from '../button/button';
+import {
+  AndesButton,
+  type AndesButtonSize,
+  type AndesButtonVariant,
+} from '../button/button';
 import type {
   AndesDialogAutoFocusButton,
   AndesDialogButtonProps,
   AndesDialogFooterContext,
 } from './dialog-base';
+
+/**
+ * How a footer lays its buttons out: pushed to the end edge (default), sharing the row
+ * evenly, or one above the other with the affirmative action first.
+ */
+export type AndesDialogActionsLayout = 'end' | 'stretch' | 'stacked';
 
 /**
  * The built-in footer both dialog surfaces and the imperative service render: a
@@ -44,6 +54,7 @@ import type {
   host: {
     class: 'andes-dialog__footer',
     '[attr.data-slot]': 'slot()',
+    '[attr.data-layout]': 'layout()',
   },
   template: `
     @if (template(); as custom) {
@@ -78,7 +89,7 @@ import type {
         data-slot="dialog-cancel"
         [class]="cancelProps?.className ?? ''"
         [variant]="cancelProps?.variant ?? 'secondary'"
-        [size]="cancelProps?.size ?? 'md'"
+        [size]="cancelProps?.size ?? size()"
         [ghost]="cancelProps?.ghost ?? false"
         [aria-label]="cancelProps?.ariaLabel"
         [disabled]="cancelBlocked()"
@@ -96,7 +107,7 @@ import type {
         data-slot="dialog-ok"
         [class]="okProps?.className ?? ''"
         [variant]="okProps?.variant ?? okType()"
-        [size]="okProps?.size ?? 'md'"
+        [size]="okProps?.size ?? size()"
         [ghost]="okProps?.ghost ?? false"
         [aria-label]="okProps?.ariaLabel"
         [disabled]="okBlocked()"
@@ -111,6 +122,10 @@ import type {
 export class AndesDialogActions implements AfterViewInit {
   /** `data-slot` for the footer box, so each surface keeps its own slot vocabulary. */
   readonly slot = input('dialog-footer');
+  /** How the buttons are laid out. */
+  readonly layout = input<AndesDialogActionsLayout>('end');
+  /** Size of the two buttons unless a button's own props set one. */
+  readonly size = input<AndesButtonSize>('md');
   readonly okText = input('OK');
   readonly cancelText = input('Cancel');
   readonly okType = input<AndesButtonVariant>('primary');

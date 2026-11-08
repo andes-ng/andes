@@ -30,6 +30,11 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
+import type { AndesButtonSize } from '../button/button';
+import {
+  ANDES_BUTTON_GROUP,
+  type AndesButtonGroupContext,
+} from '../button/button-group';
 import { AndesAlertDialogAcknowledge } from './alert-dialog-acknowledge';
 import { AndesAlertDialogConfirmPhrase } from './alert-dialog-confirm-phrase';
 import { AndesAlertDialogCountdown } from './alert-dialog-countdown';
@@ -55,7 +60,10 @@ export type {
   AndesAlertDialogInitialFocus,
   AndesAlertDialogTone,
 } from './alert-dialog-state';
-import { AndesDialogActions } from './dialog-actions';
+import {
+  AndesDialogActions,
+  type AndesDialogActionsLayout,
+} from './dialog-actions';
 import {
   AndesDialogRoot,
   AndesDialogRootBase,
@@ -138,9 +146,9 @@ export class AndesAlertDialogContentTemplate {
 })
 export class AndesAlertDialog extends AndesDialogRootBase {
   /**
-   * What kind of interruption this is. Adds a coloured accent along the top edge of the
-   * surface and drives the icon of `andes-alert-dialog-icon`. It is purely visual: the
-   * title and description still have to say what is at stake.
+   * What kind of interruption this is. Colours the status icon
+   * (`andes-alert-dialog-icon`) and the countdown bar; the surface itself stays neutral. It
+   * is purely visual: the title and description still have to say what is at stake.
    */
   readonly tone = input<AndesAlertDialogTone | null>(null);
   /**
@@ -149,6 +157,11 @@ export class AndesAlertDialog extends AndesDialogRootBase {
    * confirmation phrase field. Takes effect on the next open.
    */
   readonly initialFocus = input<AndesAlertDialogInitialFocus | null>(null);
+  /**
+   * How the built-in footer (`footer="default"`) lays its buttons out: `'end'` (default),
+   * `'stretch'` or `'stacked'`. Your own `[andesAlertDialogFooter]` takes `layout` itself.
+   */
+  readonly actionsLayout = input<AndesDialogActionsLayout>('end');
 
   private readonly state = inject(AndesAlertDialogState);
   private readonly outsideClickDismissal = inject(
@@ -250,6 +263,8 @@ export class AndesAlertDialogTrigger {
 export class AndesAlertDialogContent extends AndesDialogSurfaceBase {
   protected readonly root = inject(AndesDialogRoot);
   protected readonly state = inject(AndesAlertDialogState);
+  /** The root this surface belongs to, for the inputs only the alert dialog has. */
+  protected readonly alert = inject(AndesAlertDialog);
 
   protected readonly classes = computed(() => {
     const tone = this.state.tone();
@@ -331,15 +346,36 @@ export class AndesAlertDialogDescription {
   readonly id = registerDialogLabel('description');
 }
 
-/** Layout wrapper for an alert dialog's Cancel/Action pair. */
+/**
+ * Layout wrapper for an alert dialog's actions. The buttons inside it that set no `size`
+ * of their own take the footer's, `sm` by default: a confirmation is a compact surface, and
+ * the small button keeps its footer slim (it returns to the default height on touch screens,
+ * through the stylesheet). Buttons that set a `size` keep it.
+ */
 @Directive({
   selector: '[andesAlertDialogFooter]',
+  providers: [
+    {
+      provide: ANDES_BUTTON_GROUP,
+      useExisting: forwardRef(() => AndesAlertDialogFooter),
+    },
+  ],
   host: {
     class: 'andes-dialog__footer',
     '[attr.data-slot]': '"alert-dialog-footer"',
+    '[attr.data-layout]': 'layout()',
   },
 })
-export class AndesAlertDialogFooter {}
+export class AndesAlertDialogFooter implements AndesButtonGroupContext {
+  /** Size of the footer's buttons that do not set one. */
+  readonly size = input<AndesButtonSize | undefined>('sm');
+  /**
+   * How the buttons sit: `'end'` (default) at the end edge, `'stretch'` sharing the row
+   * evenly, `'stacked'` one above the other with the affirmative action first. A phone
+   * stacks them whatever this says.
+   */
+  readonly layout = input<AndesDialogActionsLayout>('end');
+}
 
 /**
  * The dismissing action. Place it before the affirmative action in the DOM so the

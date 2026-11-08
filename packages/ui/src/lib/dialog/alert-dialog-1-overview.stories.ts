@@ -187,6 +187,40 @@ export const Sizes: Story = {
   }),
 };
 
+/** Where the buttons sit. */
+export const FooterLayouts: Story = {
+  name: 'Footer layouts',
+  parameters: about(
+    'The footer puts its buttons at the end by default, stretch makes them share the row evenly and stacked puts the affirmative action above Cancel, which suits long labels; a phone stacks them whatever the layout says.',
+  ),
+  render: () => ({
+    props: { ...shared, layouts: ['end', 'stretch', 'stacked'] },
+    template: `
+      <div [style]="row">
+        @for (layout of layouts; track layout) {
+          <andes-alert-dialog>
+            <andes-button variant="secondary" andesAlertDialogTrigger>Layout {{ layout }}</andes-button>
+
+            <andes-alert-dialog-content *andesAlertDialogContent>
+              <div andesAlertDialogHeader>
+                <h2 andesAlertDialogTitle>Remove this member?</h2>
+                <p andesAlertDialogDescription>
+                  They lose access to every project in the workspace.
+                </p>
+              </div>
+
+              <div andesAlertDialogFooter [layout]="layout">
+                <andes-button variant="secondary" andesAlertDialogCancel>Keep member</andes-button>
+                <andes-button variant="danger" andesAlertDialogAction>Remove member</andes-button>
+              </div>
+            </andes-alert-dialog-content>
+          </andes-alert-dialog>
+        }
+      </div>
+    `,
+  }),
+};
+
 /** Why the dialog went away. */
 export const ReportsTheOutcome: Story = {
   name: 'Reports the outcome',

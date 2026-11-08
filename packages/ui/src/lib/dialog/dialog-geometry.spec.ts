@@ -89,7 +89,7 @@ const dialogVar = (name: string) => {
 };
 
 describe('dialog geometry', () => {
-  it('is 520px wide by default and 416px for a confirmation', () => {
+  it('is 520px wide by default and 400px for a confirmation', () => {
     expect(
       toPx(declaredValue(css, '.andes-dialog--md', 'max-width') ?? ''),
     ).toBe(520);
@@ -101,7 +101,7 @@ describe('dialog geometry', () => {
           'max-width',
         ) ?? '',
       ),
-    ).toBe(416);
+    ).toBe(400);
   });
 
   it('pads the surface 20px above and below and 24px at the sides', () => {
@@ -235,11 +235,11 @@ describe('dialog geometry', () => {
     );
   });
 
-  it('sets a confirmation icon of 22px, 12px before the text, 8px between title and content', () => {
+  it('sets a confirmation icon of 20px, 12px before the text, 2px between title and content', () => {
     expect(declaredValue(css, '.andes-dialog__method-icon', 'width')).toBe(
-      '1.375rem',
+      '1.25rem',
     );
-    expect(toPx('1.375rem')).toBe(22);
+    expect(toPx('1.25rem')).toBe(20);
     expect(
       declaredValue(css, '.andes-dialog__method-icon', 'margin-block-start'),
     ).toBe('1px');
@@ -247,7 +247,7 @@ describe('dialog geometry', () => {
       'var(--andes-space-3)',
     );
     expect(declaredValue(css, '.andes-dialog__method-text', 'gap')).toBe(
-      'var(--andes-space-2)',
+      '0.125rem',
     );
   });
 });

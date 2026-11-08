@@ -16,6 +16,8 @@
   } @else if (root.footer(); as footer) {
   <andes-dialog-actions
     slot="alert-dialog-footer"
+    size="sm"
+    [layout]="alert.actionsLayout()"
     [template]="footer === 'default' ? null : footer"
     [context]="root.footerContext"
     [okText]="root.okText()"

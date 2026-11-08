@@ -252,6 +252,172 @@ describe('AndesDialogService', () => {
     error.mockRestore();
   });
 
+  it('shows why OK failed, under the content, so the user can retry', async () => {
+    const error = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    const work = deferred();
+    service.confirm({ title: 'Sure?', onOk: () => work.promise });
+    await settle();
+
+    action('ok')?.click();
+    await settle();
+    work.reject(new Error('The server said no.'));
+    await nextTask();
+    await settle();
+
+    const message = surface()?.querySelector(
+      '[data-slot="dialog-method-error"]',
+    );
+    expect(message?.getAttribute('role')).toBe('alert');
+    expect(message?.textContent?.trim()).toBe('The server said no.');
+    expect(action('ok')?.disabled).toBe(false);
+    error.mockRestore();
+  });
+
+  it('takes the failure text from errorMessage, and clears it on the next attempt', async () => {
+    const error = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    let attempt = 0;
+    service.confirm({
+      title: 'Sure?',
+      errorMessage: (reason) => `Could not save: ${(reason as Error).message}`,
+      onOk: () => {
+        attempt += 1;
+        return attempt === 1
+          ? Promise.reject(new Error('offline'))
+          : new Promise<void>(() => undefined);
+      },
+    });
+    await settle();
+
+    action('ok')?.click();
+    await nextTask();
+    await settle();
+    expect(
+      surface()
+        ?.querySelector('[data-slot="dialog-method-error"]')
+        ?.textContent?.trim(),
+    ).toBe('Could not save: offline');
+
+    action('ok')?.click();
+    await settle();
+    expect(
+      surface()?.querySelector('[data-slot="dialog-method-error"]'),
+    ).toBeNull();
+    error.mockRestore();
+  });
+
+  it('reports the outcome: how it closed and what onOk resolved to', async () => {
+    const ok = service.confirm({
+      title: 'Sure?',
+      onOk: () => Promise.resolve({ id: 7 }),
+    });
+    await settle();
+    action('ok')?.click();
+    await expect(ok.outcome).resolves.toEqual({
+      confirmed: true,
+      reason: 'ok',
+      value: { id: 7 },
+    });
+    await settle();
+    await nextTask();
+
+    const cancelled = service.confirm({ title: 'Sure?' });
+    await settle();
+    action('cancel')?.click();
+    await expect(cancelled.outcome).resolves.toEqual({
+      confirmed: false,
+      reason: 'cancel',
+      value: undefined,
+    });
+    await settle();
+    await nextTask();
+
+    const escaped = service.confirm({ title: 'Sure?' });
+    await settle();
+    pressEscape();
+    await expect(escaped.outcome).resolves.toMatchObject({
+      confirmed: false,
+      reason: 'escape',
+    });
+    await settle();
+    await nextTask();
+
+    const destroyed = service.confirm({ title: 'Sure?' });
+    await settle();
+    destroyed.destroy();
+    await expect(destroyed.outcome).resolves.toMatchObject({
+      confirmed: false,
+      reason: 'destroyed',
+    });
+  });
+
+  it('lets a tone swap the icon and its colour class', async () => {
+    service.confirm({ title: 'Delete?', tone: 'danger' });
+    await settle();
+
+    expect(surface()?.classList).toContain('andes-dialog--method-error');
+    expect(surface()?.classList).toContain('andes-dialog--method-confirm');
+    expect(
+      surface()?.querySelector('[data-slot="dialog-method-icon"] svg circle'),
+    ).toBeTruthy();
+  });
+
+  it('queues a dialog behind the open ones when asked to', async () => {
+    const first = service.confirm({ title: 'First' });
+    await settle();
+    const second = service.confirm({ title: 'Second', queue: true });
+    const third = service.confirm({ title: 'Third', queue: true });
+    await settle();
+
+    expect(surfaces()).toHaveLength(1);
+    expect(surface()?.textContent).toContain('First');
+
+    first.destroy();
+    await first.result;
+    await nextTask();
+    await settle();
+    expect(surfaces()).toHaveLength(1);
+    expect(surface()?.textContent).toContain('Second');
+
+    second.destroy();
+    await second.result;
+    await nextTask();
+    await settle();
+    expect(surface()?.textContent).toContain('Third');
+    third.destroy();
+  });
+
+  it('withdraws a queued dialog that is destroyed before its turn', async () => {
+    service.confirm({ title: 'First' });
+    await settle();
+    const queued = service.confirm({ title: 'Second', queue: true });
+    await settle();
+
+    queued.destroy();
+    await expect(queued.result).resolves.toBe(false);
+    service.destroyAll();
+    await settle();
+    await nextTask();
+    await settle();
+
+    expect(surfaces()).toHaveLength(0);
+  });
+
+  it('lays the footer out as asked', async () => {
+    service.confirm({ title: 'Sure?', actionsLayout: 'stacked' });
+    await settle();
+
+    expect(
+      surface()
+        ?.querySelector('[data-slot="alert-dialog-footer"]')
+        ?.getAttribute('data-layout'),
+    ).toBe('stacked');
+    expect(action('ok')?.classList).toContain('andes-button--sm');
+  });
+
   it('resolves result false and runs onCancel from the Cancel button', async () => {
     const onCancel = vi.fn();
     const ref = service.confirm({ title: 'Sure?', onCancel });

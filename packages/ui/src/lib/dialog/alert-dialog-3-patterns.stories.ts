@@ -32,7 +32,7 @@ type Story = StoryObj<AndesAlertDialog>;
 export const TypeToConfirm: Story = {
   name: 'Type to confirm',
   parameters: about(
-    'A field that must be typed before the action unlocks,, such as the name of the repository: the phrase sits in a chip one click selects, a wrong entry is flagged only once it can no longer become the phrase, and Enter confirms a matching one.',
+    'A field that must be typed before the action unlocks, such as the name of the repository: the phrase sits in a chip one click selects, a wrong entry is flagged only once it can no longer become the phrase, and Enter confirms a matching one.',
   ),
   render: () => {
     const result = signal(NOTHING_YET);
@@ -60,6 +60,47 @@ export const TypeToConfirm: Story = {
                 andesAlertDialogAction
                 (click)="result.set('Deleted acme-web.')"
               >Delete project</andes-button>
+            </div>
+          </andes-alert-dialog-content>
+        </andes-alert-dialog>
+
+        ${resultLine}
+      `,
+    };
+  },
+};
+
+/** Copy the phrase. */
+export const CopyThePhrase: Story = {
+  name: 'Copy the phrase',
+  parameters: about(
+    'A small button after the phrase copies it and shows a check for a moment, the chip itself can be selected by click, double click or drag without the field stealing focus, copying keeps working when blockPaste forbids pasting into the field, and showCopy hides the button.',
+  ),
+  render: () => {
+    const result = signal(NOTHING_YET);
+    return {
+      props: { ...shared, result },
+      template: `
+        <andes-alert-dialog initialFocus="input" (cancelled)="result.set('Cancelled.')">
+          <andes-button danger andesAlertDialogTrigger>Delete workspace</andes-button>
+
+          <andes-alert-dialog-content *andesAlertDialogContent>
+            <div andesAlertDialogHeader>
+              <h2 andesAlertDialogTitle>Delete workspace acme-labs?</h2>
+              <p andesAlertDialogDescription>
+                Copy the name with the button, then type it: pasting is turned off.
+              </p>
+            </div>
+
+            <andes-alert-dialog-confirm-phrase phrase="acme-labs" blockPaste />
+
+            <div andesAlertDialogFooter>
+              <andes-button variant="secondary" andesAlertDialogCancel>Cancel</andes-button>
+              <andes-button
+                variant="danger"
+                andesAlertDialogAction
+                (click)="result.set('Deleted acme-labs.')"
+              >Delete workspace</andes-button>
             </div>
           </andes-alert-dialog-content>
         </andes-alert-dialog>

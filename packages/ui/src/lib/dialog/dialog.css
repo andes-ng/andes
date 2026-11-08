@@ -113,9 +113,21 @@
 }
 
 /* A confirmation is a short, dense surface - it should not stretch to a content width
-   it will never use. */
+   it will never use: 400px by default, 320px for a one-line acknowledgement. */
+.andes-dialog--alert.andes-dialog--sm {
+  max-width: 20rem;
+}
+
 .andes-dialog--alert.andes-dialog--md {
-  max-width: 26rem;
+  max-width: 25rem;
+}
+
+.andes-dialog--alert.andes-dialog--lg {
+  max-width: 32rem;
+}
+
+.andes-dialog--alert.andes-dialog--xl {
+  max-width: 40rem;
 }
 
 /* An explicit `width`, including its per-breakpoint object form. The
@@ -448,15 +460,15 @@ ng-icon.andes-dialog__close-icon {
   );
 }
 
-/* A 22px filled disc (the status icons) nudged down 1px, so it is centred on
-   the title's 24px first line. */
+/* A 20px filled disc (the status icons) nudged down 1px, so it is centred on
+   the title's 22px first line. */
 .andes-dialog__method-icon {
   display: inline-flex;
   flex: none;
-  width: 1.375rem;
-  height: 1.375rem;
+  width: 1.25rem;
+  height: 1.25rem;
   margin-block-start: 1px;
-  color: var(--andes-color-warning);
+  color: var(--andes-alert-warning, var(--andes-color-warning));
 }
 
 /* A consumer's own `icon` is a stroked glyph in the status colour. */
@@ -493,22 +505,22 @@ ng-icon.andes-dialog__method-glyph {
 }
 
 .andes-dialog--method-info .andes-dialog__method-icon {
-  color: var(--andes-color-info);
+  color: var(--andes-alert-info, var(--andes-color-info));
 }
 
 .andes-dialog--method-success .andes-dialog__method-icon {
-  color: var(--andes-color-success);
+  color: var(--andes-alert-success, var(--andes-color-success));
 }
 
 .andes-dialog--method-error .andes-dialog__method-icon {
-  color: var(--andes-color-danger);
+  color: var(--andes-alert-danger, var(--andes-color-danger));
 }
 
 .andes-dialog__method-text {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  gap: var(--andes-space-2);
+  gap: 0.125rem;
   min-width: 0;
 }
 

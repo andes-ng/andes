@@ -12,9 +12,12 @@ export type {
 export { AndesDialogMethodRef, AndesDialogService } from './dialog.service';
 export type {
   AndesDialogMethodConfig,
+  AndesDialogMethodCloseReason,
   AndesDialogMethodContent,
   AndesDialogMethodKind,
+  AndesDialogMethodOutcome,
 } from './dialog.service';
+export type { AndesDialogActionsLayout } from './dialog-actions';
 export {
   ANDES_DIALOG_IMPORTS,
   AndesDialog,

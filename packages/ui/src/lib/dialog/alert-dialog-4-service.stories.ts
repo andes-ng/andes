@@ -399,6 +399,213 @@ class UpdateDemo {
   }
 }
 
+@Component({
+  selector: 'andes-dialog-service-failure',
+  imports: [AndesButton],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <div class="row">
+      <andes-button variant="danger" (click)="remove()"
+        >Delete (fails twice)</andes-button
+      >
+      <andes-button variant="secondary" (click)="custom()"
+        >Delete with its own message</andes-button
+      >
+    </div>
+    <p class="result">
+      Result: <strong>{{ last() }}</strong>
+    </p>
+  `,
+  styles: DEMO_STYLES,
+})
+class FailureDemo {
+  private readonly dialogs = inject(AndesDialogService);
+  protected readonly last = signal('Nothing yet.');
+
+  protected remove(): void {
+    let attempts = 0;
+    this.dialogs.confirm({
+      title: 'Delete this project?',
+      content: 'It stays open with the reason when the request fails.',
+      okText: 'Delete',
+      okType: 'danger',
+      tone: 'danger',
+      onOk: () => {
+        attempts += 1;
+        return request(900, () => attempts <= 2);
+      },
+      afterClose: () => this.last.set(`Closed after ${attempts} attempt(s).`),
+    });
+  }
+
+  protected custom(): void {
+    this.dialogs.confirm({
+      title: 'Publish the release?',
+      content: 'The text under the content comes from errorMessage.',
+      okText: 'Publish',
+      errorMessage: (error) =>
+        `The release was not published (${(error as Error).message}). Try again in a moment.`,
+      onOk: () => request(700, () => true),
+    });
+  }
+}
+
+/** Show why OK failed. */
+export const FailureInTheDialog: Story = {
+  name: 'Failure in the dialog',
+  parameters: about(
+    'When onOk rejects the dialog stays open and says why under the content, in an alert region that is announced, with the rejection message by default or the text of errorMessage; the line clears on the next attempt.',
+  ),
+  render: () => ({
+    moduleMetadata: { imports: [FailureDemo] },
+    template: '<andes-dialog-service-failure />',
+  }),
+};
+
+@Component({
+  selector: 'andes-dialog-service-value',
+  imports: [AndesButton],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <div class="row">
+      <andes-button variant="primary" (click)="create()"
+        >Create the workspace</andes-button
+      >
+    </div>
+    <p class="result">
+      Outcome: <strong>{{ last() }}</strong>
+    </p>
+  `,
+  styles: DEMO_STYLES,
+})
+class ValueDemo {
+  private readonly dialogs = inject(AndesDialogService);
+  protected readonly last = signal('Nothing yet.');
+
+  protected async create(): Promise<void> {
+    const ref = this.dialogs.confirm({
+      title: 'Create the workspace?',
+      content: 'OK resolves with the new workspace, which the caller receives.',
+      okText: 'Create',
+      onOk: () =>
+        new Promise<{ id: number }>((resolve) =>
+          setTimeout(() => resolve({ id: 42 }), 600),
+        ),
+    });
+    const outcome = await ref.outcome;
+    this.last.set(
+      outcome.confirmed
+        ? `created workspace ${(outcome.value as { id: number }).id}`
+        : `not created (${outcome.reason})`,
+    );
+  }
+}
+
+/** The answer and what came with it. */
+export const OutcomeAndValue: Story = {
+  name: 'Outcome and value',
+  parameters: about(
+    'ref.outcome settles with whether OK was chosen, which way out was taken (ok, cancel, close-button, escape, backdrop or destroyed) and the value the promise returned by onOk resolved to, so the caller gets the result of the work it confirmed.',
+  ),
+  render: () => ({
+    moduleMetadata: { imports: [ValueDemo] },
+    template: '<andes-dialog-service-value />',
+  }),
+};
+
+@Component({
+  selector: 'andes-dialog-service-tones',
+  imports: [AndesButton],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <div class="row">
+      @for (tone of tones; track tone) {
+        <andes-button variant="secondary" (click)="ask(tone)">{{
+          tone
+        }}</andes-button>
+      }
+    </div>
+  `,
+  styles: DEMO_STYLES,
+})
+class ToneDemo {
+  private readonly dialogs = inject(AndesDialogService);
+  protected readonly tones = ['danger', 'warning', 'info', 'success'] as const;
+
+  protected ask(tone: (typeof this.tones)[number]): void {
+    this.dialogs.confirm({
+      title: `A confirmation with the ${tone} tone`,
+      content: 'The tone picks the status icon and its colour.',
+      tone,
+      okType: tone === 'danger' ? 'danger' : 'primary',
+    });
+  }
+}
+
+/** A confirmation in another tone. */
+export const ToneOfAConfirmation: Story = {
+  name: 'Tone of a confirmation',
+  parameters: about(
+    'A confirm opens with the warning icon, and tone swaps it for the danger, info or success one, in the colour that suits the dark theme as well, while the surface itself stays neutral.',
+  ),
+  render: () => ({
+    moduleMetadata: { imports: [ToneDemo] },
+    template: '<andes-dialog-service-tones />',
+  }),
+};
+
+@Component({
+  selector: 'andes-dialog-service-queue',
+  imports: [AndesButton],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <div class="row">
+      <andes-button variant="secondary" (click)="queue()"
+        >Ask three questions in a row</andes-button
+      >
+    </div>
+    <p class="result">
+      Answers: <strong>{{ answers() }}</strong>
+    </p>
+  `,
+  styles: DEMO_STYLES,
+})
+class QueueDemo {
+  private readonly dialogs = inject(AndesDialogService);
+  protected readonly answers = signal('none yet');
+
+  protected async queue(): Promise<void> {
+    this.answers.set('');
+    const questions = ['Save the draft?', 'Notify the team?', 'Archive it?'];
+    const refs = questions.map((title) =>
+      this.dialogs.confirm({
+        title,
+        content: 'Each one opens when the one before it is answered.',
+        queue: true,
+      }),
+    );
+    for (const [index, ref] of refs.entries()) {
+      const yes = await ref.result;
+      this.answers.update(
+        (text) =>
+          `${text}${text ? ', ' : ''}${index + 1}: ${yes ? 'yes' : 'no'}`,
+      );
+    }
+  }
+}
+
+/** One question at a time. */
+export const QueuedQuestions: Story = {
+  name: 'Queued questions',
+  parameters: about(
+    'With queue set a dialog waits for the ones that are open to close, and opens in order, instead of stacking on top of them; the ref is usable at once, result settles when its turn has come and gone, and destroy withdraws it.',
+  ),
+  render: () => ({
+    moduleMetadata: { imports: [QueueDemo] },
+    template: '<andes-dialog-service-queue />',
+  }),
+};
+
 /** Change a dialog that is open. */
 export const UpdateAndDestroy: Story = {
   name: 'Update and destroy',

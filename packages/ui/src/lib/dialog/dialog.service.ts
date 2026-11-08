@@ -35,7 +35,11 @@ import {
   AndesAlertDialogTitle,
 } from './alert-dialog';
 import { AndesDialogActions } from './dialog-actions';
-import { ANDES_DIALOG_STATUS_ICONS } from './dialog-status-icons';
+import {
+  ANDES_DIALOG_STATUS_ICONS,
+  type AndesDialogStatus,
+} from './dialog-status-icons';
+import type { AndesDialogActionsLayout } from './dialog-actions';
 import type {
   AndesDialogAutoFocusButton,
   AndesDialogButtonProps,
@@ -47,6 +51,20 @@ import type {
 /** The five imperative flavours: one confirmation and four acknowledgements. */
 export type AndesDialogMethodKind =
   'confirm' | 'info' | 'success' | 'error' | 'warning';
+
+/** How an imperative dialog was closed. */
+export type AndesDialogMethodCloseReason =
+  'ok' | 'cancel' | 'close-button' | 'escape' | 'backdrop' | 'destroyed';
+
+/** What an imperative dialog settled with: see `AndesDialogMethodRef.outcome`. */
+export interface AndesDialogMethodOutcome<T = unknown> {
+  /** `true` when the dialog closed through OK. */
+  readonly confirmed: boolean;
+  /** Which way out the user (or the code) took. */
+  readonly reason: AndesDialogMethodCloseReason;
+  /** What the promise returned by `onOk` resolved to; `undefined` when it returned none. */
+  readonly value: T | undefined;
+}
 
 /** Text, or a template for rich content. Templates receive the dialog's ref. */
 export type AndesDialogMethodContent =
@@ -66,6 +84,30 @@ export interface AndesDialogMethodConfig {
    * on a decorative icon - the kind is conveyed by the title, not the glyph.
    */
   readonly icon?: TemplateRef<unknown> | null;
+  /**
+   * Colour and glyph of the status icon, overriding the kind's own: a `confirm` is a
+   * warning by default, `tone: 'danger'` makes it a destructive one.
+   */
+  readonly tone?: AndesDialogStatus;
+  /**
+   * What to say under the content when `onOk` rejects, shown in the dialog (and announced)
+   * so the user can retry: a fixed text, or a function of the rejection. By default the
+   * rejection's own message is shown. A handler that throws synchronously is treated alike.
+   */
+  readonly errorMessage?: string | ((error: unknown) => string);
+  /**
+   * Wait for the dialogs that are open (and queued before this one) to close, then open.
+   * Without it a new dialog opens at once, on top of the others. The returned ref is
+   * usable straight away: `result` settles when the dialog has been shown and closed, and
+   * `destroy()` withdraws it from the queue.
+   */
+  readonly queue?: boolean;
+  /**
+   * How the footer buttons are laid out: `'end'` (default) pushes them to the end edge,
+   * `'stretch'` makes them share the row evenly, `'stacked'` puts them one above the
+   * other with the affirmative action first.
+   */
+  readonly actionsLayout?: AndesDialogActionsLayout;
   /** OK label. Default `'OK'`. */
   readonly okText?: string;
   /** Cancel label. Default `'Cancel'`. */
@@ -158,6 +200,7 @@ export class AndesDialogMethodRef {
   private readonly _config: WritableSignal<AndesDialogMethodConfig>;
   private readonly _closed = signal(false);
   private resolveResult!: (confirmed: boolean) => void;
+  private resolveOutcome!: (outcome: AndesDialogMethodOutcome) => void;
   private closeHandler: (() => void) | null = null;
 
   /**
@@ -165,6 +208,12 @@ export class AndesDialogMethodRef {
    * other way out (Cancel, "x", Escape, `destroy()`).
    */
   readonly result: Promise<boolean>;
+
+  /**
+   * Settles with the full outcome when the dialog closes: whether OK was chosen, which way
+   * out was taken, and the value `onOk`'s promise resolved to. `result` is its `confirmed`.
+   */
+  readonly outcome: Promise<AndesDialogMethodOutcome>;
 
   /** The dialog's current configuration. */
   readonly config: Signal<AndesDialogMethodConfig>;
@@ -180,6 +229,9 @@ export class AndesDialogMethodRef {
     this.config = this._config.asReadonly();
     this.result = new Promise<boolean>((resolve) => {
       this.resolveResult = resolve;
+    });
+    this.outcome = new Promise<AndesDialogMethodOutcome>((resolve) => {
+      this.resolveOutcome = resolve;
     });
   }
 
@@ -216,25 +268,44 @@ export class AndesDialogMethodRef {
   }
 
   /** @internal Records the outcome. Idempotent. */
-  settle(confirmed: boolean): void {
+  settle(
+    confirmed: boolean,
+    detail: {
+      readonly reason?: AndesDialogMethodCloseReason;
+      readonly value?: unknown;
+    } = {},
+  ): void {
     if (this._closed()) {
       return;
     }
     this._closed.set(true);
     this.closeHandler = null;
     this.resolveResult(confirmed);
+    this.resolveOutcome({
+      confirmed,
+      reason: detail.reason ?? (confirmed ? 'ok' : 'destroyed'),
+      value: detail.value,
+    });
   }
 }
 
 // `confirm` shares the exclamation icon with `warning`: both ask for attention. The icons are
 // the lucide ones `andes-alert` and the alert dialog's tone icon draw, each a disc whose mark
 // the stylesheet cuts out.
-const METHOD_ICONS: Record<AndesDialogMethodKind, string> = {
-  confirm: ANDES_DIALOG_STATUS_ICONS.warning,
-  warning: ANDES_DIALOG_STATUS_ICONS.warning,
-  error: ANDES_DIALOG_STATUS_ICONS.danger,
-  info: ANDES_DIALOG_STATUS_ICONS.info,
-  success: ANDES_DIALOG_STATUS_ICONS.success,
+const METHOD_TONES: Record<AndesDialogMethodKind, AndesDialogStatus> = {
+  confirm: 'warning',
+  warning: 'warning',
+  error: 'danger',
+  info: 'info',
+  success: 'success',
+};
+
+/** The stylesheet's name for each tone's icon colour (`error` is what `danger` was first called). */
+const TONE_CLASSES: Record<AndesDialogStatus, string> = {
+  warning: 'warning',
+  danger: 'error',
+  info: 'info',
+  success: 'success',
 };
 
 /**
@@ -336,9 +407,26 @@ const METHOD_ICONS: Record<AndesDialogMethodKind, string> = {
           </div>
         </div>
 
+        <!-- Why OK failed, so the user can retry from the same dialog. -->
+        @if (failure(); as message) {
+          <p
+            class="andes-alert-dialog__error andes-dialog__method-error"
+            data-slot="dialog-method-error"
+            role="alert"
+          >
+            <ng-icon
+              class="andes-alert-dialog__error-icon"
+              aria-hidden="true"
+              name="lucideCircleAlert"
+            />
+            <span class="andes-alert-dialog__error-text">{{ message }}</span>
+          </p>
+        }
+
         @if (cfg.footer !== null) {
           <andes-dialog-actions
             slot="alert-dialog-footer"
+            size="sm"
             [template]="cfg.footer ?? null"
             [context]="footerContext"
             [okText]="cfg.okText ?? 'OK'"
@@ -349,6 +437,7 @@ const METHOD_ICONS: Record<AndesDialogMethodKind, string> = {
             [okLoading]="okLoading()"
             [cancelLoading]="cancelLoading()"
             [showCancel]="showCancel()"
+            [layout]="cfg.actionsLayout ?? 'end'"
             [autoFocusButton]="autoFocusButton()"
             [okButtonProps]="cfg.okButtonProps ?? null"
             [cancelButtonProps]="cfg.cancelButtonProps ?? null"
@@ -401,17 +490,29 @@ export class AndesDialogMethod {
 
   protected readonly surfaceClass = computed(() => {
     const cfg = this.ref().config();
+    // The kind's own class stays for consumers' styling; the tone's decides the icon colour.
     return [
       'andes-dialog--method',
       `andes-dialog--method-${this.ref().kind}`,
+      `andes-dialog--method-${TONE_CLASSES[this.tone()]}`,
       cfg.closable ? 'andes-dialog--method-closable' : '',
       cfg.className ?? '',
     ]
-      .filter(Boolean)
+      .filter((name, at, all) => name && all.indexOf(name) === at)
       .join(' ');
   });
 
-  protected readonly iconName = computed(() => METHOD_ICONS[this.ref().kind]);
+  /** The status the icon shows: the `tone` asked for, else the kind's own. */
+  protected readonly tone = computed(
+    () => this.ref().config().tone ?? METHOD_TONES[this.ref().kind],
+  );
+
+  protected readonly iconName = computed(
+    () => ANDES_DIALOG_STATUS_ICONS[this.tone()],
+  );
+
+  /** Why the last OK failed; cleared by the next attempt. */
+  protected readonly failure = signal<string | null>(null);
 
   /** Accessible name when no title is given, so the alertdialog is never unnamed. */
   protected readonly defaultLabel = computed(() => {
@@ -430,6 +531,10 @@ export class AndesDialogMethod {
   /** How the pending close should settle `result`. */
   private outcome: boolean | null = null;
   private cancelHandled = false;
+  /** Which way out was taken, when the code (not the overlay) knows. */
+  private source: AndesDialogMethodCloseReason | null = null;
+  /** What `onOk`'s promise resolved to. */
+  private okValue: unknown;
   /** Set once a close is under way, so a late handler result cannot undo it. */
   private closing = false;
 
@@ -443,10 +548,12 @@ export class AndesDialogMethod {
     if (this.okLoading() || this.cancelLoading()) {
       return;
     }
+    this.failure.set(null);
     const done = await this.settleThrough(
       this.ref().config().onOk,
       this.okLoading,
       () => this.close(true),
+      true,
     );
     if (done) {
       this.close(true);
@@ -464,10 +571,12 @@ export class AndesDialogMethod {
       () => {
         // A deferred close still came from the Cancel button, whose handler has run.
         this.cancelHandled = true;
+        this.source = 'cancel';
         this.close(false);
       },
     );
     if (done) {
+      this.source = 'cancel';
       this.close(false);
     } else if (!this.closing) {
       this.cancelHandled = false;
@@ -476,6 +585,7 @@ export class AndesDialogMethod {
 
   /** The "x": a cancel that does not wait on `onCancel`. */
   protected dismiss(): void {
+    this.source = 'close-button';
     this.open.set(false);
   }
 
@@ -492,6 +602,7 @@ export class AndesDialogMethod {
   /** @internal Closes without running any handler, for `destroy()`. */
   destroy(): void {
     this.cancelHandled = true;
+    this.source = 'destroyed';
     if (this.root()?.isOpen()) {
       this.close(false);
     } else {
@@ -515,7 +626,27 @@ export class AndesDialogMethod {
         )
         .catch((error: unknown) => console.error(error));
     }
-    this.ref().settle(confirmed);
+    this.ref().settle(confirmed, {
+      reason: confirmed ? 'ok' : (this.source ?? closeReasonOf(reason)),
+      value: confirmed ? this.okValue : undefined,
+    });
+  }
+
+  /** A failed handler: logged, and (for OK) shown in the dialog so the user can retry. */
+  private report(error: unknown, isOk: boolean): void {
+    console.error(error);
+    if (!isOk) {
+      return;
+    }
+    const custom = this.ref().config().errorMessage;
+    const message =
+      typeof custom === 'function'
+        ? custom(error)
+        : (custom ??
+          (error instanceof Error && error.message
+            ? error.message
+            : 'Something went wrong. Try again.'));
+    this.failure.set(message);
   }
 
   /**
@@ -529,12 +660,13 @@ export class AndesDialogMethod {
     handler: ((close: () => void) => unknown) | undefined,
     loading: WritableSignal<boolean>,
     close: () => void,
+    isOk = false,
   ): Promise<boolean> {
     let result: unknown;
     try {
       result = handler?.(close);
     } catch (error) {
-      console.error(error);
+      this.report(error, isOk);
       return false;
     }
     if (!isPromiseLike(result)) {
@@ -542,14 +674,35 @@ export class AndesDialogMethod {
     }
     loading.set(true);
     try {
-      await result;
+      const value = await result;
+      if (isOk) {
+        this.okValue = value;
+      }
       return true;
     } catch (error) {
-      console.error(error);
+      this.report(error, isOk);
       return false;
     } finally {
       loading.set(false);
     }
+  }
+}
+
+function closeReasonOf(
+  reason: AndesOverlayCloseReason,
+): AndesDialogMethodCloseReason {
+  switch (reason) {
+    case 'escape-key':
+      return 'escape';
+    case 'outside-click':
+    case 'backdrop-click':
+      return 'backdrop';
+    case 'close-button':
+      return 'close-button';
+    case 'destroyed':
+      return 'destroyed';
+    default:
+      return 'cancel';
   }
 }
 
@@ -591,6 +744,7 @@ export class AndesDialogService {
   private readonly appRef = inject(ApplicationRef);
   private readonly environmentInjector = inject(EnvironmentInjector);
   private readonly open = new Set<AndesDialogMethodRef>();
+  private readonly waiting: AndesDialogMethodRef[] = [];
 
   /** A confirmation with OK and Cancel. */
   confirm(config: AndesDialogMethodConfig): AndesDialogMethodRef {
@@ -617,8 +771,11 @@ export class AndesDialogService {
     return this.show('warning', config);
   }
 
-  /** Destroys every dialog this service has open. */
+  /** Destroys every dialog this service has open, and withdraws the queued ones. */
   destroyAll(): void {
+    for (const ref of [...this.waiting]) {
+      ref.destroy();
+    }
     for (const ref of [...this.open]) {
       ref.destroy();
     }
@@ -629,6 +786,33 @@ export class AndesDialogService {
     config: AndesDialogMethodConfig,
   ): AndesDialogMethodRef {
     const ref = new AndesDialogMethodRef(kind, config);
+    if (config.queue && (this.open.size > 0 || this.waiting.length > 0)) {
+      this.waiting.push(ref);
+      // Withdrawn (destroyed while it waits, or settled in any other way): off the queue.
+      void ref.result.then(() => {
+        const at = this.waiting.indexOf(ref);
+        if (at !== -1) {
+          this.waiting.splice(at, 1);
+        }
+      });
+      return ref;
+    }
+    this.render(ref);
+    return ref;
+  }
+
+  /** Opens the next queued dialog once nothing else is open. */
+  private next(): void {
+    if (this.open.size > 0) {
+      return;
+    }
+    const ref = this.waiting.shift();
+    if (ref && !ref.closed()) {
+      this.render(ref);
+    }
+  }
+
+  private render(ref: AndesDialogMethodRef): void {
     const componentRef = createComponent(AndesDialogMethod, {
       environmentInjector: this.environmentInjector,
     });
@@ -644,9 +828,8 @@ export class AndesDialogService {
       setTimeout(() => {
         componentRef.destroy();
         ref.config().afterClose?.();
+        this.next();
       });
     });
-
-    return ref;
   }
 }

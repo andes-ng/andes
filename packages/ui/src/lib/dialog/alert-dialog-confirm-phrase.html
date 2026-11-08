@@ -1,14 +1,37 @@
-<label class="andes-alert-dialog__phrase-label" [attr.for]="inputId">
-  {{ labelParts().before }} @if (labelParts().hasPhrase) {
-  <code class="andes-alert-dialog__phrase">{{ phrase() }}</code>{{
-  labelParts().after }} }
-</label>
+<!-- Not a <label for>: a label would activate the field on any click inside it, and a click
+     on the phrase chip would collapse the selection the user is making to copy it. The field
+     takes its name from this element instead (aria-labelledby), and a click on the label's
+     own words still focuses the field. -->
+<div class="andes-alert-dialog__phrase-row">
+  <span class="andes-alert-dialog__phrase-label" [id]="labelId"
+    >{{ labelParts().before }}@if (labelParts().hasPhrase) {<code
+      class="andes-alert-dialog__phrase"
+      >{{ phrase() }}</code
+    >{{ labelParts().after }}}</span
+  >
+  @if (showCopy() && labelParts().hasPhrase) {
+  <andes-button
+    class="andes-alert-dialog__phrase-copy"
+    data-slot="alert-dialog-phrase-copy"
+    variant="ghost"
+    size="icon-xs"
+    [aria-label]="copyLabel().replace('{phrase}', phrase())"
+    (click)="copyPhrase()"
+  >
+    <ng-icon
+      aria-hidden="true"
+      [name]="copied() ? 'lucideCheck' : 'lucideCopy'"
+    />
+  </andes-button>
+  }
+</div>
 <andes-input
   [id]="inputId"
   [(value)]="value"
   [placeholder]="placeholder()"
   [status]="status() === 'mismatch' ? 'error' : undefined"
   [disabled]="state.pending()"
+  [aria-labelledby]="labelId"
   [aria-describedby]="hintId"
   autocomplete="off"
   (pressEnter)="onEnter($event)"

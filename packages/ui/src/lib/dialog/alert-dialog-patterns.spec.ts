@@ -4,6 +4,8 @@ import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { readFileSync } from 'node:fs';
 import { vi } from 'vitest';
 import {
+  lucideCheck,
+  lucideCopy,
   lucideCircleAlert,
   lucideCircleCheck,
   lucideCircleX,
@@ -31,6 +33,8 @@ const iconName = (icon: Element | null | undefined) =>
     lucideCircleCheck,
     lucideCircleX,
     lucideInfo,
+    lucideCheck,
+    lucideCopy,
   });
 
 /**
@@ -188,6 +192,8 @@ describe('matchesConfirmPhrase', () => {
           phrase="acme-web"
           [ignoreCase]="ignoreCase()"
           [blockPaste]="blockPaste()"
+          [showCopy]="showCopy()"
+          [copyLabel]="copyLabel()"
         />
 
         <div andesAlertDialogFooter>
@@ -215,6 +221,8 @@ class PhraseHost {
   readonly destroyOnClose = signal(true);
   readonly ignoreCase = signal(false);
   readonly blockPaste = signal(false);
+  readonly showCopy = signal(true);
+  readonly copyLabel = signal('Copy {phrase}');
   readonly reasons: AndesOverlayCloseReason[] = [];
   cancelled = 0;
   confirmed = 0;
@@ -251,7 +259,10 @@ describe('type-to-confirm', () => {
     expect(label.textContent?.replace(/\s+/g, ' ').trim()).toBe(
       'Type acme-web to confirm.',
     );
-    expect(label.getAttribute('for')).toBe(inDialog('input').id);
+    // Not a <label for>: a click on the chip must not move focus to the field.
+    expect(label.tagName).toBe('SPAN');
+    expect(label.hasAttribute('for')).toBe(false);
+    expect(inDialog('input').getAttribute('aria-labelledby')).toBe(label.id);
   });
 
   it('refuses an early click: nothing closes, nothing runs, and it says why', async () => {
@@ -1232,7 +1243,7 @@ describe('guarding against an accidental answer', () => {
           >I understand.</andes-alert-dialog-acknowledge
         >
 
-        <div andesAlertDialogFooter>
+        <div andesAlertDialogFooter [layout]="layout()">
           <andes-button id="cancel" variant="secondary" andesAlertDialogCancel>
             Cancel
           </andes-button>
@@ -1251,9 +1262,199 @@ describe('guarding against an accidental answer', () => {
 })
 class ButtonHost {
   readonly open = signal(false);
+  readonly layout = signal<'end' | 'stretch' | 'stacked'>('end');
   readonly reasons: AndesOverlayCloseReason[] = [];
   confirmed = 0;
 }
+
+describe('copying the phrase', () => {
+  withElementGeometry();
+
+  async function setup() {
+    const fixture = TestBed.createComponent(PhraseHost);
+    fixture.detectChanges();
+    await openDialog(fixture);
+    return { fixture, host: fixture.componentInstance };
+  }
+
+  const copyButton = () =>
+    inDialog(
+      '[data-slot="alert-dialog-phrase-copy"] button',
+    ) as HTMLButtonElement;
+  const copyIcon = () =>
+    inDialog('[data-slot="alert-dialog-phrase-copy"] ng-icon');
+
+  let writeText: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+  });
+
+  afterEach(() => {
+    Reflect.deleteProperty(navigator, 'clipboard');
+    Reflect.deleteProperty(document, 'execCommand');
+    vi.useRealTimers();
+  });
+
+  it('puts a small copy button right after the phrase, named after it', async () => {
+    await setup();
+
+    expect(copyButton()).toBeTruthy();
+    expect(copyButton().getAttribute('aria-label')).toBe('Copy acme-web');
+    expect(iconName(copyIcon())).toBe('lucideCopy');
+    expect(
+      inDialog('.andes-alert-dialog__phrase-label').nextElementSibling,
+    ).toBe(inDialog('[data-slot="alert-dialog-phrase-copy"]'));
+  });
+
+  it('can be hidden, and takes another accessible name', async () => {
+    const { fixture, host } = await setup();
+
+    host.copyLabel.set('Copiar {phrase}');
+    fixture.detectChanges();
+    expect(copyButton().getAttribute('aria-label')).toBe('Copiar acme-web');
+
+    host.showCopy.set(false);
+    fixture.detectChanges();
+    expect(inDialog('[data-slot="alert-dialog-phrase-copy"]')).toBeNull();
+    // The label still names the field without it.
+    expect(inDialog('input').getAttribute('aria-labelledby')).toBe(
+      inDialog('.andes-alert-dialog__phrase-label').id,
+    );
+  });
+
+  it('copies the phrase, shows a check for a moment, and announces it', async () => {
+    const { fixture } = await setup();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+
+    click(copyButton());
+    await Promise.resolve();
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    expect(writeText).toHaveBeenCalledWith('acme-web');
+    expect(iconName(copyIcon())).toBe('lucideCheck');
+    expect(live().textContent).toBe('Copied acme-web.');
+
+    vi.advanceTimersByTime(1500);
+    fixture.detectChanges();
+    expect(iconName(copyIcon())).toBe('lucideCopy');
+  });
+
+  it('copies through a hidden field where the clipboard api is missing', async () => {
+    const { fixture } = await setup();
+    Reflect.deleteProperty(navigator, 'clipboard');
+    const execCommand = vi.fn().mockReturnValue(true);
+    Object.defineProperty(document, 'execCommand', {
+      configurable: true,
+      value: execCommand,
+    });
+
+    click(copyButton());
+    await flush();
+    fixture.detectChanges();
+
+    expect(execCommand).toHaveBeenCalledWith('copy');
+    expect(live().textContent).toBe('Copied acme-web.');
+    expect(document.querySelector('textarea')).toBeNull();
+  });
+
+  it('says so when the copy is refused', async () => {
+    const { fixture } = await setup();
+    writeText.mockRejectedValue(new Error('denied'));
+    Object.defineProperty(document, 'execCommand', {
+      configurable: true,
+      value: vi.fn().mockReturnValue(false),
+    });
+
+    click(copyButton());
+    await flush();
+    fixture.detectChanges();
+
+    expect(live().textContent).toBe(
+      'Could not copy. Select the text and copy it.',
+    );
+    expect(iconName(copyIcon())).toBe('lucideCopy');
+  });
+
+  it('still copies under blockPaste: only pasting into the field is refused', async () => {
+    const { fixture, host } = await setup();
+    host.blockPaste.set(true);
+    fixture.detectChanges();
+
+    click(copyButton());
+    await flush();
+    fixture.detectChanges();
+
+    expect(writeText).toHaveBeenCalledWith('acme-web');
+    expect(live().textContent).toBe('Copied acme-web.');
+  });
+});
+
+describe('selecting the phrase', () => {
+  withElementGeometry();
+
+  async function setup() {
+    const fixture = TestBed.createComponent(PhraseHost);
+    fixture.detectChanges();
+    await openDialog(fixture);
+    return fixture;
+  }
+
+  it('does not move focus to the field when the chip is clicked', async () => {
+    await setup();
+    const field = inDialog('input') as HTMLInputElement;
+    field.blur();
+
+    click(inDialog('.andes-alert-dialog__phrase'));
+
+    expect(document.activeElement).not.toBe(field);
+  });
+
+  it('focuses the field when the words of the label are clicked, as a label would', async () => {
+    await setup();
+    const field = inDialog('input') as HTMLInputElement;
+    field.blur();
+
+    click(inDialog('.andes-alert-dialog__phrase-label'));
+
+    expect(document.activeElement).toBe(field);
+  });
+
+  it('leaves focus alone when the click ends a text selection', async () => {
+    await setup();
+    const field = inDialog('input') as HTMLInputElement;
+    field.blur();
+    const chip = inDialog('.andes-alert-dialog__phrase');
+    const range = document.createRange();
+    range.selectNodeContents(chip);
+    getSelection()?.removeAllRanges();
+    getSelection()?.addRange(range);
+
+    click(inDialog('.andes-alert-dialog__phrase-label'));
+
+    expect(document.activeElement).not.toBe(field);
+    expect(getSelection()?.toString()).toBe('acme-web');
+    getSelection()?.removeAllRanges();
+  });
+
+  it('keeps the chip selectable as a whole with one click', () => {
+    expect(
+      declaredValue(
+        readFileSync(
+          'packages/ui/src/lib/dialog/alert-dialog-patterns.css',
+          'utf8',
+        ),
+        '.andes-alert-dialog__phrase',
+        'user-select',
+      ),
+    ).toBe('all');
+  });
+});
 
 describe('on an <andes-button>', () => {
   withElementGeometry();
@@ -1299,6 +1500,26 @@ describe('on an <andes-button>', () => {
 
     expect(host.confirmed).toBe(1);
     expect(host.reasons).toEqual(['close-button']);
+  });
+
+  it('gives the footer buttons the small size unless they set one', async () => {
+    await setup();
+
+    expect(inDialog('#action button').classList).toContain('andes-button--sm');
+    expect(inDialog('#cancel button').classList).toContain('andes-button--sm');
+  });
+
+  it('lays the footer out at the end, stretched or stacked', async () => {
+    const { fixture, host } = await setup();
+    const footer = () => inDialog('[data-slot="alert-dialog-footer"]');
+
+    expect(footer().getAttribute('data-layout')).toBe('end');
+    host.layout.set('stacked');
+    fixture.detectChanges();
+    expect(footer().getAttribute('data-layout')).toBe('stacked');
+    host.layout.set('stretch');
+    fixture.detectChanges();
+    expect(footer().getAttribute('data-layout')).toBe('stretch');
   });
 
   it('keeps a button the consumer disabled themselves disabled', async () => {
@@ -1601,12 +1822,12 @@ describe('alert-dialog-patterns.css', () => {
     expect(css).not.toMatch(/\brgba?\(/);
   });
 
-  it('sizes the tone icon like the service confirm icon: a 22px disc in the tone colour', () => {
+  it('sizes the tone icon like the service confirm icon: a 20px disc in the tone colour', () => {
     expect(declaredValue(css, '.andes-alert-dialog__icon', 'inline-size')).toBe(
-      '1.375rem',
+      '1.25rem',
     );
     expect(declaredValue(css, '.andes-alert-dialog__icon', 'block-size')).toBe(
-      '1.375rem',
+      '1.25rem',
     );
     expect(
       declaredValue(css, '.andes-alert-dialog__icon ng-icon circle', 'fill'),
@@ -1617,6 +1838,36 @@ describe('alert-dialog-patterns.css', () => {
     expect(
       declaredValue(css, '.andes-alert-dialog__icon ng-icon line', 'stroke'),
     ).toBe('var(--andes-color-popover)');
+  });
+
+  it('is built slim: 16px by 20px padding, an 8px radius and a 16px medium title', () => {
+    const surface = '.andes-dialog.andes-dialog--alert';
+    expect(declaredValue(css, surface, '--andes-dialog-padding-block')).toBe(
+      'var(--andes-space-4)',
+    );
+    expect(declaredValue(css, surface, '--andes-dialog-padding-inline')).toBe(
+      'var(--andes-space-5)',
+    );
+    expect(declaredValue(css, surface, 'border-radius')).toBe(
+      'var(--andes-radius-lg)',
+    );
+    expect(
+      declaredValue(
+        css,
+        '.andes-dialog--alert .andes-dialog__title',
+        'font-size',
+      ),
+    ).toBe('1rem');
+    expect(
+      declaredValue(
+        css,
+        '.andes-dialog--alert .andes-dialog__title',
+        'font-weight',
+      ),
+    ).toBe('var(--andes-font-weight-medium)');
+    expect(
+      declaredValue(css, '.andes-dialog--alert .andes-dialog__header', 'gap'),
+    ).toBe('0.125rem');
   });
 
   it('draws the hold fill from the start edge, so it fills the right way in RTL', () => {

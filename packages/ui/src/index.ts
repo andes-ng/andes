@@ -9,7 +9,7 @@ export * from './lib/accordion';
 
 // @slot affix
 
-// @slot alert
+export * from './lib/alert';
 
 // @slot anchor
 
@@ -141,7 +141,7 @@ export * from './lib/textarea';
 
 // @slot timeline
 
-export * from './lib/toast';
+// @slot toast
 
 export * from './lib/toggle';
 

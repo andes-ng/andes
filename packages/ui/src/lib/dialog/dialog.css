@@ -1,18 +1,20 @@
 /*
- * AndesDialogContent renders with ViewEncapsulation.None: the parts inside a dialog
- * (header, title, footer, close controls) are consumer markup projected from the
- * consumer's own view, so an encapsulated stylesheet could never reach them. Every
- * class is namespaced `andes-dialog*` to make that safe.
+ * Shared by AndesDialogContent and AndesAlertDialogContent, both of which render
+ * with ViewEncapsulation.None: the parts inside a dialog (header, title, footer,
+ * close controls) are consumer markup projected from the consumer's own view, so
+ * an encapsulated stylesheet could never reach them. Every class is namespaced
+ * `andes-dialog*` to make that safe, and the two surfaces are one visual part
+ * distinguished by `data-slot`, not by a second class family.
  */
 
 .andes-dialog {
-  /* 20px above and below, 24px at the sides: the modal padding Ant Design uses. The
+  /* 20px above and below, 24px at the sides: the modal padding. The
      inline step is 24px, which the token scale does not have (it stops at 20px,
      --andes-space-5), so it is composed from tokens rather than hard-coded. Held as
      custom properties because the close control and the header's close-clearance are
      derived from them below. They measure from the surface's outer edge, so the 1px
      border is taken out of the scroll box's own padding and of the close control's inset:
-     text lands exactly 24px in, as it does in Ant Design's borderless modal. */
+     text lands exactly 24px in. */
   --andes-dialog-border-width: 1px;
   --andes-dialog-padding-block: var(--andes-space-5);
   --andes-dialog-padding-inline: calc(
@@ -56,7 +58,7 @@
   /* A fixed dark ink rather than one derived from --andes-color-foreground, for the same
      reason --andes-color-overlay is black-based: a shadow is cast light, not themed ink.
      Deriving it from the foreground turned this into a white halo in the dark theme,
-     where that token is #f8fafc. The three layers are Ant Design's modal elevation.
+     where that token is #f8fafc. The shadow has three layers.
      Dark-theme separation comes from the surface being
      lighter than the scrim plus the 1px border, which is how both references do it. */
   box-shadow:
@@ -93,7 +95,7 @@
 
 /* Sizes. Neither reference library exposes an enum, but a scale keeps consumers off
    magic widths; every step still collapses to the viewport on a narrow screen. `md` is
-   520px, the width of an Ant Design modal. */
+   520px, the width of a standard modal. */
 .andes-dialog--sm {
   max-width: 24rem;
 }
@@ -110,10 +112,28 @@
   max-width: 56rem;
 }
 
+/* A confirmation is a short, dense surface - it should not stretch to a content width
+   it will never use: 400px by default, 320px for a one-line acknowledgement. */
+.andes-dialog--alert.andes-dialog--sm {
+  max-width: 20rem;
+}
+
+.andes-dialog--alert.andes-dialog--md {
+  max-width: 25rem;
+}
+
+.andes-dialog--alert.andes-dialog--lg {
+  max-width: 32rem;
+}
+
+.andes-dialog--alert.andes-dialog--xl {
+  max-width: 40rem;
+}
+
 /* An explicit `width`, including its per-breakpoint object form. The
    component writes one custom property per breakpoint, already resolved so each one
    inherits the nearest smaller breakpoint given; the rules below only pick the one for
-   the current viewport. Doubled class so it outranks any size step.
+   the current viewport. Doubled class so it outranks the alert variant's own step above.
    `width: 100%` on the surface still caps it at the pane, so a large value can never
    overflow a narrow screen. */
 .andes-dialog.andes-dialog--custom-width {
@@ -168,7 +188,7 @@
 }
 
 /* `fullscreen`: the surface fills the pane edge to edge, square-cornered. Doubled class
-   so it outranks any size step. */
+   so it outranks the alert variant's own size step. */
 .andes-dialog.andes-dialog--fullscreen {
   width: 100%;
   max-width: none;
@@ -184,8 +204,9 @@
 }
 
 /* Clearance for the built-in close control, applied only where one is actually
-   rendered. Applying it unconditionally made a `[showCloseButton]="false"` dialog wrap
-   its copy against 20px of reserved gutter that nothing occupied. The control's box reaches in past the content
+   rendered. Applying it unconditionally made an alert dialog - which never has a close
+   button - and a `[showCloseButton]="false"` dialog wrap their copy against 20px of
+   reserved gutter that nothing occupied. The control's box reaches in past the content
    edge by its size plus its inset minus the padding; the step clears that and leaves a
    visible gap beside it. */
 .andes-dialog:has(> .andes-dialog__close) .andes-dialog__header {
@@ -289,8 +310,8 @@
   display: none;
 }
 
-/* Four 16px bars 16px apart with 16px above and below, like Ant Design's modal skeleton
-   (the header already contributes the gap above, hence the 8px top margin). */
+/* Four 16px bars 16px apart with 16px above and below (the header already contributes the
+   gap above, hence the 8px top margin). */
 .andes-dialog__skeleton {
   display: flex;
   flex-direction: column;
@@ -329,7 +350,7 @@
 .andes-dialog__maximize {
   position: absolute;
   /* A 2rem hit area 12px from the corner with a 1rem glyph centred in it, the geometry
-     of Ant Design's close control. */
+     of the close control. */
   inset-block-start: calc(
     var(--andes-dialog-close-inset) - var(--andes-dialog-border-width)
   );
@@ -423,6 +444,86 @@ ng-icon.andes-dialog__close-icon {
   );
 }
 
+/* Imperative dialogs from AndesDialogService: a status icon beside the title and
+   content. */
+.andes-dialog__method {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--andes-space-3);
+}
+
+/* Clearance for the optional "x" (`closable`), the same step the header gets. */
+.andes-dialog--method-closable .andes-dialog__method {
+  padding-inline-end: calc(
+    var(--andes-dialog-close-size) + var(--andes-dialog-close-inset) -
+      var(--andes-dialog-padding-inline) + var(--andes-space-2)
+  );
+}
+
+/* A 20px filled disc (the status icons) nudged down 1px, so it is centred on
+   the title's 22px first line. */
+.andes-dialog__method-icon {
+  display: inline-flex;
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-block-start: 1px;
+  color: var(--andes-alert-warning, var(--andes-color-warning));
+}
+
+/* A consumer's own `icon` is a stroked glyph in the status colour. */
+.andes-dialog__method-icon > svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The built-in icon is lucide's circle icon in the status colour (`currentcolor`): its circle
+   is filled and its marks (paths, or the lines of the exclamation mark) are stroked in the
+   surface colour, so one icon works on a light and a dark surface alike. Where the browser
+   lets CSS set the radius, the disc grows to the edge of the box. */
+ng-icon.andes-dialog__method-glyph {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+.andes-dialog__method-glyph circle {
+  r: 11px;
+  fill: currentcolor;
+}
+
+.andes-dialog__method-glyph path,
+.andes-dialog__method-glyph line {
+  fill: none;
+  stroke: var(--andes-color-popover);
+  stroke-width: 2.2;
+}
+
+.andes-dialog--method-info .andes-dialog__method-icon {
+  color: var(--andes-alert-info, var(--andes-color-info));
+}
+
+.andes-dialog--method-success .andes-dialog__method-icon {
+  color: var(--andes-alert-success, var(--andes-color-success));
+}
+
+.andes-dialog--method-error .andes-dialog__method-icon {
+  color: var(--andes-alert-danger, var(--andes-color-danger));
+}
+
+.andes-dialog__method-text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
 /* On a narrow screen the actions stack and fill the width. `column-reverse` keeps the
    DOM order - Cancel first, so the focus trap opens on the safe choice - while showing
    the affirmative action first, which is the order both reference libraries stack a
@@ -454,9 +555,9 @@ ng-icon.andes-dialog__close-icon {
   justify-content: center;
   box-sizing: border-box;
   width: 100%;
-  /* 16px of gutter, so the surface is `100vw - 32px` on a phone, as Ant Design's is. */
+  /* 16px of gutter, so the surface is `100vw - 32px` on a phone. */
   padding: var(--andes-space-4);
-  /* Zoom and fade in, from 20% scale over 300ms on Ant Design's ease-out-circ curve: a
+  /* Zoom and fade in, from 20% scale over 300ms on an ease-out-circ curve: a
      fast start that settles without overshoot. */
   animation: andes-dialog-enter 0.3s cubic-bezier(0.08, 0.82, 0.17, 1);
 }
@@ -466,7 +567,7 @@ ng-icon.andes-dialog__close-icon {
 /* prettier-ignore */
 .andes-overlay-pane:has(> .andes-dialog--top, > .andes-dialog-keep-alive > .andes-dialog--top) {
   align-self: flex-start;
-  /* 100px on a tall screen (Ant Design's `top`), shrinking with the viewport. */
+  /* 100px on a tall screen (the `top` offset), shrinking with the viewport. */
   padding-block-start: clamp(var(--andes-space-4), 12.5dvh, 6.25rem);
 }
 
@@ -484,11 +585,11 @@ ng-icon.andes-dialog__close-icon {
 
 /* The CDK's prebuilt stylesheet fades every backdrop over 400ms, so the scrim kept
    darkening for well over a tenth of a second after the dialog had finished arriving.
-   Ant Design's mask fades linearly over 200ms, which lands inside the surface's own entry.
-   Scoped to the class the dialog root passes as `backdropClass`, so no other
+   The mask fades linearly over 200ms, which lands inside the surface's own entry.
+   Scoped to the class the two dialog roots pass as `backdropClass`, so no other
    overlay's timing changes.
 
-   The scrim is a flat 45% black, also as in Ant Design, in both themes: the primitive
+   The scrim is a flat 45% black in both themes: the primitive
    paints it from `--andes-color-overlay`, which resolves on the backdrop element, so
    re-pointing the token here recolours this scrim alone. `--andes-dialog-mask` is the
    consumer hook: any CSS background value (a gradient, say), usually set from a
@@ -504,7 +605,7 @@ ng-icon.andes-dialog__close-icon {
    children and the scrim with `data-andes-closing` and waits for the animations below
    before detaching (on a branch whose primitive does not do that yet, the attribute
    never appears and the close stays instant). The surface mirrors its entry - a fade
-   and a shrink back to 20% - over 200ms on Ant Design's ease-in-out-circ curve, so a
+   and a shrink back to 20% - over 200ms on an ease-in-out-circ curve, so a
    dismissal is quicker than the arrival. `forwards` holds the last frame until the pane
    is removed, so the surface cannot flash back to full opacity for a frame in between. */
 /* prettier-ignore */

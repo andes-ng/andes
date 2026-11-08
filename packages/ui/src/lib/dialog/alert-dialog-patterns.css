@@ -286,8 +286,7 @@
   gap: var(--andes-space-1);
 }
 
-/* The label's words, the phrase chip and the copy button on one line (wrapping when the
-   phrase is long). */
+/* The label's words and the phrase chip on one line (wrapping when the phrase is long). */
 .andes-alert-dialog__phrase-row {
   display: flex;
   flex-wrap: wrap;
@@ -296,15 +295,15 @@
 }
 
 /* A plain element named by the field through aria-labelledby, not a <label for>: a label
-   activates the field on every click inside it, which collapsed the selection a user makes
-   in the chip to copy it. */
+   activates the field on every click inside it, which collapsed any text selection in the
+   chip. */
 .andes-alert-dialog__phrase-label {
   color: var(--andes-color-popover-foreground);
   font-weight: var(--andes-font-weight-medium);
   line-height: 1.25rem;
 }
 
-/* One click selects the whole phrase, to copy it or to see exactly what to type. A quiet
+/* The phrase to type. A quiet
    chip: a faint wash of the ink, a small radius, and no border or tint of its own. */
 .andes-alert-dialog__phrase {
   padding: 0 0.3125rem;
@@ -319,8 +318,6 @@
   font-weight: 400;
   overflow-wrap: anywhere;
   cursor: text;
-  -webkit-user-select: all;
-  user-select: all;
 }
 
 /* The selection stays on the library's own focus colour, in both themes, rather than the
@@ -332,19 +329,6 @@
     transparent
   );
   color: inherit;
-}
-
-/* The copy button: a 20px ghost square that sits right after the chip. */
-.andes-alert-dialog__phrase-copy {
-  display: inline-flex;
-  color: var(--andes-color-muted-foreground);
-  font-size: 0.875rem;
-}
-
-.andes-alert-dialog__phrase-copy ng-icon {
-  display: flex;
-  inline-size: 0.875rem;
-  block-size: 0.875rem;
 }
 
 /* Always occupies its line, so the dialog does not jump when the first message arrives. */

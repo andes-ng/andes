@@ -70,47 +70,6 @@ export const TypeToConfirm: Story = {
   },
 };
 
-/** Copy the phrase. */
-export const CopyThePhrase: Story = {
-  name: 'Copy the phrase',
-  parameters: about(
-    'A small button after the phrase copies it and shows a check for a moment, the chip itself can be selected by click, double click or drag without the field stealing focus, copying keeps working when blockPaste forbids pasting into the field, and showCopy hides the button.',
-  ),
-  render: () => {
-    const result = signal(NOTHING_YET);
-    return {
-      props: { ...shared, result },
-      template: `
-        <andes-alert-dialog initialFocus="input" (cancelled)="result.set('Cancelled.')">
-          <andes-button danger andesAlertDialogTrigger>Delete workspace</andes-button>
-
-          <andes-alert-dialog-content *andesAlertDialogContent>
-            <div andesAlertDialogHeader>
-              <h2 andesAlertDialogTitle>Delete workspace acme-labs?</h2>
-              <p andesAlertDialogDescription>
-                Copy the name with the button, then type it: pasting is turned off.
-              </p>
-            </div>
-
-            <andes-alert-dialog-confirm-phrase phrase="acme-labs" blockPaste />
-
-            <div andesAlertDialogFooter>
-              <andes-button variant="secondary" andesAlertDialogCancel>Cancel</andes-button>
-              <andes-button
-                variant="danger"
-                andesAlertDialogAction
-                (click)="result.set('Deleted acme-labs.')"
-              >Delete workspace</andes-button>
-            </div>
-          </andes-alert-dialog-content>
-        </andes-alert-dialog>
-
-        ${resultLine}
-      `,
-    };
-  },
-};
-
 /** Type to confirm, strict. */
 export const TypeToConfirmStrict: Story = {
   name: 'Type to confirm, strict',

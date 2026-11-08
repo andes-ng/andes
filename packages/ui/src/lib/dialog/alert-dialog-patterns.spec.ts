@@ -5,7 +5,6 @@ import { readFileSync } from 'node:fs';
 import { vi } from 'vitest';
 import {
   lucideCheck,
-  lucideCopy,
   lucideCircleAlert,
   lucideCircleCheck,
   lucideCircleX,
@@ -34,7 +33,6 @@ const iconName = (icon: Element | null | undefined) =>
     lucideCircleX,
     lucideInfo,
     lucideCheck,
-    lucideCopy,
   });
 
 /**
@@ -192,8 +190,6 @@ describe('matchesConfirmPhrase', () => {
           phrase="acme-web"
           [ignoreCase]="ignoreCase()"
           [blockPaste]="blockPaste()"
-          [showCopy]="showCopy()"
-          [copyLabel]="copyLabel()"
         />
 
         <div andesAlertDialogFooter>
@@ -221,8 +217,6 @@ class PhraseHost {
   readonly destroyOnClose = signal(true);
   readonly ignoreCase = signal(false);
   readonly blockPaste = signal(false);
-  readonly showCopy = signal(true);
-  readonly copyLabel = signal('Copy {phrase}');
   readonly reasons: AndesOverlayCloseReason[] = [];
   cancelled = 0;
   confirmed = 0;
@@ -1267,134 +1261,6 @@ class ButtonHost {
   confirmed = 0;
 }
 
-describe('copying the phrase', () => {
-  withElementGeometry();
-
-  async function setup() {
-    const fixture = TestBed.createComponent(PhraseHost);
-    fixture.detectChanges();
-    await openDialog(fixture);
-    return { fixture, host: fixture.componentInstance };
-  }
-
-  const copyButton = () =>
-    inDialog(
-      '[data-slot="alert-dialog-phrase-copy"] button',
-    ) as HTMLButtonElement;
-  const copyIcon = () =>
-    inDialog('[data-slot="alert-dialog-phrase-copy"] ng-icon');
-
-  let writeText: ReturnType<typeof vi.fn>;
-
-  beforeEach(() => {
-    writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, 'clipboard', {
-      configurable: true,
-      value: { writeText },
-    });
-  });
-
-  afterEach(() => {
-    Reflect.deleteProperty(navigator, 'clipboard');
-    Reflect.deleteProperty(document, 'execCommand');
-    vi.useRealTimers();
-  });
-
-  it('puts a small copy button right after the phrase, named after it', async () => {
-    await setup();
-
-    expect(copyButton()).toBeTruthy();
-    expect(copyButton().getAttribute('aria-label')).toBe('Copy acme-web');
-    expect(iconName(copyIcon())).toBe('lucideCopy');
-    expect(
-      inDialog('.andes-alert-dialog__phrase-label').nextElementSibling,
-    ).toBe(inDialog('[data-slot="alert-dialog-phrase-copy"]'));
-  });
-
-  it('can be hidden, and takes another accessible name', async () => {
-    const { fixture, host } = await setup();
-
-    host.copyLabel.set('Copiar {phrase}');
-    fixture.detectChanges();
-    expect(copyButton().getAttribute('aria-label')).toBe('Copiar acme-web');
-
-    host.showCopy.set(false);
-    fixture.detectChanges();
-    expect(inDialog('[data-slot="alert-dialog-phrase-copy"]')).toBeNull();
-    // The label still names the field without it.
-    expect(inDialog('input').getAttribute('aria-labelledby')).toBe(
-      inDialog('.andes-alert-dialog__phrase-label').id,
-    );
-  });
-
-  it('copies the phrase, shows a check for a moment, and announces it', async () => {
-    const { fixture } = await setup();
-    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-
-    click(copyButton());
-    await Promise.resolve();
-    await Promise.resolve();
-    fixture.detectChanges();
-
-    expect(writeText).toHaveBeenCalledWith('acme-web');
-    expect(iconName(copyIcon())).toBe('lucideCheck');
-    expect(live().textContent).toBe('Copied acme-web.');
-
-    vi.advanceTimersByTime(1500);
-    fixture.detectChanges();
-    expect(iconName(copyIcon())).toBe('lucideCopy');
-  });
-
-  it('copies through a hidden field where the clipboard api is missing', async () => {
-    const { fixture } = await setup();
-    Reflect.deleteProperty(navigator, 'clipboard');
-    const execCommand = vi.fn().mockReturnValue(true);
-    Object.defineProperty(document, 'execCommand', {
-      configurable: true,
-      value: execCommand,
-    });
-
-    click(copyButton());
-    await flush();
-    fixture.detectChanges();
-
-    expect(execCommand).toHaveBeenCalledWith('copy');
-    expect(live().textContent).toBe('Copied acme-web.');
-    expect(document.querySelector('textarea')).toBeNull();
-  });
-
-  it('says so when the copy is refused', async () => {
-    const { fixture } = await setup();
-    writeText.mockRejectedValue(new Error('denied'));
-    Object.defineProperty(document, 'execCommand', {
-      configurable: true,
-      value: vi.fn().mockReturnValue(false),
-    });
-
-    click(copyButton());
-    await flush();
-    fixture.detectChanges();
-
-    expect(live().textContent).toBe(
-      'Could not copy. Select the text and copy it.',
-    );
-    expect(iconName(copyIcon())).toBe('lucideCopy');
-  });
-
-  it('still copies under blockPaste: only pasting into the field is refused', async () => {
-    const { fixture, host } = await setup();
-    host.blockPaste.set(true);
-    fixture.detectChanges();
-
-    click(copyButton());
-    await flush();
-    fixture.detectChanges();
-
-    expect(writeText).toHaveBeenCalledWith('acme-web');
-    expect(live().textContent).toBe('Copied acme-web.');
-  });
-});
-
 describe('selecting the phrase', () => {
   withElementGeometry();
 
@@ -1442,7 +1308,12 @@ describe('selecting the phrase', () => {
     getSelection()?.removeAllRanges();
   });
 
-  it('keeps the chip selectable as a whole with one click', () => {
+  it('shows no copy button: the phrase is for typing', async () => {
+    await setup();
+    expect(inDialog('.andes-alert-dialog__phrase-row button')).toBeNull();
+  });
+
+  it('leaves the chip as plain text, not selected whole by one click', () => {
     expect(
       declaredValue(
         readFileSync(
@@ -1452,7 +1323,7 @@ describe('selecting the phrase', () => {
         '.andes-alert-dialog__phrase',
         'user-select',
       ),
-    ).toBe('all');
+    ).toBeUndefined();
   });
 });
 

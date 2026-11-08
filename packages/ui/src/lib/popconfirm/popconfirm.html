@@ -56,6 +56,7 @@
           }
         </div>
       </div>
+      @if (showActions()) {
       <div
         class="andes-popconfirm-buttons"
         [class]="partClass('footer')"
@@ -98,6 +99,7 @@
           >{{ okText() }}</andes-button
         >
       </div>
+      }
     </div>
   </andes-popover-content>
 </ng-template>

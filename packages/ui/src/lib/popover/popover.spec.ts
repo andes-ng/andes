@@ -566,69 +566,161 @@ describe('AndesPopover - extended features', () => {
       );
     });
 
-    it('enters with a 150ms soft fade and a drift of at most 4px', () => {
-      // Read from the stylesheet source: jsdom runs no animations, and keyframes
-      // are not reflected in the computed style.
+    it('enters with a soft 200ms fade, a 6px drift and a 0.97 scale on a long ease-out', () => {
+      // Read from the stylesheet source: jsdom runs no transitions.
       const css = readFileSync(
         'packages/ui/src/lib/popover/popover-content.css',
         'utf8',
       );
       expect(css).toContain(
-        'animation: andes-popover-in 0.15s cubic-bezier(0.2, 0, 0, 1);',
+        '--_duration: var(--andes-popover-duration, 200ms);',
       );
-      const keyframes =
-        /@keyframes andes-popover-in\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
-      expect(keyframes).toContain(
-        'translate: var(--andes-popover-enter-from, 0 -4px);',
+      expect(css).toContain(
+        '--_ease: var(--andes-popover-ease, cubic-bezier(0.16, 1, 0.3, 1));',
       );
-      const offsets = [...css.matchAll(/--andes-popover-enter-from: ([^;]+);/g)]
-        .flatMap((m) => m[1].match(/-?\d+px/g) ?? [])
-        .map((px) => Math.abs(Number.parseInt(px, 10)));
-      expect(offsets.length).toBeGreaterThan(0);
-      expect(Math.max(...offsets)).toBeLessThanOrEqual(4);
+      expect(css).toContain('--_distance: var(--andes-popover-distance, 6px);');
+      expect(css).toContain('--_scale: var(--andes-popover-scale, 0.97);');
+      const starting =
+        /@starting-style\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+      expect(starting).toContain('opacity: 0;');
+      expect(starting).toContain('translate: var(--_from);');
+      expect(starting).toContain('scale: var(--_scale);');
     });
 
-    it('keeps the arrow strokes on the panel border instead of poking into the panel', () => {
+    it('drifts in from the side of the trigger for each of the four sides', () => {
       const css = readFileSync(
         'packages/ui/src/lib/popover/popover-content.css',
         'utf8',
       );
-      // A clip that overshoots the arrow's base by 1px leaves a visible step where the
-      // outline strokes meet the border; only a sub-pixel overlap is allowed.
-      const clips = [
-        ...css.matchAll(/clip-path: polygon\(([^)]*\)?[^;]*)\);/g),
-      ];
-      expect(clips.length).toBe(4);
-      for (const [, polygon] of clips) {
-        expect(polygon).not.toMatch(/[+-]\s?1px/);
-        expect(polygon).toMatch(/0\.25px/);
-      }
+      expect(css).toContain('--_from: 0 calc(var(--_distance) * -1);');
+      expect(css).toContain(
+        "[data-side='top'] {\n  --_from: 0 var(--_distance);",
+      );
+      expect(css).toContain(
+        "[data-side='left'] {\n  --_from: var(--_distance) 0;",
+      );
+      expect(css).toContain(
+        "[data-side='right'] {\n  --_from: calc(var(--_distance) * -1) 0;",
+      );
     });
 
-    it('leaves with a quicker, accelerating mirror of its entry', () => {
+    it('grows from the arrow tip: the side of the trigger, at the trigger position, mirrored for rtl', () => {
       const css = readFileSync(
         'packages/ui/src/lib/popover/popover-content.css',
         'utf8',
+      );
+      expect(css).toContain(
+        'transform-origin: var(--andes-popover-origin, var(--_along, 50%)) 100%;',
+      );
+      expect(css).toContain(
+        'transform-origin: 100% var(--andes-popover-origin, var(--_along, 50%));',
+      );
+      expect(css).toContain(
+        'transform-origin: 0 var(--andes-popover-origin, var(--_along, 50%));',
+      );
+      expect(css).toContain(
+        "[data-align='start']:dir(rtl) {\n  --_along: calc(100% - 20px);",
+      );
+      expect(css).toContain("[data-align='end']:dir(rtl) {\n  --_along: 20px;");
+    });
+
+    it('measures where the motion grows from once the panel is laid out', async () => {
+      const { fixture, trigger, panel, update } = setup();
+      vi.spyOn(
+        HTMLElement.prototype,
+        'getBoundingClientRect',
+      ).mockImplementation(function (this: HTMLElement) {
+        const box =
+          this.id === 'trigger'
+            ? { left: 300, top: 100, width: 100, height: 30 }
+            : this.classList.contains('cdk-overlay-pane')
+              ? { left: 200, top: 138, width: 240, height: 80 }
+              : { left: 0, top: 0, width: 0, height: 0 };
+        return {
+          ...box,
+          x: box.left,
+          y: box.top,
+          right: box.left + box.width,
+          bottom: box.top + box.height,
+          toJSON: () => ({}),
+        } as DOMRect;
+      });
+      trigger().click();
+      update();
+      await fixture.whenStable();
+      update();
+
+      // Trigger centre 350 - panel left 200.
+      expect(panel()?.style.getPropertyValue('--andes-popover-origin')).toBe(
+        '150px',
+      );
+    });
+
+    it('leaves with a quicker, softer ease-in once the overlay marks it closing', () => {
+      const css = readFileSync(
+        'packages/ui/src/lib/popover/popover-content.css',
+        'utf8',
+      );
+      // A `:host-context()` rule never matches an unencapsulated stylesheet, which is why the
+      // exit used to be skipped: the rule has to key off the attribute on an ancestor.
+      expect(css).not.toContain(':host-context');
+      expect(css).toContain(
+        '--_exit-duration: var(--andes-popover-exit-duration, 140ms);',
+      );
+      expect(css).toContain(
+        '--_exit-ease: var(--andes-popover-exit-ease, cubic-bezier(0.4, 0, 1, 1));',
       );
       const rule =
-        /:host-context\(\[data-andes-closing\]\) \.andes-popover-content \{([^}]*)\}/.exec(
+        /\[data-andes-closing\] \.andes-popover-content \{([^}]*)\}/.exec(
           css,
         )?.[1] ?? '';
-      expect(rule).toContain('pointer-events: none;');
-      expect(rule).toMatch(
-        /animation: andes-popover-out var\(--andes-duration-fast, 120ms\)\s+var\(--andes-ease-in, [^)]+\)\) forwards;/,
+      expect(rule).toContain('opacity: 0;');
+      expect(rule).toContain('translate: var(--_from);');
+      expect(rule).toContain('scale: var(--_scale);');
+      expect(rule).toContain('var(--_exit-duration) var(--_exit-ease)');
+    });
+
+    it('is shorter in every respect, and fade-only, with reduced motion', () => {
+      const css = readFileSync(
+        'packages/ui/src/lib/popover/popover-content.css',
+        'utf8',
       );
-      const keyframes =
-        /@keyframes andes-popover-out\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
-      expect(keyframes).toMatch(
-        /to \{\s*opacity: 0;\s*translate: var\(--andes-popover-enter-from, 0 -4px\);/,
+      const reduced =
+        /@media \(prefers-reduced-motion: reduce\) \{([\s\S]*?)\n\}/.exec(
+          css,
+        )?.[1] ?? '';
+      expect(reduced).toContain('--_distance: 0px;');
+      expect(reduced).toContain('--_scale: 1;');
+      expect(reduced).toContain('--_duration: 80ms;');
+      expect(reduced).toContain('--_exit-duration: 0ms;');
+    });
+
+    it('draws the arrow as two stacked path layers on whole pixels, based on the panel border', () => {
+      const css = readFileSync(
+        'packages/ui/src/lib/popover/popover-content.css',
+        'utf8',
       );
-      const reduced = css.slice(
-        css.indexOf('@media (prefers-reduced-motion: reduce)'),
+      // 16px by 9px: 8px of arrow and the 1px of the panel border it overlaps.
+      expect(css).toMatch(
+        /\.andes-popover-arrow \{[^}]*width: 16px;[^}]*height: 9px;/,
       );
-      expect(reduced).toMatch(
-        /:host-context\(\[data-andes-closing\]\) \.andes-popover-content \{\s*animation: none;/,
+      const paths = [...css.matchAll(/clip-path: path\(\s*'([^']+)'/g)].map(
+        (m) => m[1],
       );
+      expect(paths).toHaveLength(2);
+      // The outline starts on the border (y = 8 base line, 9 inner edge), the fill 1px inside.
+      expect(paths[0]).toMatch(/^M 0 9 L 0 8 A 4 4 /);
+      expect(paths[0]).toMatch(/ A 2 2 0 0 1 /);
+      expect(paths[0]).toMatch(/A 4 4 0 0 0 16 8 L 16 9 Z$/);
+      expect(paths[1]).toMatch(/^M 0 9 A 5 5 /);
+      expect(paths[1]).toMatch(/ A 1 1 0 0 1 /);
+      expect(paths[1]).toMatch(/A 5 5 0 0 0 16 9 Z$/);
+      // Whole-pixel placement for each side: base on the surface's outer border edge.
+      expect(css).toContain("[data-side='bottom'] {\n  top: -9px;");
+      expect(css).toContain("[data-side='top'] {\n  bottom: -2px;");
+      expect(css).toContain("[data-side='right'] {\n  left: -9px;");
+      expect(css).toContain("[data-side='left'] {\n  right: -9px;");
+      expect(css).not.toContain('polygon');
     });
 
     it('deepens the success and info fills and the warning text for 4.5:1', () => {
@@ -934,10 +1026,12 @@ describe('AndesPopover - extended features', () => {
       update();
 
       const arrow = panel()?.querySelector<HTMLElement>('.andes-popover-arrow');
-      expect(arrow?.style.left).toBe('16px');
+      expect(
+        arrow?.style.getPropertyValue('--andes-popover-arrow-offset'),
+      ).toBe('20px');
     });
 
-    it('centers the arrow on the trigger without rounding to whole pixels', async () => {
+    it('centres the arrow on the trigger, snapped to a whole device pixel', async () => {
       const { fixture, host, trigger, panel, update } = setup();
       host.showArrow.set(true);
       update();
@@ -952,9 +1046,11 @@ describe('AndesPopover - extended features', () => {
       await fixture.whenStable();
       update();
 
-      // Trigger center 140.5 - panel left 20 (no border in jsdom).
+      // Trigger centre 140.5 rounds to 141; minus the panel left 20 (no border in jsdom).
       const arrow = panel()?.querySelector<HTMLElement>('.andes-popover-arrow');
-      expect(arrow?.style.left).toBe('120.5px');
+      expect(
+        arrow?.style.getPropertyValue('--andes-popover-arrow-offset'),
+      ).toBe('121px');
     });
 
     it('arrowPointAtCenter shifts the panel so the arrow points at the trigger center', async () => {
@@ -973,11 +1069,137 @@ describe('AndesPopover - extended features', () => {
       await fixture.whenStable();
       update();
 
-      // 200 / 2 - 16px arrow inset.
-      expect(overlay.config().positioning).toMatchObject({ alignOffset: 84 });
+      // 200 / 2 - 20px arrow inset (the 8px radius, the 8px half-width, 4px clear).
+      expect(overlay.config().positioning).toMatchObject({ alignOffset: 80 });
       const arrow = panel()?.querySelector<HTMLElement>('.andes-popover-arrow');
-      expect(arrow?.style.left).toBe('16px');
+      expect(
+        arrow?.style.getPropertyValue('--andes-popover-arrow-offset'),
+      ).toBe('20px');
     });
+  });
+
+  describe('arrow offsets for every placement', () => {
+    /** [placement, side, align]: the twelve, with the geometry each one implies. */
+    const PLACEMENTS_UNDER_TEST: [
+      AndesPopoverPlacement,
+      'top' | 'bottom' | 'left' | 'right',
+      'start' | 'center' | 'end',
+    ][] = [
+      ['top', 'top', 'center'],
+      ['topLeft', 'top', 'start'],
+      ['topRight', 'top', 'end'],
+      ['bottom', 'bottom', 'center'],
+      ['bottomLeft', 'bottom', 'start'],
+      ['bottomRight', 'bottom', 'end'],
+      ['left', 'left', 'center'],
+      ['leftTop', 'left', 'start'],
+      ['leftBottom', 'left', 'end'],
+      ['right', 'right', 'center'],
+      ['rightTop', 'right', 'start'],
+      ['rightBottom', 'right', 'end'],
+    ];
+
+    it.each(PLACEMENTS_UNDER_TEST)(
+      '%s points at the trigger and clears the corner by at least the radius and 4px',
+      async (placement, side, align) => {
+        const fixture = TestBed.createComponent(FeatureHost);
+        const host = fixture.componentInstance;
+        host.placement.set(placement);
+        host.showArrow.set(true);
+        fixture.detectChanges();
+
+        // A 100 x 40 trigger at (400, 300); a 240 x 120 panel lined up the way the
+        // alignment says, on the side the placement names.
+        const trigger = { left: 400, top: 300, width: 100, height: 40 };
+        const size = { width: 240, height: 120 };
+        const horizontal = side === 'top' || side === 'bottom';
+        const along = (start: number, extent: number, panelExtent: number) =>
+          align === 'start'
+            ? start
+            : align === 'end'
+              ? start + extent - panelExtent
+              : start + extent / 2 - panelExtent / 2;
+        const panel = horizontal
+          ? {
+              ...size,
+              left: along(trigger.left, trigger.width, size.width),
+              top:
+                side === 'top'
+                  ? trigger.top - 8 - size.height
+                  : trigger.top + trigger.height + 8,
+            }
+          : {
+              ...size,
+              top: along(trigger.top, trigger.height, size.height),
+              left:
+                side === 'left'
+                  ? trigger.left - 8 - size.width
+                  : trigger.left + trigger.width + 8,
+            };
+        const toRect = (r: {
+          left: number;
+          top: number;
+          width: number;
+          height: number;
+        }) =>
+          ({
+            ...r,
+            x: r.left,
+            y: r.top,
+            right: r.left + r.width,
+            bottom: r.top + r.height,
+            toJSON: () => ({}),
+          }) as DOMRect;
+        vi.spyOn(
+          HTMLElement.prototype,
+          'getBoundingClientRect',
+        ).mockImplementation(function (this: HTMLElement) {
+          if (this.id === 'trigger') {
+            return toRect(trigger);
+          }
+          return this.classList.contains('cdk-overlay-pane')
+            ? toRect(panel)
+            : toRect({ left: 0, top: 0, width: 0, height: 0 });
+        });
+
+        (document.getElementById('trigger') as HTMLElement).click();
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        const surface = document.querySelector(
+          '.andes-popover-content',
+        ) as HTMLElement;
+        const arrow = surface.querySelector(
+          '.andes-popover-arrow',
+        ) as HTMLElement;
+        const offset = Number.parseFloat(
+          arrow.style.getPropertyValue('--andes-popover-arrow-offset'),
+        );
+        const start = horizontal ? panel.left : panel.top;
+        const extent = horizontal ? panel.width : panel.height;
+        const triggerStart = horizontal ? trigger.left : trigger.top;
+        const triggerExtent = horizontal ? trigger.width : trigger.height;
+
+        expect(surface.getAttribute('data-side')).toBe(side);
+        // Whole pixel, inside the panel, over the trigger.
+        expect(Number.isInteger(offset)).toBe(true);
+        expect(start + offset).toBeGreaterThanOrEqual(triggerStart);
+        expect(start + offset).toBeLessThanOrEqual(
+          triggerStart + triggerExtent,
+        );
+        // The arrow's 16px footprint stays 8px (the radius) + 4px away from both corners.
+        expect(offset - 8).toBeGreaterThanOrEqual(8 + 4);
+        expect(extent - offset - 8).toBeGreaterThanOrEqual(8 + 4);
+        // And a centred panel points at the middle of the trigger.
+        if (align === 'center') {
+          expect(start + offset).toBe(
+            Math.round(triggerStart + triggerExtent / 2),
+          );
+        }
+        fixture.destroy();
+      },
+    );
   });
 
   describe('openChange', () => {

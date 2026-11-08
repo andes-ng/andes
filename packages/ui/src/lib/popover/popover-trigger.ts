@@ -1,7 +1,4 @@
-import {
-  AndesOverlayPrimitive,
-  AndesOverlayTriggerPrimitive,
-} from '@andes-ng/primitives';
+import { AndesOverlayTriggerPrimitive } from '@andes-ng/primitives';
 import {
   afterNextRender,
   computed,
@@ -49,7 +46,6 @@ const DISABLED_SELECTOR = ':disabled, [aria-disabled="true"]';
 })
 export class AndesPopoverTrigger {
   protected readonly popover = inject(AndesPopoverBase);
-  private readonly overlay = inject(AndesOverlayPrimitive);
   private readonly triggerPrimitive = inject(AndesOverlayTriggerPrimitive);
   private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
 
@@ -60,8 +56,8 @@ export class AndesPopoverTrigger {
     if (this.triggerPrimitive.ariaAttachment() !== 'expanded') {
       return null;
     }
-    const role = this.overlay.config().role;
-    const open = this.overlay.isOpen();
+    const role = this.popover.role;
+    const open = this.popover.open();
     return {
       'aria-haspopup':
         role === 'alertdialog' || role === 'dialog'
@@ -70,31 +66,36 @@ export class AndesPopoverTrigger {
             ? role
             : null,
       'aria-expanded': String(open),
-      'aria-controls': open ? this.overlay.contentId : null,
+      'aria-controls': open ? this.popover.panelId : null,
     };
   });
 
   constructor() {
     const host = this.elementRef.nativeElement;
     this.popover.registerTriggerHost(host);
+    this.popover.registerAnchor(host);
 
-    // `AndesOverlayTriggerPrimitive` registers *this* host as the element focus
-    // returns to on close. That is right for `<button andesPopoverTrigger>`, but
-    // the directive is just as legitimately composed onto a wrapper component -
-    // `<andes-button andesPopoverTrigger>` - whose host element is a
-    // non-focusable custom element with the real `<button>` inside its template.
-    // `focus()` on such a host silently no-ops, so closing the popover would
-    // strand focus on `<body>`. Re-anchor to the inner focusable element once the
-    // wrapper has rendered its content.
+    // `AndesOverlayTriggerPrimitive` registers *this* host as the anchor and as the element
+    // focus returns to on close. The anchor is right for any host with a box of its own -
+    // `<andes-input>`, `<andes-button>`: the panel then sits against the whole visible
+    // control, never over its padding or affixes. But `focus()` on a non-focusable custom
+    // element silently no-ops, so closing the popover would strand focus on `<body>`:
+    // focus is sent to the focusable element inside the wrapper instead, once it has
+    // rendered. Only a host with no box at all (`display: contents`) hands the anchor over
+    // to that element.
     afterNextRender(() => {
       if (host.tabIndex >= 0 || host.matches(FOCUSABLE_SELECTOR)) {
         return;
       }
       const focusable = host.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
-      if (focusable) {
-        this.overlay.registerAnchor(focusable);
-        this.innerTarget.set(focusable);
+      if (!focusable) {
+        return;
       }
+      if (!this.hasLayout(host) && this.hasLayout(focusable)) {
+        this.popover.registerAnchor(focusable);
+      }
+      this.popover.registerFocusTarget(focusable);
+      this.innerTarget.set(focusable);
     });
 
     // The ARIA the primitive puts on a wrapper host is invisible to assistive
@@ -118,6 +119,12 @@ export class AndesPopoverTrigger {
         }
       }
     });
+  }
+
+  /** Whether an element has a box (false under jsdom, where nothing is laid out). */
+  private hasLayout(element: HTMLElement): boolean {
+    const box = element.getBoundingClientRect();
+    return box.width > 0 || box.height > 0;
   }
 
   /**

@@ -46,6 +46,7 @@ import {
   type AndesPopoverClassNamesInput,
   type AndesPopoverContainer,
   type AndesPopoverContentInput,
+  type AndesPopoverMode,
   type AndesPopoverOpenChange,
   type AndesPopoverPlacement,
   type AndesPopoverPresetColor,
@@ -63,8 +64,9 @@ type AndesPopoverOpenSource = 'click' | 'hover' | 'focus' | 'programmatic';
 /** Resolves a `title`/`content`/`description` input: a function is called, the rest is kept. */
 export function andesPopoverRenderable(
   value: AndesPopoverContentInput,
+  context: AndesPopoverTemplateContext,
 ): AndesPopoverRenderable | null | undefined {
-  return typeof value === 'function' ? value() : value;
+  return typeof value === 'function' ? value(context) : value;
 }
 
 interface FocusPolicy {
@@ -79,12 +81,22 @@ const OPPOSITE_SIDE: Readonly<Record<AndesOverlaySide, AndesOverlaySide>> = {
   right: 'left',
 };
 
+/** Half the width of the arrow's footprint, shoulders included (px). */
+const ARROW_HALF_WIDTH = 8;
+/** Room kept between the arrow's footprint and the rounded corner next to it (px). */
+const ARROW_CORNER_GAP = 4;
+/** The default corner radius (px), which the arrow's inset from an edge clears. */
+const DEFAULT_RADIUS = 8;
 /** Distance, in px, from a panel edge to the arrow's center for `start`/`end` alignment. */
-const ARROW_EDGE_INSET = 16;
+const ARROW_EDGE_INSET = DEFAULT_RADIUS + ARROW_HALF_WIDTH + ARROW_CORNER_GAP;
 /** The arrow never points closer than this (px) to the trigger's own edges. */
 const ARROW_ANCHOR_INSET = 8;
 /** Mirrors the overlay primitive's default `viewportMargin`. */
 const VIEWPORT_MARGIN = 8;
+
+/** The controls a pinned panel can hand focus to. */
+const PANEL_FOCUSABLE_SELECTOR =
+  'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
 
 /** A number is px, a string any CSS length; empty is `null`. */
 function cssLength(value: number | string | null | undefined): string | null {
@@ -352,6 +364,14 @@ export abstract class AndesPopoverBase {
   /** The side the panel actually renders on, after any collision flip. */
   readonly resolvedSide = this._resolvedSide.asReadonly();
 
+  private readonly _originOffset = signal<number | null>(null);
+  /**
+   * Where the motion grows from, in px along the panel's cross axis: the trigger's
+   * position over the panel, measured once the panel is laid out. `null` until then,
+   * when the CSS falls back to the alignment.
+   */
+  readonly originOffset = this._originOffset.asReadonly();
+
   private readonly _arrowOffset = signal<number | null>(null);
   /**
    * Arrow position in px along the panel's cross axis, measured so it keeps
@@ -396,16 +416,31 @@ export abstract class AndesPopoverBase {
   private pendingSource: AndesPopoverOpenSource = 'programmatic';
   private openedBy: AndesPopoverOpenSource | null = null;
   private triggerHost: HTMLElement | null = null;
+  private focusTarget: HTMLElement | null = null;
+  private swapHeight: number | null = null;
   private pointerDownOnTrigger = false;
   private openTimer: ReturnType<typeof setTimeout> | undefined;
   private closeTimer: ReturnType<typeof setTimeout> | undefined;
   private frame: number | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private defaultOpenApplied = false;
-  private readonly templateContext: AndesPopoverTemplateContext = {
-    $implicit: { close: () => this.close() },
-    close: () => this.close(),
-  };
+  private readonly _mode = signal<AndesPopoverMode>('click');
+  /**
+   * `'hover'` while the open panel is a preview (opened by hover or focus), `'click'` once
+   * it is pinned by a click, or when a click, a context menu or code opened it.
+   */
+  readonly mode = this._mode.asReadonly();
+
+  /** What templates and content functions receive; `mode` is read live. */
+  protected readonly templateContext = ((
+    owner: AndesPopoverBase,
+  ): AndesPopoverTemplateContext => ({
+    $implicit: { close: () => owner.close() },
+    close: () => owner.close(),
+    get mode() {
+      return owner._mode();
+    },
+  }))(this);
   private readonly cachedViews = new Map<
     string,
     { template: TemplateRef<unknown>; view: EmbeddedViewRef<unknown> }
@@ -499,6 +534,37 @@ export abstract class AndesPopoverBase {
   /** @internal */
   registerTriggerHost(element: HTMLElement): void {
     this.triggerHost = element;
+  }
+
+  /**
+   * @internal Registers the element the panel is positioned against. Done here rather than
+   * through whichever overlay the trigger directive injects: a trigger put on a component
+   * that has an overlay of its own (a select, say) would otherwise anchor *that* one.
+   */
+  registerAnchor(element: HTMLElement): void {
+    this.overlay.registerAnchor(element);
+  }
+
+  /** @internal Id of the panel, for the trigger's `aria-controls`. */
+  get panelId(): string {
+    return this.overlay.contentId;
+  }
+
+  /** @internal The role of the panel, for the trigger's `aria-haspopup`. */
+  get role(): AndesOverlayRole {
+    return this.panelRole;
+  }
+
+  /** @internal The panel height from before the last content swap, once (`null` if none). */
+  takeSwapHeight(): number | null {
+    const height = this.swapHeight;
+    this.swapHeight = null;
+    return height;
+  }
+
+  /** @internal The focusable element inside a wrapper trigger, where focus returns on close. */
+  registerFocusTarget(element: HTMLElement | null): void {
+    this.focusTarget = element;
   }
 
   /** @internal */
@@ -713,6 +779,9 @@ export abstract class AndesPopoverBase {
     const source = this.pendingSource;
     this.pendingSource = 'programmatic';
     this.openedBy = source;
+    this._mode.set(
+      source === 'hover' || source === 'focus' ? 'hover' : 'click',
+    );
 
     // Hover/focus-opened panels are passive: they must not pull focus away from
     // where the user is, nor push it back to the trigger on close.
@@ -721,15 +790,21 @@ export abstract class AndesPopoverBase {
       autoFocus: passive ? 'none' : this.autoFocus(),
       restoreFocus: !passive && this.restoreFocus(),
     });
-    this._resolvedSide.set(this.preferredSide());
-    this.centerShift.set(this.measureCenterShift());
-    this._arrowOffset.set(null);
+    // A panel re-opened during its exit is still there, laid out: it keeps its side and arrow.
+    if (!this.overlay.panelElement()) {
+      this._resolvedSide.set(this.preferredSide());
+      this.centerShift.set(this.measureCenterShift());
+      this._arrowOffset.set(null);
+      this._originOffset.set(null);
+    }
 
     this.scopedContainer?.setTarget(
       resolveAndesPopoverContainer(this.container(), this.document),
     );
     this.overlay.configure(this.buildConfig());
-    this.overlay.open(template);
+    this.overlay.open(template, {
+      restoreFocusTo: this.focusTarget ?? undefined,
+    });
     this.applyZIndex();
     this.startTracking();
     afterNextRender(
@@ -741,7 +816,8 @@ export abstract class AndesPopoverBase {
   }
 
   private onOverlayClosed(reason: AndesOverlayCloseReason): void {
-    this.clearTimers();
+    // Only the close timer: a pointer that came back during the exit has a pending open.
+    this.cancelClose();
     this.stopTracking();
     this.openedBy = null;
     if (this.open()) {
@@ -756,13 +832,33 @@ export abstract class AndesPopoverBase {
     this.handleClosed(reason);
   }
 
+  /**
+   * A click on the trigger while a hover or focus preview is open: the same panel becomes a
+   * pinned one. It stays mounted where it is (the content swaps, see `AndesPopoverContent`),
+   * stops closing when the pointer leaves, and takes focus the way a click-opened one does.
+   */
   private pin(): void {
     this.clearTimers();
     this.openedBy = 'click';
+    // The height the panel has now, taken before the content changes under it.
+    this.swapHeight =
+      this.overlay.contentElement()?.getBoundingClientRect().height ?? null;
+    this._mode.set('click');
     this.focusPolicy.update((policy) => ({
       ...policy,
       restoreFocus: this.restoreFocus(),
     }));
+    if (this.autoFocus() === 'first-tabbable') {
+      // A hover preview opened without a focus trap: look for the first control by hand.
+      afterNextRender(
+        () =>
+          this.overlay
+            .contentElement()
+            ?.querySelector<HTMLElement>(PANEL_FOCUSABLE_SELECTOR)
+            ?.focus(),
+        { injector: this.injector },
+      );
+    }
   }
 
   /**
@@ -924,11 +1020,13 @@ export abstract class AndesPopoverBase {
       }
     }
 
-    this._arrowOffset.set(
-      this.showArrow()
-        ? this.computeArrowOffset(anchorRect, panelRect, panel)
-        : null,
+    const { arrow, origin } = this.computeArrowOffset(
+      anchorRect,
+      panelRect,
+      panel,
     );
+    this._arrowOffset.set(this.showArrow() ? arrow : null);
+    this._originOffset.set(origin);
   }
 
   /**
@@ -964,11 +1062,17 @@ export abstract class AndesPopoverBase {
     return space[opposite] > space[preferred] ? opposite : preferred;
   }
 
+  /**
+   * Where along the panel's edge the arrow points (`arrow`, from the inside of the border,
+   * snapped to whole device pixels so its edges stay crisp) and where the enter and exit
+   * motion grows from (`origin`, from the border box, unsnapped): both at the trigger,
+   * kept clear of the panel's rounded corners.
+   */
   private computeArrowOffset(
     anchor: DOMRect,
     panel: DOMRect,
     panelElement: HTMLElement,
-  ): number {
+  ): { arrow: number; origin: number } {
     const side = this._resolvedSide();
     const horizontal = side === 'top' || side === 'bottom';
     const panelStart = horizontal ? panel.left : panel.top;
@@ -977,13 +1081,20 @@ export abstract class AndesPopoverBase {
     const anchorSize = horizontal ? anchor.width : anchor.height;
     const anchorCenter = anchorStart + anchorSize / 2;
     const align = this.resolvedAlign();
+    // The arrow's footprint must clear the corner radius, whatever the radius is set to.
+    const radius =
+      parseFloat(getComputedStyle(panelElement).borderTopLeftRadius) || 0;
+    const edgeInset = Math.max(
+      ARROW_EDGE_INSET,
+      radius + ARROW_HALF_WIDTH + ARROW_CORNER_GAP,
+    );
 
     let target =
       this.arrowPointAtCenter() || align === 'center'
         ? anchorCenter
         : align === 'start'
-          ? panelStart + ARROW_EDGE_INSET
-          : panelStart + panelSize - ARROW_EDGE_INSET;
+          ? panelStart + edgeInset
+          : panelStart + panelSize - edgeInset;
 
     // Always point at the trigger (matters once CDK has shifted the panel)...
     const anchorInset = Math.min(ARROW_ANCHOR_INSET, anchorSize / 2);
@@ -994,21 +1105,23 @@ export abstract class AndesPopoverBase {
     );
     // ...without leaving the panel's rounded corners.
     target =
-      panelSize <= ARROW_EDGE_INSET * 2
+      panelSize <= edgeInset * 2
         ? panelStart + panelSize / 2
         : clamp(
             target,
-            panelStart + ARROW_EDGE_INSET,
-            panelStart + panelSize - ARROW_EDGE_INSET,
+            panelStart + edgeInset,
+            panelStart + panelSize - edgeInset,
           );
 
     const border = horizontal
       ? panelElement.clientLeft
       : panelElement.clientTop;
-    // Not rounded: the panel itself often sits on a fractional x/y (centered
-    // on a fractional-width trigger), so a whole-pixel offset from its edge
-    // would push the arrow up to half a pixel off the trigger's center.
-    return target - panelStart - border;
+    const ratio = this.document.defaultView?.devicePixelRatio || 1;
+    const snapped = Math.round(target * ratio) / ratio;
+    return {
+      arrow: snapped - panelStart - border,
+      origin: clamp(target, panelStart, panelStart + panelSize) - panelStart,
+    };
   }
 
   /** Extra align offset that puts a `start`/`end` arrow over the trigger's center. */

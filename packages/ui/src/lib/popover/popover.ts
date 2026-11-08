@@ -90,10 +90,10 @@ export class AndesPopover extends AndesPopoverBase {
   protected readonly projectedContent = contentChild(AndesPopoverContent);
 
   override readonly panelTitle = computed(() =>
-    andesPopoverRenderable(this.title()),
+    andesPopoverRenderable(this.title(), this.templateContext),
   );
   override readonly panelBody = computed(() =>
-    andesPopoverRenderable(this.content()),
+    andesPopoverRenderable(this.content(), this.templateContext),
   );
   // The `title` input and a composed `[andesPopoverTitle]` can coexist; both
   // then name the panel, input first.

@@ -5,6 +5,7 @@
   [style]="popover.partStyle('root')"
   [style.--andes-popover-width]="popover.panelWidth()"
   [style.--andes-popover-max-width]="popover.panelMaxWidth()"
+  [style.--andes-popover-origin.px]="popover.originOffset()"
   [attr.data-side]="popover.resolvedSide()"
   [attr.data-align]="popover.resolvedAlign()"
   [attr.data-color]="popover.colorAttribute()"
@@ -23,16 +24,7 @@
     [class]="popover.partClass('arrow')"
     [style]="popover.partStyle('arrow')"
     [attr.data-side]="popover.resolvedSide()"
-    [style.left.px]="
-      popover.resolvedSide() === 'top' || popover.resolvedSide() === 'bottom'
-        ? popover.arrowOffset()
-        : null
-    "
-    [style.top.px]="
-      popover.resolvedSide() === 'left' || popover.resolvedSide() === 'right'
-        ? popover.arrowOffset()
-        : null
-    "
+    [style.--andes-popover-arrow-offset.px]="popover.arrowOffset()"
     aria-hidden="true"
   ></span>
   } @if (popover.panelTitle(); as title) {

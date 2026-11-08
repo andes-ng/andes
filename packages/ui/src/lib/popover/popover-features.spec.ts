@@ -7,6 +7,7 @@ import {
 } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
+import { AndesInput } from '../input/input';
 import { AndesPopover } from './popover';
 import { AndesPopoverContent } from './popover-content';
 import { AndesPopoverClose } from './popover-parts';
@@ -698,5 +699,369 @@ describe('AndesPopover - nested', () => {
     update();
 
     expect(panels().length).toBe(0);
+  });
+});
+
+@Component({
+  imports: [AndesPopover, AndesPopoverTrigger, AndesInput],
+  template: `
+    <andes-popover
+      trigger="focus"
+      placement="right"
+      [showArrow]="true"
+      content="Rules"
+    >
+      <andes-input andesPopoverTrigger aria-label="Password" />
+    </andes-popover>
+  `,
+})
+class FieldHost {
+  readonly popover = viewChild.required(AndesPopover);
+}
+
+describe('AndesPopover - on a field', () => {
+  withElementGeometry();
+  afterEach(() => vi.restoreAllMocks());
+
+  const rect = (r: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  }) =>
+    ({
+      ...r,
+      x: r.left,
+      y: r.top,
+      right: r.left + r.width,
+      bottom: r.top + r.height,
+      toJSON: () => ({}),
+    }) as DOMRect;
+
+  it('anchors to the outer box of the field, not to the native input inside it', async () => {
+    const fixture = TestBed.createComponent(FieldHost);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const host = document.querySelector('andes-input') as HTMLElement;
+    const input = host.querySelector('input') as HTMLInputElement;
+
+    const anchor = (
+      fixture.componentInstance.popover() as unknown as {
+        overlay: { anchor(): HTMLElement | null };
+      }
+    ).overlay.anchor();
+
+    expect(anchor).toBe(host);
+    expect(anchor).not.toBe(input);
+  });
+
+  it('points the arrow at the middle of the whole field, not of the input inside it', async () => {
+    const fixture = TestBed.createComponent(FieldHost);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const host = document.querySelector('andes-input') as HTMLElement;
+    const input = host.querySelector('input') as HTMLInputElement;
+    // The field is 224 x 80 at (100, 100); the input sits 13px in, and is shorter.
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+      function (this: HTMLElement) {
+        if (this === host) {
+          return rect({ left: 100, top: 100, width: 224, height: 80 });
+        }
+        if (this === input) {
+          return rect({ left: 113, top: 105, width: 198, height: 22 });
+        }
+        return this.classList.contains('cdk-overlay-pane')
+          ? rect({ left: 332, top: 90, width: 150, height: 100 })
+          : rect({ left: 0, top: 0, width: 0, height: 0 });
+      },
+    );
+
+    input.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const surface = document.querySelector(
+      '.andes-popover-content',
+    ) as HTMLElement;
+    const arrow = surface.querySelector('.andes-popover-arrow') as HTMLElement;
+    // Field middle 140 - panel top 90; the input middle (116) would have been clamped to 20.
+    expect(arrow.style.getPropertyValue('--andes-popover-arrow-offset')).toBe(
+      '50px',
+    );
+  });
+
+  it('gives focus back to the input inside the field on close', async () => {
+    const fixture = TestBed.createComponent(FieldHost);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const input = document
+      .querySelector('andes-input')
+      ?.querySelector('input') as HTMLInputElement;
+    input.focus();
+
+    fixture.componentInstance.popover().show();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    (document.body as HTMLElement).focus();
+    fixture.componentInstance.popover().close();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(document.activeElement).toBe(input);
+  });
+});
+
+@Component({
+  imports: [AndesPopover, AndesPopoverTrigger, AndesPopoverClose],
+  template: `
+    <button type="button" id="outside">Outside</button>
+    <andes-popover
+      [trigger]="['hover', 'click']"
+      [openDelay]="0"
+      [closeDelay]="0"
+      [title]="title"
+      [content]="body"
+      (openChangeDetail)="
+        details.push(
+          $event.open ? 'open:' + $event.source : 'close:' + $event.source
+        )
+      "
+    >
+      <button type="button" id="trigger" andesPopoverTrigger>
+        Hover and click
+      </button>
+    </andes-popover>
+    <ng-template #body let-mode="mode">
+      @if (mode === 'click') {
+        <span id="pinned-text">Click content</span>
+        <button type="button" id="close" andesPopoverClose>Close</button>
+      } @else {
+        <span id="hover-text">Hover content</span>
+      }
+    </ng-template>
+  `,
+})
+class PinHost {
+  readonly details: string[] = [];
+  readonly title = (context: { mode: string }) =>
+    context.mode === 'click' ? 'Click title' : 'Hover title';
+}
+
+describe('AndesPopover - hover, then click to pin', () => {
+  withElementGeometry();
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  function setup() {
+    vi.useFakeTimers();
+    const fixture = TestBed.createComponent(PinHost);
+    fixture.detectChanges();
+    const q = (selector: string) =>
+      document.querySelector(selector) as HTMLElement | null;
+    const trigger = q('#trigger') as HTMLElement;
+    const settle = async () => {
+      fixture.detectChanges();
+      await vi.advanceTimersByTimeAsync(20);
+      fixture.detectChanges();
+    };
+    const hover = async () => {
+      trigger.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+      await settle();
+    };
+    const leave = async () => {
+      trigger.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+      await settle();
+    };
+    const click = async () => {
+      trigger.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      trigger.click();
+      await settle();
+    };
+    const escape = async () => {
+      document.body.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'Escape',
+          keyCode: 27,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+      await settle();
+    };
+    return {
+      fixture,
+      q,
+      trigger,
+      hover,
+      leave,
+      click,
+      escape,
+      settle,
+      panels: () => document.querySelectorAll('.andes-popover-content').length,
+      text: () =>
+        q('.andes-popover-content')?.textContent?.replace(/\s+/g, ' ').trim(),
+    };
+  }
+
+  it('opens as a hover preview with the hover content', async () => {
+    const { hover, text, fixture } = setup();
+    await hover();
+
+    expect(text()).toBe('Hover title Hover content');
+    expect(fixture.componentInstance.details).toEqual(['open:hover']);
+  });
+
+  it('closes a hover preview when the pointer leaves', async () => {
+    const { hover, leave, panels } = setup();
+    await hover();
+    await leave();
+
+    expect(panels()).toBe(0);
+  });
+
+  it('turns the same panel into the click content on a click, without a second panel', async () => {
+    const { hover, click, q, text, panels } = setup();
+    await hover();
+    const surface = q('.andes-popover-content');
+
+    await click();
+
+    expect(panels()).toBe(1);
+    expect(q('.andes-popover-content')).toBe(surface);
+    expect(text()).toBe('Click title Click contentClose');
+  });
+
+  it('stays open when the pointer leaves once pinned', async () => {
+    const { hover, click, leave, panels, text } = setup();
+    await hover();
+    await click();
+    await leave();
+    await vi.advanceTimersByTimeAsync(500);
+
+    expect(panels()).toBe(1);
+    expect(text()).toContain('Click content');
+  });
+
+  it('a click opens it straight into the click content', async () => {
+    const { click, text } = setup();
+    await click();
+
+    expect(text()).toContain('Click content');
+  });
+
+  it('closes a pinned panel from its Close action', async () => {
+    const { hover, click, q, settle, panels } = setup();
+    await hover();
+    await click();
+    q('#close')?.click();
+    await settle();
+
+    expect(panels()).toBe(0);
+  });
+
+  it('closes a pinned panel on a second click on the trigger', async () => {
+    const { hover, click, panels } = setup();
+    await hover();
+    await click();
+    await click();
+
+    expect(panels()).toBe(0);
+  });
+
+  it('closes a pinned panel on Escape', async () => {
+    const { hover, click, escape, panels } = setup();
+    await hover();
+    await click();
+    await escape();
+
+    expect(panels()).toBe(0);
+  });
+
+  it('closes a pinned panel on a press outside', async () => {
+    const { hover, click, q, settle, panels, fixture } = setup();
+    await hover();
+    await click();
+    const outside = q('#outside') as HTMLElement;
+    outside.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    outside.click();
+    await settle();
+
+    expect(panels()).toBe(0);
+    expect(fixture.componentInstance.details.at(-1)).toBe(
+      'close:outside-click',
+    );
+  });
+
+  it('reports the hover and the pinned states as one open panel, closed by the click or by the page', async () => {
+    const { hover, click, escape, fixture } = setup();
+    await hover();
+    await click();
+    await escape();
+
+    expect(fixture.componentInstance.details).toEqual([
+      'open:hover',
+      'close:escape-key',
+    ]);
+  });
+
+  it('moves focus to the first control of the pinned content', async () => {
+    const { hover, click, q } = setup();
+    await hover();
+    await click();
+    await vi.advanceTimersByTimeAsync(50);
+
+    expect(document.activeElement).toBe(q('#close'));
+  });
+
+  it('fades the content in and eases the height when the content swaps', async () => {
+    const animate = vi.fn(() => ({ finished: Promise.resolve() }));
+    (HTMLElement.prototype as unknown as { animate: unknown }).animate =
+      animate;
+    try {
+      const { hover, click, q } = setup();
+      let surfaceHeights = [66, 96];
+      vi.spyOn(
+        HTMLElement.prototype,
+        'getBoundingClientRect',
+      ).mockImplementation(function (this: HTMLElement) {
+        const height = this.classList.contains('andes-popover-content')
+          ? ((surfaceHeights.length > 1
+              ? surfaceHeights.shift()
+              : surfaceHeights[0]) as number)
+          : 0;
+        return {
+          left: 0,
+          top: 0,
+          width: 100,
+          height,
+          x: 0,
+          y: 0,
+          right: 100,
+          bottom: height,
+          toJSON: () => ({}),
+        } as DOMRect;
+      });
+      await hover();
+      surfaceHeights = [66, 96];
+      await click();
+      await vi.advanceTimersByTimeAsync(50);
+
+      const frames = animate.mock.calls.map((call) =>
+        JSON.stringify((call as unknown[])[0]),
+      );
+      expect(frames).toContain('[{"opacity":0},{"opacity":1}]');
+      expect(
+        frames.some((f) =>
+          f.startsWith('[{"height":"66px"},{"height":"96px"}'),
+        ),
+      ).toBe(true);
+      expect(q('.andes-popover-content')).not.toBeNull();
+    } finally {
+      delete (HTMLElement.prototype as unknown as { animate?: unknown })
+        .animate;
+    }
   });
 });

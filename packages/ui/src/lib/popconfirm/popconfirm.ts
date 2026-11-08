@@ -71,6 +71,12 @@ export interface AndesPopconfirmButtonProps {
   readonly class?: string | readonly string[];
 }
 
+/**
+ * When the OK and Cancel buttons show: `'open'` as soon as the panel is open, or `'click'` only
+ * once a click has pinned it (a hover or focus preview then shows the question alone).
+ */
+export type AndesPopconfirmActionsOn = 'open' | 'click';
+
 /** Which button receives focus when the popconfirm opens. */
 export type AndesPopconfirmInitialFocus = 'cancel' | 'ok';
 
@@ -178,6 +184,16 @@ export class AndesPopconfirm extends AndesPopoverBase {
    * answer to a destructive question; `'ok'` for a routine one.
    */
   readonly initialFocus = input<AndesPopconfirmInitialFocus>('cancel');
+  /**
+   * When the buttons show. With `[trigger]="['hover', 'click']"` and `actionsOn="click"` the
+   * panel previews the question on hover, and a click turns the same panel into the
+   * confirmation: the buttons appear, and it stays open when the pointer leaves, until it is
+   * answered. Default `'open'`.
+   */
+  readonly actionsOn = input<AndesPopconfirmActionsOn>('open');
+  protected readonly showActions = computed(
+    () => this.actionsOn() === 'open' || this.mode() === 'click',
+  );
   /** Disables the OK button. Default `false`. */
   readonly okDisabled = input(false, { transform: booleanAttribute });
   /** Shows the OK button's loading state. Default `false`. */
@@ -212,10 +228,10 @@ export class AndesPopconfirm extends AndesPopoverBase {
   protected readonly cancelBusy = computed(() => this.pending() === 'cancel');
 
   protected readonly titleContent = computed(() =>
-    andesPopoverRenderable(this.title()),
+    andesPopoverRenderable(this.title(), this.templateContext),
   );
   protected readonly descriptionContent = computed(() =>
-    andesPopoverRenderable(this.description()),
+    andesPopoverRenderable(this.description(), this.templateContext),
   );
 
   override readonly panelLabelledBy = computed(() =>

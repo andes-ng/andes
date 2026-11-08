@@ -28,25 +28,38 @@ export type AndesPopoverTriggerAction =
 export type AndesPopoverRenderable = string | TemplateRef<unknown>;
 
 /**
- * What the `title`, `content` and `description` inputs accept: text, a template, or a
- * function returning either (evaluated each time the panel is drawn).
+ * How the open panel is being used. A panel opened by hover or by keyboard focus is a preview
+ * (`'hover'`), which closes when the pointer or the focus leaves; a click turns the same panel
+ * into a pinned one (`'click'`), which stays until it is dismissed. A panel opened by a click,
+ * a context menu or code starts in `'click'`.
  */
-export type AndesPopoverContentInput =
-  | AndesPopoverRenderable
-  | null
-  | undefined
-  | (() => AndesPopoverRenderable | null | undefined);
+export type AndesPopoverMode = 'hover' | 'click';
 
 /**
- * What context a template given to `title`, `content` or `description` receives:
- * `let-close` (or `let-popover`) is the way to dismiss the panel from inside it.
+ * What a template given to `title`, `content` or `description` receives (`let-close`,
+ * `let-mode`, `let-popover`), and what a function given to them is called with.
  */
 export interface AndesPopoverTemplateContext {
   /** The popover or popconfirm that renders the template. */
   readonly $implicit: { close(): void };
   /** Closes the panel; the same as `$implicit.close()`. */
   readonly close: () => void;
+  /** Whether the panel is a hover preview or has been pinned open by a click. */
+  readonly mode: AndesPopoverMode;
 }
+
+/**
+ * What the `title`, `content` and `description` inputs accept: text, a template, or a function
+ * returning either. The function is called with the {@link AndesPopoverTemplateContext} and
+ * again whenever the signals it reads change, so it can swap its text with the `mode`.
+ */
+export type AndesPopoverContentInput =
+  | AndesPopoverRenderable
+  | null
+  | undefined
+  | ((
+      context: AndesPopoverTemplateContext,
+    ) => AndesPopoverRenderable | null | undefined);
 
 /**
  * What caused an open or close, as reported by `openChangeDetail`.

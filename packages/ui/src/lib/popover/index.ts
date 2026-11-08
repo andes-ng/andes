@@ -19,6 +19,7 @@ export type {
   AndesPopoverClassNamesInput,
   AndesPopoverContainer,
   AndesPopoverContentInput,
+  AndesPopoverMode,
   AndesPopoverOpenChange,
   AndesPopoverPlacement,
   AndesPopoverPresetColor,

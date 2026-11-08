@@ -392,3 +392,117 @@ describe('AndesPopconfirm - added features', () => {
     });
   });
 });
+
+@Component({
+  imports: [AndesPopconfirm, AndesPopconfirmTrigger],
+  template: `
+    <button type="button" id="outside">Outside</button>
+    <andes-popconfirm
+      [trigger]="['hover', 'click']"
+      actionsOn="click"
+      [openDelay]="0"
+      [closeDelay]="0"
+      [title]="question"
+      (confirm)="events.push('confirm')"
+      (cancelled)="events.push('cancel')"
+    >
+      <button type="button" id="trigger" andesPopconfirmTrigger>Delete</button>
+    </andes-popconfirm>
+  `,
+})
+class PreviewHost {
+  readonly events: string[] = [];
+  readonly question = (context: { mode: string }) =>
+    context.mode === 'click' ? 'Delete for good?' : 'Delete?';
+}
+
+describe('AndesPopconfirm - hover previews, click asks', () => {
+  withElementGeometry();
+  afterEach(() => vi.useRealTimers());
+
+  function setup() {
+    vi.useFakeTimers();
+    const fixture = TestBed.createComponent(PreviewHost);
+    fixture.detectChanges();
+    const trigger = document.getElementById('trigger') as HTMLElement;
+    const settle = async () => {
+      fixture.detectChanges();
+      await vi.advanceTimersByTimeAsync(20);
+      fixture.detectChanges();
+    };
+    return {
+      fixture,
+      trigger,
+      settle,
+      buttons: () =>
+        document.querySelectorAll('.andes-popconfirm-buttons andes-button')
+          .length,
+      panels: () => document.querySelectorAll('.andes-popover-content').length,
+      title: () =>
+        document.querySelector('.andes-popconfirm-title')?.textContent?.trim(),
+      hover: async () => {
+        trigger.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+        await settle();
+      },
+      leave: async () => {
+        trigger.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+        await settle();
+      },
+      click: async () => {
+        trigger.dispatchEvent(
+          new PointerEvent('pointerdown', { bubbles: true }),
+        );
+        trigger.click();
+        await settle();
+      },
+    };
+  }
+
+  it('previews the question on hover, without buttons, and closes when the pointer leaves', async () => {
+    const { hover, leave, buttons, title, panels } = setup();
+    await hover();
+
+    expect(title()).toBe('Delete?');
+    expect(buttons()).toBe(0);
+
+    await leave();
+    expect(panels()).toBe(0);
+  });
+
+  it('shows Cancel and OK after a click, on the same panel, and keeps it open on mouse leave', async () => {
+    const { hover, click, leave, buttons, title, panels } = setup();
+    await hover();
+    const surface = document.querySelector('.andes-popover-content');
+    await click();
+
+    expect(document.querySelector('.andes-popover-content')).toBe(surface);
+    expect(title()).toBe('Delete for good?');
+    expect(buttons()).toBe(2);
+
+    await leave();
+    await vi.advanceTimersByTimeAsync(500);
+    expect(panels()).toBe(1);
+  });
+
+  it('stays until it is answered, and OK confirms', async () => {
+    const { hover, click, settle, panels, fixture } = setup();
+    await hover();
+    await click();
+    (document.querySelector('.andes-popconfirm-ok') as HTMLElement).click();
+    await settle();
+
+    expect(fixture.componentInstance.events).toEqual(['confirm']);
+    expect(panels()).toBe(0);
+  });
+
+  it('Cancel answers it the other way', async () => {
+    const { hover, click, settle, panels, fixture } = setup();
+    await hover();
+    await click();
+    (document.querySelector('.andes-popconfirm-cancel') as HTMLElement).click();
+    await settle();
+
+    expect(fixture.componentInstance.events).toEqual(['cancel']);
+    expect(panels()).toBe(0);
+  });
+});

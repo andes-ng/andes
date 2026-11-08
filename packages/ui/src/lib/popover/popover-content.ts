@@ -1,8 +1,13 @@
 import { AndesOverlayContentPrimitive } from '@andes-ng/primitives';
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  effect,
+  ElementRef,
   inject,
+  Injector,
+  untracked,
   TemplateRef,
   ViewEncapsulation,
 } from '@angular/core';
@@ -48,6 +53,71 @@ import { AndesPopoverOutlet } from './popover-outlet';
 })
 export class AndesPopoverContent {
   protected readonly popover = inject(AndesPopoverBase);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
+
+  constructor() {
+    // A hover preview turned into a pinned panel by a click keeps its place, its arrow and its
+    // motion: only the content changes. It does so softly - the content fades in and the
+    // surface grows or shrinks to the new height - instead of jumping.
+    let previous = this.popover.mode();
+    effect(() => {
+      const mode = this.popover.mode();
+      untracked(() => {
+        if (mode !== previous) {
+          previous = mode;
+          this.swapContent();
+        }
+      });
+    });
+  }
+
+  /**
+   * Runs before the template shows the new content: reads the height the panel has now, then
+   * after the render animates from it to the new one and fades the content in.
+   */
+  private swapContent(): void {
+    const surface = this.host.nativeElement.querySelector<HTMLElement>(
+      '.andes-popover-content',
+    );
+    if (!surface || typeof surface.animate !== 'function') {
+      return;
+    }
+    const from =
+      this.popover.takeSwapHeight() ?? surface.getBoundingClientRect().height;
+    const reduced =
+      typeof matchMedia === 'function' &&
+      matchMedia('(prefers-reduced-motion: reduce)').matches;
+    afterNextRender(
+      {
+        // Measure the new height, then start from the old one: both in one callback, since the
+        // `write` phase runs before the `read` phase.
+        mixedReadWrite: () => {
+          const to = surface.getBoundingClientRect().height;
+          const parts = Array.from(surface.children).filter(
+            (child) => !child.classList.contains('andes-popover-arrow'),
+          );
+          for (const part of parts) {
+            part.animate([{ opacity: 0 }, { opacity: 1 }], {
+              duration: reduced ? 80 : 150,
+              easing: 'ease-out',
+            });
+          }
+          if (!reduced && Math.abs(to - from) >= 1) {
+            // The surface clips while it resizes, but the arrow sits outside it.
+            surface.setAttribute('data-swapping', '');
+            const resize = surface.animate(
+              [{ height: `${from}px` }, { height: `${to}px` }],
+              { duration: 180, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' },
+            );
+            const done = () => surface.removeAttribute('data-swapping');
+            resize.finished.then(done, done);
+          }
+        },
+      },
+      { injector: this.injector },
+    );
+  }
 
   protected isTemplate(value: unknown): value is TemplateRef<unknown> {
     return value instanceof TemplateRef;

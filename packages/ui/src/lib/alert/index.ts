@@ -2,6 +2,7 @@ export { AndesAlert, AndesAlertCloseEvent } from './alert';
 export type {
   AndesAlertActionPlacement,
   AndesAlertClassNames,
+  AndesAlertCloseReason,
   AndesAlertContent,
   AndesAlertPart,
   AndesAlertPartStyle,
@@ -9,6 +10,7 @@ export type {
   AndesAlertSemanticInfo,
   AndesAlertSemanticValue,
   AndesAlertSeverity,
+  AndesAlertSize,
   AndesAlertStyles,
   AndesAlertTemplateContext,
   AndesAlertVariant,

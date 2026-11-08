@@ -23,6 +23,7 @@ import {
   AndesAlertRole,
   AndesAlertSemanticValue,
   AndesAlertSeverity,
+  AndesAlertSize,
   AndesAlertStyles,
   AndesAlertTemplateContext,
   AndesAlertVariant,
@@ -49,14 +50,6 @@ function lengthOf(declared: string | undefined): number {
   return toPx(
     name ? (declaredValue(themeCss(), ':root', name) ?? '') : (declared ?? ''),
   );
-}
-
-/** The literal a `var(--name, literal)` falls back to. */
-function fallbackOf(declared: string | undefined): string | undefined {
-  const comma = declared?.indexOf(',') ?? -1;
-  return declared && comma > 0
-    ? declared.slice(comma + 1, declared.lastIndexOf(')')).trim()
-    : undefined;
 }
 
 @Component({
@@ -503,7 +496,7 @@ describe('AndesAlert', () => {
           opacity: 0,
         });
         expect(options.fill).toBe('forwards');
-        // Ant Design's unmount: 0.3s on its ease-in-out-circ curve, with the height and the
+        // The unmount: 0.3s on an ease-in-out-circ curve, with the height and the
         // opacity running together from the first frame to the last.
         expect(options.duration).toBe(300);
         expect(options.easing).toBe('cubic-bezier(0.78, 0.14, 0.15, 0.86)');
@@ -1274,28 +1267,42 @@ describe('AndesAlert close button options', () => {
 });
 
 describe('AndesAlert metrics', () => {
-  // The numbers are Ant Design's, measured on its live Alert page. The unit tests cannot lay
-  // anything out, so they pin the declarations the layout comes from.
+  // The unit tests cannot lay anything out, so they pin the declarations the layout comes from.
+  // The paddings are measured to the outer edge of the border (see --andes-alert-border-width).
   const css = alertCss();
   const base = (property: string) =>
     declaredValue(css, '.andes-alert', property);
+  const rich =
+    ':has( .andes-alert__title:not(:empty) + .andes-alert__description:not(:empty) )';
   const withDescription = (property: string) =>
-    declaredValue(
-      css,
-      '.andes-alert:has( .andes-alert__title:not(:empty) + .andes-alert__description:not(:empty) )',
-      property,
-    );
+    declaredValue(css, `.andes-alert${rich}`, property);
+  const small = (property: string) =>
+    declaredValue(css, '.andes-alert--sm', property);
+  const smallWithDescription = (property: string) =>
+    declaredValue(css, `.andes-alert--sm${rich}`, property);
 
-  it('is a compact 8px x 12px strip with a 14px icon, 14px/22px text and an 8px radius', () => {
-    expect(lengthOf(base('--andes-alert-padding-block'))).toBe(8);
+  it('is a 40px strip: 10px x 12px, a 16px icon, 14px/20px text and an 8px radius', () => {
+    expect(lengthOf(base('--andes-alert-padding-block'))).toBe(10);
     expect(lengthOf(base('--andes-alert-padding-inline'))).toBe(12);
-    expect(lengthOf(base('--andes-alert-icon-size'))).toBe(14);
+    expect(lengthOf(base('--andes-alert-icon-size'))).toBe(16);
     expect(lengthOf(base('--andes-alert-icon-gap'))).toBe(8);
     expect(lengthOf(base('--andes-alert-trailing-gap'))).toBe(8);
     expect(lengthOf(base('--andes-alert-title-size'))).toBe(14);
-    expect(lengthOf(base('--andes-alert-title-leading'))).toBe(22);
+    expect(lengthOf(base('--andes-alert-title-leading'))).toBe(20);
+    expect(lengthOf(base('--andes-alert-leading'))).toBe(20);
     expect(lengthOf(base('border-radius'))).toBe(8);
-    expect(base('border')).toBe('1px solid var(--andes-color-border)');
+    expect(base('border')).toBe(
+      'var(--andes-alert-border-width) solid var(--andes-color-border)',
+    );
+    expect(lengthOf(base('--andes-alert-border-width'))).toBe(1);
+    // 20px of line + 2 x 10px of padding, border included = 40px.
+    expect(base('box-sizing')).toBe('border-box');
+  });
+
+  it('takes the border out of the padding, so a borderless card keeps its size', () => {
+    expect(base('padding')).toBe(
+      'calc( var(--andes-alert-padding-block) - var(--andes-alert-border-width) ) calc(var(--andes-alert-padding-inline) - var(--andes-alert-border-width))',
+    );
   });
 
   it('centres the icon, text, action and close button on the row as a group', () => {
@@ -1303,16 +1310,50 @@ describe('AndesAlert metrics', () => {
     expect(base('display')).toBe('flex');
   });
 
-  it('steps up to 20px x 24px, a 24px icon and a 16px title with a description', () => {
-    expect(lengthOf(withDescription('--andes-alert-padding-block'))).toBe(20);
-    expect(lengthOf(withDescription('--andes-alert-padding-inline'))).toBe(24);
-    expect(lengthOf(withDescription('--andes-alert-icon-size'))).toBe(24);
+  it('steps up to 12px x 16px, a 20px icon and a medium 14px/20px title with a description', () => {
+    expect(lengthOf(withDescription('--andes-alert-padding-block'))).toBe(12);
+    expect(lengthOf(withDescription('--andes-alert-padding-inline'))).toBe(16);
+    expect(lengthOf(withDescription('--andes-alert-icon-size'))).toBe(20);
     expect(lengthOf(withDescription('--andes-alert-icon-gap'))).toBe(12);
-    expect(lengthOf(withDescription('--andes-alert-title-size'))).toBe(16);
-    expect(lengthOf(withDescription('--andes-alert-row-gap'))).toBe(8);
-    // 16px x 1.5714285714285714 = 25.14px, the line Ant's title sits on.
-    expect(withDescription('--andes-alert-title-leading')).toBe(
-      '1.5714285714285714',
+    // The title keeps the 14px/20px of the one-line strip and gains weight.
+    expect(withDescription('--andes-alert-title-weight')).toBe(
+      'var(--andes-font-weight-medium)',
+    );
+    expect(
+      declaredValue(themeCss(), ':root', '--andes-font-weight-medium'),
+    ).toBe('500');
+  });
+
+  it('sets the description 2px under the title in 13px/20px', () => {
+    expect(lengthOf(base('--andes-alert-row-gap'))).toBe(2);
+    expect(
+      lengthOf(
+        declaredValue(
+          css,
+          `.andes-alert${rich} .andes-alert__description`,
+          '--andes-alert-description-size',
+        ),
+      ),
+    ).toBe(13);
+    expect(lengthOf(base('--andes-alert-leading'))).toBe(20);
+    expect(declaredValue(css, '.andes-alert__description', 'font-size')).toBe(
+      'var(--andes-alert-description-size)',
+    );
+  });
+
+  it('softens the ink of a description that sits under a title only', () => {
+    expect(
+      declaredValue(
+        css,
+        '.andes-alert__title:not(:empty) + .andes-alert__description',
+        'color',
+      ),
+    ).toBe('var(--andes-alert-ink-soft)');
+    expect(declaredValue(css, '.andes-alert__description', 'color')).toBe(
+      'var(--andes-alert-ink)',
+    );
+    expect(base('--andes-alert-ink-soft')).toBe(
+      'color-mix( in srgb, var(--andes-alert-ink) 72%, var(--andes-alert-surface) )',
     );
   });
 
@@ -1320,7 +1361,7 @@ describe('AndesAlert metrics', () => {
     expect(withDescription('align-items')).toBe('flex-start');
   });
 
-  it('sets the title in regular weight, as Ant Design does', () => {
+  it('sets a title that stands alone in regular weight', () => {
     expect(base('--andes-alert-title-weight')).toBe(
       'var(--andes-font-weight-regular)',
     );
@@ -1332,21 +1373,32 @@ describe('AndesAlert metrics', () => {
     ).toBe('400');
   });
 
-  it('draws the close glyph at 12px inside a 24px target', () => {
-    expect(lengthOf(base('--andes-alert-close-glyph'))).toBe(12);
+  it('draws the close glyph at 14px in a 20px button inside a 24px target', () => {
+    expect(lengthOf(base('--andes-alert-close-glyph'))).toBe(14);
+    expect(lengthOf(base('--andes-alert-close-box'))).toBe(20);
     expect(lengthOf(base('--andes-alert-control-size'))).toBe(24);
     const close = (property: string) =>
       declaredValue(css, '.andes-alert__close', property);
-    // The box is the glyph's, so the close button lines up like Ant's 12px one...
-    expect(close('width')).toBe('var(--andes-alert-close-glyph)');
-    expect(close('height')).toBe('var(--andes-alert-close-glyph)');
+    expect(close('width')).toBe('var(--andes-alert-close-box)');
+    expect(close('height')).toBe('var(--andes-alert-close-box)');
+    expect(lengthOf(close('border-radius'))).toBe(4);
     expect(close('margin-inline-start')).toBe(
       'var(--andes-alert-trailing-gap)',
     );
-    // ...and an invisible hit area reaches 6px past it on every side.
+    // An invisible hit area reaches 2px past the box on every side.
     expect(declaredValue(css, '.andes-alert__close::after', 'inset')).toBe(
-      'calc( (var(--andes-alert-close-glyph) - var(--andes-alert-control-size)) / 2 )',
+      'calc( (var(--andes-alert-close-box) - var(--andes-alert-control-size)) / 2 )',
     );
+  });
+
+  it('tints the close button on hover instead of drawing a border', () => {
+    expect(
+      declaredValue(
+        css,
+        '.andes-alert__close:hover:not(:disabled)',
+        'background-color',
+      ),
+    ).toBe('color-mix(in srgb, var(--andes-alert-ink) 7%, transparent)');
   });
 
   it("draws lucide's x in a box the size of the glyph", () => {
@@ -1358,10 +1410,9 @@ describe('AndesAlert metrics', () => {
     expect(declaredValue(css, '.andes-alert__close-x', '--ng-icon__size')).toBe(
       'var(--andes-alert-close-glyph)',
     );
-    // 1.3px strokes at 12px are 2.6 units of lucide's 24-unit grid.
     expect(
       declaredValue(css, '.andes-alert__close-x', '--ng-icon__stroke-width'),
-    ).toBe('2.6');
+    ).toBe('2');
   });
 
   it('puts the action 8px before the close button, at the inline-end edge', () => {
@@ -1384,7 +1435,38 @@ describe('AndesAlert metrics', () => {
         'border-width',
       ),
     ).toBe('0');
+    expect(
+      declaredValue(
+        css,
+        '.andes-alert--banner.andes-alert--tinted',
+        '--andes-alert-border-width',
+      ),
+    ).toBe('0px');
     expect(declaredValue(css, ':host', 'display')).toBe('block');
+  });
+
+  describe('small size', () => {
+    it('is a 30px strip: 6px x 10px, a 14px icon and 13px/18px text', () => {
+      expect(lengthOf(small('--andes-alert-padding-block'))).toBe(6);
+      expect(lengthOf(small('--andes-alert-padding-inline'))).toBe(10);
+      expect(lengthOf(small('--andes-alert-icon-size'))).toBe(14);
+      expect(lengthOf(small('--andes-alert-font-size'))).toBe(13);
+      expect(lengthOf(small('--andes-alert-leading'))).toBe(18);
+      expect(lengthOf(small('--andes-alert-close-box'))).toBe(18);
+      expect(lengthOf(small('--andes-alert-close-glyph'))).toBe(12);
+    });
+
+    it('steps up to 8px x 12px and a 16px icon with a description', () => {
+      expect(
+        lengthOf(smallWithDescription('--andes-alert-padding-block')),
+      ).toBe(8);
+      expect(
+        lengthOf(smallWithDescription('--andes-alert-padding-inline')),
+      ).toBe(12);
+      expect(lengthOf(smallWithDescription('--andes-alert-icon-size'))).toBe(
+        16,
+      );
+    });
   });
 
   function createClosableAlert() {
@@ -1404,67 +1486,70 @@ describe('AndesAlert metrics', () => {
 });
 
 describe('AndesAlert palette', () => {
-  // Ant Design's colors for each type, in light and dark, read off its live Alert page.
   const css = alertCss();
-  const palette = {
+  const severities = ['success', 'info', 'warning', 'danger'] as const;
+  const darkRoot = ":host-context([data-andes-theme='dark']) .andes-alert";
+
+  /** The theme token a severity's glyph takes on each theme. */
+  const accents = {
     success: {
-      light: ['#52c41a', '#f6ffed', '#b7eb8f'],
-      dark: ['#49aa19', '#162312', '#274916'],
+      light: '--andes-color-success',
+      dark: '--andes-color-success-text',
     },
-    info: {
-      light: ['#1677ff', '#e6f4ff', '#91caff'],
-      dark: ['#1668dc', '#111a2c', '#15325b'],
-    },
+    info: { light: '--andes-color-info', dark: '--andes-color-info-text' },
     warning: {
-      light: ['#faad14', '#fffbe6', '#ffe58f'],
-      dark: ['#d89614', '#2b2111', '#594214'],
+      light: '--andes-color-warning-text',
+      dark: '--andes-color-warning-text',
     },
     danger: {
-      light: ['#ff4d4f', '#fff2f0', '#ffccc7'],
-      dark: ['#dc4446', '#2c1618', '#5b2526'],
+      light: '--andes-color-danger',
+      dark: '--andes-color-danger-text',
     },
   } as const;
 
   describe.each(['light', 'dark'] as const)('on the %s theme', (theme) => {
-    it.each(Object.keys(palette) as (keyof typeof palette)[])(
-      'colors the %s glyph, wash and border',
+    it.each(severities)(
+      'takes the %s glyph from its theme token',
       (severity) => {
-        const selector =
-          theme === 'dark'
-            ? `:host-context([data-andes-theme='dark']) .andes-alert--${severity}`
-            : `.andes-alert--${severity}`;
-        const [accent, tint, border] = palette[severity][theme];
+        const selector = theme === 'dark' ? darkRoot : '.andes-alert';
 
-        expect(
-          fallbackOf(declaredValue(css, selector, '--andes-alert-accent')),
-        ).toBe(accent);
-        expect(
-          fallbackOf(declaredValue(css, selector, '--andes-alert-tint')),
-        ).toBe(tint);
-        expect(
-          fallbackOf(declaredValue(css, selector, '--andes-alert-tint-border')),
-        ).toBe(border);
+        expect(declaredValue(css, selector, `--_${severity}`)).toBe(
+          `var(${accents[severity][theme]})`,
+        );
       },
     );
   });
 
-  it.each(Object.keys(palette))(
-    'lets a theme override the %s colors with --andes-alert-%s-*',
+  it.each(severities)(
+    'washes the %s card with 9% of its glyph colour and borders it at 35%',
     (severity) => {
-      const light = declaredValue(
-        css,
-        `.andes-alert--${severity}`,
-        '--andes-alert-accent',
-      );
-      const dark = declaredValue(
-        css,
-        `:host-context([data-andes-theme='dark']) .andes-alert--${severity}`,
-        '--andes-alert-accent',
-      );
+      const rule = `.andes-alert--${severity}`;
 
-      // The same hook on both themes, so one override re-colors the severity everywhere.
-      expect(light).toContain(`var(--andes-alert-${severity}-icon,`);
-      expect(dark).toContain(`var(--andes-alert-${severity}-icon,`);
+      expect(declaredValue(css, rule, '--andes-alert-tint')).toBe(
+        `var( --andes-alert-${severity}-bg, color-mix(in srgb, var(--_${severity}) 9%, var(--andes-color-card)) )`,
+      );
+      expect(declaredValue(css, rule, '--andes-alert-tint-border')).toBe(
+        `var( --andes-alert-${severity}-border, color-mix(in srgb, var(--_${severity}) 35%, var(--andes-color-card)) )`,
+      );
+    },
+  );
+
+  it.each(['neutral', ...severities])(
+    'lets a theme re-color the %s severity through its custom properties',
+    (severity) => {
+      const rule = `.andes-alert--${severity}`;
+
+      for (const [property, hook] of [
+        ['--andes-alert-accent', 'icon'],
+        ['--andes-alert-tint', 'bg'],
+        ['--andes-alert-tint-border', 'border'],
+        ['--andes-alert-solid', 'solid'],
+        ['--andes-alert-solid-ink', 'solid-ink'],
+      ]) {
+        expect(declaredValue(css, rule, property)).toContain(
+          `--andes-alert-${severity}-${hook},`,
+        );
+      }
     },
   );
 
@@ -1481,8 +1566,31 @@ describe('AndesAlert palette', () => {
     expect(declaredValue(css, '.andes-alert--filled', 'border-color')).toBe(
       'transparent',
     );
+    expect(declaredValue(css, '.andes-alert--filled', 'background-color')).toBe(
+      'var(--andes-alert-tint)',
+    );
     // A transparent border, not none: switching variants never shifts the layout.
-    expect(declaredValue(css, '.andes-alert', 'border')).toContain('1px solid');
+    expect(declaredValue(css, '.andes-alert', 'border')).toContain('solid');
+  });
+
+  it('keeps the neutral card on an outlined alert and softens its edge', () => {
+    expect(
+      declaredValue(css, '.andes-alert--outlined', 'border-color'),
+    ).toContain('var(--andes-alert-accent) 30%');
+    expect(
+      declaredValue(css, '.andes-alert--outlined', 'background-color'),
+    ).toBe(undefined);
+  });
+
+  it('paints a solid alert in the strong colour with its own ink', () => {
+    const solid = (property: string) =>
+      declaredValue(css, '.andes-alert--solid', property);
+
+    expect(solid('background-color')).toBe('var(--andes-alert-solid)');
+    expect(solid('--andes-alert-ink')).toBe('var(--andes-alert-solid-ink)');
+    expect(solid('--andes-alert-accent')).toBe('var(--andes-alert-solid-ink)');
+    expect(solid('--andes-alert-surface')).toBe('var(--andes-alert-solid)');
+    expect(solid('border-color')).toBe('transparent');
   });
 
   it('cuts the glyph mark out in the color behind the icon', () => {
@@ -1494,9 +1602,12 @@ describe('AndesAlert palette', () => {
     );
   });
 
-  it('colors the close glyph at half the text color, which clears 3:1 on every wash', () => {
+  it('colors the close glyph at 55% of the ink, which clears 3:1 on every wash', () => {
+    expect(declaredValue(css, '.andes-alert', '--andes-alert-close-ink')).toBe(
+      'color-mix( in srgb, var(--andes-alert-ink) 55%, var(--andes-alert-surface) )',
+    );
     expect(declaredValue(css, '.andes-alert__close', 'color')).toBe(
-      'color-mix(in srgb, var(--andes-color-foreground) 50%, transparent)',
+      'var(--andes-alert-close-ink)',
     );
   });
 });
@@ -1739,6 +1850,7 @@ describe('AndesAlert classNames and styles', () => {
       props: {
         severity: 'info',
         variant: 'tinted',
+        size: 'md',
         banner: false,
         closable: true,
         showIcon: true,
@@ -1761,5 +1873,443 @@ describe('AndesAlert classNames and styles', () => {
     expect(part('root').classList).not.toContain('mine');
     expect(part('icon').classList).not.toContain('mine');
     expect(part('root').style.color).toBe('');
+  });
+});
+
+describe('AndesAlert neutral, solid and small', () => {
+  @Component({
+    imports: [AndesAlert],
+    template: `<andes-alert
+      [severity]="severity()"
+      [variant]="variant()"
+      [size]="size()"
+      description="Saved."
+    />`,
+  })
+  class StyleHost {
+    readonly severity = signal<AndesAlertSeverity>('neutral');
+    readonly variant = signal<AndesAlertVariant>('tinted');
+    readonly size = signal<AndesAlertSize>('md');
+  }
+
+  function create() {
+    const fixture = TestBed.createComponent(StyleHost);
+    fixture.detectChanges();
+    const alert = fixture.nativeElement.querySelector(
+      '[data-slot="alert"]',
+    ) as HTMLElement;
+    return { fixture, alert, host: fixture.componentInstance };
+  }
+
+  it('draws a neutral alert with the info glyph in a quiet colour and a status role', () => {
+    const { alert } = create();
+
+    expect(alert.classList).toContain('andes-alert--neutral');
+    expect(alert.getAttribute('data-severity')).toBe('neutral');
+    expect(alert.getAttribute('role')).toBe('status');
+    expect(
+      alert.querySelector('.andes-alert__icon ng-icon')?.getAttribute('name'),
+    ).toBe('lucideInfo');
+  });
+
+  it('switches to the solid variant', () => {
+    const { fixture, alert, host } = create();
+    host.variant.set('solid');
+    fixture.detectChanges();
+
+    expect(alert.classList).toContain('andes-alert--solid');
+    expect(alert.classList).not.toContain('andes-alert--tinted');
+  });
+
+  it('is the medium size unless it is set to small', () => {
+    const { fixture, alert, host } = create();
+
+    expect(alert.classList).not.toContain('andes-alert--sm');
+
+    host.size.set('sm');
+    fixture.detectChanges();
+
+    expect(alert.classList).toContain('andes-alert--sm');
+  });
+});
+
+describe('AndesAlert colour contrast', () => {
+  // WCAG AA from the stylesheet and the token sheet themselves: 4.5:1 for the text, 3:1 for the
+  // glyph and the close button. The mixes are done the way the browser does them (in sRGB).
+  const css = alertCss();
+  const tokens = themeCss();
+  const severities = ['success', 'info', 'warning', 'danger'] as const;
+
+  type Rgb = [number, number, number];
+
+  /** A token's colour on a theme, following `var()` chains and falling back to the light value. */
+  function token(theme: 'light' | 'dark', name: string): Rgb {
+    let value =
+      (theme === 'dark'
+        ? declaredValue(tokens, "[data-andes-theme='dark']", name)
+        : undefined) ?? declaredValue(tokens, ':root', name);
+    for (let depth = 0; value?.startsWith('var(') && depth < 5; depth++) {
+      const next = /^var\((--[\w-]+)\)$/.exec(value)?.[1] ?? '';
+      value =
+        (theme === 'dark'
+          ? declaredValue(tokens, "[data-andes-theme='dark']", next)
+          : undefined) ?? declaredValue(tokens, ':root', next);
+    }
+    const hex = (value ?? '').replace('#', '');
+    expect(hex).toMatch(/^[0-9a-f]{6}$/i);
+    return [0, 2, 4].map((at) => parseInt(hex.slice(at, at + 2), 16)) as Rgb;
+  }
+
+  const mix = (a: Rgb, percent: number, b: Rgb): Rgb =>
+    a.map(
+      (c, i) => (c * percent) / 100 + (b[i] * (100 - percent)) / 100,
+    ) as Rgb;
+
+  const luminance = ([r, g, b]: Rgb) => {
+    const [lr, lg, lb] = [r, g, b].map((c) => {
+      const v = c / 255;
+      return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * lr + 0.7152 * lg + 0.0722 * lb;
+  };
+
+  const contrast = (a: Rgb, b: Rgb) => {
+    const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+  };
+
+  /** The one percentage a `color-mix()` declaration carries, read off the stylesheet. */
+  const percent = (declared: string | undefined) =>
+    Number(/(\d+)%/.exec(declared ?? '')?.[1]);
+
+  const soft = percent(
+    declaredValue(css, '.andes-alert', '--andes-alert-ink-soft'),
+  );
+  const closeInk = percent(
+    declaredValue(css, '.andes-alert', '--andes-alert-close-ink'),
+  );
+
+  it('reads the mixes off the stylesheet', () => {
+    expect(soft).toBe(72);
+    expect(closeInk).toBe(55);
+  });
+
+  describe.each(['light', 'dark'] as const)('on the %s theme', (theme) => {
+    const card = token(theme, '--andes-color-card');
+    const ink = token(theme, '--andes-color-card-foreground');
+    const accentToken = (severity: (typeof severities)[number]) =>
+      /var\((--[\w-]+)\)/.exec(
+        declaredValue(
+          css,
+          theme === 'dark'
+            ? ":host-context([data-andes-theme='dark']) .andes-alert"
+            : '.andes-alert',
+          `--_${severity}`,
+        ) ?? '',
+      )?.[1] ?? '';
+
+    it.each(severities)(
+      'keeps the text, the softer text, the glyph and the close button legible on a %s wash',
+      (severity) => {
+        const accent = token(theme, accentToken(severity));
+        const wash = mix(accent, 9, card);
+
+        expect(contrast(ink, wash)).toBeGreaterThanOrEqual(4.5);
+        expect(contrast(mix(ink, soft, wash), wash)).toBeGreaterThanOrEqual(
+          4.5,
+        );
+        expect(contrast(accent, wash)).toBeGreaterThanOrEqual(3);
+        expect(contrast(mix(ink, closeInk, wash), wash)).toBeGreaterThanOrEqual(
+          3,
+        );
+        // The same on the plain card an outlined alert keeps.
+        expect(contrast(mix(ink, soft, card), card)).toBeGreaterThanOrEqual(
+          4.5,
+        );
+        expect(contrast(accent, card)).toBeGreaterThanOrEqual(3);
+      },
+    );
+
+    it('keeps the neutral wash, ink and glyph legible', () => {
+      const wash = mix(token(theme, '--andes-color-foreground'), 4, card);
+      const glyph = token(theme, '--andes-color-muted-foreground');
+
+      expect(contrast(ink, wash)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(mix(ink, soft, wash), wash)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(glyph, wash)).toBeGreaterThanOrEqual(3);
+    });
+
+    it.each([
+      [
+        'success',
+        '--andes-color-success-solid',
+        '--andes-color-success-foreground',
+      ],
+      ['info', '--andes-color-info-solid', '--andes-color-info-foreground'],
+      ['warning', '--andes-color-warning', '--andes-color-warning-foreground'],
+      ['danger', '--andes-color-danger', '--andes-color-danger-foreground'],
+      ['neutral', '--andes-color-foreground', '--andes-color-background'],
+    ])(
+      'keeps the ink of a solid %s alert legible on its colour',
+      (_, solid, on) => {
+        expect(
+          contrast(token(theme, on), token(theme, solid)),
+        ).toBeGreaterThanOrEqual(4.5);
+      },
+    );
+  });
+});
+
+describe('AndesAlert open state and auto-dismiss', () => {
+  @Component({
+    imports: [AndesAlert],
+    template: `<andes-alert
+      closable
+      [(open)]="open"
+      [duration]="duration()"
+      (closing)="onClosing($event)"
+      (afterClose)="afterCloseCount = afterCloseCount + 1"
+    >
+      Saved.
+      <button slot="action" type="button" class="inside">Inside</button>
+    </andes-alert>`,
+  })
+  class OpenHost {
+    readonly open = signal(true);
+    readonly duration = signal<number | null>(null);
+    reasons: string[] = [];
+    afterCloseCount = 0;
+    veto = false;
+
+    onClosing(event: AndesAlertCloseEvent): void {
+      this.reasons.push(event.reason);
+      if (this.veto) event.preventDefault();
+    }
+  }
+
+  function create() {
+    const fixture = TestBed.createComponent(OpenHost);
+    fixture.detectChanges();
+    const alert = () =>
+      fixture.nativeElement.querySelector('[data-slot="alert"]') as HTMLElement;
+    return { fixture, alert, host: fixture.componentInstance };
+  }
+
+  describe('open', () => {
+    it('is open by default', () => {
+      const { alert } = create();
+
+      expect(alert().hidden).toBe(false);
+    });
+
+    it('hides the alert and emits afterClose when it is set to false', async () => {
+      const { fixture, alert, host } = create();
+
+      host.open.set(false);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(alert().hidden).toBe(true);
+      expect(host.afterCloseCount).toBe(1);
+      // Setting it is the consumer's own doing: no closing event to answer.
+      expect(host.reasons).toEqual([]);
+    });
+
+    it('brings the alert back when it is set to true again', async () => {
+      const { fixture, alert, host } = create();
+      host.open.set(false);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      host.open.set(true);
+      fixture.detectChanges();
+
+      expect(alert().hidden).toBe(false);
+      expect(
+        (fixture.nativeElement.querySelector('andes-alert') as HTMLElement)
+          .style.display,
+      ).toBe('');
+    });
+
+    it('writes false back when the close button closes the alert', async () => {
+      const { fixture, host } = create();
+
+      (
+        fixture.nativeElement.querySelector(
+          '.andes-alert__close',
+        ) as HTMLButtonElement
+      ).click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(host.open()).toBe(false);
+      expect(host.reasons).toEqual(['button']);
+    });
+
+    it('starts hidden, without a collapse or an afterClose, when it starts closed', async () => {
+      const fixture = TestBed.createComponent(OpenHost);
+      fixture.componentInstance.open.set(false);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(
+        (
+          fixture.nativeElement.querySelector(
+            '[data-slot="alert"]',
+          ) as HTMLElement
+        ).hidden,
+      ).toBe(true);
+      expect(fixture.componentInstance.afterCloseCount).toBe(0);
+    });
+  });
+
+  describe('duration', () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it('stays open without a duration', async () => {
+      const { fixture, alert } = create();
+
+      await vi.advanceTimersByTimeAsync(60_000);
+      fixture.detectChanges();
+
+      expect(alert().hidden).toBe(false);
+    });
+
+    it('closes by itself once the duration has passed, with the timeout reason', async () => {
+      const { fixture, alert, host } = create();
+      host.duration.set(3000);
+      fixture.detectChanges();
+
+      await vi.advanceTimersByTimeAsync(2900);
+      fixture.detectChanges();
+      expect(alert().hidden).toBe(false);
+
+      await vi.advanceTimersByTimeAsync(200);
+      fixture.detectChanges();
+
+      expect(alert().hidden).toBe(true);
+      expect(host.reasons).toEqual(['timeout']);
+      expect(host.open()).toBe(false);
+      expect(host.afterCloseCount).toBe(1);
+    });
+
+    it('has no originating click on a timeout', async () => {
+      const { fixture, host } = create();
+      let event: AndesAlertCloseEvent | undefined;
+      host.onClosing = (e) => (event = e);
+      host.duration.set(1000);
+      fixture.detectChanges();
+
+      await vi.advanceTimersByTimeAsync(1100);
+
+      expect(event?.originalEvent).toBeNull();
+      expect(event?.reason).toBe('timeout');
+    });
+
+    it('stays open when the timeout is vetoed, and does not ask again', async () => {
+      const { fixture, alert, host } = create();
+      host.veto = true;
+      host.duration.set(1000);
+      fixture.detectChanges();
+
+      await vi.advanceTimersByTimeAsync(5000);
+      fixture.detectChanges();
+
+      expect(alert().hidden).toBe(false);
+      expect(host.reasons).toEqual(['timeout']);
+    });
+
+    it('holds the countdown while the pointer is over the alert and resumes it after', async () => {
+      const { fixture, alert, host } = create();
+      host.duration.set(3000);
+      fixture.detectChanges();
+      const element = fixture.nativeElement.querySelector(
+        'andes-alert',
+      ) as HTMLElement;
+
+      await vi.advanceTimersByTimeAsync(2000);
+      element.dispatchEvent(new Event('pointerenter'));
+      fixture.detectChanges();
+      await vi.advanceTimersByTimeAsync(10_000);
+      fixture.detectChanges();
+      expect(alert().hidden).toBe(false);
+
+      element.dispatchEvent(new Event('pointerleave'));
+      fixture.detectChanges();
+      // 1000ms of the 3000 are left, not a fresh 3000.
+      await vi.advanceTimersByTimeAsync(900);
+      fixture.detectChanges();
+      expect(alert().hidden).toBe(false);
+      await vi.advanceTimersByTimeAsync(200);
+      fixture.detectChanges();
+
+      expect(alert().hidden).toBe(true);
+    });
+
+    it('holds the countdown while focus is inside the alert', async () => {
+      const { fixture, alert, host } = create();
+      host.duration.set(1000);
+      fixture.detectChanges();
+      const element = fixture.nativeElement.querySelector(
+        'andes-alert',
+      ) as HTMLElement;
+      const inside = element.querySelector('.inside') as HTMLElement;
+
+      element.dispatchEvent(new FocusEvent('focusin'));
+      fixture.detectChanges();
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(alert().hidden).toBe(false);
+
+      element.dispatchEvent(
+        new FocusEvent('focusout', { relatedTarget: inside }),
+      );
+      fixture.detectChanges();
+      await vi.advanceTimersByTimeAsync(5000);
+      // Focus moved to another part of the alert: still inside, still held.
+      expect(alert().hidden).toBe(false);
+
+      element.dispatchEvent(new FocusEvent('focusout'));
+      fixture.detectChanges();
+      await vi.advanceTimersByTimeAsync(1100);
+      fixture.detectChanges();
+
+      expect(alert().hidden).toBe(true);
+    });
+
+    it('closes on a timeout even when the close button is disabled', async () => {
+      @Component({
+        imports: [AndesAlert],
+        template: `<andes-alert closable closeDisabled [duration]="500"
+          >Exporting.</andes-alert
+        >`,
+      })
+      class DisabledHost {}
+
+      const fixture = TestBed.createComponent(DisabledHost);
+      fixture.detectChanges();
+      await vi.advanceTimersByTimeAsync(600);
+      fixture.detectChanges();
+
+      expect(
+        (
+          fixture.nativeElement.querySelector(
+            '[data-slot="alert"]',
+          ) as HTMLElement
+        ).hidden,
+      ).toBe(true);
+    });
+
+    it('treats a zero or a non-number duration as off', async () => {
+      const { fixture, alert, host } = create();
+      host.duration.set(0);
+      fixture.detectChanges();
+
+      await vi.advanceTimersByTimeAsync(60_000);
+      fixture.detectChanges();
+
+      expect(alert().hidden).toBe(false);
+    });
   });
 });

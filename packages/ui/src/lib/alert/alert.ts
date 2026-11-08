@@ -10,9 +10,12 @@ import {
   inject,
   Injector,
   input,
+  model,
+  numberAttribute,
   output,
   signal,
   TemplateRef,
+  untracked,
   viewChild,
 } from '@angular/core';
 import clsx from 'clsx';
@@ -25,15 +28,22 @@ import {
   lucideX,
 } from '@ng-icons/lucide';
 
-export type AndesAlertSeverity = 'success' | 'info' | 'warning' | 'danger';
+/** `neutral` carries no colour of its own: a plain note that is not good, bad or urgent news. */
+export type AndesAlertSeverity =
+  'neutral' | 'success' | 'info' | 'warning' | 'danger';
 export type AndesAlertRole = 'alert' | 'status';
 /**
  * `tinted` fills the card with a soft wash of the severity color and draws a stronger tinted
  * border; `filled` keeps the same wash but drops the border, for alerts sitting on a busy
  * surface where an extra outline only adds noise; `outlined` keeps the neutral card surface
- * and carries the severity only in the icon and a tinted border.
+ * and carries the severity only in the icon and a tinted border; `solid` paints the card in
+ * the severity's own strong color with light text, for the one message that must not be missed.
  */
-export type AndesAlertVariant = 'tinted' | 'filled' | 'outlined';
+export type AndesAlertVariant = 'tinted' | 'filled' | 'outlined' | 'solid';
+/** `md` is the default; `sm` is a denser strip for toolbars, forms and table headers. */
+export type AndesAlertSize = 'sm' | 'md';
+/** What closed the alert: its close button, or the `duration` running out. */
+export type AndesAlertCloseReason = 'button' | 'timeout';
 /**
  * `bottom` stacks the action under the text, for messages with room to breathe; `end` puts it
  * beside the text at the inline-end edge, lined up with the first line, so a one-line notice
@@ -65,6 +75,7 @@ export interface AndesAlertSemanticInfo {
     /** The resolved severity - i.e. after `banner`'s `warning` default has been applied. */
     severity: AndesAlertSeverity;
     variant: AndesAlertVariant;
+    size: AndesAlertSize;
     banner: boolean;
     closable: boolean;
     showIcon: boolean;
@@ -91,14 +102,17 @@ export type AndesAlertContent =
 /**
  * Emitted by `closing` before the alert starts hiding. Beyond observing the dismissal,
  * `preventDefault()` lets a consumer veto it (e.g. to confirm first, or to keep the alert until
- * a request settles) without having to own the visibility state themselves.
+ * a request settles) without having to own the visibility state themselves. A veto of a
+ * `timeout` closes nothing and is not retried until `duration` changes.
  */
 export class AndesAlertCloseEvent {
   private prevented = false;
 
   constructor(
     readonly source: AndesAlert,
-    readonly originalEvent: MouseEvent,
+    /** The click on the close button; null when the `duration` ran out instead. */
+    readonly originalEvent: MouseEvent | null,
+    readonly reason: AndesAlertCloseReason = 'button',
   ) {}
 
   get defaultPrevented(): boolean {
@@ -111,9 +125,8 @@ export class AndesAlertCloseEvent {
 }
 
 /**
- * Collapse duration and easing, the same 0.3s ease-in-out-circ that Ant Design uses to unmount
- * an alert. There is no motion token for them in `@andes-ng/tokens` yet, so they live here
- * rather than in the stylesheet.
+ * Collapse duration and easing: 0.3s on an ease-in-out-circ curve. There is no motion token for
+ * them in `@andes-ng/tokens` yet, so they live here rather than in the stylesheet.
  */
 const COLLAPSE_DURATION_MS = 300;
 const COLLAPSE_EASING = 'cubic-bezier(0.78, 0.14, 0.15, 0.86)';
@@ -166,6 +179,11 @@ const FOCUSABLE_SELECTOR = [
     // Hiding the inner card alone would leave an empty block box behind, which still takes a
     // `gap` slot in the consumer's flex/grid layout after the alert is dismissed.
     '[style.display]': 'visible() ? null : "none"',
+    // A timed alert holds its countdown while it is being read or used.
+    '(pointerenter)': 'hovered.set(true)',
+    '(pointerleave)': 'hovered.set(false)',
+    '(focusin)': 'focused.set(true)',
+    '(focusout)': 'onFocusOut($event)',
   },
 })
 export class AndesAlert {
@@ -176,6 +194,7 @@ export class AndesAlert {
   /** Left unset, resolves to `info` - or to `warning` in `banner` mode. */
   readonly severity = input<AndesAlertSeverity | undefined>(undefined);
   readonly variant = input<AndesAlertVariant>('tinted');
+  readonly size = input<AndesAlertSize>('md');
   readonly closable = input(false, { transform: booleanAttribute });
   readonly showIcon = input(true, { transform: booleanAttribute });
   /**
@@ -213,6 +232,25 @@ export class AndesAlert {
    */
   readonly closeDisabled = input(false, { transform: booleanAttribute });
   readonly actionPlacement = input<AndesAlertActionPlacement>('bottom');
+  /**
+   * Whether the alert is shown. Two-way (`[(open)]`), so a consumer can hide it, bring it back
+   * or follow what the user did without an `@if`: setting it to false collapses the alert the
+   * way the close button does, and the close button, a `duration` timeout or a finished
+   * collapse write false back.
+   */
+  readonly open = model(true);
+  /**
+   * Closes the alert by itself after this many milliseconds, through the same `closing` event
+   * as the close button (`reason: 'timeout'`). The countdown holds while the pointer is over
+   * the alert or focus is inside it, and picks up where it stopped. Unset or 0 keeps the alert
+   * until it is dismissed.
+   */
+  readonly duration = input<number | null, unknown>(null, {
+    transform: (value: unknown) => {
+      const ms = numberAttribute(value, 0);
+      return ms > 0 ? ms : null;
+    },
+  });
 
   /**
    * Extra class names for the alert's parts (`root`, `icon`, `section`, `title`, `description`,
@@ -249,6 +287,11 @@ export class AndesAlert {
 
   protected readonly visible = signal(true);
   private readonly leaving = signal(false);
+  protected readonly hovered = signal(false);
+  protected readonly focused = signal(false);
+  private collapsing: Animation | null = null;
+  /** What is left of the `duration` the countdown is working through. */
+  private countdown = { duration: 0, left: 0 };
 
   private readonly card = viewChild<ElementRef<HTMLElement>>('card');
   private readonly marqueeTrack =
@@ -268,6 +311,53 @@ export class AndesAlert {
   });
 
   constructor() {
+    // `open` is the consumer's handle on the visibility; `visible` is what is drawn. The first
+    // run only syncs them, so an alert that starts closed never animates or announces itself.
+    let synced = false;
+    effect(() => {
+      const open = this.open();
+      untracked(() => {
+        if (!synced) {
+          synced = true;
+          if (!open) this.visible.set(false);
+        } else if (open) {
+          this.reopen();
+        } else if (this.visible() && !this.leaving()) {
+          this.hide();
+        }
+      });
+    });
+
+    effect((onCleanup) => {
+      const duration = this.duration();
+      if (
+        !duration ||
+        !this.visible() ||
+        this.leaving() ||
+        this.hovered() ||
+        this.focused()
+      ) {
+        return;
+      }
+      const state = this.countdown;
+      if (state.duration !== duration) {
+        state.duration = duration;
+        state.left = duration;
+      }
+      if (state.left <= 0) return;
+      const startedAt = Date.now();
+      const timer = setTimeout(() => {
+        state.left = 0;
+        untracked(() => this.dismiss(null, 'timeout'));
+      }, state.left);
+      onCleanup(() => {
+        clearTimeout(timer);
+        if (state.left > 0) {
+          state.left = Math.max(0, state.left - (Date.now() - startedAt));
+        }
+      });
+    });
+
     effect((onCleanup) => {
       const track = this.marqueeTrack()?.nativeElement;
       const view = this.document.defaultView;
@@ -342,6 +432,7 @@ export class AndesAlert {
       `andes-alert--${this.resolvedSeverity()}`,
       `andes-alert--${this.variant()}`,
       {
+        'andes-alert--sm': this.size() === 'sm',
         'andes-alert--no-icon': !this.showIcon(),
         'andes-alert--closable': this.closable(),
         'andes-alert--banner': this.banner(),
@@ -356,6 +447,7 @@ export class AndesAlert {
     props: {
       severity: this.resolvedSeverity(),
       variant: this.variant(),
+      size: this.size(),
       banner: this.banner(),
       closable: this.closable(),
       showIcon: this.showIcon(),
@@ -372,16 +464,32 @@ export class AndesAlert {
     resolveSemantic(this.styles(), this.semanticInfo()),
   );
 
-  protected dismiss(event: MouseEvent): void {
-    // `disabled` already blocks real clicks; this also covers a synthetic `click()`.
-    if (this.leaving() || this.closeDisabled()) return;
+  protected onFocusOut(event: FocusEvent): void {
+    const next = event.relatedTarget;
+    if (!(next instanceof Node) || !this.host.nativeElement.contains(next)) {
+      this.focused.set(false);
+    }
+  }
 
-    const closeEvent = new AndesAlertCloseEvent(this, event);
+  protected dismiss(
+    event: MouseEvent | null,
+    reason: AndesAlertCloseReason = 'button',
+  ): void {
+    // `disabled` already blocks real clicks; this also covers a synthetic `click()`. A timeout
+    // is not the user acting on the button, so `closeDisabled` does not hold it back.
+    if (this.leaving() || (reason === 'button' && this.closeDisabled())) return;
+
+    const closeEvent = new AndesAlertCloseEvent(this, event, reason);
     this.closing.emit(closeEvent);
     if (closeEvent.defaultPrevented) return;
 
+    this.hide();
+  }
+
+  private hide(): void {
     this.leaving.set(true);
     const animation = this.collapse();
+    this.collapsing = animation;
     if (!animation) {
       this.finishClose();
       return;
@@ -391,6 +499,17 @@ export class AndesAlert {
       // Cancelled (e.g. the host was destroyed mid-collapse) - nothing left to hide.
       () => undefined,
     );
+  }
+
+  /** Brings the alert back, cancelling a collapse that is still running. */
+  private reopen(): void {
+    if (this.visible() && !this.leaving()) return;
+    this.collapsing?.cancel();
+    this.collapsing = null;
+    this.card()?.nativeElement.style.removeProperty('overflow');
+    this.countdown = { duration: 0, left: 0 };
+    this.leaving.set(false);
+    this.visible.set(true);
   }
 
   /**
@@ -412,7 +531,7 @@ export class AndesAlert {
       ? style.height
       : `${card.offsetHeight}px`;
     card.style.overflow = 'hidden';
-    // Height, padding and opacity run together over the whole duration, as in Ant Design.
+    // Height, padding and opacity run together over the whole duration.
     return card.animate(
       [
         {
@@ -435,6 +554,7 @@ export class AndesAlert {
   private finishClose(animation?: Animation): void {
     this.restoreFocus();
     this.visible.set(false);
+    this.open.set(false);
     afterNextRender(
       () => {
         animation?.cancel();

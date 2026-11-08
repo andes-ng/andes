@@ -619,9 +619,9 @@ describe('AndesPopover - extended features', () => {
         'transform-origin: 0 var(--andes-popover-origin, var(--_along, 50%));',
       );
       expect(css).toContain(
-        "[data-align='start']:dir(rtl) {\n  --_along: calc(100% - 20px);",
+        "[data-align='start']:dir(rtl) {\n  --_along: calc(100% - 24px);",
       );
-      expect(css).toContain("[data-align='end']:dir(rtl) {\n  --_along: 20px;");
+      expect(css).toContain("[data-align='end']:dir(rtl) {\n  --_along: 24px;");
     });
 
     it('measures where the motion grows from once the panel is laid out', async () => {
@@ -700,26 +700,26 @@ describe('AndesPopover - extended features', () => {
         'packages/ui/src/lib/popover/popover-content.css',
         'utf8',
       );
-      // 16px by 9px: 8px of arrow and the 1px of the panel border it overlaps.
+      // 24px by 9px: 8px of arrow and the 1px of the panel border it overlaps.
       expect(css).toMatch(
-        /\.andes-popover-arrow \{[^}]*width: 16px;[^}]*height: 9px;/,
+        /\.andes-popover-arrow \{[^}]*width: 24px;[^}]*height: 9px;/,
       );
       const paths = [...css.matchAll(/clip-path: path\(\s*'([^']+)'/g)].map(
         (m) => m[1],
       );
       expect(paths).toHaveLength(2);
       // The outline starts on the border (y = 8 base line, 9 inner edge), the fill 1px inside.
-      expect(paths[0]).toMatch(/^M 0 9 L 0 8 A 4 4 /);
-      expect(paths[0]).toMatch(/ A 2 2 0 0 1 /);
-      expect(paths[0]).toMatch(/A 4 4 0 0 0 16 8 L 16 9 Z$/);
-      expect(paths[1]).toMatch(/^M 0 9 A 5 5 /);
-      expect(paths[1]).toMatch(/ A 1 1 0 0 1 /);
-      expect(paths[1]).toMatch(/A 5 5 0 0 0 16 9 Z$/);
+      expect(paths[0]).toMatch(/^M 0 9 L 0 8 A 4.5 4.5 /);
+      expect(paths[0]).toMatch(/ A 2.5 2.5 0 0 1 /);
+      expect(paths[0]).toMatch(/A 4.5 4.5 0 0 0 24 8 L 24 9 Z$/);
+      expect(paths[1]).toMatch(/^M 0 9 A 5.5 5.5 /);
+      expect(paths[1]).toMatch(/ A 1.5 1.5 0 0 1 /);
+      expect(paths[1]).toMatch(/A 5.5 5.5 0 0 0 24 9 Z$/);
       // Whole-pixel placement for each side: base on the surface's outer border edge.
       expect(css).toContain("[data-side='bottom'] {\n  top: -9px;");
       expect(css).toContain("[data-side='top'] {\n  bottom: -2px;");
-      expect(css).toContain("[data-side='right'] {\n  left: -9px;");
-      expect(css).toContain("[data-side='left'] {\n  right: -9px;");
+      expect(css).toContain("[data-side='right'] {\n  left: -13px;");
+      expect(css).toContain("[data-side='left'] {\n  right: -13px;");
       expect(css).not.toContain('polygon');
     });
 
@@ -1028,7 +1028,7 @@ describe('AndesPopover - extended features', () => {
       const arrow = panel()?.querySelector<HTMLElement>('.andes-popover-arrow');
       expect(
         arrow?.style.getPropertyValue('--andes-popover-arrow-offset'),
-      ).toBe('20px');
+      ).toBe('24px');
     });
 
     it('centres the arrow on the trigger, snapped to a whole device pixel', async () => {
@@ -1069,12 +1069,12 @@ describe('AndesPopover - extended features', () => {
       await fixture.whenStable();
       update();
 
-      // 200 / 2 - 20px arrow inset (the 8px radius, the 8px half-width, 4px clear).
-      expect(overlay.config().positioning).toMatchObject({ alignOffset: 80 });
+      // 200 / 2 - 24px arrow inset (the 8px radius, the 12px half-width, 4px clear).
+      expect(overlay.config().positioning).toMatchObject({ alignOffset: 76 });
       const arrow = panel()?.querySelector<HTMLElement>('.andes-popover-arrow');
       expect(
         arrow?.style.getPropertyValue('--andes-popover-arrow-offset'),
-      ).toBe('20px');
+      ).toBe('24px');
     });
   });
 
@@ -1182,15 +1182,21 @@ describe('AndesPopover - extended features', () => {
         const triggerExtent = horizontal ? trigger.width : trigger.height;
 
         expect(surface.getAttribute('data-side')).toBe(side);
+        // The panel sits 8px of arrow plus 6px of air from the trigger, so the tip is 6px clear.
+        const positioning = fixture.debugElement
+          .query(By.directive(AndesPopover))
+          .injector.get(AndesOverlayPrimitive)
+          .config().positioning as { sideOffset?: number };
+        expect((positioning.sideOffset ?? 0) - 8).toBeGreaterThanOrEqual(6);
         // Whole pixel, inside the panel, over the trigger.
         expect(Number.isInteger(offset)).toBe(true);
         expect(start + offset).toBeGreaterThanOrEqual(triggerStart);
         expect(start + offset).toBeLessThanOrEqual(
           triggerStart + triggerExtent,
         );
-        // The arrow's 16px footprint stays 8px (the radius) + 4px away from both corners.
-        expect(offset - 8).toBeGreaterThanOrEqual(8 + 4);
-        expect(extent - offset - 8).toBeGreaterThanOrEqual(8 + 4);
+        // The arrow's 24px footprint stays 8px (the radius) + 4px away from both corners.
+        expect(offset - 12).toBeGreaterThanOrEqual(8 + 4);
+        expect(extent - offset - 12).toBeGreaterThanOrEqual(8 + 4);
         // And a centred panel points at the middle of the trigger.
         if (align === 'center') {
           expect(start + offset).toBe(

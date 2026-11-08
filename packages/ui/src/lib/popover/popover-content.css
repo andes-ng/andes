@@ -109,19 +109,19 @@
 
 /* Before the trigger's position is measured: the edge the alignment names. */
 .andes-popover-content[data-align='start'] {
-  --_along: 20px;
+  --_along: 24px;
 }
 
 .andes-popover-content[data-align='end'] {
-  --_along: calc(100% - 20px);
+  --_along: calc(100% - 24px);
 }
 
 .andes-popover-content[data-align='start']:dir(rtl) {
-  --_along: calc(100% - 20px);
+  --_along: calc(100% - 24px);
 }
 
 .andes-popover-content[data-align='end']:dir(rtl) {
-  --_along: 20px;
+  --_along: 24px;
 }
 
 @starting-style {
@@ -346,31 +346,34 @@
   display: contents;
 }
 
-/* Arrow: a shallow chevron, 16px wide and 8px tall, with a softly rounded tip (2px radius) and
-   concave shoulders (4px radius) that blend into the panel edge, so the edge flows into the
-   arrow with no corner and no step. It is two stacked layers cut with `clip-path: path()`:
-   the element itself is the outline in the border colour, and its `::before` is the fill, the
-   same shape inset by 1px (tip radius 1px, shoulder radius 5px, same centres). Both layers
-   run 1px past the base line, into the panel's own 1px border, so the panel border continues
-   into the outline and the fill erases the border line across the base: one silhouette, no
-   seam. The geometry is drawn pointing up (apex at the top, base line 8px down) and rotated
-   about the centre of that base line for the other sides, in whole 90 degree turns, so every
-   coordinate stays on whole pixels. The offset along the edge (`--andes-popover-arrow-offset`,
-   measured by `AndesPopoverBase`, snapped to whole device pixels) is where the arrow's
-   centre sits; without it the arrow is centred. The base sits exactly on the surface's outer
-   border edge: the surface's own 1px border plus the arrow's 8px of height reach out to the
-   trigger side of the gap. Reads `--_border` and the panel background, so presets and custom
-   colours give a solid arrow. */
+/* Arrow: a wide, shallow chevron - 24px across including its shoulders, 8px tall, a slope of
+   about 40 degrees - with a softly rounded tip (2.5px radius) and concave shoulders (4.5px
+   radius) that blend into the panel edge, so the edge flows into the arrow with no corner and
+   no step. It is two stacked layers cut with `clip-path: path()`: the element itself is the
+   outline in the border colour, and its `::before` is the fill, the same shape inset by 1px
+   (tip radius 1.5px, shoulder radius 5.5px, same centres). Both layers run 1px past the base
+   line, into the panel's own 1px border, so the panel border continues into the outline and
+   the fill erases the border line across the base: one silhouette, no seam. The geometry is
+   drawn pointing up (apex at the top, base line 8px down) and rotated about the centre of that
+   base line for the other sides, in whole 90 degree turns, so every coordinate stays on whole
+   pixels. The offset along the edge (`--andes-popover-arrow-offset`, measured by
+   `AndesPopoverBase`, snapped to whole device pixels) is where the arrow's centre sits;
+   without it the arrow is centred. The base sits exactly on the surface's outer border edge:
+   the surface's own 1px border plus the arrow's 8px of height reach out towards the trigger,
+   and the panel is placed 6px further out than that, so the tip never touches the trigger. The
+   surface must not clip it: nothing on the surface sets `overflow` except while the content
+   swaps (`overflow-clip-margin` keeps the arrow then). Reads `--_border` and the panel
+   background, so presets and custom colours give a solid arrow. */
 .andes-popover-arrow {
   position: absolute;
   box-sizing: border-box;
-  width: 16px;
+  width: 24px;
   height: 9px;
   background-color: var(--_border);
   clip-path: path(
-    'M 0 9 L 0 8 A 4 4 0 0 0 3.489 5.956 L 6.255 1.022 A 2 2 0 0 1 9.745 1.022 L 12.511 5.956 A 4 4 0 0 0 16 8 L 16 9 Z'
+    'M 0 9 L 0 8 A 4.5 4.5 0 0 0 2.911 6.932 L 10.383 0.594 A 2.5 2.5 0 0 1 13.617 0.594 L 21.089 6.932 A 4.5 4.5 0 0 0 24 8 L 24 9 Z'
   );
-  transform-origin: 8px 8px;
+  transform-origin: 12px 8px;
   pointer-events: none;
 }
 
@@ -380,29 +383,29 @@
   inset: 0;
   background-color: var(--andes-popover-background, var(--andes-color-popover));
   clip-path: path(
-    'M 0 9 A 5 5 0 0 0 4.361 6.445 L 7.128 1.511 A 1 1 0 0 1 8.872 1.511 L 11.639 6.445 A 5 5 0 0 0 16 9 Z'
+    'M 0 9 A 5.5 5.5 0 0 0 3.558 7.694 L 11.03 1.356 A 1.5 1.5 0 0 1 12.97 1.356 L 20.442 7.694 A 5.5 5.5 0 0 0 24 9 Z'
   );
 }
 
 .andes-popover-arrow[data-side='bottom'] {
   top: -9px;
-  left: calc(var(--andes-popover-arrow-offset, 50%) - 8px);
+  left: calc(var(--andes-popover-arrow-offset, 50%) - 12px);
 }
 
 .andes-popover-arrow[data-side='top'] {
   bottom: -2px;
-  left: calc(var(--andes-popover-arrow-offset, 50%) - 8px);
+  left: calc(var(--andes-popover-arrow-offset, 50%) - 12px);
   transform: rotate(180deg);
 }
 
 .andes-popover-arrow[data-side='right'] {
-  left: -9px;
+  left: -13px;
   top: calc(var(--andes-popover-arrow-offset, 50%) - 8px);
   transform: rotate(-90deg);
 }
 
 .andes-popover-arrow[data-side='left'] {
-  right: -9px;
+  right: -13px;
   top: calc(var(--andes-popover-arrow-offset, 50%) - 8px);
   transform: rotate(90deg);
 }

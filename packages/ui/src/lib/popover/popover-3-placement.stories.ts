@@ -135,7 +135,7 @@ export const ArrowPointAtCenter: Story = {
 export const Offsets: Story = {
   name: 'Offsets',
   parameters: about(
-    'sideOffset sets the gap to the trigger and alignOffset slides the panel along it, both in pixels.',
+    'sideOffset sets the whole distance from the trigger to the panel (14px by default with an arrow, 8px without) and alignOffset slides the panel along it, both in pixels.',
   ),
   render: () => ({
     template: `

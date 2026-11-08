@@ -122,15 +122,15 @@ export const CssProperties: Story = {
 export const FlushContent: Story = {
   name: 'Edge to edge',
   parameters: about(
-    'Setting the padding to 0 lets a block fill the panel to its rounded edge, here a coloured banner above the text.',
+    'Setting the padding to 0 lets a block fill the panel to its rounded edge, here a coloured banner above the text that follows the rounded corners itself, so nothing clips the arrow.',
   ),
   render: () => ({
     template: `
       <div style="${stage}">
         <andes-popover [showArrow]="true">
           <andes-button variant="outline" andesPopoverTrigger>Banner</andes-button>
-          <andes-popover-content style="--andes-popover-padding: 0; overflow: hidden; width: 16rem;">
-            <div style="height: 4rem; background: linear-gradient(135deg, var(--andes-color-primary), var(--andes-color-info));"></div>
+          <andes-popover-content style="--andes-popover-padding: 0; width: 16rem;">
+            <div style="height: 4rem; border-radius: calc(var(--andes-radius-lg) - 1px) calc(var(--andes-radius-lg) - 1px) 0 0; background: linear-gradient(135deg, var(--andes-color-primary), var(--andes-color-info));"></div>
             <p style="margin: 0; padding: 0.75rem 1rem;">The panel has no padding of its own here.</p>
           </andes-popover-content>
         </andes-popover>
@@ -279,4 +279,30 @@ export const Motion: Story = {
       `,
     };
   },
+};
+
+/** Gap to the trigger. */
+export const GapToTheTrigger: Story = {
+  name: 'Gap to the trigger',
+  parameters: about(
+    'With an arrow the panel sits 14px from the trigger (the 8px arrow plus 6px of air) and without one 8px; --andes-popover-gap on the trigger or any ancestor changes the air, and sideOffset sets the whole distance.',
+  ),
+  render: () => ({
+    template: `
+      <div style="${wideStage}">
+        <andes-popover [showArrow]="true" content="The default: 6px of air beyond the arrow.">
+          <andes-button variant="outline" andesPopoverTrigger>Default (14px)</andes-button>
+        </andes-popover>
+        <andes-popover [showArrow]="true" content="12px of air beyond the arrow.">
+          <andes-button variant="outline" andesPopoverTrigger style="--andes-popover-gap: 12px;">--andes-popover-gap: 12px</andes-button>
+        </andes-popover>
+        <andes-popover content="No arrow: 8px.">
+          <andes-button variant="outline" andesPopoverTrigger>No arrow (8px)</andes-button>
+        </andes-popover>
+        <andes-popover [showArrow]="true" [sideOffset]="10" content="sideOffset is the whole distance.">
+          <andes-button variant="outline" andesPopoverTrigger>sideOffset 10</andes-button>
+        </andes-popover>
+      </div>
+    `,
+  }),
 };

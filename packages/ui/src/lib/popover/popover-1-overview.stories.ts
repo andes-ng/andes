@@ -78,7 +78,7 @@ const meta: Meta<AndesPopover> = {
     side: 'bottom',
     align: 'center',
     trigger: 'click',
-    sideOffset: 8,
+    sideOffset: undefined,
     alignOffset: 0,
     showArrow: false,
     arrowPointAtCenter: false,

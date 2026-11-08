@@ -82,7 +82,7 @@ const OPPOSITE_SIDE: Readonly<Record<AndesOverlaySide, AndesOverlaySide>> = {
 };
 
 /** Half the width of the arrow's footprint, shoulders included (px). */
-const ARROW_HALF_WIDTH = 8;
+const ARROW_HALF_WIDTH = 12;
 /** Room kept between the arrow's footprint and the rounded corner next to it (px). */
 const ARROW_CORNER_GAP = 4;
 /** The default corner radius (px), which the arrow's inset from an edge clears. */
@@ -97,6 +97,13 @@ const VIEWPORT_MARGIN = 8;
 /** The controls a pinned panel can hand focus to. */
 const PANEL_FOCUSABLE_SELECTOR =
   'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
+
+/** How far the arrow reaches out of the panel edge (px). */
+const ARROW_HEIGHT = 8;
+/** Default clear space between the trigger and the arrow's tip (px). */
+const DEFAULT_ARROW_GAP = 6;
+/** Default distance between the trigger and a panel without an arrow (px). */
+const DEFAULT_PLAIN_GAP = 8;
 
 /** A number is px, a string any CSS length; empty is `null`. */
 function cssLength(value: number | string | null | undefined): string | null {
@@ -158,8 +165,15 @@ export abstract class AndesPopoverBase {
   readonly side = input<AndesOverlaySide>('bottom');
   /** Alignment along that side. Default `'center'`. */
   readonly align = input<AndesOverlayAlign>('center');
-  /** Gap in px between the trigger and the panel. Default `8`. */
-  readonly sideOffset = input(8);
+  /**
+   * Distance in px from the trigger to the panel. By default it follows the arrow: with
+   * `showArrow` the panel sits the arrow's 8px of height plus 6px of air from the trigger
+   * (14px), so the tip never touches it; without an arrow the panel sits 8px away. The air
+   * can be set for every panel with the `--andes-popover-gap` custom property (the clear
+   * space between the trigger and the arrow tip, or the panel's edge without an arrow); a
+   * number here replaces both and is the whole distance to the panel.
+   */
+  readonly sideOffset = input<number | undefined>(undefined);
   /** Extra px offset along the alignment axis. Default `0`. */
   readonly alignOffset = input(0);
   /** Renders a small pointer element on the panel, on the anchored side. Default `false`. */
@@ -747,6 +761,31 @@ export abstract class AndesPopoverBase {
   // Internals.
   // ---------------------------------------------------------------------------
 
+  /**
+   * The distance from the trigger to the panel: `sideOffset` when given, else the
+   * `--andes-popover-gap` air (read from the trigger, so it can be set on it or on any
+   * ancestor) plus the arrow's height when there is an arrow.
+   */
+  private effectiveOffset(): number {
+    const explicit = this.sideOffset();
+    if (explicit !== undefined && explicit !== null) {
+      return explicit;
+    }
+    const arrow = this.showArrow();
+    const anchor = this.overlay.anchor();
+    const token = anchor
+      ? Number.parseFloat(
+          getComputedStyle(anchor).getPropertyValue('--andes-popover-gap'),
+        )
+      : Number.NaN;
+    const gap = Number.isFinite(token)
+      ? token
+      : arrow
+        ? DEFAULT_ARROW_GAP
+        : DEFAULT_PLAIN_GAP;
+    return gap + (arrow ? ARROW_HEIGHT : 0);
+  }
+
   private buildConfig(): Partial<AndesOverlayConfig> {
     const policy = this.focusPolicy();
     return {
@@ -761,7 +800,7 @@ export abstract class AndesPopoverBase {
         kind: 'anchored',
         side: this._resolvedSide(),
         align: this.resolvedAlign(),
-        sideOffset: this.sideOffset(),
+        sideOffset: this.effectiveOffset(),
         alignOffset: this.alignOffset() + this.centerShift(),
         // Flipping is decided here (main axis only, see `chooseSide`) rather
         // than by CDK, whose fallback list would jump to a perpendicular side
@@ -1050,7 +1089,7 @@ export abstract class AndesPopoverBase {
     };
     const needs = (side: AndesOverlaySide) =>
       (side === 'top' || side === 'bottom' ? panel.height : panel.width) +
-      this.sideOffset() +
+      this.effectiveOffset() +
       VIEWPORT_MARGIN;
 
     if (space[preferred] >= needs(preferred)) {

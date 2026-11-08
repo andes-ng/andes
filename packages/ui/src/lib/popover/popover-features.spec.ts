@@ -1065,3 +1065,120 @@ describe('AndesPopover - hover, then click to pin', () => {
     }
   });
 });
+
+@Component({
+  imports: [AndesPopover, AndesPopoverTrigger],
+  template: `
+    <andes-popover
+      [showArrow]="arrow()"
+      [sideOffset]="offset()"
+      [side]="side()"
+      content="Body"
+    >
+      <button type="button" id="trigger" andesPopoverTrigger>Open</button>
+    </andes-popover>
+  `,
+})
+class GapHost {
+  readonly arrow = signal(true);
+  readonly offset = signal<number | undefined>(undefined);
+  readonly side = signal<'top' | 'bottom' | 'left' | 'right'>('bottom');
+  readonly popover = viewChild.required(AndesPopover);
+}
+
+describe('AndesPopover - distance to the trigger', () => {
+  function distance(host: GapHost, fixture: { detectChanges(): void }) {
+    fixture.detectChanges();
+    const positioning = (
+      host.popover() as unknown as {
+        overlay: { config(): { positioning: { sideOffset?: number } } };
+      }
+    ).overlay.config().positioning;
+    return positioning.sideOffset;
+  }
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it('keeps the arrow tip 6px from the trigger: 8px of arrow plus 6px of air', () => {
+    const fixture = TestBed.createComponent(GapHost);
+    expect(distance(fixture.componentInstance, fixture)).toBe(14);
+  });
+
+  it('keeps a smaller 8px gap without an arrow', () => {
+    const fixture = TestBed.createComponent(GapHost);
+    fixture.componentInstance.arrow.set(false);
+    expect(distance(fixture.componentInstance, fixture)).toBe(8);
+  });
+
+  it('takes an explicit sideOffset as the whole distance, arrow or not', () => {
+    const fixture = TestBed.createComponent(GapHost);
+    fixture.componentInstance.offset.set(20);
+    expect(distance(fixture.componentInstance, fixture)).toBe(20);
+    fixture.componentInstance.arrow.set(false);
+    expect(distance(fixture.componentInstance, fixture)).toBe(20);
+  });
+
+  it('reads the --andes-popover-gap air from the trigger, before the arrow height', () => {
+    const fixture = TestBed.createComponent(GapHost);
+    fixture.detectChanges();
+    const trigger = document.getElementById('trigger') as HTMLElement;
+    trigger.style.setProperty('--andes-popover-gap', '10px');
+    fixture.componentInstance.arrow.set(false);
+    fixture.detectChanges();
+    expect(distance(fixture.componentInstance, fixture)).toBe(10);
+    fixture.componentInstance.arrow.set(true);
+    expect(distance(fixture.componentInstance, fixture)).toBe(18);
+  });
+
+  it('flips on the real distance: a panel that fits with 8px but not with 14px', async () => {
+    vi.useFakeTimers();
+    const fixture = TestBed.createComponent(GapHost);
+    fixture.detectChanges();
+    const height = window.innerHeight;
+    // Room below: 100 for the panel (92) + distance + the 8px viewport margin -> fits at 8, not at 14.
+    const rect = (r: {
+      left: number;
+      top: number;
+      width: number;
+      height: number;
+    }) =>
+      ({
+        ...r,
+        x: r.left,
+        y: r.top,
+        right: r.left + r.width,
+        bottom: r.top + r.height,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+      function (this: HTMLElement) {
+        if (this.id === 'trigger') {
+          return rect({ left: 100, top: height - 142, width: 80, height: 30 });
+        }
+        return this.classList.contains('cdk-overlay-pane')
+          ? rect({ left: 60, top: 0, width: 200, height: 92 })
+          : rect({ left: 0, top: 0, width: 0, height: 0 });
+      },
+    );
+    for (const [arrow, expected] of [
+      [false, 'bottom'],
+      [true, 'top'],
+    ] as const) {
+      fixture.componentInstance.arrow.set(arrow);
+      fixture.detectChanges();
+      (document.getElementById('trigger') as HTMLElement).click();
+      fixture.detectChanges();
+      await vi.advanceTimersByTimeAsync(20);
+      fixture.detectChanges();
+      expect(
+        document
+          .querySelector('.andes-popover-content')
+          ?.getAttribute('data-side'),
+      ).toBe(expected);
+      fixture.componentInstance.popover().close();
+      fixture.detectChanges();
+      await vi.advanceTimersByTimeAsync(400);
+    }
+    vi.useRealTimers();
+  });
+});

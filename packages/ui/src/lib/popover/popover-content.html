@@ -1,6 +1,10 @@
 <div
   andesOverlayContent
   class="andes-popover-content"
+  [class]="popover.partClass('root')"
+  [style]="popover.partStyle('root')"
+  [style.--andes-popover-width]="popover.panelWidth()"
+  [style.--andes-popover-max-width]="popover.panelMaxWidth()"
   [attr.data-side]="popover.resolvedSide()"
   [attr.data-align]="popover.resolvedAlign()"
   [attr.data-color]="popover.colorAttribute()"
@@ -16,6 +20,8 @@
   @if (popover.showArrow()) {
   <span
     class="andes-popover-arrow"
+    [class]="popover.partClass('arrow')"
+    [style]="popover.partStyle('arrow')"
     [attr.data-side]="popover.resolvedSide()"
     [style.left.px]="
       popover.resolvedSide() === 'top' || popover.resolvedSide() === 'bottom'
@@ -30,7 +36,12 @@
     aria-hidden="true"
   ></span>
   } @if (popover.panelTitle(); as title) {
-  <div class="andes-popover-title" [id]="popover.titleId">
+  <div
+    class="andes-popover-title"
+    [class]="popover.partClass('title')"
+    [style]="popover.partStyle('title')"
+    [id]="popover.titleId"
+  >
     @if (isTemplate(title)) {
     <div
       class="andes-popover-slot"
@@ -49,7 +60,12 @@
     [attr.tabindex]="popover.panelMaxHeight() ? 0 : null"
   >
     @if (popover.panelBody(); as body) {
-    <div class="andes-popover-body" [id]="popover.bodyId">
+    <div
+      class="andes-popover-body"
+      [class]="popover.partClass('body')"
+      [style]="popover.partStyle('body')"
+      [id]="popover.bodyId"
+    >
       @if (isTemplate(body)) {
       <div
         class="andes-popover-slot"

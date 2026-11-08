@@ -531,22 +531,39 @@ describe('AndesPopover - extended features', () => {
       expect(panel()?.getAttribute('aria-labelledby')).toBe(title?.id);
     });
 
-    it('sets a 16/24 semibold title over the 14/22 panel text', () => {
+    it('sets a 14/20 medium title over 13/20 muted text on a 14/20 panel', () => {
       const { trigger, panel, update } = setup();
       trigger().click();
       update();
 
       const surface = getComputedStyle(panel() as Element);
-      expect(surface.fontSize).toBe('var(--andes-text-font-size, 0.875rem)');
-      expect(surface.lineHeight).toBe(
-        'var(--andes-text-line-height, 1.375rem)',
-      );
+      expectLength(surface.fontSize, '0.875rem');
+      expectLength(surface.lineHeight, '1.25rem');
       const title = getComputedStyle(
         panel()?.querySelector('.andes-popover-title') as Element,
       );
-      expectLength(title.fontSize, '1rem');
-      expectLength(title.lineHeight, '1.5rem');
-      expect(title.fontWeight).toBe('600');
+      expectLength(title.fontSize, '0.875rem');
+      expectLength(title.lineHeight, '1.25rem');
+      expect(title.fontWeight).toBe('500');
+      const body = getComputedStyle(
+        panel()?.querySelector('.andes-popover-body') as Element,
+      );
+      expectLength(body.fontSize, '0.8125rem');
+      expectLength(body.lineHeight, '1.25rem');
+    });
+
+    it('pads 12px by 16px measured to the outer edge, with the soft shadow and an 8px radius', () => {
+      const css = readFileSync(
+        'packages/ui/src/lib/popover/popover-content.css',
+        'utf8',
+      );
+      expect(css).toContain('var(--andes-popover-padding, 0.75rem)');
+      expect(css).toContain('var(--andes-popover-padding, 1rem)');
+      expect(css).toContain('calc(var(--_pad-block) - 1px)');
+      expect(css).toContain('0 6px 16px 0 rgb(0 0 0 / 8%)');
+      expect(css).toContain(
+        'var(--andes-popover-radius, var(--andes-radius-lg))',
+      );
     });
 
     it('enters with a 150ms soft fade and a drift of at most 4px', () => {

@@ -4,9 +4,16 @@
     <div class="andes-popconfirm">
       <div class="andes-popconfirm-message">
         @if (icon() !== null) {
-        <span class="andes-popconfirm-icon" aria-hidden="true">
-          @if (icon(); as customIcon) {
+        <span
+          class="andes-popconfirm-icon"
+          [class]="partClass('icon')"
+          [style]="partStyle('icon')"
+          aria-hidden="true"
+        >
+          @if (iconTemplate(); as customIcon) {
           <ng-container *ngTemplateOutlet="customIcon" />
+          } @else if (iconName(); as name) {
+          <ng-icon class="andes-popconfirm-icon-custom" [name]="name" />
           } @else {
           <ng-icon
             class="andes-popconfirm-icon-default"
@@ -16,8 +23,13 @@
         </span>
         }
         <div class="andes-popconfirm-text">
-          @if (title(); as titleValue) {
-          <div class="andes-popconfirm-title" [id]="titleId">
+          @if (titleContent(); as titleValue) {
+          <div
+            class="andes-popconfirm-title"
+            [class]="partClass('title')"
+            [style]="partStyle('title')"
+            [id]="titleId"
+          >
             @if (isTemplate(titleValue)) {
             <div
               class="andes-popconfirm-slot"
@@ -26,8 +38,13 @@
             ></div>
             } @else { {{ titleValue }} }
           </div>
-          } @if (description(); as descriptionValue) {
-          <div class="andes-popconfirm-description" [id]="bodyId">
+          } @if (descriptionContent(); as descriptionValue) {
+          <div
+            class="andes-popconfirm-description"
+            [class]="partClass('body')"
+            [style]="partStyle('body')"
+            [id]="bodyId"
+          >
             @if (isTemplate(descriptionValue)) {
             <div
               class="andes-popconfirm-slot"
@@ -39,23 +56,44 @@
           }
         </div>
       </div>
-      <div class="andes-popconfirm-buttons">
+      <div
+        class="andes-popconfirm-buttons"
+        [class]="partClass('footer')"
+        [style]="partStyle('footer')"
+      >
         @if (showCancel()) {
         <andes-button
           class="andes-popconfirm-cancel"
-          size="sm"
-          variant="outline"
-          cdkFocusInitial
+          [class]="cancel().class"
+          [size]="cancel().size"
+          [variant]="cancel().variant"
+          [shape]="cancel().shape"
+          [color]="cancel().color"
+          [danger]="cancel().danger"
+          [ghost]="cancel().ghost"
+          [disabled]="cancel().disabled"
+          [loading]="cancel().loading"
+          [aria-label]="cancel().ariaLabel"
+          [attr.cdkFocusInitial]="initialFocus() === 'cancel' ? '' : null"
           (click)="handleCancel()"
           >{{ cancelText() }}</andes-button
         >
         }
         <andes-button
           class="andes-popconfirm-ok"
-          size="sm"
-          [variant]="okType()"
-          [disabled]="okDisabled()"
-          [loading]="okBusy()"
+          [class]="ok().class"
+          [size]="ok().size"
+          [variant]="ok().variant"
+          [shape]="ok().shape"
+          [color]="ok().color"
+          [danger]="ok().danger"
+          [ghost]="ok().ghost"
+          [disabled]="ok().disabled"
+          [loading]="ok().loading"
+          [aria-label]="ok().ariaLabel"
+          [attr.cdkFocusInitial]="
+            initialFocus() === 'ok' || !showCancel() ? '' : null
+          "
           (click)="handleOk()"
           >{{ okText() }}</andes-button
         >

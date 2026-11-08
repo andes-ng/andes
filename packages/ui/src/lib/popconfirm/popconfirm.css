@@ -4,14 +4,16 @@
   display: contents;
 }
 
-/* The surface itself (background, border, radius, shadow, type, arrow)
-   is `andes-popover-content`; this is only the confirmation layout inside it. */
+/* The surface itself (background, border, radius, shadow, type, arrow) is
+   `andes-popover-content`; this is only the confirmation layout inside it, in the same slim
+   scale: a 14px/20px title over a 13px/20px description 2px below it, a 16px icon on the
+   title's first line, and a row of small (24px, 13px) buttons 12px under the text. */
 .andes-popconfirm {
   display: flex;
   flex-direction: column;
   gap: var(--andes-space-3);
-  font-size: var(--andes-text-font-size, 0.875rem);
-  line-height: var(--andes-text-line-height, 1.375rem);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
 }
 
 .andes-popconfirm-message {
@@ -20,20 +22,21 @@
   gap: var(--andes-space-2);
 }
 
-/* The box is one text line tall (the surface's 1.375rem line-height), so the
-   icon centers on the title's first line however many lines follow. Plain
-   amber is ~2.2:1 on the light surface; mixing in a quarter of the surface's
-   foreground darkens it past 3:1 there and lightens it in dark. */
+/* The box is one title line tall (20px), so the icon centres on the first line however many
+   lines follow. Plain amber is ~2.2:1 on the light surface; mixing in a quarter of the
+   surface's foreground darkens it past 3:1 there and lightens it in dark. */
 .andes-popconfirm-icon {
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
-  /* One text line tall, so the glyph centres on the title's first line. */
-  height: var(--andes-text-line-height, 1.375rem);
-  color: color-mix(
-    in srgb,
-    var(--andes-color-warning) 75%,
-    var(--andes-popover-foreground, var(--andes-color-popover-foreground))
+  height: 1.25rem;
+  color: var(
+    --andes-popconfirm-icon-color,
+    color-mix(
+      in srgb,
+      var(--andes-color-warning) 75%,
+      var(--andes-popover-foreground, var(--andes-color-popover-foreground))
+    )
   );
   font-size: 1rem;
   line-height: 1;
@@ -42,7 +45,8 @@
 /* The default mark is lucide's circle-alert in an `ng-icon`, drawn as the solid disc it always
    was: the ring is filled and the exclamation mark is knocked out in the panel's own colour.
    As a flex box its svg never sits on a text baseline, so it fills the 1em box exactly. */
-.andes-popconfirm-icon-default {
+.andes-popconfirm-icon-default,
+.andes-popconfirm-icon-custom {
   display: flex;
   width: 1em;
   height: 1em;
@@ -59,17 +63,16 @@
 .andes-popconfirm-text {
   display: flex;
   flex-direction: column;
-  gap: var(--andes-space-1);
+  gap: 0.125rem;
   min-width: 0;
 }
 
 .andes-popconfirm-title {
-  /* Semibold like the other surface titles, but kept at the 14/22 body size: it is
-     a one-line question set beside the icon, which is centred on that 22px line. */
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .andes-popconfirm-description {
+  font-size: 0.8125rem;
   color: var(
     --andes-popover-muted-foreground,
     var(--andes-color-muted-foreground)
@@ -80,7 +83,11 @@
   display: contents;
 }
 
+/* Small buttons: 24px high with 13px labels and a little less side padding. */
 .andes-popconfirm-buttons {
+  --andes-control-height-sm: 1.5rem;
+  --andes-control-font-size-sm: 0.8125rem;
+  --andes-control-padding-x-sm: 0.5rem;
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;

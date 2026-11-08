@@ -8,6 +8,7 @@ import {
   type AndesOverlayRole,
   type AndesOverlaySide,
 } from '@andes-ng/primitives';
+import { OverlayContainer } from '@angular/cdk/overlay';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   afterNextRender,
@@ -23,6 +24,7 @@ import {
   linkedSignal,
   model,
   numberAttribute,
+  output,
   signal,
   untracked,
   ViewContainerRef,
@@ -32,17 +34,38 @@ import {
 } from '@angular/core';
 
 import {
+  AndesPopoverOverlayContainer,
+  resolveAndesPopoverContainer,
+} from './popover-container';
+import {
   ANDES_POPOVER_DEFAULT_HOVER_DELAY,
   ANDES_POPOVER_PLACEMENTS,
   ANDES_POPOVER_PRESET_COLORS,
+  andesPopoverStyleObject,
+  type AndesPopoverChangeSource,
+  type AndesPopoverClassNamesInput,
+  type AndesPopoverContainer,
+  type AndesPopoverContentInput,
+  type AndesPopoverOpenChange,
   type AndesPopoverPlacement,
   type AndesPopoverPresetColor,
   type AndesPopoverRenderable,
+  type AndesPopoverSemanticInfo,
+  type AndesPopoverSemanticPart,
+  type AndesPopoverStylesInput,
+  type AndesPopoverTemplateContext,
   type AndesPopoverTriggerAction,
 } from './popover-types';
 
 /** How the panel was opened - decides whether it may move focus. */
 type AndesPopoverOpenSource = 'click' | 'hover' | 'focus' | 'programmatic';
+
+/** Resolves a `title`/`content`/`description` input: a function is called, the rest is kept. */
+export function andesPopoverRenderable(
+  value: AndesPopoverContentInput,
+): AndesPopoverRenderable | null | undefined {
+  return typeof value === 'function' ? value() : value;
+}
 
 interface FocusPolicy {
   readonly autoFocus: AndesOverlayAutoFocus;
@@ -62,6 +85,24 @@ const ARROW_EDGE_INSET = 16;
 const ARROW_ANCHOR_INSET = 8;
 /** Mirrors the overlay primitive's default `viewportMargin`. */
 const VIEWPORT_MARGIN = 8;
+
+/** A number is px, a string any CSS length; empty is `null`. */
+function cssLength(value: number | string | null | undefined): string | null {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+  return typeof value === 'number' ? `${value}px` : value;
+}
+
+function changeSourceOf(
+  reason: AndesOverlayCloseReason,
+): AndesPopoverChangeSource {
+  return reason === 'escape-key' ||
+    reason === 'outside-click' ||
+    reason === 'close-button'
+    ? reason
+    : 'imperative';
+}
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
@@ -83,6 +124,10 @@ export abstract class AndesPopoverBase {
   private readonly viewContainerRef = inject(ViewContainerRef);
   private readonly document = inject(DOCUMENT);
   private readonly injector = inject(Injector);
+  private readonly scopedContainer = (() => {
+    const container = inject(OverlayContainer);
+    return container instanceof AndesPopoverOverlayContainer ? container : null;
+  })();
 
   /** The `<ng-template>` rendered into the overlay. */
   protected abstract readonly panelTemplate: Signal<
@@ -177,6 +222,44 @@ export abstract class AndesPopoverBase {
     return typeof value === 'number' ? `${value}px` : value;
   });
 
+  /** Panel width: a number is taken as px, a string as any CSS length. Default: fits the content. */
+  readonly width = input<number | string | null | undefined>(undefined);
+  /**
+   * Widest the panel may grow before its text wraps: a number is px, a string any CSS
+   * length. Default `24rem`, and never wider than the viewport.
+   */
+  readonly maxWidth = input<number | string | null | undefined>(undefined);
+  /**
+   * Where the panel is drawn: an element, an `ElementRef`, a CSS selector or a function
+   * returning one. The panel then lives inside it (so a theme scope, `dir` or shadow root
+   * on that element applies) but is still positioned against the viewport, so the element
+   * must not have a `transform` or `filter`. Default: the page-wide overlay layer.
+   */
+  readonly container = input<AndesPopoverContainer>(null);
+  /** Extra classes for the panel's parts (an object, or a function of the panel's props). */
+  readonly classNames = input<AndesPopoverClassNamesInput | null | undefined>(
+    null,
+  );
+  /** Inline styles for the panel's parts (an object, or a function of the panel's props). */
+  readonly styles = input<AndesPopoverStylesInput | null | undefined>(null);
+  /** Escape closes the panel. Default `true`. */
+  readonly closeOnEscape = input(true, { transform: booleanAttribute });
+  /** A press outside the panel and its trigger closes it. Default `true`. */
+  readonly closeOnOutsideClick = input(true, { transform: booleanAttribute });
+  /**
+   * Where focus goes when a click, context-menu or programmatic open draws the panel:
+   * the first tabbable element in it (`'first-tabbable'`, default), the panel itself
+   * (`'container'`) or nowhere (`'none'`). Hover and focus opens never move focus.
+   */
+  readonly autoFocus = input<AndesOverlayAutoFocus>('first-tabbable');
+  /** Returns focus to the trigger when a click-opened panel closes. Default `true`. */
+  readonly restoreFocus = input(true, { transform: booleanAttribute });
+
+  /** {@link width} as a CSS length. */
+  readonly panelWidth = computed(() => cssLength(this.width()));
+  /** {@link maxWidth} as a CSS length. */
+  readonly panelMaxWidth = computed(() => cssLength(this.maxWidth()));
+
   /** `data-color` of the panel: the preset name, `'custom'`, or `null`. */
   readonly colorAttribute = computed(() => {
     const color = this.color();
@@ -193,6 +276,45 @@ export abstract class AndesPopoverBase {
     this.colorAttribute() === 'custom' ? (this.color() ?? null) : null,
   );
 
+  private readonly semanticInfo = computed<AndesPopoverSemanticInfo>(() => ({
+    props: {
+      placement: this.placement(),
+      side: this.preferredSide(),
+      align: this.resolvedAlign(),
+      showArrow: this.showArrow(),
+      color: this.color() ?? null,
+      open: this.open(),
+    },
+  }));
+
+  private readonly partClassNames = computed(() => {
+    const value = this.classNames();
+    const resolved =
+      typeof value === 'function' ? value(this.semanticInfo()) : value;
+    return resolved ?? {};
+  });
+
+  private readonly partStyles = computed(() => {
+    const value = this.styles();
+    const resolved =
+      typeof value === 'function' ? value(this.semanticInfo()) : value;
+    return resolved ?? {};
+  });
+
+  /** Extra classes for one part, from `classNames`. */
+  partClass(part: AndesPopoverSemanticPart): string | null {
+    const value = this.partClassNames()[part];
+    if (!value) {
+      return null;
+    }
+    return typeof value === 'string' ? value : value.join(' ');
+  }
+
+  /** Inline styles for one part, from `styles`. */
+  partStyle(part: AndesPopoverSemanticPart): Record<string, string> | null {
+    return andesPopoverStyleObject(this.partStyles()[part]);
+  }
+
   /**
    * Open state. Two-way bindable for controlled usage; uncontrolled otherwise.
    * Its `openChange` output fires whenever the component itself changes the
@@ -200,6 +322,19 @@ export abstract class AndesPopoverBase {
    * writes `[open]`.
    */
   readonly open = model(false);
+
+  /**
+   * Whether the panel starts open, for one that is not controlled with `open`. Read once,
+   * when the panel first renders.
+   */
+  readonly defaultOpen = input(false, { transform: booleanAttribute });
+
+  /**
+   * Fires with the new state and what caused it whenever the user (or `show()`,
+   * `close()`, `toggle()`) opens or closes the panel: the counterpart of `openChange`,
+   * which only carries the state. Not fired for a change made by writing `open`.
+   */
+  readonly openChangeDetail = output<AndesPopoverOpenChange>();
 
   /** The side requested through `placement` or `side`. */
   readonly preferredSide = computed(() => {
@@ -266,6 +401,11 @@ export abstract class AndesPopoverBase {
   private closeTimer: ReturnType<typeof setTimeout> | undefined;
   private frame: number | null = null;
   private resizeObserver: ResizeObserver | null = null;
+  private defaultOpenApplied = false;
+  private readonly templateContext: AndesPopoverTemplateContext = {
+    $implicit: { close: () => this.close() },
+    close: () => this.close(),
+  };
   private readonly cachedViews = new Map<
     string,
     { template: TemplateRef<unknown>; view: EmbeddedViewRef<unknown> }
@@ -278,14 +418,25 @@ export abstract class AndesPopoverBase {
     });
 
     effect(() => {
-      const shouldShow = this.open() && !this.disabled();
       const template = this.panelTemplate();
       if (!template) {
         return;
       }
+      // `defaultOpen`: read once, on the panel's first render. After that the panel is
+      // the user's (or `open`'s) to open and close.
+      if (!this.defaultOpenApplied) {
+        this.defaultOpenApplied = true;
+        untracked(() => {
+          if (this.defaultOpen() && !this.disabled() && !this.open()) {
+            this.pendingSource = 'programmatic';
+            this.open.set(true);
+          }
+        });
+      }
+      const shouldShow = this.open() && !this.disabled();
       untracked(() => {
         if (shouldShow) {
-          this.show(template);
+          this.present(template);
         } else {
           this.overlay.close();
         }
@@ -314,15 +465,20 @@ export abstract class AndesPopoverBase {
    * calls; handy from a `TemplateRef` handler or a parent holding the instance.
    */
   close(): void {
-    this.requestClose();
+    this.requestClose('imperative');
+  }
+
+  /** Opens the panel (reported through `openChange`). Does nothing while `disabled`. */
+  show(): void {
+    this.requestOpen('programmatic');
   }
 
   /** Opens if closed, closes if open. */
   toggle(): void {
     if (this.open()) {
-      this.requestClose();
+      this.requestClose('imperative');
     } else {
-      this.requestOpen('click');
+      this.requestOpen('click', 'imperative');
     }
   }
 
@@ -362,7 +518,7 @@ export abstract class AndesPopoverBase {
       // Clicking a hover/focus-opened panel pins it instead of closing it.
       this.pin();
     } else {
-      this.requestClose();
+      this.requestClose('click');
     }
   }
 
@@ -373,7 +529,7 @@ export abstract class AndesPopoverBase {
     }
     event.preventDefault();
     if (!this.open()) {
-      this.requestOpen('click');
+      this.requestOpen('click', 'contextMenu');
     } else if (this.openedBy === 'hover' || this.openedBy === 'focus') {
       this.pin();
     }
@@ -427,7 +583,7 @@ export abstract class AndesPopoverBase {
     ) {
       return;
     }
-    this.requestClose();
+    this.requestClose('focus');
   }
 
   /** @internal */
@@ -469,9 +625,11 @@ export abstract class AndesPopoverBase {
       // `[andesPopoverClose]`.
       entry = {
         template,
-        view: this.viewContainerRef.createEmbeddedView(template, undefined, {
-          injector: this.injector,
-        }),
+        view: this.viewContainerRef.createEmbeddedView(
+          template,
+          this.templateContext,
+          { injector: this.injector },
+        ),
       };
       this.cachedViews.set(key, entry);
     }
@@ -491,21 +649,32 @@ export abstract class AndesPopoverBase {
   }
 
   /** Opens through the same path the trigger uses (honours `disabled`). */
-  protected requestOpen(source: AndesPopoverOpenSource): void {
+  protected requestOpen(
+    source: AndesPopoverOpenSource,
+    change?: AndesPopoverChangeSource,
+  ): void {
     this.clearTimers();
     if (this.disabled() || this.open()) {
       return;
     }
     this.pendingSource = source;
-    this.open.set(true);
+    this.commit(
+      true,
+      change ?? (source === 'programmatic' ? 'imperative' : source),
+    );
   }
 
-  /** Closes and notifies `openChange`. */
-  protected requestClose(): void {
+  /** Closes and notifies `openChange` and `openChangeDetail`. */
+  protected requestClose(source: AndesPopoverChangeSource): void {
     this.clearTimers();
     if (this.open()) {
-      this.open.set(false);
+      this.commit(false, source);
     }
+  }
+
+  private commit(open: boolean, source: AndesPopoverChangeSource): void {
+    this.open.set(open);
+    this.openChangeDetail.emit({ open, source });
   }
 
   // ---------------------------------------------------------------------------
@@ -518,6 +687,8 @@ export abstract class AndesPopoverBase {
       ...andesOverlayPreset('popover'),
       role: this.panelRole,
       panelClass: this.panelClass(),
+      closeOnEscape: this.closeOnEscape(),
+      closeOnOutsideClick: this.closeOnOutsideClick(),
       autoFocus: policy.autoFocus,
       restoreFocus: policy.restoreFocus,
       positioning: {
@@ -535,7 +706,7 @@ export abstract class AndesPopoverBase {
     };
   }
 
-  private show(template: TemplateRef<unknown>): void {
+  private present(template: TemplateRef<unknown>): void {
     if (this.overlay.isOpen()) {
       return;
     }
@@ -547,13 +718,16 @@ export abstract class AndesPopoverBase {
     // where the user is, nor push it back to the trigger on close.
     const passive = source === 'hover' || source === 'focus';
     this.focusPolicy.set({
-      autoFocus: passive ? 'none' : 'first-tabbable',
-      restoreFocus: !passive,
+      autoFocus: passive ? 'none' : this.autoFocus(),
+      restoreFocus: !passive && this.restoreFocus(),
     });
     this._resolvedSide.set(this.preferredSide());
     this.centerShift.set(this.measureCenterShift());
     this._arrowOffset.set(null);
 
+    this.scopedContainer?.setTarget(
+      resolveAndesPopoverContainer(this.container(), this.document),
+    );
     this.overlay.configure(this.buildConfig());
     this.overlay.open(template);
     this.applyZIndex();
@@ -571,7 +745,7 @@ export abstract class AndesPopoverBase {
     this.stopTracking();
     this.openedBy = null;
     if (this.open()) {
-      this.open.set(false);
+      this.commit(false, changeSourceOf(reason));
     }
     if (this.destroyOnHidden()) {
       for (const { view } of this.cachedViews.values()) {
@@ -585,7 +759,10 @@ export abstract class AndesPopoverBase {
   private pin(): void {
     this.clearTimers();
     this.openedBy = 'click';
-    this.focusPolicy.update((policy) => ({ ...policy, restoreFocus: true }));
+    this.focusPolicy.update((policy) => ({
+      ...policy,
+      restoreFocus: this.restoreFocus(),
+    }));
   }
 
   /**
@@ -645,12 +822,12 @@ export abstract class AndesPopoverBase {
     clearTimeout(this.closeTimer);
     const delay = this.closeDelay();
     if (delay <= 0) {
-      this.requestClose();
+      this.requestClose('hover');
       return;
     }
     this.closeTimer = setTimeout(() => {
       this.closeTimer = undefined;
-      this.requestClose();
+      this.requestClose('hover');
     }, delay);
   }
 

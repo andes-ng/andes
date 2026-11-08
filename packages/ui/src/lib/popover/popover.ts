@@ -1,4 +1,5 @@
 import { provideAndesOverlay } from '@andes-ng/primitives';
+import { OverlayContainer } from '@angular/cdk/overlay';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -9,9 +10,10 @@ import {
   viewChild,
 } from '@angular/core';
 
-import { AndesPopoverBase } from './popover-base';
+import { AndesPopoverBase, andesPopoverRenderable } from './popover-base';
+import { AndesPopoverOverlayContainer } from './popover-container';
 import { AndesPopoverContent } from './popover-content';
-import type { AndesPopoverRenderable } from './popover-types';
+import type { AndesPopoverContentInput } from './popover-types';
 
 /**
  * Non-modal floating panel anchored to a trigger element.
@@ -60,6 +62,7 @@ import type { AndesPopoverRenderable } from './popover-types';
   selector: 'andes-popover',
   imports: [AndesPopoverContent],
   providers: [
+    { provide: OverlayContainer, useClass: AndesPopoverOverlayContainer },
     provideAndesOverlay(),
     { provide: AndesPopoverBase, useExisting: AndesPopover },
   ],
@@ -73,25 +76,30 @@ import type { AndesPopoverRenderable } from './popover-types';
   },
 })
 export class AndesPopover extends AndesPopoverBase {
-  /** Panel header - text or a template. Labels the dialog (`aria-labelledby`). */
-  readonly title = input<AndesPopoverRenderable | null | undefined>(undefined);
-  /** Panel body - text or a template. Rendered below the title. */
-  readonly content = input<AndesPopoverRenderable | null | undefined>(
-    undefined,
-  );
+  /**
+   * Panel header: text, a template or a function returning either. Labels the dialog
+   * (`aria-labelledby`). A template receives `let-close` to dismiss the panel.
+   */
+  readonly title = input<AndesPopoverContentInput>(undefined);
+  /** Panel body: text, a template or a function returning either. Rendered below the title. */
+  readonly content = input<AndesPopoverContentInput>(undefined);
 
   protected readonly panelTemplate = viewChild<TemplateRef<unknown>>('panel');
 
   /** Whether the consumer projected its own `<andes-popover-content>`. */
   protected readonly projectedContent = contentChild(AndesPopoverContent);
 
-  override readonly panelTitle = computed(() => this.title());
-  override readonly panelBody = computed(() => this.content());
+  override readonly panelTitle = computed(() =>
+    andesPopoverRenderable(this.title()),
+  );
+  override readonly panelBody = computed(() =>
+    andesPopoverRenderable(this.content()),
+  );
   // The `title` input and a composed `[andesPopoverTitle]` can coexist; both
   // then name the panel, input first.
   override readonly panelLabelledBy = computed(
     () =>
-      [this.title() ? this.titleId : null, this.titlePartId()]
+      [this.panelTitle() ? this.titleId : null, this.titlePartId()]
         .filter(Boolean)
         .join(' ') || null,
   );

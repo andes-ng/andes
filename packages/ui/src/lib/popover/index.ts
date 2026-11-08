@@ -7,14 +7,27 @@ export {
   AndesPopoverTitle,
 } from './popover-parts';
 export { AndesPopconfirmTrigger, AndesPopoverTrigger } from './popover-trigger';
-export { AndesPopoverBase } from './popover-base';
+export { AndesPopoverBase, andesPopoverRenderable } from './popover-base';
 export {
   ANDES_POPOVER_PLACEMENTS,
   ANDES_POPOVER_PRESET_COLORS,
+  andesPopoverStyleObject,
 } from './popover-types';
 export type {
+  AndesPopoverChangeSource,
+  AndesPopoverClassNames,
+  AndesPopoverClassNamesInput,
+  AndesPopoverContainer,
+  AndesPopoverContentInput,
+  AndesPopoverOpenChange,
   AndesPopoverPlacement,
   AndesPopoverPresetColor,
   AndesPopoverRenderable,
+  AndesPopoverSemanticInfo,
+  AndesPopoverSemanticPart,
+  AndesPopoverSemanticProps,
+  AndesPopoverStyles,
+  AndesPopoverStylesInput,
+  AndesPopoverTemplateContext,
   AndesPopoverTriggerAction,
 } from './popover-types';

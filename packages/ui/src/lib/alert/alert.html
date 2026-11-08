@@ -1,0 +1,143 @@
+<div
+  #card
+  data-slot="alert"
+  [attr.data-severity]="resolvedSeverity()"
+  [attr.role]="resolvedRole()"
+  [class]="classes()"
+  [style]="partStyles().root"
+  [hidden]="!visible()"
+>
+  @if (showIcon()) {
+  <span
+    class="andes-alert__icon"
+    [class]="partClassNames().icon"
+    [style]="partStyles().icon"
+    aria-hidden="true"
+  >
+    @if (icon(); as customIcon) {
+    <ng-container
+      [ngTemplateOutlet]="customIcon"
+      [ngTemplateOutletContext]="templateContext()"
+    />
+    } @else {
+    <!-- Solid discs with the mark knocked out in the surface color: lucide's circle icons,
+         the disc filled and the mark stroked in the surface color by the stylesheet. The
+         warning glyph is a disc too - its color and its "!" tell it from info. -->
+    @switch (resolvedSeverity()) { @case ('success') {
+    <ng-icon class="andes-alert__glyph" name="lucideCircleCheck" />
+    } @case ('warning') {
+    <ng-icon class="andes-alert__glyph" name="lucideCircleAlert" />
+    } @case ('danger') {
+    <ng-icon class="andes-alert__glyph" name="lucideCircleX" />
+    } @default {
+    <ng-icon class="andes-alert__glyph" name="lucideInfo" />
+    } } }
+  </span>
+  }
+
+  <!-- Each input takes precedence over its slot. Every <ng-content> still appears exactly once in
+       this template: the description and action ones live in the templates at the end, which
+       render in whichever spot is active (marquee or not, bottom or end). -->
+  <div
+    class="andes-alert__content"
+    [class]="partClassNames().section"
+    [style]="partStyles().section"
+  >
+    <div
+      class="andes-alert__title"
+      [class]="partClassNames().title"
+      [style]="partStyles().title"
+    >
+      @if (titleTemplate(); as tpl) {
+      <ng-container
+        [ngTemplateOutlet]="tpl"
+        [ngTemplateOutletContext]="templateContext()"
+      />
+      } @else if (titleText(); as text) { {{ text }} } @else {
+      <ng-content select="[slot=title]" />
+      }
+    </div>
+    <div
+      class="andes-alert__description"
+      [class]="partClassNames().description"
+      [style]="partStyles().description"
+    >
+      @if (marquee()) {
+      <span
+        #marqueeTrack
+        class="andes-alert__marquee"
+        [style.animation-duration]="marqueeDuration()"
+      >
+        <ng-container [ngTemplateOutlet]="descriptionContent" />
+      </span>
+      } @else {
+      <ng-container [ngTemplateOutlet]="descriptionContent" />
+      }
+    </div>
+    @if (actionPlacement() !== 'end') {
+    <div
+      class="andes-alert__action"
+      [class]="partClassNames().actions"
+      [style]="partStyles().actions"
+    >
+      <ng-container [ngTemplateOutlet]="actionContent" />
+    </div>
+    }
+  </div>
+  @if (actionPlacement() === 'end') {
+  <div
+    class="andes-alert__action andes-alert__action--end"
+    [class]="partClassNames().actions"
+    [style]="partStyles().actions"
+  >
+    <ng-container [ngTemplateOutlet]="actionContent" />
+  </div>
+  }
+
+  <ng-template #descriptionContent>
+    @if (descriptionTemplate(); as tpl) {
+    <ng-container
+      [ngTemplateOutlet]="tpl"
+      [ngTemplateOutletContext]="templateContext()"
+    />
+    } @else if (descriptionText(); as text) { {{ text }} } @else {
+    <ng-content />
+    }
+  </ng-template>
+  <ng-template #actionContent>
+    @if (action(); as tpl) {
+    <ng-container
+      [ngTemplateOutlet]="tpl"
+      [ngTemplateOutletContext]="templateContext()"
+    />
+    } @else {
+    <ng-content select="[slot=action]" />
+    }
+  </ng-template>
+
+  @if (closable()) {
+  <button
+    type="button"
+    class="andes-alert__close"
+    [class.andes-alert__close--text]="showCloseText()"
+    [class]="partClassNames().close"
+    [style]="partStyles().close"
+    [attr.aria-label]="closeAriaLabel()"
+    [disabled]="closeDisabled()"
+    (click)="dismiss($event)"
+  >
+    @if (closeIcon(); as customCloseIcon) {
+    <span class="andes-alert__close-icon" aria-hidden="true">
+      <ng-container
+        [ngTemplateOutlet]="customCloseIcon"
+        [ngTemplateOutletContext]="templateContext()"
+      />
+    </span>
+    } @else if (showCloseText()) {
+    <span class="andes-alert__close-text">{{ closeText() }}</span>
+    } @else {
+    <ng-icon class="andes-alert__close-x" name="lucideX" aria-hidden="true" />
+    }
+  </button>
+  }
+</div>

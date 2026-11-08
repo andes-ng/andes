@@ -1,0 +1,9 @@
+<p class="andes-alert-dialog__countdown-text">
+  @if (remaining() > 0) { {{ text() }} } @else { {{ readyLabel() }} }
+</p>
+<span class="andes-alert-dialog__countdown-bar" aria-hidden="true">
+  <span
+    class="andes-alert-dialog__countdown-fill"
+    [style.inline-size.%]="progress()"
+  ></span>
+</span>

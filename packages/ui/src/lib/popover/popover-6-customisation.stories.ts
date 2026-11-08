@@ -22,6 +22,8 @@ import {
 const STORY_CSS = `
 .story-popover-note { border-style: dashed; border-width: 2px; }
 .story-popover-note-title { letter-spacing: 0.04em; text-transform: uppercase; font-size: 0.75rem; }
+.story-motion-slow { --andes-popover-duration: 700ms; --andes-popover-exit-duration: 280ms; --andes-popover-distance: 16px; --andes-popover-scale: 0.9; --andes-popover-ease: cubic-bezier(0.34, 1.4, 0.64, 1); }
+.story-motion-none { --andes-popover-duration: 0ms; --andes-popover-exit-duration: 0ms; --andes-popover-distance: 0px; --andes-popover-scale: 1; }
 .story-popover-wide { --andes-popover-padding: 1.25rem; --andes-popover-radius: 1rem; }
 `;
 
@@ -251,4 +253,30 @@ export const CustomContainer: Story = {
       </div>
     `,
   }),
+};
+
+/** Motion. */
+export const Motion: Story = {
+  name: 'Motion',
+  parameters: about(
+    'The panel fades in over 200ms with a 6px drift from the trigger and a small scale from the arrow tip, and out over 140ms; custom properties change the timing, the drift and the scale, and reduced motion keeps only a short fade.',
+  ),
+  render: () => {
+    addStoryCss('story-popover-css', STORY_CSS);
+    return {
+      template: `
+        <div style="${wideStage}">
+          <andes-popover trigger="hover" title="Default" content="200ms in, 140ms out." [showArrow]="true">
+            <andes-button variant="outline" andesPopoverTrigger>Default motion</andes-button>
+          </andes-popover>
+          <andes-popover trigger="hover" panelClass="story-motion-slow" title="Custom" content="700ms in with a 16px drift and a lively ease." [showArrow]="true">
+            <andes-button variant="outline" andesPopoverTrigger>Custom duration</andes-button>
+          </andes-popover>
+          <andes-popover trigger="hover" panelClass="story-motion-none" title="No motion" content="What the panel does when the system asks for reduced motion, apart from a short fade." [showArrow]="true">
+            <andes-button variant="outline" andesPopoverTrigger>No motion</andes-button>
+          </andes-popover>
+        </div>
+      `,
+    };
+  },
 };

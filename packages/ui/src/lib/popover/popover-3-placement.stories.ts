@@ -5,6 +5,7 @@ import {
   about,
   bar,
   grid,
+  placementBoard,
   PLACEMENT_OPTIONS,
   PLACEMENT_RING,
   wideStage,
@@ -221,6 +222,28 @@ export const FollowsOnScroll: Story = {
           <andes-button variant="outline" andesPopoverTrigger>Scroll the box</andes-button>
         </andes-popover>
         <div style="height: 22rem;"></div>
+      </div>
+    `,
+  }),
+};
+
+/** Arrow alignment. */
+export const ArrowAlignment: Story = {
+  name: 'Arrow alignment',
+  parameters: about(
+    'All twelve placements open at once with their arrow: the arrow sits on the border of the panel, points at the middle of the trigger, and keeps clear of the rounded corner beside it.',
+  ),
+  render: () => ({
+    props: { placements: PLACEMENT_RING },
+    template: `
+      <div style="${placementBoard}">
+        @for (placement of placements; track placement) {
+          <div style="display: flex; align-items: center; justify-content: center; min-height: 9.5rem;">
+            <andes-popover [placement]="placement" [showArrow]="true" [defaultOpen]="true" [closeOnEscape]="false" [closeOnOutsideClick]="false" [content]="placement">
+              <andes-button size="sm" variant="outline" andesPopoverTrigger>{{ placement }}</andes-button>
+            </andes-popover>
+          </div>
+        }
       </div>
     `,
   }),

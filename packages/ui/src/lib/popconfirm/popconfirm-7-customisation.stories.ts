@@ -15,6 +15,7 @@ import { ANDES_POPOVER_PRESET_COLORS } from '../popover/popover-types';
 import { AndesPopconfirm } from './popconfirm';
 
 const STORY_CSS = `
+.story-confirm-motion-slow { --andes-popover-duration: 700ms; --andes-popover-exit-duration: 280ms; --andes-popover-distance: 16px; --andes-popover-scale: 0.9; }
 .story-confirm-title { letter-spacing: 0.02em; }
 .story-confirm-footer { justify-content: space-between; }
 .story-confirm-pane { --andes-popover-radius: 1rem; --andes-popconfirm-icon-color: var(--andes-color-success-text); }
@@ -182,4 +183,27 @@ export const StackingOrder: Story = {
       </div>
     `,
   }),
+};
+
+/** Motion. */
+export const Motion: Story = {
+  name: 'Motion',
+  parameters: about(
+    'The question fades in over 200ms with a 6px drift and a small scale from the arrow tip, and out over 140ms, and the same custom properties as the popover change its timing, drift and scale.',
+  ),
+  render: () => {
+    addStoryCss('story-popconfirm-css', STORY_CSS);
+    return {
+      template: `
+        <div style="${wideStage}">
+          <andes-popconfirm trigger="hover" title="Default motion" [showCancel]="false" okText="OK">
+            <andes-button variant="outline" andesPopconfirmTrigger>Default motion</andes-button>
+          </andes-popconfirm>
+          <andes-popconfirm trigger="hover" panelClass="story-confirm-motion-slow" title="Custom duration" [showCancel]="false" okText="OK">
+            <andes-button variant="outline" andesPopconfirmTrigger>Custom duration</andes-button>
+          </andes-popconfirm>
+        </div>
+      `,
+    };
+  },
 };

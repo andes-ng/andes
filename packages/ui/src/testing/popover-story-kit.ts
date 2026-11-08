@@ -77,6 +77,10 @@ export const wideStage =
 export const grid =
   'display: grid; grid-template-columns: repeat(3, minmax(0, 8.5rem)); justify-content: center; gap: 3.5rem 1.5rem; padding: 6rem 1rem;';
 
+/** A board for the stories that keep every placement open at once: one wide cell per placement. */
+export const placementBoard =
+  'display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: 0.5rem; padding: 0.5rem;';
+
 /** A block of code. */
 export const code = `${font} display: block; box-sizing: border-box; margin: 0; padding: 0.75rem 1rem; max-width: min(40rem, 100%); overflow-x: auto; border-radius: var(--andes-radius-md); background: var(--andes-color-muted); color: var(--andes-color-foreground); font-family: ui-monospace, monospace; font-size: 0.8125rem; line-height: 1.25rem; white-space: pre;`;
 

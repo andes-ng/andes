@@ -5,6 +5,7 @@ import {
   about,
   bar,
   grid,
+  placementBoard,
   PLACEMENT_RING,
   stage,
   withDescription,
@@ -12,6 +13,7 @@ import {
   wideStage,
 } from '../../testing/popover-story-kit';
 import { AndesButton } from '../button/button';
+import { AndesInput } from '../input/input';
 import { AndesTag } from '../tag/tag';
 import { AndesPopconfirmTrigger } from '../popover/popover-trigger';
 import { AndesPopconfirm } from './popconfirm';
@@ -23,7 +25,13 @@ const meta: Meta<AndesPopconfirm> = {
     withDescription,
     withPopoverKit,
     moduleMetadata({
-      imports: [AndesButton, AndesTag, NgIcon, AndesPopconfirmTrigger],
+      imports: [
+        AndesButton,
+        AndesInput,
+        AndesTag,
+        NgIcon,
+        AndesPopconfirmTrigger,
+      ],
     }),
   ],
   parameters: { layout: 'padded' },
@@ -159,6 +167,63 @@ export const Offsets: Story = {
         <andes-popconfirm placement="bottomLeft" [alignOffset]="24" title="Delete the task?">
           <andes-button variant="outline" andesPopconfirmTrigger>alignOffset 24</andes-button>
         </andes-popconfirm>
+      </div>
+    `,
+  }),
+};
+
+/** Focus on a field. */
+export const FocusOnField: Story = {
+  name: 'Focus on a field',
+  parameters: about(
+    'On a field the question sits against the whole outer box of the control with the normal gap, and the arrow points at its edge, never over the field.',
+  ),
+  render: () => ({
+    template: `
+      <div style="${stage}">
+        <andes-popconfirm trigger="focus" placement="right" title="Use the saved address?" [showCancel]="false" okText="Use it">
+          <andes-input andesPopconfirmTrigger aria-label="Address" placeholder="Focus this field" style="width: 16rem;" />
+        </andes-popconfirm>
+      </div>
+    `,
+  }),
+};
+
+/** Arrow alignment. */
+export const ArrowAlignment: Story = {
+  name: 'Arrow alignment',
+  parameters: about(
+    'All twelve placements open at once with their arrow: the arrow sits on the border of the panel, points at the middle of the trigger, and keeps clear of the rounded corner beside it.',
+  ),
+  render: () => ({
+    props: { placements: PLACEMENT_RING },
+    template: `
+      <div style="${placementBoard}">
+        @for (placement of placements; track placement) {
+          <div style="display: flex; align-items: center; justify-content: center; min-height: 9.5rem;">
+            <andes-popconfirm [placement]="placement" [defaultOpen]="true" [closeOnEscape]="false" [closeOnOutsideClick]="false" [title]="placement" [showCancel]="false" okText="OK">
+              <andes-button size="sm" variant="outline" andesPopconfirmTrigger>{{ placement }}</andes-button>
+            </andes-popconfirm>
+          </div>
+        }
+      </div>
+    `,
+  }),
+};
+
+/** Preview, then confirm. */
+export const PreviewThenConfirm: Story = {
+  name: 'Hover previews, click asks',
+  parameters: about(
+    'Hovering previews the question without buttons; a click turns the same panel into the confirmation, with Cancel and OK, and it stays open when the pointer leaves until it is answered.',
+  ),
+  render: () => ({
+    template: `
+      <div style="${stage}">
+        <andes-popconfirm [trigger]="['hover', 'click']" actionsOn="click" [title]="question" okType="danger" okText="Delete" description="Hover to preview, click to decide.">
+          <andes-button variant="danger" andesPopconfirmTrigger>Delete the task</andes-button>
+        </andes-popconfirm>
+        <ng-template #question let-mode="mode">{{ mode === 'click' ? 'Delete the task for good?' : 'Delete the task?' }}</ng-template>
       </div>
     `,
   }),

@@ -7,13 +7,20 @@ import {
   bar,
   caption,
   column,
+  remember,
+  muted,
   stage,
   withDescription,
   withPopoverKit,
   wideStage,
 } from '../../testing/popover-story-kit';
 import { AndesButton } from '../button/button';
+import { AndesAvatar } from '../avatar/avatar';
+import { AndesAvatarFallback } from '../avatar/avatar-fallback';
 import { AndesInput } from '../input/input';
+import { AndesInputNumber } from '../input-number/input-number';
+import { AndesSelect } from '../select/select';
+import { AndesTextarea } from '../textarea/textarea';
 import { AndesSwitch } from '../switch/switch';
 import { AndesTag } from '../tag/tag';
 import { AndesPopover } from './popover';
@@ -29,7 +36,12 @@ const meta: Meta<AndesPopover> = {
     moduleMetadata({
       imports: [
         AndesButton,
+        AndesAvatar,
+        AndesAvatarFallback,
         AndesInput,
+        AndesInputNumber,
+        AndesSelect,
+        AndesTextarea,
         AndesSwitch,
         AndesTag,
         NgIcon,
@@ -292,4 +304,141 @@ export const OnAnyElement: Story = {
       </div>
     `,
   }),
+};
+
+/** Focus on every kind of field. */
+export const FocusOnFields: Story = {
+  name: 'Focus on a field',
+  parameters: about(
+    'On a field the panel sits against the whole outer box of the control, with the normal gap and the arrow pointing at its edge, never over its padding, its icons or its border.',
+  ),
+  render: () => ({
+    props: {
+      options: [
+        { value: 'a', label: 'Option A' },
+        { value: 'b', label: 'Option B' },
+      ],
+    },
+    template: `
+      <div style="${wideStage} flex-direction: column;">
+        <andes-popover trigger="focus" placement="right" title="Name" content="Shown on your public profile." [showArrow]="true">
+          <andes-input andesPopoverTrigger aria-label="Name" placeholder="Input" style="width: 16rem;" />
+        </andes-popover>
+        <andes-popover trigger="focus" placement="right" title="Quantity" content="Between 1 and 99." [showArrow]="true">
+          <andes-input-number andesPopoverTrigger aria-label="Quantity" style="width: 16rem;" />
+        </andes-popover>
+        <andes-popover trigger="focus" placement="right" title="Notes" content="Markdown is supported." [showArrow]="true">
+          <andes-textarea andesPopoverTrigger aria-label="Notes" placeholder="Textarea" style="width: 16rem;" />
+        </andes-popover>
+        <andes-popover trigger="focus" placement="right" title="Choice" content="You can change it later." [showArrow]="true">
+          <andes-select andesPopoverTrigger aria-label="Choice" placeholder="Select" [options]="options" style="width: 16rem;" />
+        </andes-popover>
+      </div>
+    `,
+  }),
+};
+
+/** Hover, then click to pin. */
+export const HoverThenPin: Story = {
+  name: 'Hover, then click to pin',
+  parameters: about(
+    'Hovering shows a preview; a click turns the same panel into a pinned one with other content, which stays open when the pointer leaves until Close, a second click, an outside press or Escape.',
+  ),
+  render: () => ({
+    props: {
+      title: (context: { mode: string }) =>
+        context.mode === 'click' ? 'Click title' : 'Hover title',
+    },
+    template: `
+      <div style="${stage}">
+        <andes-popover [trigger]="['hover', 'click']" [title]="title" [content]="body" [showArrow]="true">
+          <andes-button variant="outline" andesPopoverTrigger>Hover and click</andes-button>
+        </andes-popover>
+        <ng-template #body let-mode="mode" let-close="close">
+          @if (mode === 'click') {
+            <p style="margin: 0 0 0.25rem;">This is click content.</p>
+            <andes-button size="sm" variant="link" (click)="close()">Close</andes-button>
+          } @else {
+            <p style="margin: 0;">This is hover content.</p>
+          }
+        </ng-template>
+      </div>
+    `,
+  }),
+};
+
+/** Preview turns into details. */
+export const PreviewThenDetails: Story = {
+  name: 'Hover shows a preview, click opens the full details',
+  parameters: about(
+    'A card previews a person on hover; clicking turns the same panel into an editable form that keeps its place and arrow while the content fades in and the height eases to the new size.',
+  ),
+  render: () => ({
+    props: { name: signal('Ana Torres'), role: signal('Design lead') },
+    template: `
+      <div style="${stage}">
+        <andes-popover [trigger]="['hover', 'click']" placement="bottomLeft" [content]="card" [showArrow]="true">
+          <andes-tag andesPopoverTrigger [clickable]="true" tabindex="0">&#64;ana.torres</andes-tag>
+        </andes-popover>
+        <ng-template #card let-mode="mode" let-close="close">
+          @if (mode === 'click') {
+            <div style="display: flex; flex-direction: column; gap: 0.75rem; width: 17rem;">
+              <strong>Edit profile</strong>
+              <andes-input aria-label="Name" size="sm" [(value)]="name" />
+              <andes-input aria-label="Role" size="sm" [(value)]="role" />
+              <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                <andes-button size="sm" variant="outline" (click)="close()">Cancel</andes-button>
+                <andes-button size="sm" (click)="close()">Save</andes-button>
+              </div>
+            </div>
+          } @else {
+            <div style="display: flex; gap: 0.75rem; width: 17rem; color: var(--andes-color-foreground);">
+              <andes-avatar><andes-avatar-fallback>AT</andes-avatar-fallback></andes-avatar>
+              <div style="display: flex; flex-direction: column; gap: 0.125rem;">
+                <strong>{{ name() }}</strong>
+                <span style="color: var(--andes-color-muted-foreground);">{{ role() }}, Lima</span>
+                <span style="color: var(--andes-color-muted-foreground);">Click to edit</span>
+              </div>
+            </div>
+          }
+        </ng-template>
+      </div>
+    `,
+  }),
+};
+
+/** Pinned and dismissed. */
+export const PinnedOutsideClick: Story = {
+  name: 'Pinned popover closes on outside click',
+  parameters: about(
+    'Once pinned the panel ignores the pointer leaving, and a press outside it closes it; the log shows each change and its cause.',
+  ),
+  render: () => {
+    const log = signal<string[]>([]);
+    let count = 0;
+    return {
+      props: {
+        log,
+        muted,
+        record: (change: { open: boolean; source: string }) =>
+          remember(
+            log,
+            `#${++count} ${change.open ? 'opened' : 'closed'} by ${change.source}`,
+          ),
+      },
+      template: `
+        <div style="${column} align-items: center; padding: 6rem 1rem;">
+          <andes-popover [trigger]="['hover', 'click']" (openChangeDetail)="record($event)" [content]="body" [showArrow]="true">
+            <andes-button variant="outline" andesPopoverTrigger>Hover, click, then press outside</andes-button>
+          </andes-popover>
+          <ng-template #body let-mode="mode">
+            {{ mode === 'click' ? 'Pinned: move the pointer away, then press outside.' : 'Preview: click the button to pin me.' }}
+          </ng-template>
+          <ol aria-label="Changes" [style]="muted + ' margin: 0; min-height: 6.5rem;'">
+            @for (entry of log(); track entry) { <li>{{ entry }}</li> }
+          </ol>
+        </div>
+      `,
+    };
+  },
 };

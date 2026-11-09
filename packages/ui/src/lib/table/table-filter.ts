@@ -1,6 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
 import {
-  afterNextRender,
   booleanAttribute,
   ChangeDetectionStrategy,
   Component,
@@ -11,7 +10,6 @@ import {
   ElementRef,
   inject,
   InjectionToken,
-  Injector,
   input,
   type OnInit,
   output,
@@ -29,11 +27,17 @@ import {
 } from '@ng-icons/lucide';
 
 import { AndesButton } from '../button/button';
+import { AndesCheckbox } from '../checkbox/checkbox';
+import { AndesInput } from '../input/input';
+import { AndesPopover } from '../popover/popover';
+import { AndesPopoverContent } from '../popover/popover-content';
+import { AndesPopoverTrigger } from '../popover/popover-trigger';
+import { AndesRadio } from '../radio-group/radio';
+import { AndesRadioGroup } from '../radio-group/radio-group';
 import { AndesTable } from './table';
+import { AndesTableButtonAria } from './table-button-aria';
 import {
   ANDES_TABLE_FILTERABLE,
-  andesPlacePanel,
-  type AndesPanelSide,
   type AndesTableFilterable,
 } from './table-context';
 import type {
@@ -212,7 +216,19 @@ function sameValues(
   viewProviders: [
     provideIcons({ lucideChevronDown, lucideFunnel, lucideSearch }),
   ],
-  imports: [AndesButton, NgIcon, NgTemplateOutlet],
+  imports: [
+    AndesButton,
+    AndesCheckbox,
+    AndesInput,
+    AndesPopover,
+    AndesPopoverContent,
+    AndesPopoverTrigger,
+    AndesRadio,
+    AndesRadioGroup,
+    AndesTableButtonAria,
+    NgIcon,
+    NgTemplateOutlet,
+  ],
   exportAs: 'andesTableFilter',
   templateUrl: './table-filter.html',
   styleUrl: './table-filter.css',
@@ -228,16 +244,12 @@ function sameValues(
     // A header that can be dragged to reorder must not start dragging from here.
     '(mousedown)': '$event.stopPropagation()',
     '(touchstart)': '$event.stopPropagation()',
-    '(keydown)': 'onKeydown($event)',
-    '(focusout)': 'onFocusOut($event)',
-    '(document:pointerdown)': 'onDocumentPointerDown($event)',
+    // Nothing typed on the filter button may reach the header's Enter/Space sort handler.
+    '(keydown)': '$event.stopPropagation()',
   },
 })
 export class AndesTableFilter implements AndesTableFilterable, OnInit {
   protected readonly table = inject(AndesTable);
-  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
-  private readonly injector = inject(Injector);
-
   /** Column id this filter writes to in `AndesTable.filters`. */
   readonly column = input.required<string>();
 
@@ -342,14 +354,10 @@ export class AndesTableFilter implements AndesTableFilterable, OnInit {
     () => this.projectedPanel()?.invalid?.() ?? false,
   );
 
-  /** Which side of the button the panel opened on, for its entry motion. */
-  protected readonly side = signal<AndesPanelSide>('below');
   protected readonly query = signal('');
   /** Tree nodes the user collapsed; every node starts expanded. */
   private readonly collapsed = signal<ReadonlySet<AndesFilterValue>>(new Set());
 
-  private readonly trigger =
-    viewChild.required<ElementRef<HTMLButtonElement>>('trigger');
   private readonly panelElement = viewChild<ElementRef<HTMLElement>>('panelEl');
 
   private readonly controlled = computed(
@@ -442,7 +450,7 @@ export class AndesTableFilter implements AndesTableFilterable, OnInit {
           this.apply([]);
         }
         if (options?.closeDropdown ?? true) {
-          this.dismiss(false, true);
+          this.dismiss(false);
         }
       },
       reset: () => this.reset(),
@@ -458,32 +466,6 @@ export class AndesTableFilter implements AndesTableFilterable, OnInit {
       if (value !== undefined) {
         untracked(() => this.table.syncFilter(this.column(), value ?? []));
       }
-    });
-
-    // Keep the panel attached to its button while anything scrolls or resizes.
-    effect((onCleanup) => {
-      if (!this.open()) {
-        return;
-      }
-
-      const reposition = (event: Event) => {
-        const panel = this.panelElement()?.nativeElement;
-        if (
-          panel &&
-          event.target instanceof Node &&
-          panel.contains(event.target)
-        ) {
-          return;
-        }
-        this.updatePosition();
-      };
-
-      window.addEventListener('scroll', reposition, true);
-      window.addEventListener('resize', reposition);
-      onCleanup(() => {
-        window.removeEventListener('scroll', reposition, true);
-        window.removeEventListener('resize', reposition);
-      });
     });
   }
 
@@ -598,15 +580,14 @@ export class AndesTableFilter implements AndesTableFilterable, OnInit {
 
   // Panel
 
-  protected onSearch(event: Event): void {
-    this.query.set((event.target as HTMLInputElement).value);
-  }
-
-  protected toggle(): void {
-    if (this.open()) {
-      this.dismiss(this.applyOnClose() && !this.invalid(), false);
+  /** The popover opened (a click on the button) or closed (Escape, a click outside). */
+  protected onOpenChange(open: boolean): void {
+    if (open) {
+      if (!this.open()) {
+        this.openPanel();
+      }
     } else {
-      this.openPanel();
+      this.dismiss(this.applyOnClose() && !this.invalid());
     }
   }
 
@@ -633,7 +614,7 @@ export class AndesTableFilter implements AndesTableFilterable, OnInit {
       return;
     }
     if (closeDropdown) {
-      this.dismiss(true, true);
+      this.dismiss(true);
     } else {
       this.apply(this.draft());
     }
@@ -642,12 +623,12 @@ export class AndesTableFilter implements AndesTableFilterable, OnInit {
   /** Resets the draft, applies it and closes. */
   clear(): void {
     this.reset();
-    this.dismiss(true, true);
+    this.dismiss(true);
   }
 
   /** Closes the panel, applying the draft only when `applyOnClose` is on. */
   close(): void {
-    this.dismiss(this.applyOnClose() && !this.invalid(), true);
+    this.dismiss(this.applyOnClose() && !this.invalid());
   }
 
   /** Opens the panel, starting the draft from the applied values. */
@@ -657,50 +638,18 @@ export class AndesTableFilter implements AndesTableFilterable, OnInit {
     }
   }
 
-  protected onKeydown(event: KeyboardEvent): void {
+  /** Keys inside the open panel: Enter on an option or the search box applies. */
+  protected onPanelKeydown(event: KeyboardEvent): void {
     // Nothing typed in the filter may reach the header's Enter/Space sort handler.
     event.stopPropagation();
 
-    if (!this.open()) {
-      return;
-    }
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      this.close();
-    } else if (
-      event.key === 'Enter' &&
-      this.isDefaultPanelField(event.target)
-    ) {
-      // Enter on an option or the search box applies, like submitting a form. Buttons
-      // keep their own Enter, and a custom panel decides for itself.
+    if (event.key === 'Enter' && this.isDefaultPanelField(event.target)) {
+      // Like submitting a form; buttons keep their own Enter, and a custom panel decides
+      // for itself.
       event.preventDefault();
       this.confirm();
     } else if (this.isDefaultPanelField(event.target)) {
       this.onOptionKey(event);
-    }
-  }
-
-  protected onFocusOut(event: FocusEvent): void {
-    // A keyboard user tabbing out of the panel leaves it, just like a click outside.
-    // Only a known destination counts: `relatedTarget` is null when the window itself
-    // loses focus, which should not dismiss anything.
-    const next = event.relatedTarget;
-    if (
-      this.open() &&
-      next instanceof Node &&
-      !this.host.nativeElement.contains(next)
-    ) {
-      this.dismiss(this.applyOnClose() && !this.invalid(), false);
-    }
-  }
-
-  protected onDocumentPointerDown(event: Event): void {
-    if (
-      this.open() &&
-      event.target instanceof Node &&
-      !this.host.nativeElement.contains(event.target)
-    ) {
-      this.dismiss(this.applyOnClose() && !this.invalid(), false);
     }
   }
 
@@ -710,6 +659,7 @@ export class AndesTableFilter implements AndesTableFilterable, OnInit {
     if (target.type !== 'checkbox') {
       return;
     }
+    const node = target.closest('[data-node]');
 
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       const inputs = Array.from(
@@ -726,7 +676,7 @@ export class AndesTableFilter implements AndesTableFilterable, OnInit {
       return;
     }
 
-    const value = target.getAttribute('data-node');
+    const value = node?.getAttribute('data-node') ?? null;
     if (
       this.isTree() &&
       value !== null &&
@@ -773,26 +723,6 @@ export class AndesTableFilter implements AndesTableFilterable, OnInit {
     this.query.set('');
     this.open.set(true);
     this.openChange.emit(true);
-
-    afterNextRender(
-      () => {
-        const panel = this.panelElement()?.nativeElement;
-        if (!panel) {
-          return;
-        }
-        // Top layer: escapes the table's overflow clipping and any stacking context.
-        if (typeof panel.showPopover === 'function') {
-          panel.showPopover();
-        }
-        this.updatePosition();
-        panel
-          .querySelector<HTMLElement>(
-            'input:not([disabled]), button:not([disabled]), [tabindex]',
-          )
-          ?.focus();
-      },
-      { injector: this.injector },
-    );
   }
 
   /** Reports `values` as the column's new filter, writing it unless controlled. */
@@ -809,7 +739,7 @@ export class AndesTableFilter implements AndesTableFilterable, OnInit {
     }
   }
 
-  private dismiss(apply: boolean, restoreFocus: boolean): void {
+  private dismiss(apply: boolean): void {
     if (!this.open()) {
       return;
     }
@@ -818,15 +748,5 @@ export class AndesTableFilter implements AndesTableFilterable, OnInit {
     }
     this.open.set(false);
     this.openChange.emit(false);
-    if (restoreFocus) {
-      this.trigger().nativeElement.focus();
-    }
-  }
-
-  private updatePosition(): void {
-    const panel = this.panelElement()?.nativeElement;
-    if (panel) {
-      this.side.set(andesPlacePanel(panel, this.trigger().nativeElement));
-    }
   }
 }

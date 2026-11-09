@@ -55,6 +55,7 @@ import {
 } from '@ng-icons/lucide';
 import { type Decorator, moduleMetadata } from '@storybook/angular';
 
+import { AndesAlert } from '../lib/alert/alert';
 import { AndesAvatar } from '../lib/avatar/avatar';
 import { AndesAvatarFallback } from '../lib/avatar/avatar-fallback';
 import { AndesBadge } from '../lib/badge/badge';
@@ -618,6 +619,7 @@ export const withTableKit: Decorator = moduleMetadata({
   imports: [
     ...TABLE_PARTS,
     ANDES_DIALOG_IMPORTS,
+    AndesAlert,
     AndesAvatar,
     AndesAvatarFallback,
     AndesBadge,

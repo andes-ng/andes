@@ -59,6 +59,8 @@ const PARTS = [
   AndesTableVirtualRows,
 ];
 
+declare const ng: { getComponent(element: Element): unknown };
+
 interface Account {
   readonly id: string;
   readonly name: string;
@@ -105,6 +107,16 @@ function key(element: Element, value: string, init: KeyboardEventInit = {}) {
     }),
   );
 }
+
+/** Zero jsdom geometry makes CDK treat everything as untabbable, so a popover cannot focus. */
+beforeAll(() => {
+  for (const key of ['offsetWidth', 'offsetHeight'] as const) {
+    Object.defineProperty(HTMLElement.prototype, key, {
+      configurable: true,
+      get: () => 1,
+    });
+  }
+});
 
 describe('table tree helpers', () => {
   it('flattens only the children of expanded parents, with their depth', () => {
@@ -361,14 +373,15 @@ describe('AndesTable events and bulk selection', () => {
       root.querySelector(
         `tr[data-row-key="${id}"] andes-table-selection input`,
       ) as HTMLInputElement;
+    // The menu is the library's dropdown menu, drawn in the overlay layer.
     const menuTrigger = () =>
       root.querySelector(
-        '.andes-table-control__menu-trigger',
+        '.andes-table-control__menu-trigger button',
       ) as HTMLButtonElement;
     const menuItems = () =>
       Array.from(
-        root.querySelectorAll('[role="menuitem"]'),
-      ) as HTMLButtonElement[];
+        document.querySelectorAll('[role="menuitem"]'),
+      ) as HTMLElement[];
     return { fixture, root, host, act, box, menuTrigger, menuItems };
   }
 
@@ -386,12 +399,18 @@ describe('AndesTable events and bulk selection', () => {
       },
     ]);
 
-    act(root.querySelector('.andes-table-filter__trigger') as HTMLElement);
-    act(document.querySelector('.andes-table-filter__input') as HTMLElement);
+    act(
+      root.querySelector('.andes-table-filter__trigger button') as HTMLElement,
+    );
+    act(
+      document.querySelector(
+        '.andes-table-filter__panel input[type="checkbox"]',
+      ) as HTMLElement,
+    );
     const ok = Array.from(
-      root.querySelectorAll('.andes-table-filter__actions andes-button'),
+      document.querySelectorAll('.andes-table-filter__actions button'),
     ).pop() as HTMLElement;
-    act(ok.querySelector('button') ?? ok);
+    act(ok);
     fixture.detectChanges();
 
     expect(host.changes.at(-1)).toEqual({
@@ -423,10 +442,9 @@ describe('AndesTable events and bulk selection', () => {
   it('opens a menu of selection entries from the select-all header', () => {
     const { host, act, menuTrigger, menuItems } = setup();
 
-    expect(menuTrigger().getAttribute('aria-haspopup')).toBe('menu');
-    expect(menuTrigger().getAttribute('aria-expanded')).toBe('false');
+    expect(menuTrigger().getAttribute('aria-label')).toBe('Selection options');
+    expect(menuItems()).toEqual([]);
     act(menuTrigger());
-    expect(menuTrigger().getAttribute('aria-expanded')).toBe('true');
     expect(menuItems().map((item) => item.textContent?.trim())).toEqual([
       'Select current page',
       'Invert current page',
@@ -457,21 +475,21 @@ describe('AndesTable events and bulk selection', () => {
     expect(host.selected()).toEqual(['a']);
   });
 
-  it('moves through the menu with the arrow keys and closes on Escape', () => {
-    const { root, act, menuTrigger, menuItems, fixture } = setup();
+  it('closes the selection menu on Escape and returns focus to its button', () => {
+    const { act, menuTrigger, menuItems, fixture } = setup();
     act(menuTrigger());
-    const menu = root.querySelector('[role="menu"]') as HTMLElement;
+    expect(menuItems()).not.toEqual([]);
 
-    menuItems()[0].focus();
-    key(menu, 'ArrowDown');
-    expect(document.activeElement).toBe(menuItems()[1]);
-    key(menu, 'End');
-    expect(document.activeElement).toBe(menuItems()[3]);
-    key(menu, 'ArrowDown');
-    expect(document.activeElement).toBe(menuItems()[0]);
-
-    key(menu, 'Escape');
+    document.body.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Escape',
+        keyCode: 27,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
     fixture.detectChanges();
+
     expect(menuItems()).toEqual([]);
     expect(document.activeElement).toBe(menuTrigger());
   });
@@ -541,17 +559,24 @@ describe('AndesTable header features', () => {
     return { fixture, root, heads, host: fixture.componentInstance };
   }
 
-  it('names the next sort step in a native tooltip', () => {
+  it('names the next sort step in the library tooltip', () => {
     const { heads, fixture } = setup();
+    const tip = (head: HTMLElement) =>
+      ng.getComponent(head.querySelector('andes-tooltip') as Element) as {
+        content(): string;
+        disabled(): boolean;
+      };
 
-    expect(heads[0].getAttribute('title')).toBe('Click to sort ascending');
+    expect(tip(heads[0]).content()).toBe('Click to sort ascending');
+    expect(tip(heads[0]).disabled()).toBe(false);
     click(heads[0]);
     fixture.detectChanges();
-    expect(heads[0].getAttribute('title')).toBe('Click to sort descending');
+    expect(tip(heads[0]).content()).toBe('Click to sort descending');
     click(heads[0]);
     fixture.detectChanges();
-    expect(heads[0].getAttribute('title')).toBe('Click to cancel sorting');
-    expect(heads[1].hasAttribute('title')).toBe(false);
+    expect(tip(heads[0]).content()).toBe('Click to cancel sorting');
+    expect(tip(heads[1]).disabled()).toBe(true);
+    expect(heads[0].hasAttribute('title')).toBe(false);
   });
 
   it('exposes the header state for a custom sort indicator', () => {
@@ -652,16 +677,22 @@ describe('AndesTable tree filter', () => {
       click(element);
       fixture.detectChanges();
     };
-    act(root.querySelector('.andes-table-filter__trigger') as HTMLElement);
+    act(
+      root.querySelector('.andes-table-filter__trigger button') as HTMLElement,
+    );
+    // The panel is the filter's popover, drawn in the overlay layer.
     const option = (text: string) =>
-      Array.from(root.querySelectorAll('.andes-table-filter__option')).find(
-        (label) => label.textContent?.trim() === text,
-      ) as HTMLElement | undefined;
+      Array.from(
+        document.querySelectorAll(
+          '.andes-table-filter__panel andes-checkbox, .andes-table-filter__panel andes-radio',
+        ),
+      ).find((label) => label.textContent?.trim() === text) as
+        HTMLElement | undefined;
     const input = (text: string) =>
       option(text)?.querySelector('input') as HTMLInputElement;
     const actions = () =>
       Array.from(
-        root.querySelectorAll('.andes-table-filter__actions button'),
+        document.querySelectorAll('.andes-table-filter__actions button'),
       ) as HTMLButtonElement[];
     return { fixture, root, act, option, input, actions };
   }
@@ -695,13 +726,13 @@ describe('AndesTable tree filter', () => {
   });
 
   it('keeps the parents of matching children while searching', () => {
-    const { root, fixture, option } = setup();
-    const search = root.querySelector(
-      '.andes-table-filter__search-input',
+    const { fixture, option } = setup();
+    const search = document.querySelector(
+      '.andes-table-filter__search input',
     ) as HTMLInputElement;
 
     search.value = 'cus';
-    search.dispatchEvent(new Event('input'));
+    search.dispatchEvent(new Event('input', { bubbles: true }));
     fixture.detectChanges();
 
     expect(option('Peru')).toBeDefined();

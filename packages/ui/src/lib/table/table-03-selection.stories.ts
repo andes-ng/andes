@@ -589,7 +589,7 @@ export const RowClickSelection: Story = {
             </thead>
             <tbody andesTableBody>
               @for (order of orders; track order.id) {
-                <tr andesTableRow [rowKey]="order.id" tabindex="0" style="cursor: pointer;" [attr.aria-selected]="selected().includes(order.id)" (click)="toggle(order.id)" (keydown.enter)="toggle(order.id)">
+                <tr andesTableRow [rowKey]="order.id" style="cursor: pointer;" (click)="toggle(order.id)">
                   <td andesTableCell>
                     @if (selected().includes(order.id)) {
                       <ng-icon name="lucideCheck" />

@@ -9,9 +9,14 @@ import {
   untracked,
   type WritableSignal,
 } from '@angular/core';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideChevronDown } from '@ng-icons/lucide';
 
+import { AndesDatePicker } from '../date-picker/date-picker';
+import { AndesInput } from '../input/input';
+import { AndesSelect } from '../select/select';
+import { AndesSelectContent } from '../select/select-content';
+import { AndesSelectItem } from '../select/select-item';
+import { AndesSelectTrigger } from '../select/select-trigger';
+import { AndesSelectValue } from '../select/select-value';
 import {
   andesReadDateRangeFilter,
   andesReadRangeFilter,
@@ -33,6 +38,8 @@ import {
  * pick the draft up again when something else changes it - opening the panel,
  * Reset, or a controlled `filters` update.
  */
+
+let nextPanelId = 0;
 
 /** Keeps a panel's field texts and the filter's draft in step. */
 function syncWithDraft(
@@ -64,8 +71,19 @@ function sameValues(
   return a.length === b.length && a.every((value, index) => value === b[index]);
 }
 
-function inputText(event: Event): string {
-  return (event.target as HTMLInputElement | HTMLSelectElement).value;
+/** A `YYYY-MM-DD` text as a local date, or `null` for an empty or malformed one. */
+function isoToDate(iso: string): Date | null {
+  const [year, month, day] = iso.split('-').map(Number);
+  return year && month && day ? new Date(year, month - 1, day) : null;
+}
+
+/** A local date as `YYYY-MM-DD`. */
+function dateToIso(value: unknown): string {
+  if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
+    return '';
+  }
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
 }
 
 /** Labels of the text filter's operators. */
@@ -95,8 +113,14 @@ const DEFAULT_OPERATOR_LABELS: AndesTextFilterOperatorLabels = {
  */
 @Component({
   selector: 'andes-table-text-filter',
-  viewProviders: [provideIcons({ lucideChevronDown })],
-  imports: [NgIcon],
+  imports: [
+    AndesInput,
+    AndesSelect,
+    AndesSelectContent,
+    AndesSelectItem,
+    AndesSelectTrigger,
+    AndesSelectValue,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     { provide: ANDES_TABLE_FILTER_PANEL, useExisting: AndesTableTextFilter },
@@ -105,39 +129,31 @@ const DEFAULT_OPERATOR_LABELS: AndesTextFilterOperatorLabels = {
   styleUrl: './table-filter-panels.css',
   template: `
     @if (operators().length > 1) {
-      <span class="andes-table-filter-panel__field">
-        <select
-          class="andes-table-filter-panel__control andes-table-filter-panel__select"
-          [attr.aria-label]="operatorLabel()"
-          (change)="onOperator($event)"
-        >
+      <andes-select
+        size="sm"
+        [aria-label]="operatorLabel()"
+        [value]="currentOperator()"
+        (valueChange)="write(0, $any($event))"
+      >
+        <andes-select-trigger><andes-select-value /></andes-select-trigger>
+        <andes-select-content>
           @for (operator of operators(); track operator) {
-            <option
-              [value]="operator"
-              [selected]="operator === currentOperator()"
-            >
+            <andes-select-item [value]="operator">
               {{ operatorLabels()[operator] }}
-            </option>
+            </andes-select-item>
           }
-        </select>
-        <ng-icon
-          class="andes-table-filter-panel__chevron"
-          name="lucideChevronDown"
-        />
-      </span>
+        </andes-select-content>
+      </andes-select>
     }
-    <span class="andes-table-filter-panel__field">
-      <input
-        type="text"
-        class="andes-table-filter-panel__control"
-        autocomplete="off"
-        [placeholder]="placeholder()"
-        [attr.aria-label]="placeholder()"
-        [value]="text()"
-        (input)="write(1, inputText($event))"
-        (keydown.enter)="filter.confirm()"
-      />
-    </span>
+    <andes-input
+      size="sm"
+      autocomplete="off"
+      [placeholder]="placeholder()"
+      [aria-label]="placeholder()"
+      [value]="text()"
+      (valueChange)="write(1, $event ?? '')"
+      (keydown.enter)="filter.confirm()"
+    />
   `,
 })
 export class AndesTableTextFilter {
@@ -180,12 +196,6 @@ export class AndesTableTextFilter {
       return [state?.operator ?? this.operator(), state?.text ?? ''];
     },
   );
-
-  protected readonly inputText = inputText;
-
-  protected onOperator(event: Event): void {
-    this.write(0, inputText(event));
-  }
 }
 
 /**
@@ -197,6 +207,7 @@ export class AndesTableTextFilter {
  */
 @Component({
   selector: 'andes-table-range-filter',
+  imports: [AndesInput],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     { provide: ANDES_TABLE_FILTER_PANEL, useExisting: AndesTableRangeFilter },
@@ -206,48 +217,43 @@ export class AndesTableTextFilter {
   },
   styleUrl: './table-filter-panels.css',
   template: `
-    <label class="andes-table-filter-panel__label">
-      <span class="andes-table-filter-panel__caption">{{ minLabel() }}</span>
-      <span
-        class="andes-table-filter-panel__field"
-        [class.andes-table-filter-panel__field--error]="minError()"
-      >
-        <input
-          type="text"
-          inputmode="decimal"
-          class="andes-table-filter-panel__control"
-          autocomplete="off"
-          [placeholder]="minPlaceholder()"
-          [attr.aria-invalid]="minError() || null"
-          [value]="min()"
-          (input)="write(0, inputText($event))"
-          (keydown.enter)="filter.confirm()"
-        />
-      </span>
-    </label>
-    <label class="andes-table-filter-panel__label">
-      <span class="andes-table-filter-panel__caption">{{ maxLabel() }}</span>
-      <span
-        class="andes-table-filter-panel__field"
-        [class.andes-table-filter-panel__field--error]="maxError()"
-      >
-        <input
-          type="text"
-          inputmode="decimal"
-          class="andes-table-filter-panel__control"
-          autocomplete="off"
-          [placeholder]="maxPlaceholder()"
-          [attr.aria-invalid]="maxError() || null"
-          [value]="max()"
-          (input)="write(1, inputText($event))"
-          (keydown.enter)="filter.confirm()"
-        />
-      </span>
-    </label>
+    <div class="andes-table-filter-panel__label">
+      <span class="andes-table-filter-panel__caption" [id]="id + '-min'">{{
+        minLabel()
+      }}</span>
+      <andes-input
+        size="sm"
+        inputmode="decimal"
+        autocomplete="off"
+        [aria-labelledby]="id + '-min'"
+        [placeholder]="minPlaceholder()"
+        [status]="minError() ? 'error' : undefined"
+        [value]="min()"
+        (valueChange)="write(0, $event ?? '')"
+        (keydown.enter)="filter.confirm()"
+      />
+    </div>
+    <div class="andes-table-filter-panel__label">
+      <span class="andes-table-filter-panel__caption" [id]="id + '-max'">{{
+        maxLabel()
+      }}</span>
+      <andes-input
+        size="sm"
+        inputmode="decimal"
+        autocomplete="off"
+        [aria-labelledby]="id + '-max'"
+        [placeholder]="maxPlaceholder()"
+        [status]="maxError() ? 'error' : undefined"
+        [value]="max()"
+        (valueChange)="write(1, $event ?? '')"
+        (keydown.enter)="filter.confirm()"
+      />
+    </div>
   `,
 })
 export class AndesTableRangeFilter implements AndesTableFilterPanelHost {
   protected readonly filter = inject(AndesTableFilter);
+  protected readonly id = `andes-table-range-${nextPanelId++}`;
 
   readonly minLabel = input('Min');
   readonly maxLabel = input('Max');
@@ -278,8 +284,6 @@ export class AndesTableRangeFilter implements AndesTableFilterPanelHost {
       ];
     },
   );
-
-  protected readonly inputText = inputText;
 
   private readonly bounds = computed(() => ({
     low: parseNumber(this.min()),
@@ -323,13 +327,14 @@ function parseNumber(text: string): number | undefined {
 
 /**
  * Date range filter body: a first and a last day, either left open, picked with
- * the browser's date fields. Writes `[from, to]` as `YYYY-MM-DD` (`null` for an
+ * the library date picker. Writes `[from, to]` as `YYYY-MM-DD` (`null` for an
  * open end), or nothing when both are empty. Match rows with
  * `andesDateRangeFilter(row => row.issued)`; a server reads the same state with
  * `andesReadDateRangeFilter`. Both days are inclusive.
  */
 @Component({
   selector: 'andes-table-date-range-filter',
+  imports: [AndesDatePicker],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     {
@@ -342,44 +347,35 @@ function parseNumber(text: string): number | undefined {
   },
   styleUrl: './table-filter-panels.css',
   template: `
-    <label class="andes-table-filter-panel__label">
-      <span class="andes-table-filter-panel__caption">{{ fromLabel() }}</span>
-      <span
-        class="andes-table-filter-panel__field"
-        [class.andes-table-filter-panel__field--error]="invalid()"
-      >
-        <input
-          type="date"
-          class="andes-table-filter-panel__control"
-          [attr.max]="to() || null"
-          [attr.aria-invalid]="invalid() || null"
-          [value]="from()"
-          (input)="write(0, inputText($event))"
-          (keydown.enter)="filter.confirm()"
-        />
-      </span>
-    </label>
-    <label class="andes-table-filter-panel__label">
-      <span class="andes-table-filter-panel__caption">{{ toLabel() }}</span>
-      <span
-        class="andes-table-filter-panel__field"
-        [class.andes-table-filter-panel__field--error]="invalid()"
-      >
-        <input
-          type="date"
-          class="andes-table-filter-panel__control"
-          [attr.min]="from() || null"
-          [attr.aria-invalid]="invalid() || null"
-          [value]="to()"
-          (input)="write(1, inputText($event))"
-          (keydown.enter)="filter.confirm()"
-        />
-      </span>
-    </label>
+    <div class="andes-table-filter-panel__label">
+      <span class="andes-table-filter-panel__caption" [id]="id + '-from'">{{
+        fromLabel()
+      }}</span>
+      <andes-date-picker
+        size="sm"
+        [aria-labelledby]="id + '-from'"
+        [status]="invalid() ? 'error' : null"
+        [value]="fromDate()"
+        (valueChange)="write(0, dateText($event))"
+      />
+    </div>
+    <div class="andes-table-filter-panel__label">
+      <span class="andes-table-filter-panel__caption" [id]="id + '-to'">{{
+        toLabel()
+      }}</span>
+      <andes-date-picker
+        size="sm"
+        [aria-labelledby]="id + '-to'"
+        [status]="invalid() ? 'error' : null"
+        [value]="toDate()"
+        (valueChange)="write(1, dateText($event))"
+      />
+    </div>
   `,
 })
 export class AndesTableDateRangeFilter implements AndesTableFilterPanelHost {
   protected readonly filter = inject(AndesTableFilter);
+  protected readonly id = `andes-table-date-range-${nextPanelId++}`;
 
   readonly fromLabel = input('From');
   readonly toLabel = input('To');
@@ -397,7 +393,9 @@ export class AndesTableDateRangeFilter implements AndesTableFilterPanelHost {
     },
   );
 
-  protected readonly inputText = inputText;
+  protected readonly fromDate = computed(() => isoToDate(this.from()));
+  protected readonly toDate = computed(() => isoToDate(this.to()));
+  protected readonly dateText = dateToIso;
 
   readonly invalid = computed(() => {
     const from = this.from();

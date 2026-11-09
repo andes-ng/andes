@@ -96,8 +96,8 @@ export const EnterToEdit: Story = {
           <tbody andesTableBody>
             @for (user of users; track user.id) {
               <tr andesTableRow [rowKey]="user.id">
-                <td andesTableCell><andes-input size="sm" [value]="user.name" [attr.aria-label]="'Name of ' + user.name" /></td>
-                <td andesTableCell><andes-input size="sm" [value]="user.city" [attr.aria-label]="'City of ' + user.name" /></td>
+                <td andesTableCell><andes-input size="sm" [value]="user.name" [aria-label]="'Name of ' + user.name" /></td>
+                <td andesTableCell><andes-input size="sm" [value]="user.city" [aria-label]="'City of ' + user.name" /></td>
                 <td andesTableCell>{{ user.role }}</td>
               </tr>
             }
@@ -489,7 +489,7 @@ export const FocusRings: Story = {
                 <td andesTableCell>
                   <span style="display: inline-flex; align-items: center; gap: 0.5rem;">
                     <andes-table-expand-toggle [label]="'Details of ' + user.name" />
-                    <andes-button variant="ghost" size="icon-xs" [attr.aria-label]="'Edit ' + user.name"><ng-icon name="lucidePencil" /></andes-button>
+                    <andes-button variant="ghost" size="icon-xs" [aria-label]="'Edit ' + user.name"><ng-icon name="lucidePencil" /></andes-button>
                   </span>
                 </td>
               </tr>

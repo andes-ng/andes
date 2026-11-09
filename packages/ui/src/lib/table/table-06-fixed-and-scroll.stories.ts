@@ -16,6 +16,7 @@ import {
 } from '../../testing/table-story-kit';
 import { AndesTable } from './table';
 import type { AndesTablePinned } from './table-column-settings';
+import type { AndesTableRowKey } from './table-context';
 
 /*
  * Tables bigger than their box: a fixed header, columns pinned to an edge, a header that follows
@@ -499,6 +500,48 @@ export const VirtualList: Story = {
         })}
       </div>`,
   }),
+};
+
+/** Virtual list with a checkbox on every row. */
+export const VirtualListSelection: Story = {
+  name: 'Virtual list with row selection',
+  parameters: about(
+    'Ten thousand rows each carry a selection checkbox, yet only the rows in view exist in the page, and select all chooses every row of the data.',
+  ),
+  render: () => {
+    const rows = users(10000);
+    const selected = signal<readonly AndesTableRowKey[]>([]);
+    return {
+      props: {
+        rows,
+        selected,
+        allKeys: rows.map((row) => row.id),
+        muted,
+      },
+      template: `
+        <div style="max-width: 46rem;">
+          <p style="${muted} margin: 0 0 0.75rem;">{{ selected().length }} of {{ rows.length }} selected</p>
+          <andes-table scrollY="20rem" density="compact" tableLayout="fixed" [(selectedKeys)]="selected" [selectableKeys]="allKeys" [rowCount]="rows.length">
+            <thead andesTableHeader>
+              <tr andesTableRow>
+                <th andesTableHead style="width: 3rem;"><andes-table-select-all /></th>
+                <th andesTableHead>Name</th>
+                <th andesTableHead>Role</th>
+                <th andesTableHead>City</th>
+              </tr>
+            </thead>
+            <tbody andesTableBody>
+              <tr *andesTableVirtualRows="let row of rows; rowHeight: 36" andesTableRow [rowKey]="row.id">
+                <td andesTableCell><andes-table-selection [label]="'Select ' + row.name" /></td>
+                <td andesTableCell ellipsis>{{ row.name }}</td>
+                <td andesTableCell ellipsis>{{ row.role }}</td>
+                <td andesTableCell ellipsis>{{ row.city }}</td>
+              </tr>
+            </tbody>
+          </andes-table>
+        </div>`,
+    };
+  },
 };
 
 /** Virtual list, both ways. */

@@ -4,7 +4,6 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  effect,
   ElementRef,
   inject,
   Injector,
@@ -23,11 +22,12 @@ import {
   lucidePinOff,
 } from '@ng-icons/lucide';
 
-import {
-  andesPlacePanel,
-  type AndesPanelSide,
-  type AndesTableFixed,
-} from './table-context';
+import { AndesButton } from '../button/button';
+import { AndesCheckbox } from '../checkbox/checkbox';
+import { AndesPopover } from '../popover/popover';
+import { AndesPopoverContent } from '../popover/popover-content';
+import { AndesPopoverTrigger } from '../popover/popover-trigger';
+import { type AndesTableFixed } from './table-context';
 import { andesMoveColumn } from './table-data';
 
 /** One column offered by `andes-table-column-settings`. */
@@ -46,8 +46,6 @@ export interface AndesTableColumnSetting {
 
 /** Edge each pinned column is fixed to, keyed by column key. */
 export type AndesTablePinned = Readonly<Record<string, AndesTableFixed>>;
-
-let nextSettingsId = 0;
 
 /**
  * "Columns" menu for a table whose header and body render from a column order
@@ -79,44 +77,29 @@ let nextSettingsId = 0;
       lucidePinOff,
     }),
   ],
-  imports: [NgIcon],
+  imports: [
+    AndesButton,
+    AndesCheckbox,
+    AndesPopover,
+    AndesPopoverContent,
+    AndesPopoverTrigger,
+    NgIcon,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './table-column-settings.css',
-  host: {
-    class: 'andes-table-column-settings',
-    '(keydown)': 'onKeydown($event)',
-    '(focusout)': 'onFocusOut($event)',
-    '(document:pointerdown)': 'onDocumentPointerDown($event)',
-  },
+  host: { class: 'andes-table-column-settings' },
   template: `
-    <button
-      #trigger
-      type="button"
-      class="andes-table-column-settings__trigger"
-      aria-haspopup="dialog"
-      [attr.aria-expanded]="open()"
-      [attr.aria-controls]="open() ? id : null"
-      (click)="toggle()"
-    >
-      <ng-icon
-        class="andes-table-column-settings__icon"
-        name="lucideColumns3"
-      />
-      {{ label() }}
-    </button>
-    @if (open()) {
-      <div
-        #panel
-        class="andes-table-column-settings__panel"
-        animate.enter="andes-table-column-settings__panel--enter"
-        animate.leave="andes-table-column-settings__panel--leave"
-        popover="manual"
-        role="dialog"
-        [id]="id"
-        [attr.aria-label]="label()"
-        [attr.data-side]="side()"
-      >
-        <ul class="andes-table-column-settings__list">
+    <andes-popover placement="bottomRight" [maxWidth]="320">
+      <andes-button andesPopoverTrigger variant="outline" size="sm">
+        <ng-icon slot="icon-start" name="lucideColumns3" />
+        {{ label() }}
+      </andes-button>
+      <andes-popover-content class="andes-table-column-settings__panel">
+        <ul
+          #list
+          class="andes-table-column-settings__list"
+          [attr.aria-label]="label()"
+        >
           @for (
             column of listed();
             track column.key;
@@ -124,28 +107,26 @@ let nextSettingsId = 0;
             let last = $last
           ) {
             <li class="andes-table-column-settings__item">
-              <label class="andes-table-column-settings__check">
-                <input
-                  type="checkbox"
-                  [checked]="!isHidden(column.key)"
-                  [disabled]="
-                    column.hideable === false || isLastVisible(column.key)
-                  "
-                  (change)="toggleHidden(column.key)"
-                />
-                <span>{{ column.label }}</span>
-              </label>
+              <andes-checkbox
+                class="andes-table-column-settings__check"
+                [checked]="!isHidden(column.key)"
+                [disabled]="
+                  column.hideable === false || isLastVisible(column.key)
+                "
+                (checkedChange)="setVisible(column.key, $event)"
+              >
+                {{ column.label }}
+              </andes-checkbox>
               @if (pinnable() && column.pinnable !== false) {
-                <button
-                  type="button"
+                <andes-button
                   class="andes-table-column-settings__pin"
                   [class.andes-table-column-settings__pin--on]="
                     isPinned(column.key)
                   "
-                  [attr.aria-pressed]="isPinned(column.key)"
-                  [attr.aria-label]="
-                    pinLabel()(column.label, isPinned(column.key))
-                  "
+                  variant="ghost"
+                  size="icon-xs"
+                  [ripple]="false"
+                  [aria-label]="pinLabel()(column.label, isPinned(column.key))"
                   (click)="togglePinned(column.key)"
                 >
                   @if (isPinned(column.key)) {
@@ -159,13 +140,15 @@ let nextSettingsId = 0;
                       name="lucidePin"
                     />
                   }
-                </button>
+                </andes-button>
               }
               @if (column.movable !== false) {
-                <button
-                  type="button"
+                <andes-button
                   class="andes-table-column-settings__move andes-table-column-settings__move--up"
-                  [attr.aria-label]="moveLabel()(column.label, 'up')"
+                  variant="ghost"
+                  size="icon-xs"
+                  [ripple]="false"
+                  [aria-label]="moveLabel()(column.label, 'up')"
                   [disabled]="first"
                   (click)="move(column.key, -1, 'up')"
                 >
@@ -173,11 +156,13 @@ let nextSettingsId = 0;
                     class="andes-table-column-settings__arrow"
                     name="lucideChevronUp"
                   />
-                </button>
-                <button
-                  type="button"
+                </andes-button>
+                <andes-button
                   class="andes-table-column-settings__move andes-table-column-settings__move--down"
-                  [attr.aria-label]="moveLabel()(column.label, 'down')"
+                  variant="ghost"
+                  size="icon-xs"
+                  [ripple]="false"
+                  [aria-label]="moveLabel()(column.label, 'down')"
                   [disabled]="last"
                   (click)="move(column.key, 1, 'down')"
                 >
@@ -185,28 +170,29 @@ let nextSettingsId = 0;
                     class="andes-table-column-settings__arrow"
                     name="lucideChevronDown"
                   />
-                </button>
+                </andes-button>
               }
             </li>
           }
         </ul>
         <div class="andes-table-column-settings__actions">
-          <button
-            type="button"
+          <andes-button
             class="andes-table-column-settings__reset"
+            variant="link"
+            size="sm"
             [disabled]="!changed()"
             (click)="reset()"
           >
             {{ resetText() }}
-          </button>
+          </andes-button>
         </div>
-      </div>
-    }
+      </andes-popover-content>
+    </andes-popover>
   `,
 })
 export class AndesTableColumnSettings implements OnInit {
-  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
+  private readonly list = viewChild<ElementRef<HTMLElement>>('list');
 
   /** The columns the menu lists, in any order; the menu follows `order`. */
   readonly columns = input.required<readonly AndesTableColumnSetting[]>();
@@ -244,14 +230,6 @@ export class AndesTableColumnSettings implements OnInit {
       `Move ${label} ${direction === 'up' ? 'earlier' : 'later'}`,
   );
 
-  protected readonly id = `andes-table-column-settings-${nextSettingsId++}`;
-  protected readonly open = signal(false);
-  protected readonly side = signal<AndesPanelSide>('below');
-
-  private readonly trigger =
-    viewChild.required<ElementRef<HTMLButtonElement>>('trigger');
-  private readonly panel = viewChild<ElementRef<HTMLElement>>('panel');
-
   private readonly initial = signal<{
     order: readonly string[];
     hidden: readonly string[];
@@ -279,31 +257,6 @@ export class AndesTableColumnSettings implements OnInit {
       !samePins(this.pinned(), this.initial().pinned),
   );
 
-  constructor() {
-    effect((onCleanup) => {
-      if (!this.open()) {
-        return;
-      }
-      const reposition = (event: Event) => {
-        const panel = this.panel()?.nativeElement;
-        if (
-          panel &&
-          event.target instanceof Node &&
-          panel.contains(event.target)
-        ) {
-          return;
-        }
-        this.place();
-      };
-      window.addEventListener('scroll', reposition, true);
-      window.addEventListener('resize', reposition);
-      onCleanup(() => {
-        window.removeEventListener('scroll', reposition, true);
-        window.removeEventListener('resize', reposition);
-      });
-    });
-  }
-
   ngOnInit(): void {
     this.initial.set({
       order: this.order(),
@@ -320,9 +273,12 @@ export class AndesTableColumnSettings implements OnInit {
     return !this.isHidden(key) && this.visibleCount() === 1;
   }
 
-  protected toggleHidden(key: string): void {
+  protected setVisible(key: string, visible: boolean): void {
+    if (visible === !this.isHidden(key)) {
+      return;
+    }
     this.hidden.set(
-      this.isHidden(key)
+      visible
         ? this.hidden().filter((item) => item !== key)
         : [...this.hidden(), key],
     );
@@ -348,15 +304,15 @@ export class AndesTableColumnSettings implements OnInit {
     // Keep focus on the same arrow of the moved row (or the other one at an end).
     afterNextRender(
       () => {
-        const items = this.panel()?.nativeElement.querySelectorAll('li');
+        const items = this.list()?.nativeElement.querySelectorAll('li');
         const index = this.listed().findIndex((column) => column.key === key);
         const item = items?.[index];
-        const same = item?.querySelector<HTMLButtonElement>(
-          `.andes-table-column-settings__move--${direction}`,
-        );
-        const other = item?.querySelector<HTMLButtonElement>(
-          `.andes-table-column-settings__move--${direction === 'up' ? 'down' : 'up'}`,
-        );
+        const buttonOf = (name: string) =>
+          item?.querySelector<HTMLButtonElement>(
+            `.andes-table-column-settings__move--${name} button`,
+          );
+        const same = buttonOf(direction);
+        const other = buttonOf(direction === 'up' ? 'down' : 'up');
         (same && !same.disabled ? same : other)?.focus();
       },
       { injector: this.injector },
@@ -367,74 +323,6 @@ export class AndesTableColumnSettings implements OnInit {
     this.order.set(this.initial().order);
     this.hidden.set(this.initial().hidden);
     this.pinned.set(this.initial().pinned);
-  }
-
-  protected toggle(): void {
-    if (this.open()) {
-      this.close(false);
-      return;
-    }
-    this.open.set(true);
-    afterNextRender(
-      () => {
-        const panel = this.panel()?.nativeElement;
-        if (!panel) {
-          return;
-        }
-        if (typeof panel.showPopover === 'function') {
-          panel.showPopover();
-        }
-        this.place();
-        panel
-          .querySelector<HTMLElement>(
-            'input:not([disabled]), button:not([disabled])',
-          )
-          ?.focus();
-      },
-      { injector: this.injector },
-    );
-  }
-
-  private close(restoreFocus: boolean): void {
-    if (!this.open()) {
-      return;
-    }
-    this.open.set(false);
-    if (restoreFocus) {
-      this.trigger().nativeElement.focus();
-    }
-  }
-
-  private place(): void {
-    const panel = this.panel()?.nativeElement;
-    if (panel) {
-      this.side.set(andesPlacePanel(panel, this.trigger().nativeElement));
-    }
-  }
-
-  protected onKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Escape' && this.open()) {
-      event.preventDefault();
-      event.stopPropagation();
-      this.close(true);
-    }
-  }
-
-  protected onFocusOut(event: FocusEvent): void {
-    const next = event.relatedTarget;
-    if (next instanceof Node && !this.host.nativeElement.contains(next)) {
-      this.close(false);
-    }
-  }
-
-  protected onDocumentPointerDown(event: Event): void {
-    if (
-      this.open() &&
-      event.target instanceof Node &&
-      !this.host.nativeElement.contains(event.target)
-    ) {
-      this.close(false);
-    }
   }
 }
 

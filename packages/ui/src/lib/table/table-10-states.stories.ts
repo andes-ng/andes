@@ -342,16 +342,12 @@ export const ErrorState: Story = {
             } @else {
               <tr andesTableRow>
                 <td andesTableCell colspan="4">
-                  <div role="alert" style="display: flex; flex-direction: column; align-items: center; gap: 0.75rem; padding-block: 2rem; text-align: center;">
-                    <span style="display: inline-flex; align-items: center; gap: 0.5rem; color: var(--andes-color-destructive);">
-                      <ng-icon name="lucideCircleAlert" size="1.25rem" aria-hidden="true" />
-                      The invoices could not be loaded
-                    </span>
-                    <andes-button variant="outline" size="sm" (click)="retry()">
+                  <andes-alert severity="danger" title="The invoices could not be loaded" description="Check the connection and try once more.">
+                    <andes-button slot="action" variant="outline" size="sm" (click)="retry()">
                       <ng-icon slot="icon-start" name="lucideRefreshCw" />
                       Try again
                     </andes-button>
-                  </div>
+                  </andes-alert>
                 </td>
               </tr>
             }
@@ -487,10 +483,7 @@ export const Gallery: Story = {
               @case ('error') {
                 <tr andesTableRow>
                   <td andesTableCell colspan="4">
-                    <span role="alert" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding-block: 2rem; color: var(--andes-color-destructive);">
-                      <ng-icon name="lucideCircleAlert" size="1.25rem" aria-hidden="true" />
-                      The invoices could not be loaded
-                    </span>
+                    <andes-alert severity="danger" title="The invoices could not be loaded" />
                   </td>
                 </tr>
               }

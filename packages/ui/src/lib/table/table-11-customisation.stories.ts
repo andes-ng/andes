@@ -440,7 +440,7 @@ export const RowEvents: Story = {
 export const CellProps: Story = {
   name: 'Cell props',
   parameters: about(
-    'Each cell takes its own class, style and attributes computed from its value, such as a title that explains the number and a colour for the low scores.',
+    'Each cell takes its own class, style and attributes computed from its value, such as a data attribute that carries the raw number and a colour for the low scores.',
   ),
   render: () => {
     injectCss();
@@ -460,8 +460,8 @@ export const CellProps: Story = {
               @for (user of users; track user.id) {
                 <tr andesTableRow>
                   <td andesTableCell [style.font-weight]="user.role === 'Admin' ? 600 : null">{{ user.name }}</td>
-                  <td andesTableCell align="end" [attr.title]="user.age + ' years old'">{{ user.age }}</td>
-                  <td andesTableCell align="end" [class.story-hot]="user.score < 60" [attr.title]="'Score ' + user.score + ' of 100'">{{ user.score }}</td>
+                  <td andesTableCell align="end" [attr.data-years]="user.age">{{ user.age }}</td>
+                  <td andesTableCell align="end" [class.story-hot]="user.score < 60" [attr.data-score]="user.score">{{ user.score }}</td>
                 </tr>
               }
             </tbody>
@@ -753,7 +753,7 @@ export const RowGrouping: Story = {
               <tr andesTableRow style="background: var(--andes-table-tint, var(--andes-color-muted));">
                 <td andesTableCell colspan="3">
                   <span style="display: inline-flex; align-items: center; gap: 0.5rem;">
-                    <andes-button variant="ghost" size="icon-xs" [attr.aria-expanded]="!closed().includes(group.role)" [attr.aria-label]="'Toggle ' + group.role" (click)="toggle(group.role)">
+                    <andes-button variant="ghost" size="icon-xs" [attr.aria-expanded]="!closed().includes(group.role)" [aria-label]="'Toggle ' + group.role" (click)="toggle(group.role)">
                       <ng-icon name="lucideChevronRight" [style.transform]="closed().includes(group.role) ? 'none' : 'rotate(90deg)'" />
                     </andes-button>
                     <strong>{{ group.role }}</strong>

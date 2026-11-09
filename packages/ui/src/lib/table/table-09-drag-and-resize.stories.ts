@@ -123,7 +123,7 @@ export const DragHandle: Story = {
             @for (row of rows(); track row.id) {
               <tr andesTableRow cdkDrag cdkDragPreviewContainer="parent" class="story-drag-row">
                 <td andesTableCell>
-                  <andes-button variant="ghost" size="icon-xs" cdkDragHandle style="cursor: grab;" [attr.aria-label]="'Drag ' + row.title">
+                  <andes-button variant="ghost" size="icon-xs" cdkDragHandle style="cursor: grab;" [aria-label]="'Drag ' + row.title">
                     <ng-icon name="lucideGripVertical" />
                   </andes-button>
                 </td>
@@ -187,8 +187,8 @@ export const KeyboardMove: Story = {
                   <td andesTableCell>{{ row.owner }}</td>
                   <td andesTableCell align="end">
                     <span style="display: inline-flex; gap: 0.25rem;">
-                      <andes-button variant="ghost" size="icon-xs" [disabled]="first" [attr.aria-label]="'Move ' + row.title + ' up'" (click)="move(i, -1)"><ng-icon name="lucideArrowUp" /></andes-button>
-                      <andes-button variant="ghost" size="icon-xs" [disabled]="last" [attr.aria-label]="'Move ' + row.title + ' down'" (click)="move(i, 1)"><ng-icon name="lucideArrowDown" /></andes-button>
+                      <andes-button variant="ghost" size="icon-xs" [disabled]="first" [aria-label]="'Move ' + row.title + ' up'" (click)="move(i, -1)"><ng-icon name="lucideArrowUp" /></andes-button>
+                      <andes-button variant="ghost" size="icon-xs" [disabled]="last" [aria-label]="'Move ' + row.title + ' down'" (click)="move(i, 1)"><ng-icon name="lucideArrowDown" /></andes-button>
                     </span>
                   </td>
                 </tr>

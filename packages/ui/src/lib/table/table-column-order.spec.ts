@@ -54,6 +54,16 @@ describe('column order helpers', () => {
   });
 });
 
+/** Zero jsdom geometry makes CDK treat everything as untabbable, so a popover cannot focus. */
+beforeAll(() => {
+  for (const key of ['offsetWidth', 'offsetHeight'] as const) {
+    Object.defineProperty(HTMLElement.prototype, key, {
+      configurable: true,
+      get: () => 1,
+    });
+  }
+});
+
 describe('AndesTable column reordering', () => {
   @Component({
     imports: [
@@ -284,33 +294,32 @@ describe('AndesTable column reordering', () => {
   });
 
   describe('column settings menu', () => {
+    // The button is the library's; the panel is its popover, drawn in the overlay layer.
+    const triggerOf = (ctx: ReturnType<typeof setup>) =>
+      ctx.root.querySelector(
+        'andes-table-column-settings andes-button button',
+      ) as HTMLButtonElement;
+
     function openMenu(ctx: ReturnType<typeof setup>) {
-      (
-        ctx.root.querySelector(
-          '.andes-table-column-settings__trigger',
-        ) as HTMLButtonElement
-      ).click();
+      triggerOf(ctx).click();
       ctx.fixture.detectChanges();
       const items = () =>
         Array.from(
-          ctx.root.querySelectorAll<HTMLElement>(
+          document.querySelectorAll<HTMLElement>(
             '.andes-table-column-settings__item',
           ),
         );
       const item = (text: string) =>
         items().find((li) => li.textContent?.includes(text)) as HTMLElement;
-      return { items, item };
+      const control = (text: string, selector: string) =>
+        item(text).querySelector(selector) as HTMLButtonElement;
+      return { items, item, control };
     }
 
     it('lists the columns in table order with visibility and move controls', () => {
       const ctx = setup();
-      const { items, item } = openMenu(ctx);
+      const { items, item, control } = openMenu(ctx);
 
-      expect(
-        ctx.root
-          .querySelector('.andes-table-column-settings__trigger')
-          ?.getAttribute('aria-expanded'),
-      ).toBe('true');
       expect(items().map((li) => li.textContent?.trim())).toEqual([
         'Id',
         'Name',
@@ -320,7 +329,10 @@ describe('AndesTable column reordering', () => {
       expect(item('Id').querySelector('input')?.disabled).toBe(true);
       expect(item('Id').querySelector('button')).toBeNull();
       expect(
-        item('Name').querySelector('button')?.getAttribute('aria-label'),
+        control(
+          'Name',
+          '.andes-table-column-settings__move--up button',
+        ).getAttribute('aria-label'),
       ).toBe('Move Name earlier');
     });
 
@@ -347,27 +359,20 @@ describe('AndesTable column reordering', () => {
 
     it('moves columns and resets to the first-render state', () => {
       const ctx = setup();
-      const { item } = openMenu(ctx);
+      const { control } = openMenu(ctx);
       const reset = () =>
-        ctx.root.querySelector(
-          '.andes-table-column-settings__reset',
+        document.querySelector(
+          '.andes-table-column-settings__reset button',
         ) as HTMLButtonElement;
 
       expect(reset().disabled).toBe(true);
-      (
-        item('Age').querySelector(
-          '.andes-table-column-settings__move--up',
-        ) as HTMLButtonElement
-      ).click();
+      control('Age', '.andes-table-column-settings__move--up button').click();
       ctx.fixture.detectChanges();
       expect(ctx.host.order()).toEqual(['id', 'name', 'age', 'city']);
       expect(ctx.headers()).toEqual(['#', 'Id', 'Name', 'Age', 'City']);
       expect(
-        (
-          item('City').querySelector(
-            '.andes-table-column-settings__move--down',
-          ) as HTMLButtonElement
-        ).disabled,
+        control('City', '.andes-table-column-settings__move--down button')
+          .disabled,
       ).toBe(true);
 
       reset().click();
@@ -377,20 +382,22 @@ describe('AndesTable column reordering', () => {
 
     it('closes on Escape and returns focus to its button', () => {
       const ctx = setup();
-      const { item } = openMenu(ctx);
-      const trigger = ctx.root.querySelector(
-        '.andes-table-column-settings__trigger',
-      ) as HTMLButtonElement;
+      openMenu(ctx);
 
-      item('Name').dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+      document.body.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'Escape',
+          keyCode: 27,
+          bubbles: true,
+          cancelable: true,
+        }),
       );
       ctx.fixture.detectChanges();
 
       expect(
-        ctx.root.querySelector('.andes-table-column-settings__panel'),
+        document.querySelector('.andes-table-column-settings__list'),
       ).toBeNull();
-      expect(document.activeElement).toBe(trigger);
+      expect(document.activeElement).toBe(triggerOf(ctx));
     });
   });
 });

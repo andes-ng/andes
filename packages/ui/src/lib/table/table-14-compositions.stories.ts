@@ -156,7 +156,7 @@ export const AdminUsers: Story = {
                 <td andesTableCell>{{ user.joined }}</td>
                 <td andesTableCell align="end">
                   <andes-dropdown-menu [items]="actions">
-                    <andes-button andesDropdownMenuTrigger variant="ghost" size="icon-sm" [attr.aria-label]="'Actions for ' + user.name"><ng-icon name="lucideEllipsis" /></andes-button>
+                    <andes-button andesDropdownMenuTrigger variant="ghost" size="icon-sm" [aria-label]="'Actions for ' + user.name"><ng-icon name="lucideEllipsis" /></andes-button>
                   </andes-dropdown-menu>
                 </td>
               </tr>
@@ -347,7 +347,7 @@ export const FileManager: Story = {
                 <td andesTableCell><span [style]="muted">{{ node.row.modified }}</span></td>
                 <td andesTableCell align="end">
                   <andes-dropdown-menu [items]="actions">
-                    <andes-button andesDropdownMenuTrigger variant="ghost" size="icon-sm" [attr.aria-label]="'Actions for ' + node.row.name"><ng-icon name="lucideEllipsis" /></andes-button>
+                    <andes-button andesDropdownMenuTrigger variant="ghost" size="icon-sm" [aria-label]="'Actions for ' + node.row.name"><ng-icon name="lucideEllipsis" /></andes-button>
                   </andes-dropdown-menu>
                 </td>
               </tr>
@@ -462,7 +462,7 @@ export const ProjectTasks: Story = {
                   </span>
                 </td>
                 <td andesTableCell>
-                  <andes-select size="sm" [attr.aria-label]="'Status of ' + task.title" [value]="task.status" (valueChange)="setStatus(task.id, $any($event))">
+                  <andes-select size="sm" [aria-label]="'Status of ' + task.title" [value]="task.status" (valueChange)="setStatus(task.id, $any($event))">
                     <andes-select-trigger><andes-select-value /></andes-select-trigger>
                     <andes-select-content>
                       <andes-select-item value="Todo">Todo</andes-select-item>
@@ -537,8 +537,8 @@ export const InventoryEditing: Story = {
                   </span>
                 </td>
                 <td andesTableCell>{{ item.category }}</td>
-                <td andesTableCell><andes-input-number size="sm" [min]="0" [attr.aria-label]="'Stock of ' + item.name" [value]="item.stock" (valueChange)="set(item.sku, 'stock', $event)" /></td>
-                <td andesTableCell><andes-input-number size="sm" [min]="0" [precision]="2" [attr.aria-label]="'Price of ' + item.name" [value]="item.price" (valueChange)="set(item.sku, 'price', $event)" /></td>
+                <td andesTableCell><andes-input-number size="sm" [min]="0" [aria-label]="'Stock of ' + item.name" [value]="item.stock" (valueChange)="set(item.sku, 'stock', $event)" /></td>
+                <td andesTableCell><andes-input-number size="sm" [min]="0" [precision]="2" [aria-label]="'Price of ' + item.name" [value]="item.price" (valueChange)="set(item.sku, 'price', $event)" /></td>
                 <td andesTableCell>
                   @if (item.stock < 20) {
                     <andes-tag color="warning"><ng-icon name="lucideTriangleAlert" style="width: 0.875rem; height: 0.875rem;" /> Low stock</andes-tag>
@@ -654,7 +654,7 @@ export const TeamMembers: Story = {
                   </span>
                 </td>
                 <td andesTableCell>
-                  <andes-select size="sm" [attr.aria-label]="'Role of ' + member.name" [value]="member.role" (valueChange)="setRole(member.id, $any($event))">
+                  <andes-select size="sm" [aria-label]="'Role of ' + member.name" [value]="member.role" (valueChange)="setRole(member.id, $any($event))">
                     <andes-select-trigger><andes-select-value /></andes-select-trigger>
                     <andes-select-content>
                       <andes-select-item value="Admin">Admin</andes-select-item>
@@ -664,9 +664,9 @@ export const TeamMembers: Story = {
                     </andes-select-content>
                   </andes-select>
                 </td>
-                <td andesTableCell><andes-switch [attr.aria-label]="'Active: ' + member.name" [checked]="member.active" (checkedChange)="setActive(member.id, $event)" /></td>
+                <td andesTableCell><andes-switch [aria-label]="'Active: ' + member.name" [checked]="member.active" (checkedChange)="setActive(member.id, $event)" /></td>
                 <td andesTableCell align="end">
-                  <andes-button variant="ghost" size="icon-sm" [attr.aria-label]="'Remove ' + member.name" (click)="remove(member.id)"><ng-icon name="lucideTrash2" /></andes-button>
+                  <andes-button variant="ghost" size="icon-sm" [aria-label]="'Remove ' + member.name" (click)="remove(member.id)"><ng-icon name="lucideTrash2" /></andes-button>
                 </td>
               </tr>
             } @empty {

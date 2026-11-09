@@ -30,6 +30,16 @@ beforeEach(() => {
   });
 });
 
+/** Zero jsdom geometry makes CDK treat everything as untabbable, so a popover cannot focus. */
+beforeAll(() => {
+  for (const key of ['offsetWidth', 'offsetHeight'] as const) {
+    Object.defineProperty(HTMLElement.prototype, key, {
+      configurable: true,
+      get: () => 1,
+    });
+  }
+});
+
 interface Person {
   readonly key: number;
   readonly name: string;
@@ -157,29 +167,36 @@ function setup(configure?: (host: AdvancedHost) => void) {
   const root = fixture.nativeElement as HTMLElement;
   const host = fixture.componentInstance;
 
+  // The button is the library's; the panel is its popover, drawn in the overlay layer.
+  const triggerHost = (index = 0) =>
+    root.querySelectorAll('.andes-table-filter__trigger')[index] as HTMLElement;
   const trigger = (index = 0) =>
-    root.querySelectorAll('.andes-table-filter__trigger')[
-      index
-    ] as HTMLButtonElement;
+    triggerHost(index).querySelector('button') as HTMLButtonElement;
   const panel = () =>
-    root.querySelector('.andes-table-filter__panel') as HTMLElement | null;
+    document.querySelector('.andes-table-filter__panel') as HTMLElement | null;
+  const choices = () =>
+    Array.from(
+      panel()?.querySelectorAll('andes-checkbox, andes-radio') ?? [],
+    ).filter(
+      (element) => !element.classList.contains('andes-table-filter__check-all'),
+    );
   const labelled = (text: string) => {
-    const label = Array.from(
-      root.querySelectorAll('.andes-table-filter__panel label'),
+    const choice = Array.from(
+      panel()?.querySelectorAll('andes-checkbox, andes-radio') ?? [],
     ).find((element) => element.textContent?.trim() === text);
-    return label?.querySelector('input') as HTMLInputElement;
+    return choice?.querySelector('input') as HTMLInputElement;
   };
   const optionTexts = () =>
-    Array.from(
-      root.querySelectorAll(
-        '.andes-table-filter__panel label:not(.andes-table-filter__check-all):not(.andes-table-filter__search-field)',
-      ),
-    ).map((label) => label.textContent?.trim());
+    choices().map((choice) => choice.textContent?.trim());
   const visibleKeys = () =>
     Array.from(root.querySelectorAll('tbody tr')).map((row) =>
       Number(row.getAttribute('data-key')),
     );
-  const detect = () => fixture.detectChanges();
+  // `andesTableAria` writes after the render that follows a change.
+  const detect = () => {
+    fixture.detectChanges();
+    fixture.detectChanges();
+  };
   const act = (element: Element) => {
     element.dispatchEvent(
       new MouseEvent('click', { bubbles: true, cancelable: true }),
@@ -201,19 +218,21 @@ function setup(configure?: (host: AdvancedHost) => void) {
     detect();
   };
   const search = (text: string) => {
-    const input = root.querySelector(
-      '.andes-table-filter__search-input',
+    const input = document.querySelector(
+      '.andes-table-filter__search input',
     ) as HTMLInputElement;
     input.value = text;
-    input.dispatchEvent(new Event('input'));
+    input.dispatchEvent(new Event('input', { bubbles: true }));
     detect();
   };
+  detect();
 
   return {
     fixture,
     root,
     host,
     trigger,
+    triggerHost,
     panel,
     labelled,
     optionTexts,
@@ -280,11 +299,11 @@ describe('AndesTableFilter tree mode', () => {
   });
 
   it('collapses and expands a node from its switcher and the arrow keys', () => {
-    const { root, trigger, labelled, optionTexts, act, key } = setup();
+    const { trigger, labelled, optionTexts, act, key } = setup();
 
     act(trigger());
-    const switcher = root.querySelector(
-      '.andes-table-filter__switcher',
+    const switcher = document.querySelector(
+      '.andes-table-filter__switcher button',
     ) as HTMLButtonElement;
     expect(switcher.getAttribute('aria-expanded')).toBe('true');
 
@@ -299,12 +318,12 @@ describe('AndesTableFilter tree mode', () => {
   });
 
   it('selects a single node with radios when multiple is off', () => {
-    const { host, trigger, labelled, act, check, button, root } = setup((h) =>
+    const { host, trigger, labelled, act, check, button } = setup((h) =>
       h.multiple.set(false),
     );
 
     act(trigger());
-    expect(root.querySelector('.andes-table-filter__check-all')).toBeNull();
+    expect(document.querySelector('.andes-table-filter__check-all')).toBeNull();
     check(labelled('Category 1'));
     check(labelled('Pink'));
     act(button('OK'));
@@ -340,14 +359,12 @@ describe('AndesTableFilter search and menu groups', () => {
   });
 
   it('shows nested options as labelled groups in menu mode', () => {
-    const { root, trigger, optionTexts, act } = setup((h) =>
-      h.mode.set('menu'),
-    );
+    const { trigger, optionTexts, act } = setup((h) => h.mode.set('menu'));
 
     act(trigger());
 
     const groups = Array.from(
-      root.querySelectorAll('.andes-table-filter__group'),
+      document.querySelectorAll('.andes-table-filter__group'),
     );
     expect(groups.map((group) => group.getAttribute('role'))).toEqual([
       'group',
@@ -365,12 +382,21 @@ describe('AndesTableFilter search and menu groups', () => {
 
 describe('AndesTableFilter value control', () => {
   it('follows a controlled filteredValue and only proposes changes', () => {
-    const { host, detect, trigger, labelled, visibleKeys, act, check, button } =
-      setup((h) => h.addressValue.set(['London']));
+    const {
+      host,
+      detect,
+      trigger,
+      triggerHost,
+      labelled,
+      visibleKeys,
+      act,
+      check,
+      button,
+    } = setup((h) => h.addressValue.set(['London']));
 
     expect(host.filters()).toEqual({ address: ['London'] });
     expect(visibleKeys()).toEqual([2, 4]);
-    expect(trigger(1).getAttribute('data-active')).toBe('');
+    expect(triggerHost(1).getAttribute('data-active')).toBe('');
 
     act(trigger(1));
     check(labelled('New York'));
@@ -394,7 +420,7 @@ describe('AndesTableFilter value control', () => {
     host.addressValue.set(null);
     detect();
     expect(host.filters()).toEqual({});
-    expect(trigger(1).getAttribute('data-active')).toBeNull();
+    expect(triggerHost(1).getAttribute('data-active')).toBeNull();
   });
 
   it('seeds defaultFilteredValue and resets back to it with resetToDefault', () => {
@@ -517,25 +543,27 @@ describe('AndesTableFilter templates and events', () => {
     fixture.detectChanges();
     const root = fixture.nativeElement as HTMLElement;
     const host = fixture.componentInstance;
-    const panel = () => root.querySelector('.andes-table-filter__panel');
+    const inPanel = (selector: string) =>
+      document.querySelector(selector) as HTMLElement;
+    const panel = () => document.querySelector('.andes-table-filter__panel');
 
-    (root.querySelector('.andes-table-filter__trigger') as HTMLElement).click();
+    (
+      root.querySelector('.andes-table-filter__trigger button') as HTMLElement
+    ).click();
     fixture.detectChanges();
-    const input = root.querySelector('.custom-input') as HTMLInputElement;
+    const input = inPanel('.custom-input') as HTMLInputElement;
     input.value = 'Jim';
     input.dispatchEvent(new Event('input'));
     fixture.detectChanges();
 
-    (root.querySelector('.custom-filter') as HTMLElement).click();
+    inPanel('.custom-filter').click();
     fixture.detectChanges();
     expect(host.filters()).toEqual({ name: ['Jim'] });
     expect(panel()).not.toBeNull();
 
-    (root.querySelector('.custom-reset') as HTMLElement).click();
+    inPanel('.custom-reset').click();
     fixture.detectChanges();
-    expect(
-      (root.querySelector('.custom-input') as HTMLInputElement).value,
-    ).toBe('');
+    expect((inPanel('.custom-input') as HTMLInputElement).value).toBe('');
     expect(host.filters()).toEqual({ name: ['Jim'] });
     expect(panel()).not.toBeNull();
   });

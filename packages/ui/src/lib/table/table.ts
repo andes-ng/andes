@@ -516,6 +516,11 @@ export class AndesTable {
   /** The table's own scroll container scrolled (with `scrollX`/`scrollY`). */
   readonly bodyScroll = output<Event>();
 
+  /** Id of the detail row of `key`, for the `aria-controls` of its expand toggle. */
+  detailId(key: AndesTableRowKey): string {
+    return `${this.radioGroupName}-detail-${String(key).replace(/\s+/g, '-')}`;
+  }
+
   /** Shared `name` for this table's radio buttons, so they form one group. */
   readonly radioGroupName = `andes-table-${nextTableId++}-selection`;
 

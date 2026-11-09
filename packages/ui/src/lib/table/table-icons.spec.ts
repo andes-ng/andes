@@ -32,9 +32,13 @@ beforeEach(() => {
   });
 });
 
-/** The `name` of every `<ng-icon>` under `root` whose svg was drawn. */
-function drawn(root: ParentNode): string[] {
+/**
+ * The `name` of every `<ng-icon>` under `root` whose svg was drawn. The check and minus of the
+ * library checkbox are its own, so they are left out here and checked on their own.
+ */
+function drawn(root: ParentNode, withCheckboxes = false): string[] {
   return Array.from(root.querySelectorAll('ng-icon'))
+    .filter((icon) => withCheckboxes || icon.closest('andes-checkbox') === null)
     .filter((icon) => icon.querySelector('svg') !== null)
     .map((icon) => icon.getAttribute('name') ?? '?');
 }
@@ -122,6 +126,16 @@ function click(element: Element | null): void {
   (element as HTMLElement).click();
 }
 
+/** Zero jsdom geometry makes CDK treat everything as untabbable, so a popover cannot focus. */
+beforeAll(() => {
+  for (const key of ['offsetWidth', 'offsetHeight'] as const) {
+    Object.defineProperty(HTMLElement.prototype, key, {
+      configurable: true,
+      get: () => 1,
+    });
+  }
+});
+
 describe('table icons', () => {
   async function render() {
     const fixture = TestBed.createComponent(Host);
@@ -142,6 +156,15 @@ describe('table icons', () => {
     expect(blank(root)).toEqual([]);
   });
 
+  it('draws the check and the minus of the select-all checkbox', async () => {
+    const fixture = await render();
+    const root: HTMLElement = fixture.nativeElement;
+
+    expect(
+      drawn(root.querySelector('andes-table-select-all') as Element, true),
+    ).toEqual(['lucideCheck', 'lucideMinus', 'lucideChevronDown']);
+  });
+
   it('draws the select-all caret', async () => {
     const fixture = await render();
     const root: HTMLElement = fixture.nativeElement;
@@ -154,10 +177,13 @@ describe('table icons', () => {
   it('draws the move arrows of the column settings panel', async () => {
     const fixture = await render();
     const root: HTMLElement = fixture.nativeElement;
-    click(root.querySelector('.andes-table-column-settings__trigger'));
+    click(
+      root.querySelector('andes-table-column-settings andes-button button'),
+    );
     fixture.detectChanges();
 
-    const panel = root.querySelector('.andes-table-column-settings__panel');
+    // The panel is the library popover, drawn in the overlay layer.
+    const panel = document.querySelector('.andes-table-column-settings__panel');
     expect(panel).not.toBeNull();
     expect(drawn(panel as Element)).toEqual([
       'lucideChevronUp',
@@ -171,10 +197,10 @@ describe('table icons', () => {
   it('draws the search glass and the tree switcher chevron in a filter panel', async () => {
     const fixture = await render();
     const root: HTMLElement = fixture.nativeElement;
-    click(root.querySelector('.andes-table-filter__trigger'));
+    click(root.querySelector('.andes-table-filter__trigger button'));
     fixture.detectChanges();
 
-    const panel = root.querySelector('.andes-table-filter__panel');
+    const panel = document.querySelector('.andes-table-filter__panel');
     expect(panel).not.toBeNull();
     expect(drawn(panel as Element)).toEqual([
       'lucideSearch',
@@ -186,11 +212,12 @@ describe('table icons', () => {
   it('draws the chevron of the text filter operator select', async () => {
     const fixture = await render();
     const root: HTMLElement = fixture.nativeElement;
-    click(root.querySelectorAll('.andes-table-filter__trigger')[1]);
+    click(root.querySelectorAll('.andes-table-filter__trigger button')[1]);
     fixture.detectChanges();
 
+    // The operator select is the library's: its chevron is drawn by the select itself.
     expect(
-      drawn(root.querySelector('andes-table-text-filter') as Element),
+      drawn(document.querySelector('andes-table-text-filter') as Element),
     ).toEqual(['lucideChevronDown']);
     expect(blank(root)).toEqual([]);
   });

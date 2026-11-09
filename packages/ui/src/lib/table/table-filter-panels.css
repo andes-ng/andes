@@ -1,5 +1,5 @@
-/* Rendered inside the filter's top-layer panel, which sets the font; the native
-   controls below inherit it. */
+/* Rendered inside the filter's popover, which sets the font; the library fields below
+   draw themselves. */
 :host {
   display: grid;
   gap: var(--andes-space-2);
@@ -26,100 +26,4 @@
   color: var(--andes-color-muted-foreground);
   font-size: 0.75rem;
   line-height: 1.25rem;
-}
-
-/* The shared field look: one border, one focus ring, no inner outline. */
-.andes-table-filter-panel__field {
-  position: relative;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  height: 2rem;
-  padding-inline: 0.6875rem;
-  border: 1px solid var(--andes-color-input);
-  border-radius: var(--andes-radius-md);
-  background-color: var(--andes-color-background);
-  color: var(--andes-color-foreground);
-  transition:
-    border-color 150ms ease,
-    box-shadow 150ms ease,
-    background-color 150ms ease;
-}
-
-.andes-table-filter-panel__field:hover {
-  border-color: color-mix(
-    in srgb,
-    var(--andes-color-primary) 65%,
-    var(--andes-color-input)
-  );
-}
-
-.andes-table-filter-panel__field:focus-within {
-  border-color: var(--andes-color-primary);
-  box-shadow: 0 0 0 2px
-    color-mix(in srgb, var(--andes-color-primary) 20%, transparent);
-  outline: none;
-}
-
-.andes-table-filter-panel__field--error,
-.andes-table-filter-panel__field--error:hover {
-  border-color: var(--andes-color-danger);
-}
-
-.andes-table-filter-panel__field--error:focus-within {
-  border-color: var(--andes-color-danger);
-  box-shadow: 0 0 0 2px
-    color-mix(in srgb, var(--andes-color-danger) 20%, transparent);
-}
-
-.andes-table-filter-panel__control {
-  box-sizing: border-box;
-  flex: 1;
-  width: 100%;
-  min-width: 0;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  outline: 0;
-  box-shadow: none;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  line-height: 1.375rem;
-}
-
-.andes-table-filter-panel__control::placeholder {
-  color: var(--andes-color-muted-foreground);
-}
-
-.andes-table-filter-panel__select {
-  padding-inline-end: 1.25rem;
-  appearance: none;
-  cursor: pointer;
-}
-
-/* Lucide's chevron in an `ng-icon`, over the select's right edge (its own arrow is off). */
-.andes-table-filter-panel__chevron {
-  position: absolute;
-  inset-inline-end: 0.6875rem;
-  display: flex;
-  width: 0.75rem;
-  height: 0.75rem;
-  color: var(--andes-color-muted-foreground);
-  pointer-events: none;
-  --ng-icon__stroke-width: 2.5;
-}
-
-/* The date fields' own calendar button and the select's list follow
-   `color-scheme`, not the tokens. */
-:host-context([data-andes-theme='dark']) {
-  color-scheme: dark;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .andes-table-filter-panel__field {
-    transition: none;
-  }
 }

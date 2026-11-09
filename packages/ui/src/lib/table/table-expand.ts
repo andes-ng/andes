@@ -19,7 +19,9 @@ import {
   lucideChevronsUpDown,
 } from '@ng-icons/lucide';
 
+import { AndesButton } from '../button/button';
 import { AndesTable } from './table';
+import { AndesTableButtonAria } from './table-button-aria';
 import type { AndesTableRowKey } from './table-context';
 import { AndesTableRow } from './table-row';
 
@@ -38,12 +40,13 @@ import { AndesTableRow } from './table-row';
   selector: 'andes-table-expand-toggle',
   exportAs: 'andesTableExpandToggle',
   viewProviders: [provideIcons({ lucideChevronRight })],
-  imports: [NgIcon],
+  imports: [AndesButton, AndesTableButtonAria, NgIcon],
   styleUrl: './table-controls.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: 'andes-table-control',
     '[class]': "table.partClass('expand')",
+    '[class.andes-table-control--expanded]': 'expanded()',
     '[style]': "table.partStyle('expand')",
   },
   template: `@if (spacer()) {
@@ -52,11 +55,13 @@ import { AndesTableRow } from './table-row';
         aria-hidden="true"
       ></span>
     } @else {
-      <button
-        type="button"
+      <andes-button
         class="andes-table-control__expand"
-        [attr.aria-expanded]="expanded()"
-        [attr.aria-label]="label()"
+        variant="ghost"
+        size="icon-xs"
+        [ripple]="false"
+        [andesTableAria]="aria()"
+        [aria-label]="label()"
         [disabled]="resolvedKey() === undefined"
         (click)="toggle()"
       >
@@ -65,12 +70,23 @@ import { AndesTableRow } from './table-row';
             class="andes-table-control__chevron"
             name="lucideChevronRight"
         /></ng-content>
-      </button>
+      </andes-button>
     }`,
 })
 export class AndesTableExpandToggle {
   protected readonly table = inject(AndesTable);
   private readonly row = inject(AndesTableRow, { optional: true });
+
+  /** `aria-expanded` and `aria-controls`, for the button the library draws. */
+  protected readonly aria = computed(() => {
+    const key = this.resolvedKey();
+    const expanded = this.expanded();
+    return {
+      'aria-expanded': expanded,
+      'aria-controls':
+        expanded && key !== undefined ? this.table.detailId(key) : null,
+    };
+  });
 
   /** Key of the row this button expands. Defaults to the enclosing row's `rowKey`. */
   readonly rowKey = input<AndesTableRowKey | undefined>(undefined);
@@ -122,7 +138,7 @@ export class AndesTableExpandToggle {
 @Component({
   selector: 'andes-table-expand-all',
   viewProviders: [provideIcons({ lucideChevronsDownUp, lucideChevronsUpDown })],
-  imports: [NgIcon],
+  imports: [AndesButton, NgIcon],
   styleUrl: './table-controls.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
@@ -130,10 +146,12 @@ export class AndesTableExpandToggle {
     '[class]': "table.partClass('expand')",
     '[style]': "table.partStyle('expand')",
   },
-  template: `<button
-    type="button"
+  template: `<andes-button
     class="andes-table-control__expand"
-    [attr.aria-label]="allExpanded() ? collapseLabel() : expandLabel()"
+    variant="ghost"
+    size="icon-xs"
+    [ripple]="false"
+    [aria-label]="allExpanded() ? collapseLabel() : expandLabel()"
     [disabled]="keys().length === 0"
     (click)="toggle()"
   >
@@ -148,7 +166,7 @@ export class AndesTableExpandToggle {
         name="lucideChevronsUpDown"
       />
     }
-  </button>`,
+  </andes-button>`,
 })
 export class AndesTableExpandAll {
   protected readonly table = inject(AndesTable);
@@ -230,6 +248,11 @@ export class AndesTableExpandedRow {
           if (node instanceof Element) {
             this.renderer.addClass(node, 'andes-table__row');
             this.renderer.addClass(node, 'andes-table__expanded-row');
+            this.renderer.setAttribute(
+              node,
+              'id',
+              this.table.detailId(this.rowKey()),
+            );
           }
         }
       } else if (!expanded && !keep && this.view) {

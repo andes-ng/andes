@@ -30,6 +30,62 @@ beforeEach(() => {
   });
 });
 
+/**
+ * jsdom reports zero geometry for every element, which makes CDK's `InteractivityChecker`
+ * treat them all as invisible and therefore untabbable (so a popover cannot move focus in).
+ */
+function withElementGeometry() {
+  const keys = ['offsetWidth', 'offsetHeight'] as const;
+  const saved = keys.map(
+    (key) =>
+      [
+        key,
+        Object.getOwnPropertyDescriptor(HTMLElement.prototype, key),
+      ] as const,
+  );
+  beforeAll(() => {
+    for (const key of keys) {
+      Object.defineProperty(HTMLElement.prototype, key, {
+        configurable: true,
+        get: () => 1,
+      });
+    }
+  });
+  afterAll(() => {
+    for (const [key, descriptor] of saved) {
+      if (descriptor) {
+        Object.defineProperty(HTMLElement.prototype, key, descriptor);
+      } else {
+        delete (HTMLElement.prototype as unknown as Record<string, unknown>)[
+          key
+        ];
+      }
+    }
+  });
+}
+
+/** Escape, as the overlay listens for it. */
+function pressEscape(): void {
+  document.body.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'Escape',
+      keyCode: 27,
+      bubbles: true,
+      cancelable: true,
+    }),
+  );
+}
+
+/** A click that starts with the pointer press an outside-click listener waits for. */
+function clickOutside(element: Element): void {
+  element.dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, cancelable: true }),
+  );
+  element.dispatchEvent(
+    new MouseEvent('click', { bubbles: true, cancelable: true }),
+  );
+}
+
 interface Row {
   readonly id: string;
   readonly name: string;
@@ -217,15 +273,15 @@ describe('AndesTable row selection', () => {
     expect(host.selected()).toEqual(['a']);
   });
 
-  it('switches to radios that share a group and keep a single selection', () => {
+  it('switches to library radios that keep a single selection', () => {
     const { host, fixture, boxes, root, act } = setup();
     host.type.set('radio');
     fixture.detectChanges();
 
     expect(boxes().every((box) => box.type === 'radio')).toBe(true);
-    const names = new Set(boxes().map((box) => box.name));
-    expect(names.size).toBe(1);
-    expect([...names][0]).toMatch(/^andes-table-\d+-selection$/);
+    expect(
+      root.querySelectorAll('andes-table-selection andes-radio'),
+    ).toHaveLength(4);
 
     act(boxes()[0]);
     act(boxes()[2]);
@@ -475,6 +531,8 @@ describe('AndesTable sorting options', () => {
 });
 
 describe('AndesTable column filters', () => {
+  withElementGeometry();
+
   const OPTIONS: readonly AndesTableFilterOption[] = [
     { text: 'Paid', value: 'paid' },
     { text: 'Pending', value: 'pending' },
@@ -565,16 +623,30 @@ describe('AndesTable column filters', () => {
     fixture.detectChanges();
     const root = fixture.nativeElement as HTMLElement;
     const host = fixture.componentInstance;
+    // The button is the library's; the panel is its popover, drawn in the overlay layer.
     const trigger = (index = 0) =>
-      root.querySelectorAll('.andes-table-filter__trigger')[
+      root.querySelectorAll('.andes-table-filter__trigger button')[
         index
       ] as HTMLButtonElement;
     const panel = () =>
-      root.querySelector('.andes-table-filter__panel') as HTMLElement | null;
+      document.querySelector(
+        '.andes-table-filter__panel',
+      ) as HTMLElement | null;
     const options = () =>
       Array.from(
-        root.querySelectorAll('.andes-table-filter__input'),
+        document.querySelectorAll(
+          '.andes-table-filter__panel input[type="checkbox"], .andes-table-filter__panel input[type="radio"]',
+        ),
       ) as HTMLInputElement[];
+    const search = () =>
+      document.querySelector(
+        '.andes-table-filter__search input',
+      ) as HTMLInputElement | null;
+    const type = (input: HTMLInputElement, text: string) => {
+      input.value = text;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      fixture.detectChanges();
+    };
     const visibleIds = () =>
       Array.from(root.querySelectorAll('tbody tr')).map((row) =>
         row.getAttribute('data-id'),
@@ -597,12 +669,16 @@ describe('AndesTable column filters', () => {
       );
       fixture.detectChanges();
     };
+    // `andesTableAria` writes after the render that follows a change.
+    fixture.detectChanges();
     return {
       fixture,
       root,
       host,
       trigger,
       panel,
+      search,
+      type,
       options,
       visibleIds,
       act,
@@ -626,17 +702,30 @@ describe('AndesTable column filters', () => {
 
     act(trigger());
     await fixture.whenStable();
+    fixture.detectChanges();
 
     expect(trigger().getAttribute('aria-expanded')).toBe('true');
-    expect(panel()?.getAttribute('role')).toBe('dialog');
-    expect(panel()?.getAttribute('aria-label')).toBe('Filter status');
-    expect(trigger().getAttribute('aria-controls')).toBe(panel()?.id);
+    expect(panel()?.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(
+      panel()
+        ?.querySelector('.andes-table-filter__body')
+        ?.getAttribute('aria-label'),
+    ).toBe('Filter status');
     expect(options().map((input) => input.type)).toEqual([
       'checkbox',
       'checkbox',
     ]);
     expect(host.sort()).toBeNull();
     expect(document.activeElement).toBe(options()[0]);
+  });
+
+  it('draws the panel in the overlay layer, outside the table', () => {
+    const { root, trigger, panel, act } = setup();
+
+    act(trigger());
+
+    expect(root.contains(panel())).toBe(false);
+    expect(panel()?.closest('.cdk-overlay-container')).not.toBeNull();
   });
 
   it('applies the chosen values on OK and marks the trigger active', () => {
@@ -658,9 +747,9 @@ describe('AndesTable column filters', () => {
     expect(host.filters()).toEqual({ status: ['pending'] });
     expect(visibleIds()).toEqual(['b', 'd']);
     expect(panel()).toBeNull();
-    expect(trigger().classList).toContain(
-      'andes-table-filter__trigger--active',
-    );
+    expect(
+      trigger().closest('.andes-table-filter__trigger')?.classList,
+    ).toContain('andes-table-filter__trigger--active');
     expect(document.activeElement).toBe(trigger());
     expect(host.sort()).toBeNull();
   });
@@ -681,12 +770,13 @@ describe('AndesTable column filters', () => {
   });
 
   it('applies the draft when dismissed with Escape or an outside click, by default', () => {
-    const { fixture, host, root, trigger, panel, options, act, check, key } =
+    const { fixture, host, root, trigger, panel, options, act, check } =
       setup();
 
     act(trigger());
     check(options()[0]);
-    key(options()[0], 'Escape');
+    pressEscape();
+    fixture.detectChanges();
 
     expect(panel()).toBeNull();
     expect(host.filters()).toEqual({ status: ['paid'] });
@@ -694,9 +784,7 @@ describe('AndesTable column filters', () => {
 
     act(trigger());
     check(options()[1]);
-    (root.querySelector('.outside') as HTMLElement).dispatchEvent(
-      new Event('pointerdown', { bubbles: true }),
-    );
+    clickOutside(root.querySelector('.outside') as HTMLElement);
     fixture.detectChanges();
 
     expect(panel()).toBeNull();
@@ -704,13 +792,14 @@ describe('AndesTable column filters', () => {
   });
 
   it('discards the draft on dismiss when applyOnClose is off', () => {
-    const { host, fixture, trigger, options, act, check, key } = setup();
+    const { host, fixture, trigger, options, act, check } = setup();
     host.applyOnClose.set(false);
     fixture.detectChanges();
 
     act(trigger());
     check(options()[0]);
-    key(options()[0], 'Escape');
+    pressEscape();
+    fixture.detectChanges();
 
     expect(host.filters()).toEqual({});
   });
@@ -740,26 +829,23 @@ describe('AndesTable column filters', () => {
   });
 
   it('narrows the options with the search box', () => {
-    const { host, fixture, root, trigger, options, act } = setup();
+    const { host, fixture, trigger, options, search, type, act } = setup();
     host.searchable.set(true);
     fixture.detectChanges();
 
     act(trigger());
-    const search = root.querySelector(
-      '.andes-table-filter__search-input',
-    ) as HTMLInputElement;
-    search.value = 'pen';
-    search.dispatchEvent(new Event('input'));
-    fixture.detectChanges();
+    type(search() as HTMLInputElement, 'pen');
 
     expect(options()).toHaveLength(1);
-    expect(options()[0].parentElement?.textContent?.trim()).toBe('Pending');
+    expect(options()[0].closest('andes-checkbox')?.textContent?.trim()).toBe(
+      'Pending',
+    );
 
-    search.value = 'zzz';
-    search.dispatchEvent(new Event('input'));
-    fixture.detectChanges();
+    type(search() as HTMLInputElement, 'zzz');
     expect(
-      root.querySelector('.andes-table-filter__no-match')?.textContent?.trim(),
+      document
+        .querySelector('.andes-table-filter__no-match')
+        ?.textContent?.trim(),
     ).toBe('No matches');
   });
 
@@ -777,7 +863,7 @@ describe('AndesTable column filters', () => {
   });
 
   it('applies the draft with Enter from an option or the search box', () => {
-    const { host, fixture, root, trigger, panel, options, act, check, key } =
+    const { host, fixture, trigger, panel, options, search, act, check, key } =
       setup();
     host.searchable.set(true);
     fixture.detectChanges();
@@ -791,122 +877,39 @@ describe('AndesTable column filters', () => {
     expect(document.activeElement).toBe(trigger());
 
     act(trigger());
-    key(
-      root.querySelector('.andes-table-filter__search-input') as Element,
-      'Enter',
-    );
+    key(search() as Element, 'Enter');
     expect(panel()).toBeNull();
   });
 
-  it('closes when focus leaves the filter, applying the draft by default', () => {
-    const { fixture, host, root, trigger, panel, options, act, check } =
-      setup();
+  it('keeps the panel open while focus moves between its controls', () => {
+    const { fixture, panel, trigger, options, act } = setup();
 
     act(trigger());
-    check(options()[0]);
-    options()[0].dispatchEvent(
-      new FocusEvent('focusout', {
-        bubbles: true,
-        relatedTarget: root.querySelector('.outside'),
-      }),
-    );
+    options()[0].focus();
+    options()[1].focus();
     fixture.detectChanges();
 
-    expect(panel()).toBeNull();
-    expect(host.filters()).toEqual({ status: ['paid'] });
-
-    // A pointer press on the panel's padding or a label must land focus on the
-    // panel itself, not on the sortable <th> around it (its nearest focusable
-    // ancestor otherwise), which would read as focus leaving the filter.
-    act(trigger());
-    expect(panel()?.getAttribute('tabindex')).toBe('-1');
-    act(trigger());
-
-    // Focus moving between controls inside the panel keeps it open.
-    act(trigger());
-    options()[0].dispatchEvent(
-      new FocusEvent('focusout', {
-        bubbles: true,
-        relatedTarget: options()[1],
-      }),
-    );
-    fixture.detectChanges();
     expect(panel()).not.toBeNull();
   });
 
-  it('opens above the button when there is no room below, and stays on screen', async () => {
-    const { fixture, trigger, panel, act } = setup();
-    const viewport = { width: 800, height: 600 };
-    vi.spyOn(document.documentElement, 'clientWidth', 'get').mockReturnValue(
-      viewport.width,
-    );
-    vi.spyOn(document.documentElement, 'clientHeight', 'get').mockReturnValue(
-      viewport.height,
-    );
-    vi.spyOn(trigger(), 'getBoundingClientRect').mockReturnValue(
-      new DOMRect(700, 560, 24, 24),
-    );
-    const size = { offsetWidth: 160, offsetHeight: 200 };
-    const original = Object.getOwnPropertyDescriptors(HTMLElement.prototype);
-    Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
-      configurable: true,
-      get() {
-        return this.classList?.contains('andes-table-filter__panel')
-          ? size.offsetWidth
-          : 0;
-      },
-    });
-    Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
-      configurable: true,
-      get() {
-        return this.classList?.contains('andes-table-filter__panel')
-          ? size.offsetHeight
-          : 0;
-      },
-    });
-
-    try {
-      act(trigger());
-      await fixture.whenStable();
-
-      // 560 - 4 (gap) - 200 (height) = 356: flipped above the button.
-      expect(panel()?.style.top).toBe('356px');
-      // End edge aligned with the button's end edge: 724 - 160.
-      expect(panel()?.style.left).toBe('564px');
-      expect(panel()?.getAttribute('data-side')).toBe('above');
-    } finally {
-      Object.defineProperty(
-        HTMLElement.prototype,
-        'offsetWidth',
-        original.offsetWidth,
-      );
-      Object.defineProperty(
-        HTMLElement.prototype,
-        'offsetHeight',
-        original.offsetHeight,
-      );
-      vi.restoreAllMocks();
-    }
-  });
-
   it('renders a custom panel template with the draft and actions', () => {
-    const { host, fixture, root, trigger, visibleIds, act } = setup();
+    const { host, fixture, trigger, visibleIds, act } = setup();
+    const custom = (name: string) =>
+      document.querySelector(`.${name}`) as HTMLElement;
 
     act(trigger(1));
-    const input = root.querySelector('.custom-input') as HTMLInputElement;
+    const input = custom('custom-input') as HTMLInputElement;
     input.value = 'car';
     input.dispatchEvent(new Event('input'));
     fixture.detectChanges();
-    act(root.querySelector('.custom-ok') as HTMLElement);
+    act(custom('custom-ok'));
 
     expect(host.filters()).toEqual({ name: ['car'] });
     expect(visibleIds()).toEqual(['c']);
 
     act(trigger(1));
-    expect(
-      (root.querySelector('.custom-input') as HTMLInputElement).value,
-    ).toBe('car');
-    act(root.querySelector('.custom-clear') as HTMLElement);
+    expect((custom('custom-input') as HTMLInputElement).value).toBe('car');
+    act(custom('custom-clear'));
     expect(host.filters()).toEqual({});
   });
 });

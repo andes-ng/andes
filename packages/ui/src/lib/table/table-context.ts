@@ -86,29 +86,6 @@ export function andesCellModifiers(
   ];
 }
 
-const ELLIPSIS_TITLE = 'data-andes-ellipsis-title';
-
-/**
- * Shows the full text of a truncated `ellipsis` cell as its native tooltip. Runs on
- * pointer entry, so it only measures the one cell being hovered. A `title` the
- * consumer set is never touched; the one added here is removed again once the
- * text fits.
- */
-export function andesSyncEllipsisTitle(element: HTMLElement): void {
-  const owned = element.hasAttribute(ELLIPSIS_TITLE);
-  if (element.hasAttribute('title') && !owned) {
-    return;
-  }
-
-  if (element.scrollWidth > element.clientWidth) {
-    element.setAttribute('title', (element.textContent ?? '').trim());
-    element.setAttribute(ELLIPSIS_TITLE, '');
-  } else if (owned) {
-    element.removeAttribute('title');
-    element.removeAttribute(ELLIPSIS_TITLE);
-  }
-}
-
 /** Which side of its button a popup panel opened on. */
 export type AndesPanelSide = 'below' | 'above';
 

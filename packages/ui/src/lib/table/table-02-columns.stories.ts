@@ -309,7 +309,7 @@ export const Ellipsis: Story = {
 export const EllipsisTooltip: Story = {
   name: 'Ellipsis with tooltip',
   parameters: about(
-    'Wrap a truncated text in a tooltip so the full text shows on hover and on focus, in the same look as every other tooltip.',
+    'A truncated cell shows its whole text in the library tooltip on hover and on focus, and a cell whose text fits shows none.',
   ),
   render: () => ({
     props: { rows: WIDE_ROWS },
@@ -325,11 +325,7 @@ export const EllipsisTooltip: Story = {
           @for (row of rows; track row.id) {
             <tr andesTableRow>
               <td andesTableCell ellipsis>{{ row.name }}</td>
-              <td andesTableCell ellipsis>
-                <andes-tooltip [content]="row.address" side="top">
-                  <span andesTooltipTrigger tabindex="0" style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ row.address }}</span>
-                </andes-tooltip>
-              </td>
+              <td andesTableCell ellipsis>{{ row.address }}</td>
             </tr>
           }
         </tbody>

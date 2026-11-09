@@ -21,11 +21,12 @@ import {
 } from '@ng-icons/lucide';
 import clsx from 'clsx';
 
+import { AndesTooltip } from '../tooltip/tooltip';
+import { AndesTooltipTrigger } from '../tooltip/tooltip-trigger';
 import { AndesTable, type AndesTableAlign } from './table';
 import {
   andesCellModifiers,
   andesCssLength,
-  andesSyncEllipsisTitle,
   type AndesTableBreakpoint,
   type AndesTableFixed,
 } from './table-context';
@@ -98,45 +99,62 @@ function optionalBoolean(value: unknown): boolean | undefined {
       lucidePin,
     }),
   ],
-  imports: [NgIcon],
-  template: `<div class="andes-table__head-content">
-      @if (showPin()) {
-        <ng-icon class="andes-table__pin" name="lucidePin" aria-hidden="true" />
-      }
-      <span class="andes-table__head-title" [id]="id + '-title'"
-        ><ng-content
-      /></span>
-      @if (sortKey() && sortIcon()) {
-        <span
-          class="andes-table__sorter"
-          aria-hidden="true"
-          [class]="table.partClass('sorter')"
-          [style]="table.partStyle('sorter')"
-        >
-          @switch (direction()) {
-            @case ('asc') {
-              <ng-icon class="andes-table__sorter-icon" name="lucideArrowUp" />
+  imports: [AndesTooltip, AndesTooltipTrigger, NgIcon],
+  template: `<andes-tooltip
+      class="andes-table__head-tip"
+      [content]="tipText()"
+      [disabled]="!tipText()"
+    >
+      <div
+        andesTooltipTrigger
+        class="andes-table__head-content"
+        (pointerenter)="measureTitle($event)"
+      >
+        @if (showPin()) {
+          <ng-icon
+            class="andes-table__pin"
+            name="lucidePin"
+            aria-hidden="true"
+          />
+        }
+        <span class="andes-table__head-title" [id]="id + '-title'"
+          ><ng-content
+        /></span>
+        @if (sortKey() && sortIcon()) {
+          <span
+            class="andes-table__sorter"
+            aria-hidden="true"
+            [class]="table.partClass('sorter')"
+            [style]="table.partStyle('sorter')"
+          >
+            @switch (direction()) {
+              @case ('asc') {
+                <ng-icon
+                  class="andes-table__sorter-icon"
+                  name="lucideArrowUp"
+                />
+              }
+              @case ('desc') {
+                <ng-icon
+                  class="andes-table__sorter-icon"
+                  name="lucideArrowDown"
+                />
+              }
+              @default {
+                <ng-icon
+                  class="andes-table__sorter-icon"
+                  name="lucideChevronsUpDown"
+                />
+              }
             }
-            @case ('desc') {
-              <ng-icon
-                class="andes-table__sorter-icon"
-                name="lucideArrowDown"
-              />
+            @if (sortPriority(); as priority) {
+              <span class="andes-table__sorter-priority">{{ priority }}</span>
             }
-            @default {
-              <ng-icon
-                class="andes-table__sorter-icon"
-                name="lucideChevronsUpDown"
-              />
-            }
-          }
-          @if (sortPriority(); as priority) {
-            <span class="andes-table__sorter-priority">{{ priority }}</span>
-          }
-        </span>
-      }
-      <ng-content select="andes-table-filter" />
-    </div>
+          </span>
+        }
+        <ng-content select="andes-table-filter" />
+      </div>
+    </andes-tooltip>
     @if (isResizable()) {
       <span
         class="andes-table__resize-handle"
@@ -173,14 +191,12 @@ function optionalBoolean(value: unknown): boolean | undefined {
       "canReorder() ? 'Alt+ArrowLeft Alt+ArrowRight' : null",
     '[attr.data-sort]': 'direction()',
     '[attr.data-sort-priority]': 'sortPriority()',
-    '[attr.title]': 'tooltip()',
     '[style.inset-inline-start]': "fixed() === 'start' ? offset() : null",
     '[style.inset-inline-end]': "fixed() === 'end' ? offset() : null",
     '(click)': 'toggleSort()',
     '(keydown.enter)': 'onActivateKey($event)',
     '(keydown.space)': 'onActivateKey($event)',
     '(keydown)': 'onMoveKey($event)',
-    '(mouseenter)': 'onPointerEnter()',
   },
 })
 export class AndesTableHead {
@@ -422,16 +438,26 @@ export class AndesTableHead {
     this.toggleSort();
   }
 
-  protected onPointerEnter(): void {
+  private readonly truncatedText = signal('');
+
+  /** What the header's tooltip says: the next sort step, else the cut-off title. */
+  protected readonly tipText = computed(
+    () => this.tooltip() ?? (this.ellipsis() ? this.truncatedText() : ''),
+  );
+
+  /** Reads whether the title is cut off, so only a truncated one gets a tooltip. */
+  protected measureTitle(event: Event): void {
     if (!this.ellipsis()) {
       return;
     }
-    const title = this.host.nativeElement.querySelector<HTMLElement>(
-      '.andes-table__head-title',
+    const title = (
+      event.currentTarget as HTMLElement
+    ).querySelector<HTMLElement>('.andes-table__head-title');
+    this.truncatedText.set(
+      title && title.scrollWidth > title.clientWidth
+        ? (title.textContent ?? '').trim()
+        : '',
     );
-    if (title) {
-      andesSyncEllipsisTitle(title);
-    }
   }
 
   // Reordering

@@ -1,8 +1,10 @@
+import { NgTemplateOutlet } from '@angular/common';
 import {
   afterNextRender,
   booleanAttribute,
+  ChangeDetectionStrategy,
+  Component,
   computed,
-  Directive,
   ElementRef,
   inject,
   input,
@@ -10,11 +12,12 @@ import {
 } from '@angular/core';
 import clsx from 'clsx';
 
+import { AndesTooltip } from '../tooltip/tooltip';
+import { AndesTooltipTrigger } from '../tooltip/tooltip-trigger';
 import { AndesTable, type AndesTableAlign } from './table';
 import {
   andesCellModifiers,
   andesCssLength,
-  andesSyncEllipsisTitle,
   type AndesTableBreakpoint,
   type AndesTableFixed,
 } from './table-context';
@@ -29,15 +32,38 @@ import {
  * In tree data, `indent` shifts the cell's content by its row's `level` times the
  * table's `indentSize` - put it on the cell holding the expand toggle.
  */
-@Directive({
+@Component({
   selector: 'td[andesTableCell]',
+  imports: [AndesTooltip, AndesTooltipTrigger, NgTemplateOutlet],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  // A truncated `ellipsis` cell shows its full text in the library tooltip; every other cell
+  // is just its content.
+  template: `
+    <ng-template #content><ng-content /></ng-template>
+    @if (ellipsis()) {
+      <andes-tooltip
+        class="andes-table__cell-tip"
+        [content]="fullText()"
+        [disabled]="!truncated()"
+      >
+        <span
+          andesTooltipTrigger
+          class="andes-table__cell-text"
+          (pointerenter)="measure($event)"
+          (focusin)="measure($event)"
+          ><ng-container [ngTemplateOutlet]="content"
+        /></span>
+      </andes-tooltip>
+    } @else {
+      <ng-container [ngTemplateOutlet]="content" />
+    }
+  `,
   host: {
     '[class]': 'classes()',
     '[style]': 'extraStyle()',
     '[attr.data-label]': 'label() || null',
     '[style.inset-inline-start]': "fixed() === 'start' ? offset() : null",
     '[style.inset-inline-end]': "fixed() === 'end' ? offset() : null",
-    '(mouseenter)': 'onPointerEnter()',
   },
 })
 export class AndesTableCell {
@@ -102,9 +128,13 @@ export class AndesTableCell {
     );
   }
 
-  protected onPointerEnter(): void {
-    if (this.ellipsis()) {
-      andesSyncEllipsisTitle(this.host.nativeElement);
-    }
+  protected readonly truncated = signal(false);
+  protected readonly fullText = signal('');
+
+  /** Reads whether the text is cut off, so the tooltip only opens for a cell that needs it. */
+  protected measure(event: Event): void {
+    const text = event.currentTarget as HTMLElement;
+    this.truncated.set(text.scrollWidth > text.clientWidth);
+    this.fullText.set((text.textContent ?? '').trim());
   }
 }

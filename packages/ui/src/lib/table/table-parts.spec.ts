@@ -18,6 +18,8 @@ import { AndesTableRow } from './table-row';
 import { AndesTableSelection } from './table-selection';
 import type { AndesTableClassNamesInput } from './table-semantic';
 
+declare const ng: { getComponent(element: Element): unknown };
+
 @Component({
   imports: [
     AndesTable,
@@ -244,6 +246,15 @@ describe('table parts, grid and extras', () => {
 });
 
 describe('column settings pinning', () => {
+  beforeAll(() => {
+    for (const key of ['offsetWidth', 'offsetHeight'] as const) {
+      Object.defineProperty(HTMLElement.prototype, key, {
+        configurable: true,
+        get: () => 1,
+      });
+    }
+  });
+
   @Component({
     imports: [AndesTableColumnSettings],
     template: `<andes-table-column-settings
@@ -275,22 +286,27 @@ describe('column settings pinning', () => {
     fixture.detectChanges();
     const root: HTMLElement = fixture.nativeElement;
     (
-      root.querySelector('.andes-table-column-settings__trigger') as HTMLElement
+      root.querySelector(
+        'andes-table-column-settings andes-button button',
+      ) as HTMLElement
     ).click();
     fixture.detectChanges();
 
-    const pins = root.querySelectorAll<HTMLElement>(
-      '.andes-table-column-settings__pin',
-    );
-    expect(pins).toHaveLength(1);
-    expect(pins[0].getAttribute('aria-label')).toBe('Pin Name');
-    pins[0].click();
+    // The panel is the library popover, drawn in the overlay layer.
+    const pin = () =>
+      document.querySelectorAll<HTMLElement>(
+        '.andes-table-column-settings__pin',
+      );
+    expect(pin()).toHaveLength(1);
+    const button = () => pin()[0].querySelector('button') as HTMLElement;
+    expect(button().getAttribute('aria-label')).toBe('Pin Name');
+    button().click();
     fixture.detectChanges();
 
     expect(fixture.componentInstance.pinned()).toEqual({ name: 'start' });
-    expect(pins[0].getAttribute('aria-pressed')).toBe('true');
-    expect(pins[0].getAttribute('aria-label')).toBe('Unpin Name');
-    expect(pins[0].querySelector('ng-icon')?.getAttribute('name')).toBe(
+    // The label carries the state: it changes, so the button is not also a pressed toggle.
+    expect(button().getAttribute('aria-label')).toBe('Unpin Name');
+    expect(pin()[0].querySelector('ng-icon')?.getAttribute('name')).toBe(
       'lucidePinOff',
     );
   });
@@ -309,5 +325,57 @@ describe('andesRowsToCsv', () => {
     );
 
     expect(csv).toBe('Name,Note,N,D\r\n"Ana, ""A""",\'=SUM(1),3,');
+  });
+});
+
+describe('ellipsis tooltip', () => {
+  @Component({
+    imports: [
+      AndesTable,
+      AndesTableBody,
+      AndesTableCell,
+      AndesTableHead,
+      AndesTableHeader,
+      AndesTableRow,
+    ],
+    template: `<andes-table>
+      <thead andesTableHeader>
+        <tr andesTableRow>
+          <th andesTableHead ellipsis>A long column title</th>
+          <th andesTableHead>Plain</th>
+        </tr>
+      </thead>
+      <tbody andesTableBody>
+        <tr andesTableRow>
+          <td andesTableCell ellipsis>A very long text that does not fit</td>
+          <td andesTableCell>Plain</td>
+        </tr>
+      </tbody>
+    </andes-table>`,
+  })
+  class EllipsisHost {}
+
+  it('shows the full text in the library tooltip, only when it is cut off', () => {
+    const fixture = TestBed.createComponent(EllipsisHost);
+    fixture.detectChanges();
+    const root: HTMLElement = fixture.nativeElement;
+    const cell = root.querySelector('tbody td') as HTMLElement;
+    const tip = cell.querySelector('andes-tooltip') as Element;
+    const text = cell.querySelector('.andes-table__cell-text') as HTMLElement;
+    const state = () =>
+      ng.getComponent(tip) as { content(): string; disabled(): boolean };
+
+    expect(state().disabled()).toBe(true);
+    Object.defineProperty(text, 'scrollWidth', { value: 300 });
+    Object.defineProperty(text, 'clientWidth', { value: 100 });
+    text.dispatchEvent(new Event('pointerenter'));
+    fixture.detectChanges();
+
+    expect(state().disabled()).toBe(false);
+    expect(state().content()).toBe('A very long text that does not fit');
+    expect(cell.hasAttribute('title')).toBe(false);
+    expect(
+      root.querySelectorAll('tbody td')[1].querySelector('andes-tooltip'),
+    ).toBeNull();
   });
 });

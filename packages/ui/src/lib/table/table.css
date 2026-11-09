@@ -203,6 +203,20 @@
   box-sizing: border-box;
 }
 
+/* The library tooltip around a header's content and around the text of an `ellipsis` cell is a
+   plain block, so the cell keeps its layout. */
+.andes-table ::ng-deep :is(.andes-table__head-tip, .andes-table__cell-tip) {
+  display: block;
+  min-width: 0;
+}
+
+.andes-table ::ng-deep .andes-table__cell-text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Header content: the title takes the free width, then the sort indicator, then the
    filter trigger at the inline end. A flex box inside the
    cell rather than on it, so the <th> stays a real table cell. */
@@ -572,7 +586,7 @@
 /* Control columns (selection, expand) shrink to their control instead of taking a
    share of the free width. */
 /* prettier-ignore */
-.andes-table ::ng-deep :is(td:has(> andes-table-selection, > andes-table-expand-toggle), th:has(> andes-table-selection, > andes-table-expand-toggle, > .andes-table__head-content > .andes-table__head-title > :is(andes-table-select-all, andes-table-selection, andes-table-expand-toggle, andes-table-expand-all))) {
+.andes-table ::ng-deep :is(td:has(> andes-table-selection, > andes-table-expand-toggle), th:has(> andes-table-selection, > andes-table-expand-toggle, > .andes-table__head-tip > .andes-table__head-content > .andes-table__head-title > :is(andes-table-select-all, andes-table-selection, andes-table-expand-toggle, andes-table-expand-all))) {
   width: 1px;
 }
 

@@ -66,6 +66,28 @@ const INVOICES: readonly Invoice[] = [
   },
 ];
 
+declare const ng: { getComponent(element: Element): unknown };
+
+/** A click that starts with the pointer press an outside-click listener waits for. */
+function clickOutside(element: Element): void {
+  element.dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, cancelable: true }),
+  );
+  element.dispatchEvent(
+    new MouseEvent('click', { bubbles: true, cancelable: true }),
+  );
+}
+
+/** Zero jsdom geometry makes CDK treat everything as untabbable, so a popover cannot focus. */
+beforeAll(() => {
+  for (const key of ['offsetWidth', 'offsetHeight'] as const) {
+    Object.defineProperty(HTMLElement.prototype, key, {
+      configurable: true,
+      get: () => 1,
+    });
+  }
+});
+
 const ids = (rows: readonly Invoice[]) => rows.map((row) => row.id);
 
 describe('advanced filter matchers', () => {
@@ -287,34 +309,59 @@ describe('ready-made filter panels', () => {
     fixture.detectChanges();
     const root = fixture.nativeElement as HTMLElement;
     const host = fixture.componentInstance;
+    const triggerHost = (index: number) =>
+      root.querySelectorAll<HTMLElement>('.andes-table-filter__trigger')[index];
     const trigger = (index: number) =>
-      root.querySelectorAll<HTMLButtonElement>('.andes-table-filter__trigger')[
-        index
-      ];
+      triggerHost(index).querySelector('button') as HTMLButtonElement;
+    // The panel is the filter's popover, drawn in the overlay layer.
     const panel = () =>
-      root.querySelector<HTMLElement>('.andes-table-filter__panel');
-    const fields = () =>
+      document.querySelector<HTMLElement>('.andes-table-filter__panel');
+    const inputs = () =>
       Array.from(
-        panel()?.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
-          'input, select',
-        ) ?? [],
+        panel()?.querySelectorAll<HTMLInputElement>('andes-input input') ?? [],
       );
     const button = (text: string) =>
       Array.from(panel()?.querySelectorAll('button') ?? []).find(
         (item) => item.textContent?.trim() === text,
       ) as HTMLButtonElement;
-    const type = (
-      field: HTMLInputElement | HTMLSelectElement,
-      value: string,
-    ) => {
+    const type = (field: HTMLInputElement, value: string) => {
       field.value = value;
-      field.dispatchEvent(
-        new Event(field instanceof HTMLSelectElement ? 'change' : 'input'),
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+      fixture.detectChanges();
+    };
+    // The library select and date picker are driven through their own models and outputs.
+    const component = (selector: string, index = 0) =>
+      ng.getComponent(
+        panel()?.querySelectorAll(selector)[index] as Element,
+      ) as {
+        value: { set(value: unknown): void; (): unknown };
+        valueChange: { emit(value: unknown): void };
+      };
+    const setOperator = (operator: string) => {
+      component('andes-select').value.set(operator);
+      fixture.detectChanges();
+    };
+    const operator = () => component('andes-select').value();
+    const setDate = (index: number, iso: string | null) => {
+      const [y, m, d] = (iso ?? '').split('-').map(Number);
+      component('andes-date-picker', index).valueChange.emit(
+        iso ? new Date(y, m - 1, d) : null,
       );
       fixture.detectChanges();
     };
+    const dates = () =>
+      [0, 1].map((index) => {
+        const value = component(
+          'andes-date-picker',
+          index,
+        ).value() as Date | null;
+        return value
+          ? `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`
+          : '';
+      });
     const open = (index: number) => {
       trigger(index).click();
+      fixture.detectChanges();
       fixture.detectChanges();
     };
     const ok = () => {
@@ -330,10 +377,15 @@ describe('ready-made filter panels', () => {
       root,
       host,
       trigger,
+      triggerHost,
       panel,
-      fields,
+      inputs,
       button,
       type,
+      setOperator,
+      operator,
+      setDate,
+      dates,
       open,
       ok,
       visibleIds,
@@ -341,10 +393,12 @@ describe('ready-made filter panels', () => {
   }
 
   it('replaces the funnel with the projected icon and lets it follow active()', () => {
-    const { root, host, fixture, trigger } = setup();
+    const { root, host, fixture, triggerHost } = setup();
 
-    expect(trigger(0).querySelector('.andes-table-filter__icon')).toBeNull();
-    expect(trigger(0).querySelector('.custom-icon')).not.toBeNull();
+    expect(
+      triggerHost(0).querySelector('.andes-table-filter__icon'),
+    ).toBeNull();
+    expect(triggerHost(0).querySelector('.custom-icon')).not.toBeNull();
     expect(root.querySelector('.custom-icon--on')).toBeNull();
 
     host.filters.set({ client: ['contains', 'and'] });
@@ -353,40 +407,43 @@ describe('ready-made filter panels', () => {
   });
 
   it('renders the text panel in place of the option list, keeping Reset / OK', () => {
-    const { panel, fields, button, open } = setup();
+    const { panel, inputs, button, open } = setup();
 
     open(0);
 
     expect(panel()?.querySelector('.andes-table-filter__options')).toBeNull();
-    expect(fields().map((field) => field.tagName)).toEqual(['SELECT', 'INPUT']);
+    expect(panel()?.querySelectorAll('andes-select')).toHaveLength(1);
+    expect(inputs()).toHaveLength(1);
     expect(button('Reset')).toBeTruthy();
     expect(button('OK')).toBeTruthy();
   });
 
   it('applies an operator and a query from the text panel', () => {
-    const { host, fields, type, open, ok, visibleIds } = setup();
+    const { host, inputs, type, setOperator, operator, open, ok, visibleIds } =
+      setup();
 
     open(0);
-    type(fields()[1], 'jose');
+    type(inputs()[0], 'jose');
     ok();
     expect(host.filters()).toEqual({ client: ['contains', 'jose'] });
     expect(visibleIds()).toEqual(['a']);
 
     open(0);
-    expect((fields()[1] as HTMLInputElement).value).toBe('jose');
-    type(fields()[0], 'startsWith');
-    type(fields()[1], 'and');
+    expect(inputs()[0].value).toBe('jose');
+    expect(operator()).toBe('contains');
+    setOperator('startsWith');
+    type(inputs()[0], 'and');
     ok();
     expect(host.filters()).toEqual({ client: ['startsWith', 'and'] });
     expect(visibleIds()).toEqual(['b', 'd']);
   });
 
   it('applies the text panel on Enter and empties it on Reset', () => {
-    const { host, fixture, fields, button, type, open } = setup();
+    const { host, fixture, inputs, button, type, open } = setup();
 
     open(0);
-    type(fields()[1], 'tamci');
-    fields()[1].dispatchEvent(
+    type(inputs()[0], 'tamci');
+    inputs()[0].dispatchEvent(
       new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
     );
     fixture.detectChanges();
@@ -395,90 +452,82 @@ describe('ready-made filter panels', () => {
     open(0);
     button('Reset').click();
     fixture.detectChanges();
-    expect((fields()[1] as HTMLInputElement).value).toBe('');
+    expect(inputs()[0].value).toBe('');
     button('OK').click();
     fixture.detectChanges();
     expect(host.filters()).toEqual({});
   });
 
   it('applies a number range, with open ends and a decimal comma', () => {
-    const { host, fields, type, open, ok, visibleIds } = setup();
+    const { host, inputs, type, open, ok, visibleIds } = setup();
 
     open(1);
-    type(fields()[0], '100');
-    type(fields()[1], '250,5');
+    type(inputs()[0], '100');
+    type(inputs()[1], '250,5');
     ok();
     expect(host.filters()).toEqual({ amount: [100, 250.5] });
     expect(visibleIds()).toEqual(['a', 'b']);
 
     open(1);
-    type(fields()[0], '');
+    type(inputs()[0], '');
     ok();
     expect(host.filters()).toEqual({ amount: [null, 250.5] });
   });
 
   it('blocks OK and does not apply on dismiss while the range is invalid', () => {
-    const { host, fixture, root, fields, button, type, open, panel } = setup();
+    const { host, fixture, root, inputs, button, type, open, panel } = setup();
 
     open(1);
-    type(fields()[0], '500');
-    type(fields()[1], '100');
+    type(inputs()[0], '500');
+    type(inputs()[1], '100');
 
     expect(button('OK').disabled).toBe(true);
-    expect(fields()[0].getAttribute('aria-invalid')).toBe('true');
+    expect(inputs()[0].getAttribute('aria-invalid')).toBe('true');
 
-    type(fields()[1], 'abc');
-    expect(fields()[1].getAttribute('aria-invalid')).toBe('true');
+    type(inputs()[1], 'abc');
+    expect(inputs()[1].getAttribute('aria-invalid')).toBe('true');
     // The half-typed text stays in the field.
-    expect((fields()[1] as HTMLInputElement).value).toBe('abc');
+    expect(inputs()[1].value).toBe('abc');
 
-    (root.querySelector('.outside') as HTMLElement).dispatchEvent(
-      new Event('pointerdown', { bubbles: true }),
-    );
+    clickOutside(root.querySelector('.outside') as HTMLElement);
     fixture.detectChanges();
     expect(panel()).toBeNull();
     expect(host.filters()).toEqual({});
   });
 
   it('applies a date range and flags a reversed one', () => {
-    const { host, fields, button, type, open, ok, visibleIds } = setup();
+    const { host, panel, button, setDate, dates, open, ok, visibleIds } =
+      setup();
 
     open(2);
-    type(fields()[0], '2026-02-01');
-    type(fields()[1], '2026-03-15');
+    expect(panel()?.querySelectorAll('andes-date-picker')).toHaveLength(2);
+    setDate(0, '2026-02-01');
+    setDate(1, '2026-03-15');
     ok();
     expect(host.filters()).toEqual({ issued: ['2026-02-01', '2026-03-15'] });
     expect(visibleIds()).toEqual(['b', 'c']);
 
     open(2);
-    expect(fields().map((field) => field.value)).toEqual([
-      '2026-02-01',
-      '2026-03-15',
-    ]);
-    type(fields()[0], '2026-04-01');
+    expect(dates()).toEqual(['2026-02-01', '2026-03-15']);
+    setDate(0, '2026-04-01');
     expect(button('OK').disabled).toBe(true);
   });
 
   it('shows a controlled filter value when the panel opens', () => {
-    const { host, fixture, fields, open } = setup();
+    const { host, fixture, inputs, open } = setup();
     host.filters.set({ amount: [10, null] });
     fixture.detectChanges();
 
     open(1);
-    expect(fields().map((field) => field.value)).toEqual(['10', '']);
+    expect(inputs().map((field) => field.value)).toEqual(['10', '']);
   });
 
-  it('closes and applies when focus tabs out of the panel', () => {
-    const { host, fixture, root, fields, type, open, panel } = setup();
+  it('closes and applies the typed query on a click outside the panel', () => {
+    const { host, fixture, root, inputs, type, open, panel } = setup();
 
     open(0);
-    type(fields()[1], 'peru');
-    fields()[1].dispatchEvent(
-      new FocusEvent('focusout', {
-        bubbles: true,
-        relatedTarget: root.querySelector('.outside'),
-      }),
-    );
+    type(inputs()[0], 'peru');
+    clickOutside(root.querySelector('.outside') as HTMLElement);
     fixture.detectChanges();
 
     expect(panel()).toBeNull();

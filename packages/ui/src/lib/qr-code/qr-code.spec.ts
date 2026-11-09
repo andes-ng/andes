@@ -152,18 +152,21 @@ describe('AndesQrCode', () => {
       expect(el.querySelector('svg')?.getAttribute('width')).toBe('240');
     });
 
-    it('renders nothing for an empty value, and flags a value that is too long', () => {
+    it('draws a placeholder for an empty value, and flags a value that is too long', () => {
       const { fixture, host, el } = setup();
       host.value.set('');
       fixture.detectChanges();
-      expect(el.querySelector('svg')).toBeNull();
+      expect(el.querySelector('.andes-qr-code__svg')).toBeNull();
+      expect(el.querySelector('.andes-qr-code__placeholder')).not.toBeNull();
       expect(host.qr().matrix()).toBeNull();
       expect(host.qr().overflow()).toBe(false);
+      expect(host.qr().empty()).toBe(true);
 
       host.value.set('x'.repeat(3000));
       fixture.detectChanges();
-      expect(el.querySelector('svg')).toBeNull();
+      expect(el.querySelector('.andes-qr-code__svg')).toBeNull();
       expect(host.qr().overflow()).toBe(true);
+      expect(host.qr().empty()).toBe(false);
     });
 
     it('exposes the matrix for tests and custom renderers', () => {
@@ -175,7 +178,7 @@ describe('AndesQrCode', () => {
   });
 
   describe('colours and frame', () => {
-    it('leaves the colours to the tokens by default', () => {
+    it('leaves the colours to the stylesheet defaults', () => {
       const { el } = setup();
       expect(el.style.getPropertyValue('--andes-qr-code-color')).toBe('');
       expect(el.style.getPropertyValue('--andes-qr-code-bg')).toBe('');
@@ -598,12 +601,18 @@ describe('AndesQrCode', () => {
       'utf8',
     ).replace(/\s+/g, ' ');
 
-    it('takes its colours from the theme tokens, overridable through two hooks', () => {
+    it('draws dark modules on a light ground by default, overridable through hooks', () => {
       expect(css).toContain(
-        '--_andes-qr-code-color: var( --andes-qr-code-color, var(--andes-color-foreground, #0f172a) )',
+        '--_andes-qr-code-color: var(--andes-qr-code-color, #0f172a)',
       );
       expect(css).toContain(
-        '--_andes-qr-code-bg: var( --andes-qr-code-bg, var(--andes-color-background, #ffffff) )',
+        '--_andes-qr-code-bg: var(--andes-qr-code-bg, #ffffff)',
+      );
+      expect(css).toContain(
+        '--_andes-qr-code-finder: var( --andes-qr-code-finder',
+      );
+      expect(css).toContain(
+        '--_andes-qr-code-quiet: var(--andes-qr-code-quiet',
       );
     });
 
@@ -614,13 +623,10 @@ describe('AndesQrCode', () => {
       expect(block).toContain('animation: none');
     });
 
-    it('uses logical properties and a visible keyboard focus ring on the refresh button', () => {
-      expect(css).toContain(
-        'padding-inline: var(--andes-control-padding-x-md, 0.75rem)',
-      );
-      expect(css).toContain(
-        '.andes-qr-code__refresh:focus-visible { outline: 2px solid var(--andes-color-focus-ring, #2563eb)',
-      );
+    it('keeps the drawing unmirrored and prints the colours', () => {
+      expect(css).toContain('direction: ltr');
+      expect(css).toContain('print-color-adjust: exact');
+      expect(css).toContain('@media print');
     });
   });
 });

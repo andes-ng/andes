@@ -1,26 +1,34 @@
-<div [class]="classes()" data-slot="qr-code-frame">
+<div [class]="classes()" data-slot="qr-code-frame" [style]="partStyles().root">
   <div
     class="andes-qr-code__symbol"
     data-slot="qr-code-symbol"
     role="img"
+    [class]="partClasses().symbol"
     [attr.aria-label]="accessibleName()"
-    [style.width.px]="pixelSize()"
-    [style.height.px]="pixelSize()"
+    [style]="partStyles().symbol"
+    [style.width.px]="fluid() ? null : pixelSize()"
+    [style.height.px]="fluid() ? null : pixelSize()"
   >
     @if (layout(); as view) { @if (type() === 'canvas') {
     <canvas
       #canvas
       class="andes-qr-code__canvas"
       aria-hidden="true"
-      [style.width.px]="pixelSize()"
-      [style.height.px]="pixelSize()"
+      [class]="partClasses().canvas"
+      [style]="partStyles().canvas"
+      [style.width]="fluid() ? '100%' : pixelSize() + 'px'"
+      [style.height]="fluid() ? '100%' : pixelSize() + 'px'"
     ></canvas>
     } @else {
     <svg
       class="andes-qr-code__svg"
       aria-hidden="true"
       focusable="false"
-      shape-rendering="crispEdges"
+      [class]="partClasses().svg"
+      [style]="partStyles().svg"
+      [attr.shape-rendering]="
+        view.shape === 'square' && !view.finderPath ? 'crispEdges' : null
+      "
       [attr.viewBox]="'0 0 ' + view.modules + ' ' + view.modules"
       [attr.width]="pixelSize()"
       [attr.height]="pixelSize()"
@@ -31,25 +39,72 @@
         [attr.height]="view.modules"
       />
       <path class="andes-qr-code__modules" [attr.d]="view.path" />
-      @if (view.icon; as rect) {
+      @if (view.finderPath) {
+      <path
+        class="andes-qr-code__finders"
+        fill-rule="evenodd"
+        [attr.d]="view.finderPath"
+      />
+      } @if (view.icon; as rect) { @if (icon(); as href) {
       <image
         class="andes-qr-code__icon"
         preserveAspectRatio="xMidYMid meet"
-        [attr.href]="icon()"
+        [class]="partClasses().icon"
+        [style]="partStyles().icon"
+        [attr.href]="href"
         [attr.x]="rect.x"
         [attr.y]="rect.y"
         [attr.width]="rect.width"
         [attr.height]="rect.height"
       />
-      }
+      } }
     </svg>
-    } }
+    } @if (iconBox(); as box) {
+    <div
+      class="andes-qr-code__icon-box"
+      data-slot="qr-code-icon"
+      [class]="partClasses().icon"
+      [style]="partStyles().icon"
+      [style.left.%]="box.left"
+      [style.top.%]="box.top"
+      [style.width.%]="box.width"
+      [style.height.%]="box.height"
+      [style.--_andes-qr-code-icon-fraction]="box.fraction"
+    >
+      <ng-container
+        *ngTemplateOutlet="iconTemplate(); context: iconContext()"
+      ></ng-container>
+    </div>
+    } } @else {
+    <div
+      class="andes-qr-code__placeholder"
+      data-slot="qr-code-placeholder"
+      [attr.data-reason]="failure() ? 'error' : 'empty'"
+    >
+      @if (failure()) {
+      <ng-icon
+        class="andes-qr-code__glyph andes-qr-code__glyph--placeholder"
+        name="lucideTriangleAlert"
+        aria-hidden="true"
+      />
+      } @else {
+      <ng-icon
+        class="andes-qr-code__glyph andes-qr-code__glyph--placeholder"
+        name="lucideQrCode"
+        aria-hidden="true"
+      />
+      }
+      <span class="andes-qr-code__message">{{ placeholderText() }}</span>
+    </div>
+    }
   </div>
 
   @if (status() !== 'active') {
   <div
     class="andes-qr-code__cover"
     data-slot="qr-code-cover"
+    [class]="partClasses().mask"
+    [style]="partStyles().mask"
     [attr.data-status]="status()"
   >
     @if (statusRender(); as template) {
@@ -57,24 +112,56 @@
       *ngTemplateOutlet="template; context: statusContext()"
     ></ng-container>
     } @else { @switch (status()) { @case ('loading') {
-    <span class="andes-qr-code__spinner" aria-hidden="true"></span>
+    <ng-icon
+      class="andes-qr-code__glyph andes-qr-code__spinner"
+      name="lucideLoaderCircle"
+      aria-hidden="true"
+    />
+    <span
+      class="andes-qr-code__message"
+      [class]="partClasses().status"
+      [style]="partStyles().status"
+      >{{ resolvedLabels().loading }}</span
+    >
     } @case ('expired') {
-    <span class="andes-qr-code__message">{{ resolvedLabels().expired }}</span>
-    <button type="button" class="andes-qr-code__refresh" (click)="onRefresh()">
+    <ng-icon
+      class="andes-qr-code__glyph andes-qr-code__glyph--status"
+      name="lucideClockAlert"
+      aria-hidden="true"
+    />
+    <span
+      class="andes-qr-code__message"
+      [class]="partClasses().status"
+      [style]="partStyles().status"
+      >{{ resolvedLabels().expired }}</span
+    >
+    <andes-button
+      class="andes-qr-code__refresh"
+      size="sm"
+      variant="outline"
+      [class]="partClasses().refresh"
+      [style]="partStyles().refresh"
+      (click)="onRefresh()"
+    >
       <ng-icon
         class="andes-qr-code__glyph"
         name="lucideRotateCw"
         aria-hidden="true"
       />
       {{ resolvedLabels().refresh }}
-    </button>
+    </andes-button>
     } @case ('scanned') {
     <ng-icon
       class="andes-qr-code__glyph andes-qr-code__glyph--success"
       name="lucideCircleCheckBig"
       aria-hidden="true"
     />
-    <span class="andes-qr-code__message">{{ resolvedLabels().scanned }}</span>
+    <span
+      class="andes-qr-code__message"
+      [class]="partClasses().status"
+      [style]="partStyles().status"
+      >{{ resolvedLabels().scanned }}</span
+    >
     } } }
   </div>
   }

@@ -37,8 +37,14 @@ describe('AndesQrCode lucide icons', () => {
     const fixture = TestBed.createComponent(Host);
     fixture.componentInstance.status.set('expired');
     fixture.detectChanges();
-    const icon = glyph(fixture.nativeElement as HTMLElement);
+    const root = fixture.nativeElement as HTMLElement;
+    const icon = root.querySelector('.andes-qr-code__refresh ng-icon');
 
+    expect(
+      root
+        .querySelector('[data-slot="qr-code-cover"] ng-icon')
+        ?.getAttribute('name'),
+    ).toBe('lucideClockAlert');
     expect(icon?.getAttribute('name')).toBe('lucideRotateCw');
     expect(icon?.getAttribute('aria-hidden')).toBe('true');
     expect(icon?.querySelector('svg')).not.toBeNull();

@@ -200,6 +200,41 @@ export function makeQrSegments(text: string): QrSegment[] {
   return [makeQrByteSegment(utf8Bytes(text))];
 }
 
+/**
+ * One part of a multi-segment value: a string (its most compact mode is picked) or a text in
+ * a mode you choose. A text that does not fit the mode you name throws a `RangeError`.
+ */
+export type QrSegmentInput =
+  string | { readonly mode: QrMode; readonly text: string };
+
+/**
+ * Turns a value into segments: a string like `makeQrSegments`, a list one part at a time, so
+ * a long id can sit in numeric mode next to a URL in byte mode in the same symbol.
+ */
+export function makeQrSegmentList(
+  input: QrSegmentInput | readonly QrSegmentInput[],
+): QrSegment[] {
+  const parts: readonly QrSegmentInput[] = Array.isArray(input)
+    ? (input as readonly QrSegmentInput[])
+    : [input as QrSegmentInput];
+  return parts.flatMap((part): QrSegment[] => {
+    if (typeof part === 'string') {
+      return makeQrSegments(part);
+    }
+    if (part.text === '') {
+      return [];
+    }
+    switch (part.mode) {
+      case 'numeric':
+        return [makeQrNumericSegment(part.text)];
+      case 'alphanumeric':
+        return [makeQrAlphanumericSegment(part.text)];
+      default:
+        return [makeQrByteSegment(utf8Bytes(part.text))];
+    }
+  });
+}
+
 function charCountBits(mode: QrMode, version: number): number {
   const tier = version <= 9 ? 0 : version <= 26 ? 1 : 2;
   switch (mode) {

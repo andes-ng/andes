@@ -315,4 +315,138 @@ describe('QR rendering helpers', () => {
       expect(calls.some((call) => call.op === 'drawImage')).toBe(false);
     });
   });
+
+  describe('shapes and corner patterns', () => {
+    it('keeps the corners inside the path while everything is square', () => {
+      const layout = buildQrLayout(matrix, { size: 160, quietZone: 2 });
+
+      expect(layout.finderPath).toBe('');
+      expect(layout.shape).toBe('square');
+      expect(layout.finderShape).toBe('square');
+    });
+
+    it('draws the corners apart when asked for a colour of their own', () => {
+      const joined = buildQrLayout(matrix, { size: 160, quietZone: 2 });
+      const apart = buildQrLayout(matrix, {
+        size: 160,
+        quietZone: 2,
+        separateFinders: true,
+      });
+
+      expect(apart.finderPath).not.toBe('');
+      expect(apart.path.length).toBeLessThan(joined.path.length);
+    });
+
+    it('puts three patterns of three shapes in the corner path', () => {
+      for (const finderShape of ['square', 'rounded', 'circle'] as const) {
+        const layout = buildQrLayout(matrix, {
+          size: 160,
+          quietZone: 2,
+          finderShape,
+          separateFinders: true,
+        });
+
+        expect(layout.finderPath.match(/M/g)).toHaveLength(9);
+      }
+    });
+
+    it('draws one sub-path per dark module for dots and rounded squares', () => {
+      const dark = matrix.modules.flat().filter(Boolean).length;
+      const finderModules = 3 * (24 + 9);
+      for (const shape of ['dots', 'rounded'] as const) {
+        const layout = buildQrLayout(matrix, {
+          size: 160,
+          quietZone: 2,
+          shape,
+        });
+
+        expect(layout.path.match(/M/g)).toHaveLength(dark - finderModules);
+        expect(layout.finderPath).not.toBe('');
+      }
+    });
+
+    it('leaves the modules under the logo in place when it does not excavate', () => {
+      const cleared = buildQrLayout(matrix, {
+        size: 160,
+        quietZone: 2,
+        icon: ICON,
+      });
+      const kept = buildQrLayout(matrix, {
+        size: 160,
+        quietZone: 2,
+        icon: { ...ICON, excavate: false },
+      });
+
+      expect(cleared.cleared).not.toBeNull();
+      expect(kept.cleared).toBeNull();
+      // The logo still covers the same area, so the level is raised for it just the same.
+      expect(kept.coverage).toBe(cleared.coverage);
+      expect(kept.path.length).toBeGreaterThan(cleared.path.length);
+    });
+
+    it('paints shapes from path data and the background in the quiet-zone colour', () => {
+      class Path2DStub {
+        constructor(readonly data: string) {}
+      }
+      vi.stubGlobal('Path2D', Path2DStub);
+      const fills: unknown[] = [];
+      const context = {
+        fillStyle: '' as unknown,
+        fillRect: vi.fn(),
+        drawImage: vi.fn(),
+        fill: vi.fn((path: unknown, rule: string) => fills.push([path, rule])),
+        save: vi.fn(),
+        restore: vi.fn(),
+        scale: vi.fn(),
+      };
+      const layout = buildQrLayout(matrix, {
+        size: 160,
+        quietZone: 2,
+        shape: 'dots',
+        finderShape: 'circle',
+      });
+      const styles: unknown[] = [];
+      Object.defineProperty(context, 'fillStyle', {
+        set: (value) => styles.push(value),
+        get: () => '',
+      });
+      drawQrToCanvas(context as never, matrix, layout, {
+        color: '#111',
+        bgColor: '#fff',
+        finderColor: '#22c',
+        quietZoneColor: '#eee',
+        pixels: 320,
+        quietZone: 2,
+      });
+
+      expect(styles).toEqual(['#eee', '#111', '#22c']);
+      expect(fills).toHaveLength(2);
+      expect(context.scale).toHaveBeenCalledWith(
+        320 / layout.modules,
+        320 / layout.modules,
+      );
+      vi.unstubAllGlobals();
+    });
+
+    it('writes the corners and the quiet-zone colour into the SVG', () => {
+      const layout = buildQrLayout(matrix, {
+        size: 160,
+        quietZone: 2,
+        finderShape: 'circle',
+      });
+      const svg = qrSvgMarkup(layout, {
+        size: 160,
+        quietZone: 2,
+        color: '#111',
+        bgColor: '#fff',
+        finderColor: '#22c',
+        quietZoneColor: '#eee',
+      });
+
+      expect(svg).toContain('<rect width="');
+      expect(svg).toContain('fill="#eee"');
+      expect(svg).toContain('fill="#22c" fill-rule="evenodd"');
+      expect(svg).not.toContain('crispEdges');
+    });
+  });
 });

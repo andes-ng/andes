@@ -443,6 +443,8 @@ export const KeepSelectionAcrossPages: Story = {
         page,
         selected,
         pages,
+        pageSize,
+        total: USERS.length,
         rows: computed(() =>
           USERS.slice((page() - 1) * pageSize, page() * pageSize),
         ),
@@ -472,15 +474,7 @@ export const KeepSelectionAcrossPages: Story = {
             </tbody>
           </andes-table>
           <div [style]="bar">
-            <andes-button variant="outline" size="sm" [disabled]="page() === 1" (click)="page.set(page() - 1)">
-              <ng-icon slot="icon-start" name="lucideChevronRight" style="rotate: 180deg;" />
-              Previous
-            </andes-button>
-            <span [style]="muted">Page {{ page() }} of {{ pages }}</span>
-            <andes-button variant="outline" size="sm" [disabled]="page() === pages" (click)="page.set(page() + 1)">
-              Next
-              <ng-icon slot="icon-end" name="lucideChevronRight" />
-            </andes-button>
+            <andes-pagination layout="table" size="small" [showSizeChanger]="false" [current]="page()" (currentChange)="page.set($event)" [pageSize]="pageSize" [total]="total" />
             <span [style]="muted">{{ selected().length }} selected over every page</span>
           </div>
         </div>`,
@@ -504,6 +498,7 @@ export const SelectAllAcrossData: Story = {
         page,
         selected,
         pages,
+        pageSize,
         allKeys: USERS.map((user) => user.id),
         total: USERS.length,
         rows: computed(() =>
@@ -535,9 +530,7 @@ export const SelectAllAcrossData: Story = {
             </tbody>
           </andes-table>
           <div [style]="bar">
-            <andes-button variant="outline" size="sm" [disabled]="page() === 1" (click)="page.set(page() - 1)">Previous</andes-button>
-            <span [style]="muted">Page {{ page() }} of {{ pages }}</span>
-            <andes-button variant="outline" size="sm" [disabled]="page() === pages" (click)="page.set(page() + 1)">Next</andes-button>
+<andes-pagination layout="table" size="small" [showSizeChanger]="false" [current]="page()" (currentChange)="page.set($event)" [pageSize]="pageSize" [total]="total" />
             <span [style]="muted">{{ selected().length }} of {{ total }} selected</span>
           </div>
         </div>`,

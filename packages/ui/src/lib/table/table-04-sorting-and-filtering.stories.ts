@@ -1065,9 +1065,7 @@ function remoteDemo(withSelection: boolean) {
           </tbody>
         </andes-table>
         <div [style]="bar">
-          <andes-button variant="outline" size="sm" [disabled]="loading() || page() === 1" (click)="go(page() - 1)">Previous</andes-button>
-          <span [style]="muted">Page {{ page() }} of {{ pages() }} - {{ result().total }} people on the server</span>
-          <andes-button variant="outline" size="sm" [disabled]="loading() || page() === pages()" (click)="go(page() + 1)">Next</andes-button>
+<andes-pagination layout="table" size="small" [showSizeChanger]="false" [loading]="loading()" [current]="page()" (currentChange)="go($event)" [pageSize]="pageSize" [total]="result().total" />
           ${withSelection ? '<span [style]="muted">{{ selected().length }} selected over every page</span>' : ''}
         </div>
       </div>`,

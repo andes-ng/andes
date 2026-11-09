@@ -6,6 +6,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   ElementRef,
   inject,
   Injector,
@@ -15,23 +16,23 @@ import {
   output,
   signal,
   TemplateRef,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
-  lucideChevronDown,
+  lucideArrowRight,
   lucideChevronLeft,
   lucideChevronRight,
   lucideChevronsLeft,
   lucideChevronsRight,
   lucideEllipsis,
+  lucideLoaderCircle,
 } from '@ng-icons/lucide';
 
 import { AndesButton } from '../button/button';
-import {
-  AndesPaginationItem,
-  getAndesPaginationRange,
-} from './pagination-range';
+import { AndesSelect } from '../select/select';
+import { getAndesPaginationRange } from './pagination-range';
 
 export type { AndesPaginationItem } from './pagination-range';
 
@@ -42,9 +43,69 @@ export type AndesPaginationAlign = 'start' | 'center' | 'end';
  */
 export type AndesPaginationSize = 'small' | 'default' | 'medium' | 'large';
 
+/**
+ * How the items are drawn. `default` marks the current page with a primary border,
+ * `outline` gives every item a border, `ghost` marks the current page with a soft
+ * tinted fill and no borders, and `filled` marks it with a solid primary fill.
+ */
+export type AndesPaginationVariant = 'default' | 'outline' | 'ghost' | 'filled';
+
+/** The corner shape of the items: `default` is a soft rounded square, `pill` is fully round. */
+export type AndesPaginationShape = 'default' | 'pill';
+
+/**
+ * What the control draws:
+ * - `default`: the numbered pages with their jumpers.
+ * - `compact`: previous / "Page 2 of 10" / next, without numbered pages.
+ * - `table`: the footer of a data table - "Rows per page [10]", the item range
+ *   ("1-10 of 100") and the first / previous / next / last buttons.
+ */
+export type AndesPaginationLayout = 'default' | 'compact' | 'table';
+
 /** Which control an `itemRender` template is being asked to render. */
 export type AndesPaginationItemType =
-  'page' | 'prev' | 'next' | 'jump-prev' | 'jump-next';
+  'page' | 'prev' | 'next' | 'first' | 'last' | 'jump-prev' | 'jump-next';
+
+/** The parts of the control that `classNames` and `styles` can address. */
+export type AndesPaginationPart =
+  | 'root'
+  | 'list'
+  | 'item'
+  | 'activeItem'
+  | 'prev'
+  | 'next'
+  | 'first'
+  | 'last'
+  | 'jump'
+  | 'options'
+  | 'sizeChanger'
+  | 'jumper'
+  | 'total';
+
+/** What `classNames` and `styles` functions are given to decide with. */
+export interface AndesPaginationState {
+  current: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  size: 'small' | 'default' | 'large';
+  variant: AndesPaginationVariant;
+  shape: AndesPaginationShape;
+  layout: AndesPaginationLayout;
+  disabled: boolean;
+  loading: boolean;
+  simple: boolean;
+}
+
+/** One extra class list per part. */
+export type AndesPaginationClassNames = Partial<
+  Record<AndesPaginationPart, string>
+>;
+
+/** One style object per part (custom properties such as `--andes-pagination-gap` work too). */
+export type AndesPaginationStyles = Partial<
+  Record<AndesPaginationPart, Record<string, string | number>>
+>;
 
 /** Context of the default item content, handed to `itemRender` as `originalElement`. */
 export interface AndesPaginationOriginalItemContext {
@@ -55,8 +116,8 @@ export interface AndesPaginationOriginalItemContext {
 /**
  * Context of an `itemRender` template. The template replaces the *content* of the
  * control, never the control itself - the pagination keeps owning the focusable
- * `<button>`, its click handling, `aria-current`, `aria-label` and `disabled` state,
- * so a custom template can't accidentally drop the accessible semantics.
+ * `<button>` (or `<a>`), its click handling, `aria-current`, `aria-label` and `disabled`
+ * state, so a custom template can't accidentally drop the accessible semantics.
  */
 export interface AndesPaginationItemRenderContext {
   /** The page the control navigates to. */
@@ -90,9 +151,9 @@ export type AndesPaginationShowTotalFn = (
 
 /**
  * Context of a `sizeChangerRender` template, which replaces the built-in page-size
- * `<select>` with any control (e.g. a searchable select). Call `change(size)` to
- * apply a new page size: it clamps the current page and emits `showSizeChange` and
- * `pageChange` exactly like the built-in control.
+ * select with any control (e.g. a segmented control). Call `change(size)` to apply a
+ * new page size: it clamps the current page and emits `showSizeChange` and `pageChange`
+ * exactly like the built-in control.
  */
 export interface AndesPaginationSizeChangerContext {
   /** The current page size. */
@@ -103,7 +164,7 @@ export interface AndesPaginationSizeChangerContext {
   disabled: boolean;
   /** The resolved size of the pagination, so the control can match its height. */
   size: 'small' | 'default' | 'large';
-  /** Accessible name for the control (`pageSizeLabel`). */
+  /** Accessible name for the control (`pageSizeLabel`, or `rowsPerPageLabel` in the table layout). */
   label: string;
   /** Suffix shown after each option (`itemsPerPageLabel`). */
   itemsPerPageLabel: string;
@@ -128,6 +189,19 @@ export interface AndesPaginationSimpleConfig {
   readOnly: boolean;
 }
 
+/** One control (or text) of the list, in the order it is drawn. */
+interface PaginationEntry {
+  key: string;
+  kind: AndesPaginationItemType | 'ellipsis' | 'simple' | 'status';
+  /** The page the control goes to. */
+  page: number;
+  label: string;
+  disabled: boolean;
+  current: boolean;
+  /** The text of a `status` entry. */
+  text: string;
+}
+
 function toSimpleConfig(
   value: boolean | string | { readOnly?: boolean } | null | undefined,
 ): AndesPaginationSimpleConfig {
@@ -143,6 +217,14 @@ function toOptionalBoolean(value: unknown): boolean | undefined {
     : booleanAttribute(value);
 }
 
+function toOptionalNumber(value: unknown): number | undefined {
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? undefined : parsed;
+}
+
 /**
  * Parses what the user typed into the quick jumper / simple input. Returns `null`
  * for anything that isn't a number, so the caller can ignore it rather than jump
@@ -156,6 +238,15 @@ function parsePageInput(text: string): number | null {
   return Number.parseInt(trimmed, 10);
 }
 
+/** Fills the `{name}` placeholders of a localised label. */
+function fill(template: string, values: Record<string, string | number>) {
+  let text = template;
+  for (const [name, value] of Object.entries(values)) {
+    text = text.split(`{${name}}`).join(String(value));
+  }
+  return text;
+}
+
 /** Phone-sized viewports (`xs`, up to 575px wide). */
 const RESPONSIVE_QUERY = '(max-width: 575.98px)';
 
@@ -163,15 +254,16 @@ const RESPONSIVE_QUERY = '(max-width: 575.98px)';
   selector: 'andes-pagination',
   viewProviders: [
     provideIcons({
-      lucideChevronDown,
+      lucideArrowRight,
       lucideChevronLeft,
       lucideChevronRight,
       lucideChevronsLeft,
       lucideChevronsRight,
       lucideEllipsis,
+      lucideLoaderCircle,
     }),
   ],
-  imports: [AndesButton, NgIcon, NgTemplateOutlet],
+  imports: [AndesButton, AndesSelect, NgIcon, NgTemplateOutlet],
   templateUrl: './pagination.html',
   styleUrl: './pagination.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -183,6 +275,19 @@ export class AndesPagination {
   /** Items per page. Two-way bindable: `[(pageSize)]`. */
   readonly pageSize = model(10);
 
+  /**
+   * The page to start on when `current` is not bound (an uncontrolled control). Applied
+   * once, when the control is created.
+   */
+  readonly defaultCurrent = input<number | undefined, unknown>(undefined, {
+    transform: toOptionalNumber,
+  });
+
+  /** The page size to start with when `pageSize` is not bound. Applied once. */
+  readonly defaultPageSize = input<number | undefined, unknown>(undefined, {
+    transform: toOptionalNumber,
+  });
+
   /** Total item count. Drives the page count together with `pageSize`. */
   readonly total = input(0, { transform: numberAttribute });
 
@@ -191,6 +296,15 @@ export class AndesPagination {
    * `total`/`pageSize` when provided.
    */
   readonly totalPages = input<number | undefined>(undefined);
+
+  /**
+   * Cursor mode, for a source that does not know its total: set it to whether another
+   * page follows the current one. The control then draws previous / "Page n" / next,
+   * Next is disabled while this is `false`, and `total` and `totalPages` are ignored.
+   */
+  readonly hasNextPage = input<boolean | undefined, unknown>(undefined, {
+    transform: toOptionalBoolean,
+  });
 
   /** Page buttons kept visible on either side of the current page. */
   readonly siblingCount = input(1, { transform: numberAttribute });
@@ -215,7 +329,28 @@ export class AndesPagination {
 
   readonly disabled = input(false, { transform: booleanAttribute });
 
+  /**
+   * Marks the control busy while the next page is being fetched: the current page shows
+   * a spinner, `aria-busy` is set and page changes are ignored until it is `false` again.
+   */
+  readonly loading = input(false, { transform: booleanAttribute });
+
   readonly size = input<AndesPaginationSize>('default');
+
+  /** How the items are drawn: `default`, `outline`, `ghost` or `filled`. */
+  readonly variant = input<AndesPaginationVariant>('default');
+
+  /** The corner shape of the items: `default` or `pill`. */
+  readonly shape = input<AndesPaginationShape>('default');
+
+  /**
+   * What the control draws: the numbered pages (`default`), a `compact` previous /
+   * "Page 2 of 10" / next, or the `table` footer: "Rows per page [10]", the item range
+   * and the first / previous / next / last buttons. The table layout turns on the size
+   * changer and the first / last buttons unless `showSizeChanger` / `showFirstLast` say
+   * otherwise, and shows "from-to of total" when `showTotal` is not set.
+   */
+  readonly layout = input<AndesPaginationLayout>('default');
 
   /** Horizontal alignment of the whole control. */
   readonly align = input<AndesPaginationAlign>('start');
@@ -232,9 +367,15 @@ export class AndesPagination {
   /** Collapses to the small, simple layout on viewports narrower than 576px. */
   readonly responsive = input(false, { transform: booleanAttribute });
 
+  /** Adds the first-page and last-page buttons. On in the `table` layout unless set. */
+  readonly showFirstLast = input<boolean | undefined, unknown>(undefined, {
+    transform: toOptionalBoolean,
+  });
+
   /**
    * Shows the page-size changer. Left unset, it appears automatically once `total`
-   * exceeds `totalBoundaryShowSizeChanger`, so short lists aren't cluttered with it.
+   * exceeds `totalBoundaryShowSizeChanger` (and always in the `table` layout), so short
+   * lists aren't cluttered with it.
    */
   readonly showSizeChanger = input<boolean | undefined, unknown>(undefined, {
     transform: toOptionalBoolean,
@@ -250,8 +391,8 @@ export class AndesPagination {
   ]);
 
   /**
-   * Template that replaces the built-in size changer, e.g. to plug in a searchable
-   * select. Context: `AndesPaginationSizeChangerContext`. Visibility still follows
+   * Template that replaces the built-in size changer, e.g. to plug in a segmented
+   * control. Context: `AndesPaginationSizeChangerContext`. Visibility still follows
    * `showSizeChanger` / `totalBoundaryShowSizeChanger`.
    */
   readonly sizeChangerRender =
@@ -268,6 +409,9 @@ export class AndesPagination {
    */
   readonly goButton = input<boolean | string | TemplateRef<void>>(false);
 
+  /** Draws an arrow icon in the go button that `goButton` adds. */
+  readonly jumperIcon = input(false, { transform: booleanAttribute });
+
   /**
    * The "x-y of z items" text: a template (context: `AndesPaginationTotalContext`)
    * or a function `(total, range) => string` for plain text.
@@ -276,14 +420,50 @@ export class AndesPagination {
     TemplateRef<AndesPaginationTotalContext> | AndesPaginationShowTotalFn | null
   >(null);
 
-  /** Template that replaces the content of page/prev/next/jumper items. */
+  /** Template that replaces the content of page/prev/next/first/last/jumper items. */
   readonly itemRender =
     input<TemplateRef<AndesPaginationItemRenderContext> | null>(null);
+
+  /**
+   * Text drawn on the Previous button next to its chevron (or instead of it, with
+   * `showNavIcons` off): "Previous". Empty draws the chevron alone.
+   */
+  readonly prevText = input('');
+
+  /** Text drawn on the Next button next to its chevron: "Next". */
+  readonly nextText = input('');
+
+  /** Keeps the chevrons on Previous and Next when `prevText` / `nextText` are set. */
+  readonly showNavIcons = input(true, { transform: booleanAttribute });
+
+  /**
+   * A function that returns the address of a page, so the items render as links
+   * (`<a href>`) that open in a new tab with the usual modifier keys. A plain click
+   * still updates the control and emits `pageChange`, so the app can route to the page.
+   * Return `null` to leave a page without a link.
+   */
+  readonly linkFor = input<((page: number) => string | null) | null>(null);
+
+  /** Extra class names for the parts of the control: an object, or a function of its state. */
+  readonly classNames = input<
+    | AndesPaginationClassNames
+    | ((state: AndesPaginationState) => AndesPaginationClassNames)
+    | null
+  >(null);
+
+  /** Inline styles for the parts of the control: an object, or a function of its state. */
+  readonly styles = input<
+    | AndesPaginationStyles
+    | ((state: AndesPaginationState) => AndesPaginationStyles)
+    | null
+  >(null);
 
   // Labels, one input each so every string can be localized.
   readonly ariaLabel = input('Pagination', { alias: 'aria-label' });
   readonly previousLabel = input('Previous page');
   readonly nextLabel = input('Next page');
+  readonly firstLabel = input('First page');
+  readonly lastLabel = input('Last page');
   /** Prefix of each page button's accessible name: "Page 3". */
   readonly pageLabel = input('Page');
   /** `{count}` is replaced by the jump distance. */
@@ -294,6 +474,8 @@ export class AndesPagination {
   readonly itemsPerPageLabel = input('/ page');
   /** Accessible name of the size changer. */
   readonly pageSizeLabel = input('Items per page');
+  /** The text before the size changer in the `table` layout: "Rows per page". */
+  readonly rowsPerPageLabel = input('Rows per page');
   readonly jumpToLabel = input('Go to');
   readonly jumpToConfirmLabel = input('Go');
   /**
@@ -303,6 +485,10 @@ export class AndesPagination {
   readonly jumpToSuffixLabel = input('');
   /** Accessible name of the simple-mode page input. */
   readonly currentPageLabel = input('Current page');
+  /** The status text: `{page}` and `{pages}`. Drawn by `compact`, announced on every change. */
+  readonly statusLabel = input('Page {page} of {pages}');
+  /** The item range: `{from}`, `{to}` and `{total}`. Drawn by `table`, announced on every change. */
+  readonly rangeLabel = input('{from}-{to} of {total}');
 
   /** Emits `{ page, pageSize }` whenever either changes through the UI. */
   readonly pageChange = output<AndesPaginationChange>();
@@ -314,6 +500,10 @@ export class AndesPagination {
   private readonly document = inject(DOCUMENT);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
+  private defaultsApplied = false;
+
+  /** Whether the quick jumper holds text that is not a page number. */
+  protected readonly jumperInvalid = signal(false);
 
   private readonly simpleInput =
     viewChild<ElementRef<HTMLInputElement>>('simpleInput');
@@ -330,18 +520,50 @@ export class AndesPagination {
         query.removeEventListener('change', listener),
       );
     }
+
+    effect(() => {
+      const startPage = this.defaultCurrent();
+      const startSize = this.defaultPageSize();
+      untracked(() => {
+        if (this.defaultsApplied) {
+          return;
+        }
+        this.defaultsApplied = true;
+        if (startSize !== undefined) {
+          this.pageSize.set(startSize);
+        }
+        if (startPage !== undefined) {
+          this.current.set(startPage);
+        }
+      });
+    });
   }
 
   protected readonly resolvedPageSize = computed(() =>
     Math.max(1, Math.trunc(Number(this.pageSize())) || 1),
   );
 
-  protected readonly resolvedTotal = computed(() =>
-    Math.max(0, Math.trunc(this.total()) || 0),
+  protected readonly isCursor = computed(
+    () => this.hasNextPage() !== undefined,
   );
 
-  /** `0` when there is nothing to paginate (`total` of 0 and no `totalPages`). */
+  protected readonly resolvedTotal = computed(() =>
+    this.isCursor() ? 0 : Math.max(0, Math.trunc(this.total()) || 0),
+  );
+
+  /** The current page as asked for, before it is held to the page count. */
+  private readonly requestedPage = computed(() =>
+    Math.max(1, Math.trunc(Number(this.current())) || 1),
+  );
+
+  /**
+   * `0` when there is nothing to paginate (`total` of 0 and no `totalPages`). In cursor
+   * mode, the pages known so far: the current one, plus the next when there is one.
+   */
   protected readonly resolvedTotalPages = computed(() => {
+    if (this.isCursor()) {
+      return this.requestedPage() + (this.hasNextPage() ? 1 : 0);
+    }
     const explicitTotalPages = this.totalPages();
     if (explicitTotalPages !== undefined && explicitTotalPages !== null) {
       return Math.max(0, Math.trunc(explicitTotalPages) || 0);
@@ -352,10 +574,7 @@ export class AndesPagination {
   protected readonly isEmpty = computed(() => this.resolvedTotalPages() === 0);
 
   protected readonly clampedCurrentPage = computed(() =>
-    Math.min(
-      Math.max(1, Math.trunc(Number(this.current())) || 1),
-      Math.max(1, this.resolvedTotalPages()),
-    ),
+    Math.min(this.requestedPage(), Math.max(1, this.resolvedTotalPages())),
   );
 
   protected readonly isHidden = computed(
@@ -368,6 +587,12 @@ export class AndesPagination {
 
   protected readonly isSimple = computed(
     () => this.simple().enabled || this.isCollapsed(),
+  );
+
+  protected readonly isTable = computed(() => this.layout() === 'table');
+
+  protected readonly isCompact = computed(
+    () => this.layout() === 'compact' && !this.isSimple(),
   );
 
   protected readonly isSmall = computed(
@@ -389,15 +614,8 @@ export class AndesPagination {
 
   protected readonly jumpSize = computed(() => (this.showLessItems() ? 3 : 5));
 
-  protected readonly items = computed(() =>
-    this.isEmpty()
-      ? []
-      : getAndesPaginationRange(
-          this.clampedCurrentPage(),
-          this.resolvedTotalPages(),
-          Math.max(0, this.siblingCount() - (this.showLessItems() ? 1 : 0)),
-          this.boundaryCount(),
-        ),
+  protected readonly resolvedShowFirstLast = computed(
+    () => this.showFirstLast() ?? this.isTable(),
   );
 
   protected readonly isFirstPage = computed(
@@ -420,6 +638,138 @@ export class AndesPagination {
     ];
   });
 
+  /** "Page 3 of 10", or "Page 3" in cursor mode. */
+  private readonly statusText = computed(() => {
+    if (this.isEmpty()) {
+      return '';
+    }
+    return this.isCursor()
+      ? `${this.pageLabel()} ${this.clampedCurrentPage()}`
+      : fill(this.statusLabel(), {
+          page: this.clampedCurrentPage(),
+          pages: this.resolvedTotalPages(),
+        });
+  });
+
+  /** "1-10 of 100". */
+  private readonly rangeText = computed(() => {
+    const [from, to] = this.totalRange();
+    return fill(this.rangeLabel(), {
+      from,
+      to,
+      total: this.resolvedTotal(),
+    });
+  });
+
+  /** What a screen reader hears after every change: the page, and the item range. */
+  protected readonly announcement = computed(() =>
+    this.isEmpty() || this.resolvedTotal() === 0
+      ? this.statusText()
+      : `${this.statusText()}. ${this.rangeText()}`,
+  );
+
+  private readonly items = computed(() =>
+    this.isEmpty()
+      ? []
+      : getAndesPaginationRange(
+          this.clampedCurrentPage(),
+          this.resolvedTotalPages(),
+          Math.max(0, this.siblingCount() - (this.showLessItems() ? 1 : 0)),
+          this.boundaryCount(),
+        ),
+  );
+
+  /** Every control and text of the list, in the order they are drawn. */
+  protected readonly entries = computed<PaginationEntry[]>(() => {
+    const current = this.clampedCurrentPage();
+    const last = this.resolvedTotalPages();
+    const off = this.disabled();
+    const entry = (
+      key: string,
+      kind: PaginationEntry['kind'],
+      page: number,
+      label: string,
+      disabled: boolean,
+      isCurrent = false,
+      text = '',
+    ): PaginationEntry => ({
+      key,
+      kind,
+      page,
+      label,
+      disabled,
+      current: isCurrent,
+      text,
+    });
+    const result: PaginationEntry[] = [];
+
+    if (this.resolvedShowFirstLast()) {
+      result.push(
+        entry('first', 'first', 1, this.firstLabel(), off || current <= 1),
+      );
+    }
+    result.push(
+      entry(
+        'prev',
+        'prev',
+        current - 1,
+        this.previousLabel(),
+        off || current <= 1,
+      ),
+    );
+
+    if (this.isCursor() || this.isCompact()) {
+      result.push(
+        entry('status', 'status', current, '', false, false, this.statusText()),
+      );
+    } else if (this.isSimple()) {
+      result.push(entry('simple', 'simple', current, '', false));
+    } else if (!this.isTable() && !this.isEmpty()) {
+      for (const item of this.items()) {
+        if (typeof item === 'number') {
+          result.push(
+            entry(
+              `page-${item}`,
+              'page',
+              item,
+              `${this.pageLabel()} ${item}`,
+              off,
+              item === current,
+            ),
+          );
+        } else if (this.showPrevNextJumpers()) {
+          result.push(
+            entry(
+              item,
+              item === 'start-ellipsis' ? 'jump-prev' : 'jump-next',
+              this.jumpTarget(item),
+              this.jumpLabel(item),
+              off,
+            ),
+          );
+        } else {
+          result.push(entry(item, 'ellipsis', 0, '', true));
+        }
+      }
+    }
+
+    result.push(
+      entry(
+        'next',
+        'next',
+        current + 1,
+        this.nextLabel(),
+        off || current >= last,
+      ),
+    );
+    if (this.resolvedShowFirstLast()) {
+      result.push(
+        entry('last', 'last', last, this.lastLabel(), off || current >= last),
+      );
+    }
+    return result;
+  });
+
   protected readonly totalTemplate = computed(() => {
     const showTotal = this.showTotal();
     return showTotal instanceof TemplateRef ? showTotal : null;
@@ -427,9 +777,14 @@ export class AndesPagination {
 
   protected readonly totalText = computed(() => {
     const showTotal = this.showTotal();
-    return typeof showTotal === 'function'
-      ? showTotal(this.resolvedTotal(), this.totalRange())
-      : null;
+    if (typeof showTotal === 'function') {
+      return showTotal(this.resolvedTotal(), this.totalRange());
+    }
+    // The table footer always says where the page sits in the data.
+    if (this.isTable() && showTotal === null) {
+      return this.isCursor() ? this.statusText() : this.rangeText();
+    }
+    return null;
   });
 
   protected readonly totalContext = computed<AndesPaginationTotalContext>(
@@ -443,7 +798,8 @@ export class AndesPagination {
   protected readonly isSizeChangerVisible = computed(
     () =>
       this.showSizeChanger() ??
-      this.resolvedTotal() > this.totalBoundaryShowSizeChanger(),
+      (this.isTable() ||
+        this.resolvedTotal() > this.totalBoundaryShowSizeChanger()),
   );
 
   /** `pageSizeOptions`, plus the current size if it isn't one of them, sorted. */
@@ -457,6 +813,20 @@ export class AndesPagination {
     return [...options].sort((a, b) => a - b);
   });
 
+  /** The select's options: "10 / page", or the bare number beside a visible "Rows per page". */
+  protected readonly sizeSelectOptions = computed(() =>
+    this.sizeOptions().map((value) => ({
+      value,
+      label: this.isTable()
+        ? String(value)
+        : `${value} ${this.itemsPerPageLabel()}`.trim(),
+    })),
+  );
+
+  protected readonly sizeChangerLabel = computed(() =>
+    this.isTable() ? this.rowsPerPageLabel() : this.pageSizeLabel(),
+  );
+
   protected readonly sizeChangerContext =
     computed<AndesPaginationSizeChangerContext>(() => ({
       $implicit: this.resolvedPageSize(),
@@ -464,13 +834,13 @@ export class AndesPagination {
       options: this.sizeOptions(),
       disabled: this.disabled(),
       size: this.resolvedSize(),
-      label: this.pageSizeLabel(),
+      label: this.sizeChangerLabel(),
       itemsPerPageLabel: this.itemsPerPageLabel(),
       change: this.changePageSize,
     }));
 
   protected readonly isQuickJumperVisible = computed(
-    () => this.showQuickJumper() && !this.isSimple(),
+    () => this.showQuickJumper() && !this.isSimple() && !this.isCursor(),
   );
 
   /** What the simple-mode input shows when it isn't being edited. */
@@ -506,25 +876,129 @@ export class AndesPagination {
       this.hasGoButton(),
   );
 
-  protected isEllipsis(
-    item: AndesPaginationItem,
-  ): item is 'start-ellipsis' | 'end-ellipsis' {
-    return item === 'start-ellipsis' || item === 'end-ellipsis';
+  /** The state that `classNames` and `styles` functions decide with. */
+  private readonly state = computed<AndesPaginationState>(() => ({
+    current: this.clampedCurrentPage(),
+    pageSize: this.resolvedPageSize(),
+    total: this.resolvedTotal(),
+    totalPages: this.resolvedTotalPages(),
+    size: this.resolvedSize(),
+    variant: this.variant(),
+    shape: this.shape(),
+    layout: this.layout(),
+    disabled: this.disabled(),
+    loading: this.loading(),
+    simple: this.isSimple(),
+  }));
+
+  private readonly partClasses = computed<AndesPaginationClassNames>(() => {
+    const value = this.classNames();
+    return (typeof value === 'function' ? value(this.state()) : value) ?? {};
+  });
+
+  private readonly partStyles = computed<AndesPaginationStyles>(() => {
+    const value = this.styles();
+    return (typeof value === 'function' ? value(this.state()) : value) ?? {};
+  });
+
+  /** The extra classes of one or more parts. */
+  protected partClass(...parts: AndesPaginationPart[]): string {
+    const classes = this.partClasses();
+    return parts
+      .map((part) => classes[part])
+      .filter(Boolean)
+      .join(' ');
   }
 
-  protected jumpTarget(item: 'start-ellipsis' | 'end-ellipsis'): number {
-    return item === 'start-ellipsis'
-      ? Math.max(1, this.clampedCurrentPage() - this.jumpSize())
-      : Math.min(
-          this.resolvedTotalPages(),
-          this.clampedCurrentPage() + this.jumpSize(),
-        );
+  /** The extra inline styles of one or more parts (`null` when there are none). */
+  protected partStyle(
+    ...parts: AndesPaginationPart[]
+  ): Record<string, string | number> | null {
+    const styles = this.partStyles();
+    const merged = Object.assign({}, ...parts.map((part) => styles[part]));
+    return Object.keys(merged).length > 0 ? merged : null;
   }
 
-  protected jumpLabel(item: 'start-ellipsis' | 'end-ellipsis'): string {
-    const template =
-      item === 'start-ellipsis' ? this.jumpPrevLabel() : this.jumpNextLabel();
-    return template.replace('{count}', String(this.jumpSize()));
+  /** The parts a control belongs to, for its classes and styles. */
+  private entryParts(entry: PaginationEntry): AndesPaginationPart[] {
+    const parts: AndesPaginationPart[] = ['item'];
+    switch (entry.kind) {
+      case 'prev':
+      case 'next':
+      case 'first':
+      case 'last':
+        parts.push(entry.kind);
+        break;
+      case 'jump-prev':
+      case 'jump-next':
+        parts.push('jump');
+        break;
+      default:
+        break;
+    }
+    if (entry.current) {
+      parts.push('activeItem');
+    }
+    return parts;
+  }
+
+  /** The built-in classes of a control, then the ones `classNames` adds. */
+  protected controlClass(entry: PaginationEntry): string {
+    const names = ['andes-pagination__item'];
+    switch (entry.kind) {
+      case 'prev':
+      case 'next':
+      case 'first':
+      case 'last':
+        names.push(`andes-pagination__item--${entry.kind}`);
+        break;
+      case 'jump-prev':
+      case 'jump-next':
+        names.push('andes-pagination__jumper');
+        break;
+      default:
+        names.push('andes-pagination__page');
+        break;
+    }
+    if (entry.current) {
+      names.push('andes-pagination__page--active');
+    }
+    if (this.hasText(entry)) {
+      names.push('andes-pagination__item--text');
+    }
+    names.push(this.partClass(...this.entryParts(entry)));
+    return names.filter(Boolean).join(' ');
+  }
+
+  /** The native tooltip of a control: the page number, or the control's name. */
+  protected titleFor(entry: PaginationEntry): string | null {
+    if (!this.showTitle()) {
+      return null;
+    }
+    return entry.kind === 'page' ? String(entry.page) : entry.label;
+  }
+
+  protected entryStyle(
+    entry: PaginationEntry,
+  ): Record<string, string | number> | null {
+    return this.partStyle(...this.entryParts(entry));
+  }
+
+  /** The address of a control's page, when the items are links. */
+  protected hrefFor(entry: PaginationEntry): string | null {
+    const build = this.linkFor();
+    if (!build || entry.disabled || entry.kind === 'ellipsis') {
+      return null;
+    }
+    return build(entry.page);
+  }
+
+  /** Whether Previous / Next draw a text beside (or instead of) their chevron. */
+  protected hasText(entry: PaginationEntry): boolean {
+    return (
+      (entry.kind === 'prev' && this.prevText() !== '') ||
+      (entry.kind === 'next' && this.nextText() !== '')
+    );
   }
 
   protected itemContext(
@@ -535,8 +1009,91 @@ export class AndesPagination {
     return { $implicit: page, page, type, originalElement };
   }
 
+  private jumpTarget(item: 'start-ellipsis' | 'end-ellipsis'): number {
+    return item === 'start-ellipsis'
+      ? Math.max(1, this.clampedCurrentPage() - this.jumpSize())
+      : Math.min(
+          this.resolvedTotalPages(),
+          this.clampedCurrentPage() + this.jumpSize(),
+        );
+  }
+
+  private jumpLabel(item: 'start-ellipsis' | 'end-ellipsis'): string {
+    const template =
+      item === 'start-ellipsis' ? this.jumpPrevLabel() : this.jumpNextLabel();
+    return template.replace('{count}', String(this.jumpSize()));
+  }
+
+  /** A click on a control. A modifier or middle click on a link is left to the browser. */
+  protected onControlClick(event: MouseEvent, entry: PaginationEntry): void {
+    if (
+      event.button !== 0 ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+    event.preventDefault();
+    // Previous and Next move from where the control is now, not from where it was drawn.
+    const current = this.clampedCurrentPage();
+    this.goToPage(
+      entry.kind === 'prev'
+        ? current - 1
+        : entry.kind === 'next'
+          ? current + 1
+          : entry.page,
+    );
+  }
+
+  /**
+   * Arrow keys, Home and End move focus along the items. Every item stays in the Tab
+   * order; the keys are a shortcut for a long row, and follow the reading direction.
+   */
+  protected onListKeydown(event: KeyboardEvent): void {
+    const target = event.target;
+    if (
+      !(target instanceof HTMLElement) ||
+      target instanceof HTMLInputElement
+    ) {
+      return;
+    }
+    const controls = Array.from(
+      this.host.nativeElement.querySelectorAll<HTMLElement>(
+        '.andes-pagination__list .andes-pagination__item:not(:disabled)',
+      ),
+    );
+    const index = controls.indexOf(target);
+    if (index === -1) {
+      return;
+    }
+    const rtl =
+      this.document.defaultView?.getComputedStyle(this.host.nativeElement)
+        .direction === 'rtl';
+    let next: number;
+    switch (event.key) {
+      case 'ArrowRight':
+        next = index + (rtl ? -1 : 1);
+        break;
+      case 'ArrowLeft':
+        next = index + (rtl ? 1 : -1);
+        break;
+      case 'Home':
+        next = 0;
+        break;
+      case 'End':
+        next = controls.length - 1;
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    controls[Math.min(Math.max(next, 0), controls.length - 1)]?.focus();
+  }
+
   protected goToPage(page: number): void {
-    if (this.disabled() || this.isEmpty()) {
+    if (this.disabled() || this.loading() || this.isEmpty()) {
       return;
     }
     const target = Math.min(Math.max(1, page), this.resolvedTotalPages());
@@ -586,25 +1143,18 @@ export class AndesPagination {
     );
   }
 
-  protected goToPrevious(): void {
-    if (!this.isFirstPage()) {
-      this.goToPage(this.clampedCurrentPage() - 1);
-    }
-  }
-
-  protected goToNext(): void {
-    if (!this.isLastPage()) {
-      this.goToPage(this.clampedCurrentPage() + 1);
-    }
-  }
-
   /** Stable reference handed to `sizeChangerRender` templates. */
   private readonly changePageSize = (pageSize: number): void =>
     this.onSizeSelected(pageSize);
 
-  protected onSizeSelected(value: string | number): void {
+  protected onSizeSelected(value: unknown): void {
     const size = Math.trunc(Number(value));
-    if (this.disabled() || !(size > 0) || size === this.resolvedPageSize()) {
+    if (
+      this.disabled() ||
+      this.loading() ||
+      !(size > 0) ||
+      size === this.resolvedPageSize()
+    ) {
       return;
     }
 
@@ -612,7 +1162,8 @@ export class AndesPagination {
     // size, in which case land on the new last page.
     const explicitTotalPages = this.totalPages();
     const newTotalPages =
-      explicitTotalPages !== undefined && explicitTotalPages !== null
+      this.isCursor() ||
+      (explicitTotalPages !== undefined && explicitTotalPages !== null)
         ? this.resolvedTotalPages()
         : Math.ceil(this.resolvedTotal() / size);
     const current = this.clampedCurrentPage();
@@ -649,12 +1200,23 @@ export class AndesPagination {
     }
   }
 
+  protected onJumperInput(): void {
+    this.jumperInvalid.set(false);
+  }
+
+  /**
+   * Jumps to the typed page and clears the field. Text that is not a page number is
+   * kept, and the field is marked invalid until the next keystroke.
+   */
   protected commitJumper(field: HTMLInputElement): void {
     const page = parsePageInput(field.value);
-    field.value = '';
-    if (page !== null) {
-      this.goToPage(page);
+    if (page === null) {
+      this.jumperInvalid.set(field.value.trim() !== '');
+      return;
     }
+    this.jumperInvalid.set(false);
+    field.value = '';
+    this.goToPage(page);
   }
 
   protected onSimpleKeydown(
@@ -668,11 +1230,11 @@ export class AndesPagination {
         return;
       case 'ArrowUp':
         event.preventDefault();
-        this.goToNext();
+        this.goToPage(this.clampedCurrentPage() + 1);
         break;
       case 'ArrowDown':
         event.preventDefault();
-        this.goToPrevious();
+        this.goToPage(this.clampedCurrentPage() - 1);
         break;
       default:
         return;

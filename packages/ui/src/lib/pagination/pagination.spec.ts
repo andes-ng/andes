@@ -431,7 +431,22 @@ describe('AndesPagination', () => {
 
   describe('size changer', () => {
     const select = (q: <T extends Element>(s: string) => T | null) =>
-      q<HTMLSelectElement>('.andes-pagination__size-changer');
+      q<HTMLElement>('.andes-pagination__size-changer');
+    const trigger = (q: <T extends Element>(s: string) => T | null) =>
+      q<HTMLElement>('.andes-pagination__size-changer [role="combobox"]');
+    /** Opens the select and returns the options it lists. */
+    const options = (
+      fixture: { detectChanges: () => void },
+      q: <T extends Element>(s: string) => T | null,
+    ) => {
+      required(trigger(q)).click();
+      fixture.detectChanges();
+      return Array.from(
+        document.querySelectorAll<HTMLElement>(
+          '[data-slot="select-content"] [role="option"]',
+        ),
+      );
+    };
 
     it('is hidden by default for small totals and shown automatically above 50', () => {
       const { update, q } = createHost((h) => {
@@ -457,22 +472,23 @@ describe('AndesPagination', () => {
     });
 
     it('lists the options, adding the current size when missing', () => {
-      const { q } = createHost((h) => {
+      const { fixture, q } = createHost((h) => {
         h.showSizeChanger.set(true);
         h.pageSize.set(15);
       });
-      const options = Array.from(required(select(q)).options);
-      expect(options.map((option) => option.textContent?.trim())).toEqual([
+      expect(required(trigger(q)).textContent).toContain('15 / page');
+      expect(required(trigger(q)).getAttribute('aria-label')).toBe(
+        'Items per page',
+      );
+      expect(
+        options(fixture, q).map((option) => option.textContent?.trim()),
+      ).toEqual([
         '10 / page',
         '15 / page',
         '20 / page',
         '50 / page',
         '100 / page',
       ]);
-      expect(required(select(q)).value).toBe('15');
-      expect(required(select(q)).getAttribute('aria-label')).toBe(
-        'Items per page',
-      );
     });
 
     it('updates pageSize, clamps current and emits both events', () => {
@@ -482,9 +498,10 @@ describe('AndesPagination', () => {
         h.current.set(8);
         h.showSizeChanger.set(true);
       });
-      const el = required(select(q));
-      el.value = '50';
-      el.dispatchEvent(new Event('change'));
+      const fifty = options(fixture, q).find((option) =>
+        option.textContent?.includes('50 / page'),
+      );
+      required(fifty).click();
       fixture.detectChanges();
 
       expect(host.pageSize()).toBe(50);
@@ -500,9 +517,10 @@ describe('AndesPagination', () => {
         h.current.set(2);
         h.showSizeChanger.set(true);
       });
-      const el = required(select(q));
-      el.value = '20';
-      el.dispatchEvent(new Event('change'));
+      const twenty = options(fixture, q).find((option) =>
+        option.textContent?.includes('20 / page'),
+      );
+      required(twenty).click();
       fixture.detectChanges();
 
       expect(host.current()).toBe(2);
@@ -510,12 +528,13 @@ describe('AndesPagination', () => {
     });
 
     it('accepts numeric strings as options', () => {
-      const { q } = createHost((h) => {
+      const { fixture, q } = createHost((h) => {
         h.showSizeChanger.set(true);
         h.pageSizeOptions.set(['25', '5', 'x']);
       });
-      const options = Array.from(required(select(q)).options);
-      expect(options.map((option) => option.value)).toEqual(['5', '10', '25']);
+      expect(
+        options(fixture, q).map((option) => option.textContent?.trim()),
+      ).toEqual(['5 / page', '10 / page', '25 / page']);
     });
 
     describe('sizeChangerRender', () => {

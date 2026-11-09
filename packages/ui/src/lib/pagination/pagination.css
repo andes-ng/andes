@@ -1,15 +1,46 @@
-/* Pagination: borderless 32px items (24px small) at 14px, the current
-   page marked by a primary border and primary text rather than a solid fill, and
-   the size changer / quick jumper drawn as regular 32px fields. */
+/* Pagination: soft 24 / 32 / 40px items at 14px with an 8px radius, 4 / 6 / 8px apart, and a
+   24px gap before the page-size and jump-to fields. The current page is marked by a primary
+   border and text by default (`data-variant`: outline, ghost or filled for the others).
+
+   Custom properties a consumer can set on the element or an ancestor:
+     --andes-pagination-item-size       height and minimum width of an item
+     --andes-pagination-gap             space between the items
+     --andes-pagination-section-gap     space between the total, the items and the options
+     --andes-pagination-radius          corner radius of an item
+     --andes-pagination-accent          the current page's colour (fill or border)
+     --andes-pagination-accent-text     the current page's text colour on a light fill
+     --andes-pagination-accent-foreground  text on a filled current page */
 
 .andes-pagination {
-  --andes-pagination-item-size: var(--andes-control-height-md, 2rem);
+  --_item-size: var(
+    --andes-pagination-item-size,
+    var(--andes-control-height-md, 2rem)
+  );
+  --_gap: var(--andes-pagination-gap, 0.375rem);
+  --_radius: var(--andes-pagination-radius, var(--andes-radius-lg, 0.5rem));
+  --_accent: var(--andes-pagination-accent, var(--andes-color-primary));
+  --_accent-text: var(
+    --andes-pagination-accent-text,
+    var(--andes-color-primary-text)
+  );
+  --_accent-foreground: var(
+    --andes-pagination-accent-foreground,
+    var(--andes-color-primary-foreground, #fff)
+  );
+  --_accent-hover: color-mix(in srgb, var(--_accent) 85%, #000);
+  --_accent-soft: color-mix(
+    in srgb,
+    var(--_accent) 12%,
+    var(--andes-color-background)
+  );
 
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-start;
-  gap: var(--andes-space-2);
+  column-gap: var(--andes-pagination-section-gap, 1.5rem);
+  row-gap: var(--andes-space-3, 0.75rem);
   font-family: var(--andes-font-family), sans-serif;
   font-size: var(--andes-text-font-size, 0.875rem);
   line-height: var(--andes-text-line-height, 1.375rem);
@@ -17,11 +48,23 @@
 }
 
 .andes-pagination--small {
-  --andes-pagination-item-size: var(--andes-control-height-sm, 1.5rem);
+  --_item-size: var(
+    --andes-pagination-item-size,
+    var(--andes-control-height-sm, 1.5rem)
+  );
+  --_gap: var(--andes-pagination-gap, 0.25rem);
 }
 
 .andes-pagination--large {
-  --andes-pagination-item-size: var(--andes-control-height-lg, 2.5rem);
+  --_item-size: var(
+    --andes-pagination-item-size,
+    var(--andes-control-height-lg, 2.5rem)
+  );
+  --_gap: var(--andes-pagination-gap, 0.5rem);
+}
+
+.andes-pagination[data-shape='pill'] {
+  --_radius: var(--andes-pagination-radius, 9999px);
 }
 
 .andes-pagination[data-align='center'] {
@@ -32,55 +75,101 @@
   justify-content: flex-end;
 }
 
+/* The table footer: the rows-per-page control at the start; the range and the buttons at the
+   end. It wraps on a narrow screen instead of squeezing. */
+.andes-pagination[data-layout='table'] {
+  justify-content: space-between;
+}
+
+.andes-pagination[data-layout='table'] .andes-pagination__total {
+  margin-inline-start: auto;
+}
+
+.andes-pagination[data-layout='table'] .andes-pagination__list {
+  margin-inline-start: auto;
+}
+
+.andes-pagination[data-layout='table']
+  .andes-pagination__total
+  + .andes-pagination__list {
+  margin-inline-start: 0;
+}
+
 .andes-pagination__list {
   display: flex;
   align-items: center;
-  gap: var(--andes-space-2);
+  gap: var(--_gap);
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-/* Small items sit flush: they have no border to separate, and the gap would double the
-   row's width. */
-.andes-pagination--small .andes-pagination__list {
-  gap: 0;
+.andes-pagination__total,
+.andes-pagination__status {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .andes-pagination__total {
   color: var(--andes-color-foreground);
 }
 
+.andes-pagination__status {
+  display: inline-block;
+  padding-inline: var(--andes-space-2, 0.5rem);
+}
+
+.andes-pagination__rows-label {
+  color: var(--andes-color-muted-foreground);
+  white-space: nowrap;
+}
+
+/* Said to a screen reader after each change, never drawn. */
+.andes-pagination__announcer {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 .andes-pagination__ellipsis {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: var(--andes-pagination-item-size);
-  height: var(--andes-pagination-item-size);
+  min-width: var(--_item-size);
+  height: var(--_item-size);
   color: var(--andes-color-muted-foreground);
   user-select: none;
 }
 
-/* Native buttons rather than andes-button - see the comment in pagination.html for
-   why: page items need a real aria-current on the focusable element itself, and
+/* Native buttons and links rather than andes-button - see the comment in pagination.html
+   for why: page items need a real aria-current on the focusable element itself, and
    prev/next/jumpers share the same box so size="small" and itemRender apply evenly.
    The transparent border keeps every item the same size as the bordered active one. */
 .andes-pagination__item {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: var(--andes-space-1, 0.25rem);
   box-sizing: border-box;
-  min-width: var(--andes-pagination-item-size);
-  height: var(--andes-pagination-item-size);
-  padding-inline: 0.375rem;
+  min-width: var(--_item-size);
+  height: var(--_item-size);
+  padding-inline: 0.5rem;
   border: 1px solid transparent;
-  border-radius: var(--andes-control-radius-md, 0.375rem);
+  border-radius: var(--_radius);
   background-color: transparent;
   color: var(--andes-color-foreground);
   font-family: inherit;
   font-size: var(--andes-control-font-size-md, 0.875rem);
   font-weight: normal;
   line-height: var(--andes-control-line-height, 1.375rem);
+  text-decoration: none;
+  white-space: nowrap;
   cursor: pointer;
   transition:
     background-color 150ms ease,
@@ -89,7 +178,7 @@
 }
 
 .andes-pagination--small .andes-pagination__item {
-  padding-inline: var(--andes-space-1);
+  padding-inline: 0.375rem;
 }
 
 /* Lucide chevrons in an `ng-icon` rather than text glyphs, so they sit on the item's optical
@@ -101,6 +190,12 @@
   flex: none;
   width: 1rem;
   height: 1rem;
+}
+
+.andes-pagination--large .andes-pagination__arrow,
+.andes-pagination--large .andes-pagination__jumper-icon {
+  width: 1.125rem;
+  height: 1.125rem;
 }
 
 /* Lucide's ellipsis rather than the "…" character: the character sits on the text baseline, so
@@ -116,12 +211,21 @@
   height: 1rem;
 }
 
-/* An item showing an icon - the default arrows and jumpers - stays square like the page
-   items (a jumper also keeps its width when hover swaps its dots for the icon); text content,
-   e.g. an itemRender "Previous" label, keeps the inline padding. Anchored on the root so it also outranks the
+/* An item showing an icon alone - the default arrows and jumpers - stays square like the page
+   items (a jumper also keeps its width when hover swaps its dots for the icon); an item with
+   text, e.g. "Previous", keeps the inline padding. Anchored on the root so it also outranks the
    small size's padding. */
-.andes-pagination .andes-pagination__item:has(> ng-icon) {
+.andes-pagination
+  .andes-pagination__item:has(> ng-icon):not(.andes-pagination__item--text) {
   padding-inline: 0;
+}
+
+.andes-pagination .andes-pagination__item--text {
+  padding-inline: 0.75rem;
+}
+
+.andes-pagination--small .andes-pagination__item--text {
+  padding-inline: 0.5rem;
 }
 
 .andes-pagination__arrow:dir(rtl),
@@ -144,29 +248,95 @@
 }
 
 .andes-pagination__page--active {
-  border-color: var(--andes-color-primary);
+  border-color: var(--_accent);
   background-color: var(--andes-color-background);
-  color: var(--andes-color-primary-text);
+  color: var(--_accent-text);
   font-weight: var(--andes-font-weight-semibold, 600);
 }
 
 .andes-pagination__page--active:hover:not(:disabled) {
-  border-color: var(--andes-color-primary-hover);
+  border-color: var(--_accent-hover);
   background-color: var(--andes-color-background);
-  color: var(--andes-color-primary-hover);
+  color: var(--_accent-text);
 }
 
-/* Disabled, the current page keeps its box but drops the primary color. */
+/* Disabled, the current page keeps its box but drops the accent. */
 .andes-pagination__page--active:disabled {
   border-color: var(--andes-color-border);
   background-color: var(--andes-color-muted);
   color: var(--andes-color-muted-foreground);
 }
 
+/* Variants. outline: every item has a border. */
+.andes-pagination[data-variant='outline'] .andes-pagination__item {
+  border-color: var(--andes-color-border);
+}
+
+.andes-pagination[data-variant='outline']
+  .andes-pagination__item:hover:not(
+    :disabled,
+    .andes-pagination__page--active
+  ) {
+  border-color: color-mix(
+    in srgb,
+    var(--_accent) 55%,
+    var(--andes-color-border)
+  );
+  background-color: transparent;
+}
+
+.andes-pagination[data-variant='outline'] .andes-pagination__page--active {
+  border-color: var(--_accent);
+  background-color: var(--_accent-soft);
+}
+
+.andes-pagination[data-variant='outline']
+  .andes-pagination__page--active:hover:not(:disabled) {
+  background-color: var(--_accent-soft);
+}
+
+.andes-pagination[data-variant='outline'] .andes-pagination__item:disabled {
+  border-color: var(--andes-color-border);
+}
+
+/* ghost: no borders, the current page on a soft tint. */
+.andes-pagination[data-variant='ghost'] .andes-pagination__page--active {
+  border-color: transparent;
+  background-color: var(--_accent-soft);
+}
+
+.andes-pagination[data-variant='ghost']
+  .andes-pagination__page--active:hover:not(:disabled) {
+  border-color: transparent;
+  background-color: var(--_accent-soft);
+}
+
+.andes-pagination[data-variant='ghost']
+  .andes-pagination__page--active:disabled,
+.andes-pagination[data-variant='filled']
+  .andes-pagination__page--active:disabled {
+  border-color: transparent;
+  background-color: var(--andes-color-muted);
+  color: var(--andes-color-muted-foreground);
+}
+
+/* filled: the current page is a solid block. */
+.andes-pagination[data-variant='filled'] .andes-pagination__page--active {
+  border-color: var(--_accent);
+  background-color: var(--_accent);
+  color: var(--_accent-foreground);
+}
+
+.andes-pagination[data-variant='filled']
+  .andes-pagination__page--active:hover:not(:disabled) {
+  border-color: var(--_accent-hover);
+  background-color: var(--_accent-hover);
+  color: var(--_accent-foreground);
+}
+
 /* Jumpers read as a plain ellipsis until hovered/focused, then reveal their arrow. */
 .andes-pagination__jumper {
   color: var(--andes-color-muted-foreground);
-  letter-spacing: 0.125rem;
 }
 
 .andes-pagination__jumper:hover:not(:disabled) {
@@ -185,15 +355,45 @@
 .andes-pagination__jumper:hover:not(:disabled) .andes-pagination__jumper-icon,
 .andes-pagination__jumper:focus-visible .andes-pagination__jumper-icon {
   display: flex;
-  color: var(--andes-color-primary-text);
-  letter-spacing: normal;
+  color: var(--_accent-text);
+}
+
+/* Loading: the current page shows a spinner and the rest waits. */
+.andes-pagination--loading
+  .andes-pagination__item:not(.andes-pagination__page--active) {
+  cursor: progress;
+}
+
+.andes-pagination__spinner {
+  display: flex;
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  animation: andes-pagination-spin 0.9s linear infinite;
+}
+
+@keyframes andes-pagination-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .andes-pagination__item,
+  .andes-pagination__input {
+    transition: none;
+  }
+
+  .andes-pagination__spinner {
+    animation: none;
+  }
 }
 
 .andes-pagination__simple {
   display: inline-flex;
   align-items: center;
-  gap: var(--andes-space-2);
-  padding-inline: var(--andes-space-1);
+  gap: var(--andes-space-2, 0.5rem);
+  padding-inline: var(--andes-space-1, 0.25rem);
 }
 
 .andes-pagination__slash {
@@ -204,19 +404,18 @@
   display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--andes-space-2);
-  margin-inline-start: var(--andes-space-2);
+  gap: var(--andes-space-3, 0.75rem);
 }
 
 /*
-  Fields: the size changer and the quick-jumper and simple-mode inputs share the text-field
-  box (32px, 11px inline padding, 6px radius; 24px / 7px / 4px when small): one border that
-  tints on hover, and on focus a primary border plus a soft 2px ring instead of an outline
-  around the border. Form controls don't inherit font by default, so they opt in explicitly.
+  Fields: the quick-jumper and simple-mode inputs share the text-field box (32px, 11px
+  inline padding, 6px radius; 24px / 7px / 4px when small): one border that tints on hover,
+  and on focus a primary border plus a soft 2px ring instead of an outline around the
+  border. Form controls don't inherit font by default, so they opt in explicitly.
 */
 .andes-pagination__input {
   box-sizing: border-box;
-  height: var(--andes-pagination-item-size);
+  height: var(--_item-size);
   margin: 0;
   padding-inline: var(--andes-control-padding-x-md, 0.6875rem);
   border: 1px solid var(--andes-color-input);
@@ -233,10 +432,18 @@
     background-color 150ms ease;
 }
 
+.andes-pagination[data-shape='pill'] .andes-pagination__input {
+  border-radius: 9999px;
+}
+
 .andes-pagination--small .andes-pagination__input {
   padding-inline: var(--andes-control-padding-x-sm, 0.4375rem);
   border-radius: var(--andes-control-radius-sm, 0.25rem);
   font-size: var(--andes-control-font-size-sm, 0.875rem);
+}
+
+.andes-pagination--small[data-shape='pill'] .andes-pagination__input {
+  border-radius: 9999px;
 }
 
 .andes-pagination__input::placeholder {
@@ -247,19 +454,30 @@
 .andes-pagination__input:hover:not(:disabled, [readonly], :focus) {
   border-color: color-mix(
     in srgb,
-    var(--andes-color-primary) 65%,
+    var(--_accent) 65%,
     var(--andes-color-input)
   );
 }
 
 .andes-pagination__input:focus {
-  border-color: var(--andes-color-primary);
-  box-shadow: 0 0 0 2px
-    color-mix(in srgb, var(--andes-color-primary) 20%, transparent);
+  border-color: var(--_accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--_accent) 20%, transparent);
 }
 
-/* The native select and text fields paint their chrome (arrow, option list, caret) from
-   `color-scheme`, not from the tokens - match it to the dark theme. */
+/* The jumper holds text that is not a page number. */
+.andes-pagination__input--invalid,
+.andes-pagination__input--invalid:hover:not(:disabled, [readonly], :focus) {
+  border-color: var(--andes-color-danger);
+}
+
+.andes-pagination__input--invalid:focus {
+  border-color: var(--andes-color-danger);
+  box-shadow: 0 0 0 2px
+    color-mix(in srgb, var(--andes-color-danger) 20%, transparent);
+}
+
+/* The native text fields paint their chrome (caret, selection) from `color-scheme`, not
+   from the tokens - match it to the dark theme. */
 :host-context([data-andes-theme='dark']) .andes-pagination__input {
   color-scheme: dark;
 }
@@ -272,60 +490,29 @@
 
 .andes-pagination__simple-input {
   width: 3.125rem;
-  padding-inline: var(--andes-space-1);
+  padding-inline: var(--andes-space-1, 0.25rem);
   text-align: center;
 }
 
 .andes-pagination__jump-input {
   width: 3.125rem;
-  margin-inline: var(--andes-space-2) 0;
+  margin-inline: var(--andes-space-2, 0.5rem) 0;
 }
 
-/* The size changer: a native <select> with its own arrow hidden, so the only
-   border is the field's and the chevron matches AndesSelect's. */
-.andes-pagination__size-changer-wrap {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-}
-
+/* The size changer is a library select; this only sets how wide its box is. */
 .andes-pagination__size-changer {
-  padding-inline-end: calc(
-    var(--andes-control-padding-x-md, 0.6875rem) + 1.125rem
-  );
-  appearance: none;
-  cursor: pointer;
+  display: block;
+  width: 7.5rem;
 }
 
-.andes-pagination--small .andes-pagination__size-changer {
-  padding-inline-end: calc(
-    var(--andes-control-padding-x-sm, 0.4375rem) + 1.125rem
-  );
-}
-
-.andes-pagination__size-changer-icon {
-  position: absolute;
-  display: flex;
-  inset-inline-end: var(--andes-control-padding-x-md, 0.6875rem);
-  width: 0.875rem;
-  height: 0.875rem;
-  color: var(--andes-color-muted-foreground);
-  pointer-events: none;
-}
-
-.andes-pagination--small .andes-pagination__size-changer-icon {
-  inset-inline-end: var(--andes-control-padding-x-sm, 0.4375rem);
-}
-
-.andes-pagination__size-changer:disabled
-  + .andes-pagination__size-changer-icon {
-  opacity: 0.6;
+.andes-pagination[data-layout='table'] .andes-pagination__size-changer {
+  width: 5rem;
 }
 
 .andes-pagination__jump {
   display: inline-flex;
   align-items: center;
-  gap: var(--andes-space-2);
+  gap: var(--andes-space-2, 0.5rem);
 }
 
 .andes-pagination__jump-label {
@@ -335,10 +522,20 @@
 }
 
 .andes-pagination__jump-suffix {
-  margin-inline-start: var(--andes-space-2);
+  margin-inline-start: var(--andes-space-2, 0.5rem);
 }
 
 /* andes-button's host has no display of its own. */
 .andes-pagination__go {
   display: inline-flex;
+}
+
+.andes-pagination__go-icon {
+  display: flex;
+  width: 1rem;
+  height: 1rem;
+}
+
+.andes-pagination__go-icon:dir(rtl) {
+  transform: scaleX(-1);
 }

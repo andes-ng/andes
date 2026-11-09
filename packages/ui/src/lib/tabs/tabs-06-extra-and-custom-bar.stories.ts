@@ -181,7 +181,7 @@ export const TemplateLabels: Story = {
       ],
     },
     template: `
-      <ng-template #inbox><ng-icon name="lucideInbox" /> Inbox <andes-badge [count]="12" /></ng-template>
+      <ng-template #inbox><ng-icon name="lucideInbox" /> Inbox <andes-badge standalone [count]="12" size="small" /></ng-template>
       <ng-template #drafts><ng-icon name="lucideFileText" /> Drafts <andes-tag>3</andes-tag></ng-template>
       <ng-template #sent><ng-icon name="lucideMail" /> Sent</ng-template>
       <div [style]="column"><andes-tabs type="card" [items]="itemsFor(inbox, drafts, sent)" /></div>`,

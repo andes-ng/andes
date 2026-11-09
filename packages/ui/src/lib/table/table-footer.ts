@@ -1,4 +1,6 @@
-import { booleanAttribute, Directive, input } from '@angular/core';
+import { booleanAttribute, Directive, inject, input } from '@angular/core';
+
+import { AndesTable } from './table';
 
 /**
  * Styles a native `<tfoot>` - the place for a totals or summary row.
@@ -11,9 +13,13 @@ import { booleanAttribute, Directive, input } from '@angular/core';
   host: {
     class: 'andes-table__footer',
     '[class.andes-table__footer--fixed]': 'fixed()',
+    '[class]': "table?.partClass('footer')",
+    '[style]': "table?.partStyle('footer')",
   },
 })
 export class AndesTableFooter {
+  protected readonly table = inject(AndesTable, { optional: true });
+
   /** Stick to the bottom of a vertically scrolling table. */
   readonly fixed = input(false, { transform: booleanAttribute });
 }

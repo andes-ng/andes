@@ -31,6 +31,9 @@ const INTERACTIVE =
     '[class.andes-table__row--selected]': 'selected()',
     '[class.andes-table__row--expanded]': 'expanded()',
     '[class.andes-table__row--clickable]': 'expandByClick()',
+    '[class]': "table?.partClass('row')",
+    '[style]': "table?.partStyle('row')",
+    '[attr.aria-selected]': 'ariaSelected()',
     '[attr.data-row-key]': 'rowKey() ?? null',
     '[attr.data-level]': 'level() || null',
     '[style.--andes-table-level]': 'level() || null',
@@ -38,7 +41,7 @@ const INTERACTIVE =
   },
 })
 export class AndesTableRow {
-  private readonly table = inject(AndesTable, { optional: true });
+  protected readonly table = inject(AndesTable, { optional: true });
 
   /** Unique key of the record this row renders. */
   readonly rowKey = input<AndesTableRowKey | undefined>(undefined);
@@ -57,6 +60,13 @@ export class AndesTableRow {
     const key = this.rowKey();
     return key !== undefined && !!this.table?.isExpanded(key);
   });
+
+  /** Grid rows say whether they are selected; in a plain table the state stays visual. */
+  protected readonly ariaSelected = computed(() =>
+    this.table?.gridNavigation() && this.rowKey() !== undefined
+      ? this.selected()
+      : null,
+  );
 
   protected readonly expandByClick = computed(
     () => this.rowKey() !== undefined && !!this.table?.expandRowByClick(),

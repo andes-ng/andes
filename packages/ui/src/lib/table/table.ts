@@ -21,6 +21,7 @@ import {
   ANDES_TABLE_FILTERABLE,
   ANDES_TABLE_SELECTABLE,
   andesCssLength,
+  type AndesTableBreakpoint,
   type AndesTableRowKey,
 } from './table-context';
 import {
@@ -36,6 +37,15 @@ import {
   type AndesSortDirection,
   type AndesSortState,
 } from './table-sort';
+import {
+  andesTableStyleObject,
+  type AndesTableClassNames,
+  type AndesTableClassNamesInput,
+  type AndesTableSemanticInfo,
+  type AndesTableSemanticPart,
+  type AndesTableStyles,
+  type AndesTableStylesInput,
+} from './table-semantic';
 import { andesTreeDescendants, type AndesTableTree } from './table-tree';
 
 /** Cell padding scale, named for what it does rather than as a size. */
@@ -209,6 +219,12 @@ let nextTableId = 0;
   templateUrl: './table.html',
   styleUrl: './table.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '[class]': "partClass('root')",
+    '[style]': "partStyle('root')",
+    '(keydown)': 'onGridKeydown($event)',
+    '(focusin)': 'onGridFocusIn($event)',
+  },
 })
 export class AndesTable {
   private readonly destroyRef = inject(DestroyRef);
@@ -231,6 +247,45 @@ export class AndesTable {
 
   /** Highlight the row under the pointer. */
   readonly rowHover = input(true, { transform: booleanAttribute });
+
+  /** Tints every other row, so long rows are easier to follow across the width. */
+  readonly striped = input(false, { transform: booleanAttribute });
+
+  /**
+   * Below this viewport width each row becomes a card: the header row is hidden
+   * visually and every cell is shown as a `label: value` line (the label is the
+   * cell's `label`). Unset keeps the table a table at every width.
+   */
+  readonly cards = input<AndesTableBreakpoint | undefined>(undefined);
+
+  /**
+   * Turns the table into a grid for the keyboard: one cell is the tab stop, the
+   * arrow keys, Home, End and Page Up/Down move between cells, Enter moves into
+   * the cell's control, Escape back to the cell and Space toggles the row's
+   * selection. The table gets `role="grid"`, and its rows `aria-selected`.
+   */
+  readonly gridNavigation = input(false, { transform: booleanAttribute });
+
+  /**
+   * Total number of data rows when only a page or a window of them is rendered
+   * (paging, virtual rows): published as `aria-rowcount`, header rows included.
+   */
+  readonly rowCount = input<number | undefined>(undefined);
+
+  /**
+   * Extra classes per part (`root`, `container`, `caption`, `header`, `headerCell`, `body`,
+   * `row`, `cell`, `footer`, `summary`, `expand`, `selection`, `sorter`, `filter`, `empty`,
+   * `loading`), as an object or as a function of the table's state.
+   */
+  readonly classNames = input<AndesTableClassNamesInput | null | undefined>(
+    undefined,
+  );
+
+  /** Inline styles per part, as an object or as a function of the table's state. */
+  readonly styles = input<AndesTableStylesInput | null | undefined>(undefined);
+
+  /** Draws a pin beside the title of every fixed (pinned) column header. */
+  readonly pinIcon = input(false, { transform: booleanAttribute });
 
   /** Render the caption above or below the table. */
   readonly captionSide = input<AndesTableCaptionSide>('bottom');
@@ -576,10 +631,59 @@ export class AndesTable {
     andesCssLength(this.scrollX()),
   );
 
+  /** What the function forms of `classNames` and `styles` are given. */
+  private readonly semanticInfo = computed<AndesTableSemanticInfo>(() => ({
+    props: {
+      density: this.density(),
+      bordered: this.bordered(),
+      striped: this.striped(),
+      loading: this.loading(),
+      selectedCount: this.selectedKeys().length,
+      expandedCount: this.expandedKeys().length,
+      sortedCount: this.activeSorts().length,
+      filtered: Object.values(this.filters()).some(
+        (value) => Array.isArray(value) && value.length > 0,
+      ),
+    },
+  }));
+
+  private readonly semanticClasses = computed(() => {
+    const input = this.classNames();
+    const resolved: AndesTableClassNames =
+      (typeof input === 'function' ? input(this.semanticInfo()) : input) ?? {};
+    const classes: Partial<Record<AndesTableSemanticPart, string>> = {};
+    for (const [part, value] of Object.entries(resolved)) {
+      const joined = clsx(value);
+      if (joined) {
+        classes[part as AndesTableSemanticPart] = joined;
+      }
+    }
+    return classes;
+  });
+
+  private readonly semanticStyles = computed<AndesTableStyles>(() => {
+    const input = this.styles();
+    return (
+      (typeof input === 'function' ? input(this.semanticInfo()) : input) ?? {}
+    );
+  });
+
+  /** Extra classes the consumer asked for on one part, or `null`. */
+  partClass(part: AndesTableSemanticPart): string | null {
+    return this.semanticClasses()[part] ?? null;
+  }
+
+  /** Extra inline styles the consumer asked for on one part, or `null`. */
+  partStyle(part: AndesTableSemanticPart): Record<string, string> | null {
+    return andesTableStyleObject(this.semanticStyles()[part]);
+  }
+
   protected readonly tableClasses = computed(() =>
     clsx(
       'andes-table',
       `andes-table--${this.density()}`,
+      this.striped() && 'andes-table--striped',
+      this.cards() && `andes-table--cards andes-table--cards-${this.cards()}`,
       `andes-table--caption-${this.captionSide()}`,
       this.tableLayout() === 'fixed' && 'andes-table--layout-fixed',
       this.bordered() && 'andes-table--bordered',
@@ -597,6 +701,7 @@ export class AndesTable {
         this.syncFixedOffsets();
         this.restoreMovedFocus();
         this.syncHeaderOffsets();
+        this.syncGrid();
       },
     });
 
@@ -1254,6 +1359,263 @@ export class AndesTable {
       }
       top += heights[index];
     });
+  }
+
+  // Grid navigation and ARIA counts
+
+  private activeCell: HTMLTableCellElement | null = null;
+  private goalColumn = 0;
+  private rovingApplied = false;
+  private countsApplied = false;
+  /** A vertical move keeps the column it started from while it passes spanning cells. */
+  private holdGoal = false;
+
+  private tableElement(): HTMLTableElement | null {
+    return this.container().nativeElement.querySelector('table');
+  }
+
+  /** The rows of this table (a nested table's rows are not among them) that take part. */
+  private gridRows(table: HTMLTableElement): HTMLTableRowElement[] {
+    return Array.from(table.rows).filter(
+      (row) => !row.hidden && row.cells.length > 0,
+    );
+  }
+
+  private columnStart(cell: HTMLTableCellElement): number {
+    let column = 0;
+    for (const sibling of Array.from(cell.parentElement?.children ?? [])) {
+      if (sibling === cell) {
+        break;
+      }
+      column += (sibling as HTMLTableCellElement).colSpan || 1;
+    }
+    return column;
+  }
+
+  private cellAt(
+    row: HTMLTableRowElement,
+    column: number,
+  ): HTMLTableCellElement {
+    let start = 0;
+    for (const cell of Array.from(row.cells)) {
+      if (column < start + cell.colSpan) {
+        return cell;
+      }
+      start += cell.colSpan;
+    }
+    return row.cells[row.cells.length - 1];
+  }
+
+  /**
+   * Publishes `aria-rowcount` / `aria-colcount` and, with `gridNavigation`, keeps
+   * exactly one cell in the tab order (the roving tab stop).
+   */
+  private syncGrid(): void {
+    const table = this.tableElement();
+    if (!table) {
+      return;
+    }
+    const grid = this.gridNavigation();
+    const total = this.rowCount();
+
+    if (grid || total !== undefined) {
+      const rows = this.gridRows(table);
+      const headRows = table.tHead?.rows.length ?? 0;
+      const footRows = table.tFoot?.rows.length ?? 0;
+      // A count another part published (virtual rows) is left alone unless `rowCount` is set.
+      if (
+        total !== undefined ||
+        this.countsApplied ||
+        !table.hasAttribute('aria-rowcount')
+      ) {
+        table.setAttribute(
+          'aria-rowcount',
+          String(
+            total === undefined ? rows.length : total + headRows + footRows,
+          ),
+        );
+      }
+      const first = rows[0];
+      table.setAttribute(
+        'aria-colcount',
+        String(
+          first
+            ? Array.from(first.cells).reduce((sum, c) => sum + c.colSpan, 0)
+            : 0,
+        ),
+      );
+      this.countsApplied = true;
+    } else if (this.countsApplied) {
+      table.removeAttribute('aria-rowcount');
+      table.removeAttribute('aria-colcount');
+      this.countsApplied = false;
+    }
+
+    if (!grid) {
+      if (this.rovingApplied) {
+        for (const cell of Array.from(
+          table.querySelectorAll<HTMLElement>('[data-andes-roving]'),
+        )) {
+          cell.removeAttribute('data-andes-roving');
+          if (
+            cell.classList.contains('andes-table__head--sortable') ||
+            cell.classList.contains('andes-table__head--reorderable')
+          ) {
+            cell.setAttribute('tabindex', '0');
+          } else {
+            cell.removeAttribute('tabindex');
+          }
+        }
+        this.rovingApplied = false;
+      }
+      return;
+    }
+
+    const cells = this.gridRows(table).flatMap((row) => Array.from(row.cells));
+    if (!this.activeCell || !cells.includes(this.activeCell)) {
+      this.activeCell =
+        cells.find((cell) => cell.tagName === 'TD') ?? cells[0] ?? null;
+    }
+    for (const cell of cells) {
+      cell.setAttribute('data-andes-roving', '');
+      const wanted = cell === this.activeCell ? '0' : '-1';
+      if (cell.getAttribute('tabindex') !== wanted) {
+        cell.setAttribute('tabindex', wanted);
+      }
+    }
+    this.rovingApplied = true;
+  }
+
+  private ownerCell(target: EventTarget | null): HTMLTableCellElement | null {
+    const table = this.tableElement();
+    const cell =
+      target instanceof Element
+        ? (target.closest('td, th') as HTMLTableCellElement | null)
+        : null;
+    return cell && cell.closest('table') === table ? cell : null;
+  }
+
+  protected onGridFocusIn(event: FocusEvent): void {
+    if (!this.gridNavigation()) {
+      return;
+    }
+    const cell = this.ownerCell(event.target);
+    if (cell && cell !== this.activeCell) {
+      this.activeCell?.setAttribute('tabindex', '-1');
+      cell.setAttribute('tabindex', '0');
+      this.activeCell = cell;
+    }
+    if (cell && !this.holdGoal) {
+      this.goalColumn = this.columnStart(cell);
+    }
+  }
+
+  protected onGridKeydown(event: KeyboardEvent): void {
+    if (
+      !this.gridNavigation() ||
+      event.defaultPrevented ||
+      event.altKey ||
+      event.metaKey
+    ) {
+      return;
+    }
+    const table = this.tableElement();
+    const cell = this.ownerCell(event.target);
+    if (!table || !cell) {
+      return;
+    }
+    const onCell = event.target === cell;
+    const target = event.target as HTMLElement;
+
+    if (!onCell) {
+      // A control inside the cell keeps its own keys; Escape leaves it for the cell.
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        cell.focus();
+        return;
+      }
+      const textual =
+        target.matches('textarea, select, [contenteditable]') ||
+        (target.matches('input') &&
+          !target.matches('input[type="checkbox"], input[type="button"]'));
+      if (textual || target.closest('[role="listbox"], [role="menu"]')) {
+        return;
+      }
+    }
+
+    const rows = this.gridRows(table);
+    const row = cell.parentElement as HTMLTableRowElement;
+    const rowIndex = rows.indexOf(row);
+    const rtl = getComputedStyle(cell).direction === 'rtl';
+    let next: HTMLTableCellElement | undefined;
+    let keepGoal = false;
+
+    switch (event.key) {
+      case 'ArrowRight':
+      case 'ArrowLeft': {
+        const forward = (event.key === 'ArrowRight') !== rtl;
+        const siblings = Array.from(row.cells);
+        next = siblings[siblings.indexOf(cell) + (forward ? 1 : -1)];
+        break;
+      }
+      case 'ArrowDown':
+      case 'ArrowUp': {
+        const to = rows[rowIndex + (event.key === 'ArrowDown' ? 1 : -1)];
+        next = to && this.cellAt(to, this.goalColumn);
+        keepGoal = true;
+        break;
+      }
+      case 'PageDown':
+      case 'PageUp': {
+        const step = event.key === 'PageDown' ? 10 : -10;
+        const to =
+          rows[Math.min(rows.length - 1, Math.max(0, rowIndex + step))];
+        next = to && this.cellAt(to, this.goalColumn);
+        keepGoal = true;
+        break;
+      }
+      case 'Home':
+      case 'End': {
+        const to = event.ctrlKey
+          ? rows[event.key === 'Home' ? 0 : rows.length - 1]
+          : row;
+        next =
+          to &&
+          (event.key === 'Home' ? to.cells[0] : to.cells[to.cells.length - 1]);
+        break;
+      }
+      case 'Enter':
+        if (onCell && cell.tagName === 'TD') {
+          const control = cell.querySelector<HTMLElement>(
+            'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+          );
+          if (control) {
+            event.preventDefault();
+            control.focus();
+          }
+        }
+        return;
+      case ' ':
+        if (onCell && cell.tagName === 'TD') {
+          const selection = row.querySelector<HTMLInputElement>(
+            'andes-table-selection input:not([disabled])',
+          );
+          if (selection) {
+            event.preventDefault();
+            selection.click();
+          }
+        }
+        return;
+      default:
+        return;
+    }
+
+    event.preventDefault();
+    if (next && next !== cell) {
+      this.holdGoal = keepGoal;
+      next.focus();
+      this.holdGoal = false;
+    }
   }
 
   // Fixed-column scroll shadows

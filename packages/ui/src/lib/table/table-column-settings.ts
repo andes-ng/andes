@@ -1,5 +1,6 @@
 import {
   afterNextRender,
+  booleanAttribute,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -18,9 +19,15 @@ import {
   lucideChevronDown,
   lucideChevronUp,
   lucideColumns3,
+  lucidePin,
+  lucidePinOff,
 } from '@ng-icons/lucide';
 
-import { andesPlacePanel, type AndesPanelSide } from './table-context';
+import {
+  andesPlacePanel,
+  type AndesPanelSide,
+  type AndesTableFixed,
+} from './table-context';
 import { andesMoveColumn } from './table-data';
 
 /** One column offered by `andes-table-column-settings`. */
@@ -33,7 +40,12 @@ export interface AndesTableColumnSetting {
   readonly hideable?: boolean;
   /** Whether the user may move it. Defaults to true. */
   readonly movable?: boolean;
+  /** Whether the user may pin it to an edge. Defaults to true (shown with `pinnable`). */
+  readonly pinnable?: boolean;
 }
+
+/** Edge each pinned column is fixed to, keyed by column key. */
+export type AndesTablePinned = Readonly<Record<string, AndesTableFixed>>;
 
 let nextSettingsId = 0;
 
@@ -59,7 +71,13 @@ let nextSettingsId = 0;
 @Component({
   selector: 'andes-table-column-settings',
   viewProviders: [
-    provideIcons({ lucideChevronDown, lucideChevronUp, lucideColumns3 }),
+    provideIcons({
+      lucideChevronDown,
+      lucideChevronUp,
+      lucideColumns3,
+      lucidePin,
+      lucidePinOff,
+    }),
   ],
   imports: [NgIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -117,6 +135,32 @@ let nextSettingsId = 0;
                 />
                 <span>{{ column.label }}</span>
               </label>
+              @if (pinnable() && column.pinnable !== false) {
+                <button
+                  type="button"
+                  class="andes-table-column-settings__pin"
+                  [class.andes-table-column-settings__pin--on]="
+                    isPinned(column.key)
+                  "
+                  [attr.aria-pressed]="isPinned(column.key)"
+                  [attr.aria-label]="
+                    pinLabel()(column.label, isPinned(column.key))
+                  "
+                  (click)="togglePinned(column.key)"
+                >
+                  @if (isPinned(column.key)) {
+                    <ng-icon
+                      class="andes-table-column-settings__arrow"
+                      name="lucidePinOff"
+                    />
+                  } @else {
+                    <ng-icon
+                      class="andes-table-column-settings__arrow"
+                      name="lucidePin"
+                    />
+                  }
+                </button>
+              }
               @if (column.movable !== false) {
                 <button
                   type="button"
@@ -173,6 +217,20 @@ export class AndesTableColumnSettings implements OnInit {
   /** Keys of the hidden columns. Two-way. */
   readonly hidden = model<readonly string[]>([]);
 
+  /**
+   * Offers a pin button per column. Two-way `pinned` holds the edge of each pinned
+   * column; bind a header's `fixed` to it (`[fixed]="pinned()['name']"`).
+   */
+  readonly pinnable = input(false, { transform: booleanAttribute });
+
+  /** The edge every pinned column is fixed to, keyed by column key. Two-way. */
+  readonly pinned = model<AndesTablePinned>({});
+
+  /** Accessible name of a pin button. */
+  readonly pinLabel = input<(label: string, pinned: boolean) => string>(
+    (label, pinned) => (pinned ? `Unpin ${label}` : `Pin ${label}`),
+  );
+
   /** Text of the button and accessible name of the menu. */
   readonly label = input('Columns');
 
@@ -197,7 +255,8 @@ export class AndesTableColumnSettings implements OnInit {
   private readonly initial = signal<{
     order: readonly string[];
     hidden: readonly string[];
-  }>({ order: [], hidden: [] });
+    pinned: AndesTablePinned;
+  }>({ order: [], hidden: [], pinned: {} });
 
   private readonly hiddenSet = computed(() => new Set(this.hidden()));
 
@@ -216,7 +275,8 @@ export class AndesTableColumnSettings implements OnInit {
   protected readonly changed = computed(
     () =>
       !same(this.order(), this.initial().order) ||
-      !same([...this.hidden()].sort(), [...this.initial().hidden].sort()),
+      !same([...this.hidden()].sort(), [...this.initial().hidden].sort()) ||
+      !samePins(this.pinned(), this.initial().pinned),
   );
 
   constructor() {
@@ -245,7 +305,11 @@ export class AndesTableColumnSettings implements OnInit {
   }
 
   ngOnInit(): void {
-    this.initial.set({ order: this.order(), hidden: this.hidden() });
+    this.initial.set({
+      order: this.order(),
+      hidden: this.hidden(),
+      pinned: this.pinned(),
+    });
   }
 
   protected isHidden(key: string): boolean {
@@ -262,6 +326,15 @@ export class AndesTableColumnSettings implements OnInit {
         ? this.hidden().filter((item) => item !== key)
         : [...this.hidden(), key],
     );
+  }
+
+  protected isPinned(key: string): boolean {
+    return this.pinned()[key] !== undefined;
+  }
+
+  protected togglePinned(key: string): void {
+    const { [key]: current, ...rest } = this.pinned();
+    this.pinned.set(current === undefined ? { ...rest, [key]: 'start' } : rest);
   }
 
   protected move(key: string, delta: -1 | 1, direction: 'up' | 'down'): void {
@@ -293,6 +366,7 @@ export class AndesTableColumnSettings implements OnInit {
   protected reset(): void {
     this.order.set(this.initial().order);
     this.hidden.set(this.initial().hidden);
+    this.pinned.set(this.initial().pinned);
   }
 
   protected toggle(): void {
@@ -366,4 +440,11 @@ export class AndesTableColumnSettings implements OnInit {
 
 function same(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
+function samePins(a: AndesTablePinned, b: AndesTablePinned): boolean {
+  const keys = Object.keys(a);
+  return (
+    keys.length === Object.keys(b).length && keys.every((k) => a[k] === b[k])
+  );
 }

@@ -1,4 +1,6 @@
-import { Directive } from '@angular/core';
+import { Directive, inject } from '@angular/core';
+
+import { AndesTable } from './table';
 
 /**
  * Styles a native `<caption>`, which gives the table its accessible name.
@@ -8,6 +10,12 @@ import { Directive } from '@angular/core';
  */
 @Directive({
   selector: 'caption[andesTableCaption]',
-  host: { class: 'andes-table__caption' },
+  host: {
+    class: 'andes-table__caption',
+    '[class]': "table?.partClass('caption')",
+    '[style]': "table?.partStyle('caption')",
+  },
 })
-export class AndesTableCaption {}
+export class AndesTableCaption {
+  protected readonly table = inject(AndesTable, { optional: true });
+}

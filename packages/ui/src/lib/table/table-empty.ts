@@ -1,11 +1,11 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 
 import { AndesEmpty } from '../empty/empty';
+import { AndesTable } from './table';
 
 /**
  * Empty state for a table body: an `andes-empty` (the `table` preset - the simple picture and
- * "No data") unless you project your own content, which replaces it, as Ant Design's
- * `locale.emptyText` does. Put it in a single cell that spans every column, typically from a
+ * "No data") unless you project your own content, which replaces it. Put it in a single cell that spans every column, typically from a
  * `@for`'s `@empty` block:
  *
  * ```html
@@ -25,7 +25,13 @@ import { AndesEmpty } from '../empty/empty';
   imports: [AndesEmpty],
   styleUrl: './table-controls.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'andes-table-empty' },
+  host: {
+    class: 'andes-table-empty',
+    '[class]': "table?.partClass('empty')",
+    '[style]': "table?.partStyle('empty')",
+  },
   template: `<ng-content><andes-empty preset="table" /></ng-content>`,
 })
-export class AndesTableEmpty {}
+export class AndesTableEmpty {
+  protected readonly table = inject(AndesTable, { optional: true });
+}

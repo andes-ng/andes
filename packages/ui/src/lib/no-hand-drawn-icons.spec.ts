@@ -14,9 +14,6 @@ const LIB = 'packages/ui/src/lib';
 const ILLUSTRATIONS: readonly string[] = [
   // The two Empty illustrations (the default box scene and the simple tray).
   'empty/empty.html',
-  // The table's sort carets: two small filled triangles stacked as the sort-order mark, CSS
-  // shapes masked from a data uri, not pictograms.
-  'table/table.css',
   // The progress ring around the current step's marker: a gauge drawn from a circle's arc.
   'steps/step.html',
   // The QR symbol itself: its modules are drawn as one svg path (a picture of the data).

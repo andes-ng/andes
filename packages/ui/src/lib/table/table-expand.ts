@@ -13,7 +13,11 @@ import {
   ViewContainerRef,
 } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideChevronRight } from '@ng-icons/lucide';
+import {
+  lucideChevronRight,
+  lucideChevronsDownUp,
+  lucideChevronsUpDown,
+} from '@ng-icons/lucide';
 
 import { AndesTable } from './table';
 import type { AndesTableRowKey } from './table-context';
@@ -37,7 +41,11 @@ import { AndesTableRow } from './table-row';
   imports: [NgIcon],
   styleUrl: './table-controls.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'andes-table-control' },
+  host: {
+    class: 'andes-table-control',
+    '[class]': "table.partClass('expand')",
+    '[style]': "table.partStyle('expand')",
+  },
   template: `@if (spacer()) {
       <span
         class="andes-table-control__expand-spacer"
@@ -61,7 +69,7 @@ import { AndesTableRow } from './table-row';
     }`,
 })
 export class AndesTableExpandToggle {
-  private readonly table = inject(AndesTable);
+  protected readonly table = inject(AndesTable);
   private readonly row = inject(AndesTableRow, { optional: true });
 
   /** Key of the row this button expands. Defaults to the enclosing row's `rowKey`. */
@@ -95,6 +103,79 @@ export class AndesTableExpandToggle {
     if (key !== undefined) {
       this.table.toggleExpanded(key);
     }
+  }
+}
+
+/**
+ * Header control that expands or collapses every expandable row at once - put it in
+ * the header cell above the row toggles. `keys` lists the rows it controls (usually
+ * every expandable row of the data, not only the rendered page). It shows the
+ * "expand" pair of chevrons while some of them are collapsed, and the "collapse"
+ * pair once all of them are open.
+ *
+ * ```html
+ * <th andesTableHead>
+ *   <andes-table-expand-all [keys]="expandableKeys" />
+ * </th>
+ * ```
+ */
+@Component({
+  selector: 'andes-table-expand-all',
+  viewProviders: [provideIcons({ lucideChevronsDownUp, lucideChevronsUpDown })],
+  imports: [NgIcon],
+  styleUrl: './table-controls.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    class: 'andes-table-control',
+    '[class]': "table.partClass('expand')",
+    '[style]': "table.partStyle('expand')",
+  },
+  template: `<button
+    type="button"
+    class="andes-table-control__expand"
+    [attr.aria-label]="allExpanded() ? collapseLabel() : expandLabel()"
+    [disabled]="keys().length === 0"
+    (click)="toggle()"
+  >
+    @if (allExpanded()) {
+      <ng-icon
+        class="andes-table-control__chevron andes-table-control__chevron--all"
+        name="lucideChevronsDownUp"
+      />
+    } @else {
+      <ng-icon
+        class="andes-table-control__chevron andes-table-control__chevron--all"
+        name="lucideChevronsUpDown"
+      />
+    }
+  </button>`,
+})
+export class AndesTableExpandAll {
+  protected readonly table = inject(AndesTable);
+
+  /** Keys of the rows this control expands and collapses. */
+  readonly keys = input.required<readonly AndesTableRowKey[]>();
+
+  /** Accessible name while some rows are collapsed. */
+  readonly expandLabel = input('Expand all rows');
+
+  /** Accessible name once every row is expanded. */
+  readonly collapseLabel = input('Collapse all rows');
+
+  /** Whether every listed row is expanded. */
+  readonly allExpanded = computed(
+    () =>
+      this.keys().length > 0 &&
+      this.keys().every((key) => this.table.isExpanded(key)),
+  );
+
+  /** Expands every listed row, or collapses them all when they are all open. */
+  toggle(): void {
+    const listed = new Set(this.keys());
+    const others = this.table.expandedKeys().filter((key) => !listed.has(key));
+    this.table.expandedKeys.set(
+      this.allExpanded() ? others : [...others, ...this.keys()],
+    );
   }
 }
 

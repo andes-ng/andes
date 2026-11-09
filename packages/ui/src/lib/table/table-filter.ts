@@ -222,6 +222,8 @@ function sameValues(
   ],
   host: {
     class: 'andes-table-filter',
+    '[class]': "table.partClass('filter')",
+    '[style]': "table.partStyle('filter')",
     '(click)': '$event.stopPropagation()',
     // A header that can be dragged to reorder must not start dragging from here.
     '(mousedown)': '$event.stopPropagation()',
@@ -232,7 +234,7 @@ function sameValues(
   },
 })
 export class AndesTableFilter implements AndesTableFilterable, OnInit {
-  private readonly table = inject(AndesTable);
+  protected readonly table = inject(AndesTable);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
 

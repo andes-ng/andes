@@ -20,11 +20,15 @@ import { AndesTable } from './table';
  */
 @Directive({
   selector: 'thead[andesTableHeader]',
-  host: { class: 'andes-table__header' },
+  host: {
+    class: 'andes-table__header',
+    '[class]': "table.partClass('header')",
+    '[style]': "table.partStyle('header')",
+  },
   hostDirectives: [CdkDropList],
 })
 export class AndesTableHeader {
-  private readonly table = inject(AndesTable);
+  protected readonly table = inject(AndesTable);
   private readonly dropList = inject(CdkDropList, { self: true });
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 

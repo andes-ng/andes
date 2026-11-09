@@ -26,6 +26,7 @@ export type {
   AndesTableRowKey,
 } from './table-context';
 export {
+  andesRowsToCsv,
   andesDateRangeFilter,
   andesFilterRows,
   andesFoldText,
@@ -43,6 +44,7 @@ export {
   andesVisibleColumns,
 } from './table-data';
 export type {
+  AndesCsvColumn,
   AndesColumnFilterMatcher,
   AndesFilterPredicate,
   AndesFilterPredicates,
@@ -53,7 +55,11 @@ export type {
   AndesTextFilterState,
 } from './table-data';
 export { AndesTableEmpty } from './table-empty';
-export { AndesTableExpandedRow, AndesTableExpandToggle } from './table-expand';
+export {
+  AndesTableExpandAll,
+  AndesTableExpandedRow,
+  AndesTableExpandToggle,
+} from './table-expand';
 export {
   ANDES_TABLE_FILTER_PANEL,
   AndesTableFilter,
@@ -76,7 +82,10 @@ export {
 } from './table-filter-panels';
 export type { AndesTextFilterOperatorLabels } from './table-filter-panels';
 export { AndesTableColumnSettings } from './table-column-settings';
-export type { AndesTableColumnSetting } from './table-column-settings';
+export type {
+  AndesTableColumnSetting,
+  AndesTablePinned,
+} from './table-column-settings';
 export { AndesTableFooter } from './table-footer';
 export { AndesTableHead } from './table-head';
 export type { AndesTableHeadScope } from './table-head';
@@ -99,6 +108,15 @@ export type {
   AndesTreeAccessors,
   AndesTableTreeNode,
 } from './table-tree';
+export type {
+  AndesTableClassNames,
+  AndesTableClassNamesInput,
+  AndesTableSemanticInfo,
+  AndesTableSemanticPart,
+  AndesTableSemanticProps,
+  AndesTableStyles,
+  AndesTableStylesInput,
+} from './table-semantic';
 export { AndesTableVirtualRows } from './table-virtual';
 export type { AndesTableVirtualRowContext } from './table-virtual';
 export { andesNextSortDirection, andesSortRows } from './table-sort';

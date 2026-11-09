@@ -379,3 +379,49 @@ export function andesVisibleColumns(
   const skip = hidden instanceof Set ? hidden : new Set(hidden);
   return order.filter((key) => !skip.has(key));
 }
+
+/** One column of a CSV export: its header text and how to read a cell from a row. */
+export interface AndesCsvColumn<T> {
+  readonly header: string;
+  readonly value: (
+    row: T,
+  ) => string | number | boolean | Date | null | undefined;
+}
+
+/** Quotes a CSV field when it holds a separator, a quote or a line break. */
+function csvField(value: string, separator: string): string {
+  return value.includes(separator) || /["\r\n]/.test(value)
+    ? `"${value.replace(/"/g, '""')}"`
+    : value;
+}
+
+/**
+ * Turns rows into CSV text (RFC 4180: CRLF line breaks, quotes doubled), header line
+ * first. A value that starts with `=`, `+`, `-` or `@` is prefixed with an apostrophe so a
+ * spreadsheet never runs it as a formula. Hand the text to a `Blob` to download it, or to the
+ * clipboard to copy it.
+ */
+export function andesRowsToCsv<T>(
+  rows: readonly T[],
+  columns: readonly AndesCsvColumn<T>[],
+  separator = ',',
+): string {
+  const text = (value: ReturnType<AndesCsvColumn<T>['value']>): string => {
+    if (value === null || value === undefined) {
+      return '';
+    }
+    const plain = value instanceof Date ? value.toISOString() : String(value);
+    return typeof value === 'string' && /^[=+\-@]/.test(plain)
+      ? `'${plain}`
+      : plain;
+  };
+  const lines = [
+    columns.map((column) => csvField(column.header, separator)).join(separator),
+    ...rows.map((row) =>
+      columns
+        .map((column) => csvField(text(column.value(row)), separator))
+        .join(separator),
+    ),
+  ];
+  return lines.join('\r\n');
+}

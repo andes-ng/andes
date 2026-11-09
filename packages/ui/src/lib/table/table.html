@@ -7,6 +7,8 @@
     [class.andes-table__container--sticky]="stickyOffsetLength()"
     [class.andes-table__container--framed]="framed()"
     [class.andes-table__container--bordered]="bordered()"
+    [class]="partClass('container')"
+    [style]="partStyle('container')"
     [style.max-height]="scrollYLength()"
     (scroll)="onContainerScroll($event)"
   >
@@ -16,6 +18,7 @@
       [style.--andes-table-indent-size]="indentLength()"
       [style.--andes-table-sticky-offset]="stickyOffsetLength()"
       [attr.aria-busy]="loading() ? 'true' : null"
+      [attr.role]="gridNavigation() ? 'grid' : null"
     >
       <ng-content />
     </table>
@@ -24,6 +27,8 @@
   <div
     class="andes-table__loading"
     [class.andes-table__loading--framed]="framed()"
+    [class]="partClass('loading')"
+    [style]="partStyle('loading')"
     aria-hidden="true"
   >
     <span class="andes-table__spinner"></span>

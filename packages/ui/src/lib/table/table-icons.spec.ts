@@ -19,7 +19,7 @@ import { AndesTableSelectAll } from './table-selection';
 /*
   The table draws lucide icons through `<ng-icon>` and registers them itself: this test bed
   never calls `provideIcons`, so an icon whose svg is rendered proves the registration is
-  automatic. The sort carets are CSS shapes, not icons, and are not checked here.
+  automatic.
 */
 
 beforeEach(() => {

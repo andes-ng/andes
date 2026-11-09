@@ -146,7 +146,8 @@
   outline-offset: 2px;
 }
 
-.andes-table-column-settings__move {
+.andes-table-column-settings__move,
+.andes-table-column-settings__pin {
   display: inline-flex;
   flex: none;
   align-items: center;
@@ -172,14 +173,20 @@
   --ng-icon__stroke-width: 2.5;
 }
 
-.andes-table-column-settings__move:hover:not(:disabled) {
+.andes-table-column-settings__move:hover:not(:disabled),
+.andes-table-column-settings__pin:hover {
   background-color: var(--andes-color-accent-hover);
   color: var(--andes-color-foreground);
 }
 
-.andes-table-column-settings__move:focus-visible {
+.andes-table-column-settings__move:focus-visible,
+.andes-table-column-settings__pin:focus-visible {
   outline: 2px solid var(--andes-color-focus-ring);
   outline-offset: -2px;
+}
+
+.andes-table-column-settings__pin--on {
+  color: var(--andes-color-primary-text);
 }
 
 .andes-table-column-settings__move:disabled {
@@ -221,6 +228,7 @@
 @media (prefers-reduced-motion: reduce) {
   .andes-table-column-settings__trigger,
   .andes-table-column-settings__item,
+  .andes-table-column-settings__pin,
   .andes-table-column-settings__move {
     transition: none;
   }

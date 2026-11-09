@@ -12,6 +12,13 @@ import {
   Renderer2,
   signal,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideArrowDown,
+  lucideArrowUp,
+  lucideChevronsUpDown,
+  lucidePin,
+} from '@ng-icons/lucide';
 import clsx from 'clsx';
 
 import { AndesTable, type AndesTableAlign } from './table';
@@ -83,18 +90,46 @@ function optionalBoolean(value: unknown): boolean | undefined {
   exportAs: 'andesTableHead',
   changeDetection: ChangeDetectionStrategy.OnPush,
   hostDirectives: [CdkDrag],
+  viewProviders: [
+    provideIcons({
+      lucideArrowDown,
+      lucideArrowUp,
+      lucideChevronsUpDown,
+      lucidePin,
+    }),
+  ],
+  imports: [NgIcon],
   template: `<div class="andes-table__head-content">
+      @if (showPin()) {
+        <ng-icon class="andes-table__pin" name="lucidePin" aria-hidden="true" />
+      }
       <span class="andes-table__head-title" [id]="id + '-title'"
         ><ng-content
       /></span>
       @if (sortKey() && sortIcon()) {
-        <span class="andes-table__sorter" aria-hidden="true">
-          <span
-            class="andes-table__sorter-caret andes-table__sorter-caret--up"
-          ></span>
-          <span
-            class="andes-table__sorter-caret andes-table__sorter-caret--down"
-          ></span>
+        <span
+          class="andes-table__sorter"
+          aria-hidden="true"
+          [class]="table.partClass('sorter')"
+          [style]="table.partStyle('sorter')"
+        >
+          @switch (direction()) {
+            @case ('asc') {
+              <ng-icon class="andes-table__sorter-icon" name="lucideArrowUp" />
+            }
+            @case ('desc') {
+              <ng-icon
+                class="andes-table__sorter-icon"
+                name="lucideArrowDown"
+              />
+            }
+            @default {
+              <ng-icon
+                class="andes-table__sorter-icon"
+                name="lucideChevronsUpDown"
+              />
+            }
+          }
         </span>
       }
       <ng-content select="andes-table-filter" />
@@ -125,6 +160,7 @@ function optionalBoolean(value: unknown): boolean | undefined {
     }`,
   host: {
     '[class]': 'classes()',
+    '[style]': "table.partStyle('headerCell')",
     '[attr.scope]': 'scope()',
     '[attr.aria-sort]': 'ariaSort()',
     '[attr.tabindex]': 'sortKey() || canReorder() ? 0 : null',
@@ -145,7 +181,7 @@ function optionalBoolean(value: unknown): boolean | undefined {
   },
 })
 export class AndesTableHead {
-  private readonly table = inject(AndesTable);
+  protected readonly table = inject(AndesTable);
   private readonly host = inject<ElementRef<HTMLTableCellElement>>(ElementRef);
   private readonly destroyRef = inject(DestroyRef);
   private readonly renderer = inject(Renderer2);
@@ -235,6 +271,15 @@ export class AndesTableHead {
     () => !!this.key() && (this.resizable() ?? this.table.resizable()),
   );
 
+  /** Draws a pin beside the title of a fixed (pinned) column. */
+  readonly pinIcon = input<boolean | undefined, unknown>(undefined, {
+    transform: optionalBoolean,
+  });
+
+  protected readonly showPin = computed(
+    () => !!this.fixed() && (this.pinIcon() ?? this.table.pinIcon()),
+  );
+
   /** Whether this header can be dragged or moved with Alt+Arrow keys. */
   protected readonly canReorder = computed(
     () =>
@@ -318,6 +363,7 @@ export class AndesTableHead {
       this.isResizable() && 'andes-table__head--resizable',
       this.canReorder() && 'andes-table__head--reorderable',
       andesCellModifiers(this.fixed(), this.ellipsis(), this.hideBelow()),
+      this.table.partClass('headerCell'),
     ),
   );
 

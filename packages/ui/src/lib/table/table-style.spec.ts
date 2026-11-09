@@ -92,32 +92,29 @@ describe('table stylesheet contract', () => {
   });
 
   describe('header and rows', () => {
-    it('makes the header and data rows 40px tall by default', () => {
+    it('makes the header and data rows 44px tall by default', () => {
       expect(rule('.andes-table--default')).toContain(
-        '--andes-table-row-height: 2.5rem',
+        '--andes-table-row-height: 2.75rem',
       );
       const cells = rule('.andes-table ::ng-deep .andes-table__head');
-      expect(cells).toContain('height: var(--andes-table-row-height, 2.5rem)');
+      expect(cells).toContain('height: var(--andes-table-row-height, 2.75rem)');
     });
 
-    it('pads cells 8px by 12px, 4px by 8px when compact and 12px by 16px when comfortable', () => {
+    it('sizes the rows 36, 44 and 52px, with 12, 16 and 20px of inline padding', () => {
       const padding = (density: string) => rule(`.andes-table--${density}`);
 
-      expect(padding('default')).toContain(
-        '--andes-table-cell-padding-block: var(--andes-space-2, 0.5rem)',
-      );
-      expect(padding('default')).toContain(
+      expect(padding('compact')).toContain('--andes-table-row-height: 2.25rem');
+      expect(padding('compact')).toContain(
         '--andes-table-cell-padding-inline: var(--andes-space-3, 0.75rem)',
       );
-      expect(padding('compact')).toContain(
-        '--andes-table-cell-padding-block: var(--andes-space-1, 0.25rem)',
-      );
-      expect(padding('compact')).toContain('--andes-table-row-height: 2rem');
-      expect(padding('comfortable')).toContain(
+      expect(padding('default')).toContain(
         '--andes-table-cell-padding-inline: var(--andes-space-4, 1rem)',
       );
       expect(padding('comfortable')).toContain(
-        '--andes-table-row-height: 3rem',
+        '--andes-table-cell-padding-inline: var(--andes-space-5, 1.25rem)',
+      );
+      expect(padding('comfortable')).toContain(
+        '--andes-table-row-height: 3.25rem',
       );
     });
 

@@ -74,7 +74,11 @@ let nextMenuId = 0;
   providers: [
     { provide: ANDES_TABLE_SELECTABLE, useExisting: AndesTableSelection },
   ],
-  host: { class: 'andes-table-control' },
+  host: {
+    class: 'andes-table-control',
+    '[class]': "table.partClass('selection')",
+    '[style]': "table.partStyle('selection')",
+  },
   template: `<input
     class="andes-table-control__input"
     [type]="table.selectionType()"

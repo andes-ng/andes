@@ -5,6 +5,7 @@ import {
   about,
   basicTabs,
   caption,
+  numbered,
   shared,
   tabsOf,
   withDescription,
@@ -14,8 +15,8 @@ import { AndesTabs } from './tabs';
 import type { AndesTabsEditEvent } from './tabs-types';
 
 /*
- * The five looks of the bar: the line, the card, the pill track, the joined segments, and the
- * editable card that adds and closes tabs.
+ * The five looks of the bar: the line, the card, the pill and segmented types with a gliding
+ * thumb, and the editable card that adds and closes tabs, then the motion of the thumb.
  */
 
 const meta: Meta<AndesTabs> = {
@@ -98,11 +99,11 @@ export const Card: Story = {
   }),
 };
 
-/** A muted track with a raised tab. */
+/** A tinted thumb behind the active tab. */
 export const Pill: Story = {
   name: 'Pill',
   parameters: about(
-    'The tabs sit in a muted rounded track and the active one is raised out of it, a quiet look for secondary navigation.',
+    'A tinted, rounded thumb sits behind the active tab, whose label takes the primary colour, and glides to the next tab when the selection changes, a quiet look for secondary navigation.',
   ),
   render: () => ({
     props: shared,
@@ -110,11 +111,11 @@ export const Pill: Story = {
   }),
 };
 
-/** Joined outlined buttons. */
+/** A muted track with a white thumb. */
 export const Segmented: Story = {
   name: 'Segmented',
   parameters: about(
-    'The tabs are joined, outlined buttons like a radio-button group, and the active one is filled with the primary colour.',
+    'The tabs sit in a muted rounded track and a white, raised thumb glides behind the active one, the same look as the segmented control.',
   ),
   render: () => ({
     props: shared,
@@ -126,7 +127,7 @@ export const Segmented: Story = {
 export const Together: Story = {
   name: 'All types together',
   parameters: about(
-    'The same three tabs in every type, one under the other, to compare their height, spacing and the way the active tab is marked.',
+    'The same three tabs in every type, one under the other, to compare their height, spacing and the way the active tab is marked, with the thumb sliding in the pill and segmented ones.',
   ),
   render: () => ({
     props: { ...shared, types: ['line', 'card', 'pill', 'segmented'] },
@@ -213,4 +214,198 @@ export const EditableCustomIcons: Story = {
       <ng-template #remove><ng-icon name="lucideTrash2" /></ng-template>
       <div [style]="column">${editableTemplate('[addIcon]="add" [removeIcon]="remove" addLabel="Add a reminder"')}</div>`,
   }),
+};
+
+const MOTION_TYPES = ['pill', 'segmented'];
+
+/** The sliding thumb. */
+export const SlidingThumb: Story = {
+  name: 'Sliding thumb',
+  parameters: about(
+    'In the pill and segmented types one thumb glides from the previous tab to the new one over 300ms, in both directions, and follows a quick series of clicks without jumping.',
+  ),
+  render: () => ({
+    props: { ...shared, types: MOTION_TYPES },
+    template: `
+      <div [style]="column">
+        @for (type of types; track type) {
+          <div><span [style]="caption">{{ type }}</span><andes-tabs [type]="type">${basicTabs()}</andes-tabs></div>
+        }
+      </div>`,
+  }),
+};
+
+/** Timing of the thumb. */
+export const ThumbTiming: Story = {
+  name: 'Thumb timing',
+  parameters: about(
+    'The motion input sets the duration and the easing of the slide, here a slow 800ms glide next to a quick 120ms one with a springy curve, and the same two custom properties can be set from CSS.',
+  ),
+  render: () => ({
+    props: {
+      ...shared,
+      slow: { duration: 800, easing: 'cubic-bezier(0.4, 0, 0.2, 1)' },
+      quick: { duration: 120, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' },
+    },
+    template: `
+      <div [style]="column">
+        <div><span [style]="caption">800ms</span><andes-tabs type="segmented" [motion]="slow">${basicTabs()}</andes-tabs></div>
+        <div><span [style]="caption">120ms with an overshoot</span><andes-tabs type="pill" [motion]="quick">${basicTabs()}</andes-tabs></div>
+        <div><span [style]="caption">custom properties</span><andes-tabs type="segmented" style="--andes-tabs-duration: 600ms; --andes-tabs-easing: ease-in;">${basicTabs()}</andes-tabs></div>
+      </div>`,
+  }),
+};
+
+/** No slide. */
+export const ThumbWithoutMotion: Story = {
+  name: 'Thumb without motion',
+  parameters: about(
+    'animated false, or a motion duration of 0, makes the thumb jump to the new tab, which is also what every user who asks the system for reduced motion gets.',
+  ),
+  render: () => ({
+    props: { ...shared, jump: { duration: 0 } },
+    template: `
+      <div [style]="column">
+        <div><span [style]="caption">animated false</span><andes-tabs type="segmented" [animated]="false">${basicTabs()}</andes-tabs></div>
+        <div><span [style]="caption">duration 0</span><andes-tabs type="pill" [motion]="jump">${basicTabs()}</andes-tabs></div>
+      </div>`,
+  }),
+};
+
+/** The thumb on a side bar. */
+export const ThumbVertical: Story = {
+  name: 'Thumb on a side bar',
+  parameters: about(
+    'On a start or end bar the thumb glides up and down and changes height with the tab, and it moves to the top of the panel when a narrow container collapses the bar.',
+  ),
+  render: () => ({
+    props: { ...shared, types: MOTION_TYPES },
+    template: `
+      <div [style]="column">
+        @for (type of types; track type) {
+          <andes-tabs [type]="type" tabPosition="left" [collapseBelow]="null">${basicTabs()}</andes-tabs>
+        }
+        <andes-tabs type="segmented" tabPosition="right" [collapseBelow]="null">${basicTabs()}</andes-tabs>
+      </div>`,
+  }),
+};
+
+/** The thumb in a right-to-left page. */
+export const ThumbRtl: Story = {
+  name: 'Thumb in right-to-left',
+  parameters: {
+    dir: 'rtl',
+    ...about(
+      'In a right-to-left page the tabs run from the right and the thumb glides from right to left, because it is placed with the physical offsets of the selected tab.',
+    ),
+  },
+  render: () => ({
+    props: { ...shared, types: MOTION_TYPES },
+    template: `
+      <div [style]="column">
+        @for (type of types; track type) {
+          <andes-tabs [type]="type">${basicTabs()}</andes-tabs>
+        }
+      </div>`,
+  }),
+};
+
+/** The thumb with scrolling tabs. */
+export const ThumbManyTabs: Story = {
+  name: 'Thumb with many tabs',
+  parameters: about(
+    'Thirty tabs scroll inside the track and the thumb scrolls with them, so the buttons above can send the selection far away and the bar follows it.',
+  ),
+  render: () => {
+    const active = signal('Tab 1');
+    return {
+      props: { ...shared, active, names: numbered(30, 'Tab') },
+      template: `
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+          <div [style]="row">
+            <andes-button size="sm" variant="outline" (click)="active.set('Tab 1')">First</andes-button>
+            <andes-button size="sm" variant="outline" (click)="active.set('Tab 15')">Middle</andes-button>
+            <andes-button size="sm" variant="outline" (click)="active.set('Tab 30')">Last</andes-button>
+          </div>
+          <andes-tabs type="segmented" [(value)]="active" style="width: min(32rem, calc(100vw - 2rem));">
+            <andes-tabs-list>
+              @for (name of names; track name) { <andes-tabs-trigger [value]="name">{{ name }}</andes-tabs-trigger> }
+            </andes-tabs-list>
+          </andes-tabs>
+          <andes-tabs type="pill" [(value)]="active" style="width: min(32rem, calc(100vw - 2rem));">
+            <andes-tabs-list>
+              @for (name of names; track name) { <andes-tabs-trigger [value]="name">{{ name }}</andes-tabs-trigger> }
+            </andes-tabs-list>
+          </andes-tabs>
+        </div>`,
+    };
+  },
+};
+
+/** The thumb around icons and counts. */
+export const ThumbIcons: Story = {
+  name: 'Thumb with icons and counts',
+  parameters: about(
+    'The thumb is sized from the whole tab, so an icon in front of the label or a count after it makes the thumb wider, and a tab that is disabled is skipped.',
+  ),
+  render: () => ({
+    props: { ...shared, types: MOTION_TYPES },
+    template: `
+      <div [style]="column">
+        @for (type of types; track type) {
+          <andes-tabs [type]="type">
+            <andes-tabs-list>
+              <andes-tabs-trigger value="inbox"><ng-icon name="lucideInbox" /> Inbox <andes-badge standalone [count]="12" size="small" /></andes-tabs-trigger>
+              <andes-tabs-trigger value="sent"><ng-icon name="lucideMail" /> Sent</andes-tabs-trigger>
+              <andes-tabs-trigger value="spam" disabled><ng-icon name="lucideTrash2" /> Spam</andes-tabs-trigger>
+              <andes-tabs-trigger value="starred"><ng-icon name="lucideStar" /> Starred</andes-tabs-trigger>
+            </andes-tabs-list>
+          </andes-tabs>
+        }
+      </div>`,
+  }),
+};
+
+/** The thumb while the tabs change. */
+export const ThumbDynamic: Story = {
+  name: 'Thumb with tabs added, removed and moved',
+  parameters: about(
+    'The thumb is measured again whenever tabs come, go or change places, so adding a tab before the active one, removing the active one or moving the first tab to the end leaves it under the right tab.',
+  ),
+  render: () => {
+    let next = 5;
+    const tabs = signal(['Tab 1', 'Tab 2', 'Tab 3', 'Tab 4']);
+    const active = signal('Tab 2');
+    return {
+      props: {
+        ...shared,
+        tabs,
+        active,
+        types: MOTION_TYPES,
+        addFirst: () => tabs.update((list) => [`Tab ${next++}`, ...list]),
+        addLast: () => tabs.update((list) => [...list, `Tab ${next++}`]),
+        removeActive: () =>
+          tabs.update((list) =>
+            list.length > 1 ? list.filter((name) => name !== active()) : list,
+          ),
+        rotate: () => tabs.update(([first, ...rest]) => [...rest, first]),
+      },
+      template: `
+        <div [style]="column">
+          <div [style]="row">
+            <andes-button size="sm" variant="outline" (click)="addFirst()">Add before</andes-button>
+            <andes-button size="sm" variant="outline" (click)="addLast()">Add after</andes-button>
+            <andes-button size="sm" variant="outline" (click)="removeActive()">Remove the active tab</andes-button>
+            <andes-button size="sm" variant="outline" (click)="rotate()">Move the first to the end</andes-button>
+          </div>
+          @for (type of types; track type) {
+            <andes-tabs [type]="type" [(value)]="active">
+              <andes-tabs-list>
+                @for (name of tabs(); track name) { <andes-tabs-trigger [value]="name">{{ name }}</andes-tabs-trigger> }
+              </andes-tabs-list>
+            </andes-tabs>
+          }
+        </div>`,
+    };
+  },
 };

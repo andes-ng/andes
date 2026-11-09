@@ -162,13 +162,14 @@ export const Dot: Story = {
 export const Highlight: Story = {
   name: 'Highlight',
   parameters: about(
-    'A 28px tinted bar with rounded corners, kept to a low opacity so the label stays readable, marks the active tab like a highlighter.',
+    'A 28px tinted bar with rounded corners marks the active line tab like a highlighter, with 14px of padding on each side of every label and 4px between the tabs so the highlight never touches the text or its neighbour.',
   ),
   render: () => ({
     props: {
       ...shared,
       indicator: { thickness: 28 },
       styles: {
+        trigger: { paddingInline: 14 },
         indicator: {
           bottom: '4px',
           borderRadius: 6,
@@ -177,7 +178,7 @@ export const Highlight: Story = {
         },
       },
     },
-    template: `<div [style]="column"><andes-tabs [indicator]="indicator" [styles]="styles" [tabBarGutter]="8">${basicTabs()}</andes-tabs></div>`,
+    template: `<div [style]="column"><andes-tabs [indicator]="indicator" [styles]="styles" [tabBarGutter]="4">${basicTabs()}</andes-tabs></div>`,
   }),
 };
 

@@ -206,7 +206,7 @@ export const Stretch: Story = {
 export const StretchSegments: Story = {
   name: 'Equal-width pills and segments',
   parameters: about(
-    'The pill track and the segmented group spread over the full width too, which suits a switch between two or three views at the top of a narrow column.',
+    'The pill and segmented types spread over the full width too, the thumb sized to its share of the bar, which suits a switch between two or three views at the top of a narrow column.',
   ),
   render: () => ({
     props: shared,

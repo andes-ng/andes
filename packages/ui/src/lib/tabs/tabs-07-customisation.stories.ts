@@ -149,7 +149,7 @@ export const StylesFunction: Story = {
 export const Tokens: Story = {
   name: 'Custom properties',
   parameters: about(
-    'Four custom properties retune one tab set without any class: the line colour and thickness, and the pill track and raised tab backgrounds.',
+    'A few custom properties retune one tab set without any class: the line colour and thickness, and the track, thumb background, border and shadow of the pill and segmented types.',
   ),
   render: () => ({
     props: shared,
@@ -160,8 +160,12 @@ export const Tokens: Story = {
           <andes-tabs style="--andes-tabs-indicator-color: var(--andes-color-danger); --andes-tabs-indicator-size: 3px;">${basicTabs()}</andes-tabs>
         </div>
         <div>
-          <span [style]="caption">--andes-tabs-pill-track-background and --andes-tabs-pill-selected-background</span>
-          <andes-tabs type="pill" style="--andes-tabs-pill-track-background: var(--andes-color-accent-hover); --andes-tabs-pill-selected-background: var(--andes-color-card);">${basicTabs()}</andes-tabs>
+          <span [style]="caption">--andes-tabs-thumb-bg on a pill</span>
+          <andes-tabs type="pill" style="--andes-tabs-thumb-bg: color-mix(in srgb, var(--andes-color-success) 14%, transparent);">${basicTabs()}</andes-tabs>
+        </div>
+        <div>
+          <span [style]="caption">--andes-tabs-track-bg, --andes-tabs-thumb-border and --andes-tabs-thumb-shadow on a segmented set</span>
+          <andes-tabs type="segmented" style="--andes-tabs-track-bg: var(--andes-color-accent-hover); --andes-tabs-thumb-border: var(--andes-color-primary); --andes-tabs-thumb-shadow: none;">${basicTabs()}</andes-tabs>
         </div>
       </div>`,
   }),

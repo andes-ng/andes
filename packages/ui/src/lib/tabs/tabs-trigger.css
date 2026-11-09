@@ -1,0 +1,370 @@
+/* The host is the visual "tab": in the bordered variants it carries the border and the
+   background around both the tab button and its remove button. `AndesTabs` measures it to
+   place the ink bar. Every variant/size/position hook is a `data-*` attribute the host sets
+   from the parent Tabs' own signals - no selector here reaches across into another
+   component's DOM.
+
+   Sizes (the whole tab, border and track included): 28px small, 36px medium, 44px large,
+   with a 14px/20px label (16px/24px on large). `--_pad-y` is what each variant adds above and
+   below the label to reach them, `--_pad-x` its inline padding. */
+:host {
+  --_pad-y: 0.25rem;
+  --_pad-x: 0;
+  --_font-size: var(--andes-text-font-size, 0.875rem);
+  --_line-height: 1.25rem;
+  display: flex;
+  flex: none;
+  align-items: stretch;
+}
+
+:host([data-size='md']) {
+  --_pad-y: 0.5rem;
+}
+
+:host([data-size='lg']) {
+  --_pad-y: 0.625rem;
+  --_font-size: 1rem;
+  --_line-height: 1.5rem;
+}
+
+/* The card takes its border out of the padding, and pads the label at least 12px, 14px and
+   16px from the card edge. */
+:host([data-variant='card']) {
+  --_pad-y: 0.1875rem;
+  --_pad-x: 0.75rem;
+}
+
+:host([data-variant='card'][data-size='md']) {
+  --_pad-y: 0.4375rem;
+  --_pad-x: 0.875rem;
+}
+
+:host([data-variant='card'][data-size='lg']) {
+  --_pad-y: 0.5625rem;
+  --_pad-x: 1rem;
+}
+
+/* The thumb types: the tab is the segment (24px, 32px or 40px; the 2px inset of the track,
+   in tabs.css, brings the control to 28px, 36px or 44px) with 12px, 14px or 16px between its
+   edge and the label, so the thumb never hugs the text. */
+:host([data-variant='pill']),
+:host([data-variant='segmented']) {
+  --_pad-y: 0.125rem;
+  --_pad-x: 0.75rem;
+}
+
+:host([data-variant='pill'][data-size='md']),
+:host([data-variant='segmented'][data-size='md']) {
+  --_pad-y: 0.375rem;
+  --_pad-x: 0.875rem;
+}
+
+:host([data-variant='pill'][data-size='lg']),
+:host([data-variant='segmented'][data-size='lg']) {
+  --_pad-y: 0.5rem;
+  --_pad-x: 1rem;
+}
+
+/* A vertical line bar keeps its tabs flush with the divider and indents the label. */
+:host([data-orientation='vertical'][data-variant='line']) {
+  --_pad-x: 1rem;
+}
+
+:host([data-stretch]) {
+  flex: 1 1 0;
+}
+
+.andes-tabs__trigger {
+  display: inline-flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  gap: var(--andes-space-2);
+  padding: var(--_pad-y) var(--_pad-x);
+  border: none;
+  background: none;
+  font-family: var(--andes-font-family), sans-serif;
+  font-weight: var(--andes-font-weight-medium);
+  font-size: var(--_font-size);
+  line-height: var(--_line-height);
+  white-space: nowrap;
+  color: var(--andes-color-muted-foreground);
+  cursor: pointer;
+  transition: color var(--andes-motion-duration-fast, 0.1s)
+    var(--andes-motion-ease-in-out, cubic-bezier(0.645, 0.045, 0.355, 1));
+}
+
+:host([data-orientation='vertical']) .andes-tabs__trigger {
+  justify-content: flex-start;
+}
+
+.andes-tabs__trigger:hover:not(:disabled) {
+  color: var(--andes-color-foreground);
+}
+
+.andes-tabs__trigger:focus-visible {
+  outline: 2px solid var(--andes-color-focus-ring);
+  outline-offset: -2px;
+}
+
+/* Pointer events skip a disabled button and land on the host, so a tooltip placed on the tab
+   can still say why it is off. */
+.andes-tabs__trigger:disabled {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+:host([data-disabled]) {
+  cursor: not-allowed;
+}
+
+/* `primary-text`, not `primary`: identical in light mode, but brightened in dark mode where
+   the solid primary only reaches 3.45:1 against the page background. The line-type
+   indicator itself is the parent's ink bar. */
+.andes-tabs__trigger--selected {
+  color: var(--andes-color-primary-text);
+}
+
+.andes-tabs__icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+.andes-tabs__icon ::ng-deep svg {
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+}
+
+/* ---- Card variants ----------------------------------------------------------------------- */
+
+/* The two card surfaces are custom properties so a container can match them to its own
+   surface: `--andes-tabs-card-selected-background` is the selected card, which opens into
+   the panel below and so should equal whatever the panel sits on (the page background by
+   default), and `--andes-tabs-card-background` is the fill of the others. A surrounding
+   card sets both, so in dark mode the selected tab doesn't read as a hole in the card. */
+:host([data-variant='card']) {
+  border: 1px solid var(--andes-color-border);
+  border-radius: var(--andes-radius-lg) var(--andes-radius-lg) 0 0;
+  background: var(--andes-tabs-card-background, var(--andes-color-muted));
+  transition: background-color 150ms ease;
+}
+
+/* An unselected card already shows full-strength text (see below), so the text colour change
+   the line type uses for hover would be invisible here - the fill answers the pointer instead.
+   `accent-hover` keeps the foreground above 4.5:1 in both themes. */
+:host([data-variant='card']:not([data-selected]):not([data-disabled]):hover) {
+  background: var(--andes-color-accent-hover);
+}
+
+/* Full foreground on the muted card fill: muted-foreground only reaches ~4.3:1 there. */
+.andes-tabs__trigger--card:not(.andes-tabs__trigger--selected) {
+  color: var(--andes-color-foreground);
+}
+
+:host([data-variant='card'][data-selected]) {
+  background: var(
+    --andes-tabs-card-selected-background,
+    var(--andes-color-background)
+  );
+  border-bottom-color: var(
+    --andes-tabs-card-selected-background,
+    var(--andes-color-background)
+  );
+}
+
+:host([data-variant='card'][data-position='bottom']) {
+  border-radius: 0 0 var(--andes-radius-lg) var(--andes-radius-lg);
+}
+
+:host([data-variant='card'][data-position='bottom'][data-selected]) {
+  border-bottom-color: var(--andes-color-border);
+  border-top-color: var(
+    --andes-tabs-card-selected-background,
+    var(--andes-color-background)
+  );
+}
+
+:host([data-variant='card'][data-position='left']) {
+  border-start-start-radius: var(--andes-radius-lg);
+  border-start-end-radius: 0;
+  border-end-start-radius: var(--andes-radius-lg);
+  border-end-end-radius: 0;
+}
+
+:host([data-variant='card'][data-position='left'][data-selected]) {
+  border-bottom-color: var(--andes-color-border);
+  border-inline-end-color: var(
+    --andes-tabs-card-selected-background,
+    var(--andes-color-background)
+  );
+}
+
+:host([data-variant='card'][data-position='right']) {
+  border-start-start-radius: 0;
+  border-start-end-radius: var(--andes-radius-lg);
+  border-end-start-radius: 0;
+  border-end-end-radius: var(--andes-radius-lg);
+}
+
+:host([data-variant='card'][data-position='right'][data-selected]) {
+  border-bottom-color: var(--andes-color-border);
+  border-inline-start-color: var(
+    --andes-tabs-card-selected-background,
+    var(--andes-color-background)
+  );
+}
+
+:host([data-closable]) .andes-tabs__trigger {
+  padding-inline-end: var(--andes-space-1);
+}
+
+/* ---- Thumb types (pill and segmented) ----------------------------------------------------- */
+
+/* The tab sits over the thumb (tabs.css) and is transparent itself. The unselected label is
+   the foreground at 65%, which stays above 4.5:1 on the muted track; hovering an unselected
+   tab tints it with a 6% wash, as a segmented control does. */
+:host([data-variant='pill']),
+:host([data-variant='segmented']) {
+  position: relative;
+  z-index: 1;
+  border-radius: var(--_item-radius, 0.25rem);
+  transition: background-color 200ms ease;
+}
+
+:host([data-variant='pill']) .andes-tabs__trigger,
+:host([data-variant='segmented']) .andes-tabs__trigger {
+  border-radius: inherit;
+  color: color-mix(in srgb, var(--andes-color-foreground) 65%, transparent);
+  transition: color 200ms ease;
+}
+
+:host([data-variant='pill']:not([data-selected]):not([data-disabled]):hover) {
+  background: color-mix(in srgb, var(--andes-color-foreground) 6%, transparent);
+}
+
+:host(
+  [data-variant='segmented']:not([data-selected]):not([data-disabled]):hover
+) {
+  background: color-mix(in srgb, var(--andes-color-foreground) 6%, transparent);
+}
+
+:host([data-variant='pill']) .andes-tabs__trigger:hover:not(:disabled),
+:host([data-variant='segmented']) .andes-tabs__trigger:hover:not(:disabled) {
+  color: var(--andes-color-foreground);
+}
+
+:host([data-variant='pill']) .andes-tabs__trigger--selected,
+:host([data-variant='segmented']) .andes-tabs__trigger--selected {
+  color: var(--_thumb-fg, var(--andes-color-foreground));
+}
+
+/* Until the thumb has been measured (the first paint, or while this tab is being dragged) the
+   selected tab draws the thumb itself, so there is never a frame without a selection. */
+:host([data-variant='pill'][data-selected][data-thumb='pending']),
+:host([data-variant='segmented'][data-selected][data-thumb='pending']) {
+  background: var(--_thumb-bg);
+  box-shadow: var(--_thumb-shadow);
+}
+
+/* A selected tab is not hovered into a different colour. */
+:host([data-variant='pill'])
+  .andes-tabs__trigger--selected:hover:not(:disabled),
+:host([data-variant='segmented'])
+  .andes-tabs__trigger--selected:hover:not(:disabled) {
+  color: var(--_thumb-fg, var(--andes-color-foreground));
+}
+
+/* Forced colors: the thumb is Highlight, so the selected label must be HighlightText. */
+@media (forced-colors: active) {
+  :host([data-variant='pill']) .andes-tabs__trigger--selected,
+  :host([data-variant='segmented']) .andes-tabs__trigger--selected {
+    forced-color-adjust: none;
+    color: HighlightText;
+  }
+
+  :host([data-variant='pill'][data-selected][data-thumb='pending']),
+  :host([data-variant='segmented'][data-selected][data-thumb='pending']) {
+    forced-color-adjust: none;
+    background: Highlight;
+    box-shadow: none;
+  }
+}
+
+/* ---- Remove button (editable-card) -------------------------------------------------------- */
+
+.andes-tabs__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  padding: 0 var(--andes-space-2) 0 var(--andes-space-1);
+  border: none;
+  background: none;
+  font-family: var(--andes-font-family), sans-serif;
+  color: var(--andes-color-muted-foreground);
+  cursor: pointer;
+  transition: color var(--andes-motion-duration-fast, 0.1s)
+    var(--andes-motion-ease-in-out, cubic-bezier(0.645, 0.045, 0.355, 1));
+}
+
+.andes-tabs__remove:hover {
+  color: var(--andes-color-foreground);
+}
+
+.andes-tabs__remove-icon,
+.andes-tabs__remove ::ng-deep svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+/* The default cross is lucide's "x" in an `ng-icon`: a flex box, so the svg never sits on a
+   text baseline. */
+.andes-tabs__remove-icon {
+  display: flex;
+}
+
+/* ---- Dragging (draggable Tabs) ------------------------------------------------------------ */
+
+:host([data-draggable]) .andes-tabs__trigger {
+  cursor: grab;
+}
+
+/* While a tab is dragged, its siblings slide out of the way instead of jumping. */
+:host([data-sorting]:not(.cdk-drag-placeholder)) {
+  transition: transform 0.2s ease;
+}
+
+/* The dragged copy follows the pointer under <body>, outside the Tabs: it keeps this
+   component's attributes, so the rules above still style it; this lifts it off the page. */
+:host(.cdk-drag-preview) {
+  box-sizing: border-box;
+  border-radius: var(--andes-radius-md);
+  background: var(
+    --andes-tabs-card-selected-background,
+    var(--andes-color-background)
+  );
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 10%),
+    0 2px 4px -2px rgb(0 0 0 / 10%);
+  cursor: grabbing;
+}
+
+:host(.cdk-drag-placeholder) {
+  opacity: 0.4;
+}
+
+:host(.cdk-drag-animating) {
+  transition: transform 0.2s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host([data-variant='pill']),
+  :host([data-variant='segmented']),
+  .andes-tabs__trigger,
+  .andes-tabs__remove,
+  :host([data-sorting]),
+  :host(.cdk-drag-animating) {
+    transition: none;
+  }
+}

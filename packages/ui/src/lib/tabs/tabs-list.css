@@ -1,0 +1,36 @@
+/* Styling the host element itself, so `:host` (not a plain element/class selector) is the
+   only correct way to reach it under Angular's default view encapsulation. The divider line
+   under the tabs is drawn by the parent `AndesTabs` bar, so it spans extra content too. */
+:host {
+  display: flex;
+  flex: none;
+  align-items: stretch;
+  /* 24px between line tabs; `tabBarGutter` overrides it inline. */
+  gap: 1.5rem;
+}
+
+:host([aria-orientation='vertical']) {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--andes-space-1);
+}
+
+/* After the vertical rule so card tabs keep their 2px seam in every orientation. */
+:host([data-variant='card']) {
+  gap: calc(var(--andes-space-1) / 2);
+}
+
+:host([data-stretch]) {
+  flex: 1 1 auto;
+}
+
+/* The thumb types: the track and the thumb belong to the bar (see tabs.css). Pill tabs sit
+   4px apart so the tinted thumbs never touch; segmented tabs share the track edge to edge and
+   carry their own padding, as the options of a segmented control do. */
+:host([data-variant='pill']) {
+  gap: var(--andes-space-1);
+}
+
+:host([data-variant='segmented']) {
+  gap: 0;
+}

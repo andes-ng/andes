@@ -12,7 +12,11 @@ import {
   viewChild,
 } from '@angular/core';
 
-import { AndesButton, type AndesButtonVariant } from '../button/button';
+import {
+  AndesButton,
+  type AndesButtonSize,
+  type AndesButtonVariant,
+} from '../button/button';
 import type {
   AndesDialogAutoFocusButton,
   AndesDialogButtonProps,
@@ -20,13 +24,20 @@ import type {
 } from './dialog-base';
 
 /**
- * The built-in footer a dialog surface renders: a Cancel/OK pair, or a consumer's
- * custom footer template laid out in the same box.
+ * How a footer lays its buttons out: pushed to the end edge (default), sharing the row
+ * evenly, or one above the other with the affirmative action first.
+ */
+export type AndesDialogActionsLayout = 'end' | 'stretch' | 'stacked';
+
+/**
+ * The built-in footer both dialog surfaces and the imperative service render: a
+ * Cancel/OK pair, or a consumer's custom footer template laid out in the same box.
  * A custom template is handed the built-in buttons as templates too
  * (`okButton`, `cancelButton`, `defaultButtons`), so it can extend the pair.
  *
- * It only reports activations; what OK and Cancel *do* (emit an output, close) is the
- * caller's business.
+ * It only reports activations; what OK and Cancel *do* (emit an output, await a
+ * promise, close) is the caller's business, which is what lets the declarative roots
+ * and `AndesDialogService` share it.
  *
  * The host is the footer box itself (`andes-dialog__footer`), so it sits directly in
  * the surface's scroll viewport and gets the same pinning and narrow-screen stacking
@@ -42,7 +53,8 @@ import type {
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: 'andes-dialog__footer',
-    '[attr.data-slot]': '"dialog-footer"',
+    '[attr.data-slot]': 'slot()',
+    '[attr.data-layout]': 'layout()',
   },
   template: `
     @if (template(); as custom) {
@@ -77,7 +89,7 @@ import type {
         data-slot="dialog-cancel"
         [class]="cancelProps?.className ?? ''"
         [variant]="cancelProps?.variant ?? 'secondary'"
-        [size]="cancelProps?.size ?? 'md'"
+        [size]="cancelProps?.size ?? size()"
         [ghost]="cancelProps?.ghost ?? false"
         [aria-label]="cancelProps?.ariaLabel"
         [disabled]="cancelBlocked()"
@@ -95,7 +107,7 @@ import type {
         data-slot="dialog-ok"
         [class]="okProps?.className ?? ''"
         [variant]="okProps?.variant ?? okType()"
-        [size]="okProps?.size ?? 'md'"
+        [size]="okProps?.size ?? size()"
         [ghost]="okProps?.ghost ?? false"
         [aria-label]="okProps?.ariaLabel"
         [disabled]="okBlocked()"
@@ -108,6 +120,12 @@ import type {
   `,
 })
 export class AndesDialogActions implements AfterViewInit {
+  /** `data-slot` for the footer box, so each surface keeps its own slot vocabulary. */
+  readonly slot = input('dialog-footer');
+  /** How the buttons are laid out. */
+  readonly layout = input<AndesDialogActionsLayout>('end');
+  /** Size of the two buttons unless a button's own props set one. */
+  readonly size = input<AndesButtonSize>('md');
   readonly okText = input('OK');
   readonly cancelText = input('Cancel');
   readonly okType = input<AndesButtonVariant>('primary');

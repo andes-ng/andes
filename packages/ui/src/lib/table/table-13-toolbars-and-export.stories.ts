@@ -187,7 +187,7 @@ export const ColumnsMenu: Story = {
 
 /** Density. */
 export const DensityToggle: Story = {
-  name: 'Density toggle',
+  name: 'Density switch in the toolbar',
   parameters: about(
     'A segmented control in the toolbar switches the row height between compact, default and comfortable.',
   ),
@@ -360,16 +360,20 @@ export const CsvDownload: Story = {
         users,
         done,
         download: () => {
-          const blob = new Blob([andesRowsToCsv(users, CSV_COLUMNS)], {
-            type: 'text/csv;charset=utf-8',
-          });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = 'team.csv';
-          link.click();
-          URL.revokeObjectURL(url);
-          done.set(`Saved team.csv with ${users.length} rows`);
+          try {
+            const blob = new Blob([andesRowsToCsv(users, CSV_COLUMNS)], {
+              type: 'text/csv;charset=utf-8',
+            });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'team.csv';
+            link.click();
+            URL.revokeObjectURL(url);
+            done.set(`Saved team.csv with ${users.length} rows`);
+          } catch {
+            done.set('The browser blocked the download');
+          }
         },
         muted,
       },

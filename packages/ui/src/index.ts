@@ -9,7 +9,7 @@ export * from './lib/accordion';
 
 // @slot affix
 
-// @slot alert
+export * from './lib/alert';
 
 // @slot anchor
 
@@ -93,13 +93,13 @@ export * from './lib/mentions';
 
 export * from './lib/palette';
 
-// @slot popconfirm
+export * from './lib/popconfirm';
 
-// @slot popover
+export * from './lib/popover';
 
 // @slot progress
 
-// @slot qr-code
+export * from './lib/qr-code';
 
 export * from './lib/radio-group';
 

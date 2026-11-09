@@ -15,6 +15,10 @@ const ILLUSTRATIONS: readonly string[] = [
   'empty/empty.html',
   // The progress ring around the current step's marker: a gauge drawn from a circle's arc.
   'steps/step.html',
+  // The QR symbol itself: its modules are drawn as one svg path (a picture of the data).
+  'qr-code/qr-code.html',
+  // The QR code's svg export, serialised as text for the download.
+  'qr-code/qr-render.ts',
 ];
 
 /** What drawing an SVG by hand looks like, in a template or through `Renderer2`. */

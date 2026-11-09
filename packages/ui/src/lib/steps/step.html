@@ -1,0 +1,132 @@
+<div class="andes-step__head">
+  @if (parent.clickable()) {
+  <button
+    #trigger
+    type="button"
+    class="andes-step__trigger"
+    [disabled]="disabled()"
+    [attr.tabindex]="tabindex()"
+    [attr.aria-describedby]="descriptionId"
+    (click)="activate()"
+    (keydown)="onKeydown($event)"
+    (focus)="onFocus()"
+    (blur)="onBlur()"
+  >
+    <ng-container *ngTemplateOutlet="body" />
+  </button>
+  } @else {
+  <div class="andes-step__trigger">
+    <ng-container *ngTemplateOutlet="body" />
+  </div>
+  } @if (!isLast()) {
+  <span
+    class="andes-step__tail"
+    [class]="classes().tail"
+    [style]="styles().tail"
+    aria-hidden="true"
+    ><span
+      class="andes-step__rail"
+      [class]="classes().rail"
+      [style]="styles().rail"
+    ></span
+  ></span>
+  }
+</div>
+
+<ng-template #body>
+  @if (showMarker()) {
+  <span
+    class="andes-step__marker"
+    [attr.data-marker]="marker()"
+    [class]="classes().icon"
+    [style]="styles().icon"
+    aria-hidden="true"
+  >
+    @switch (marker()) { @case ('template') {
+    <ng-container *ngTemplateOutlet="iconTemplate(); context: iconContext()" />
+    } @case ('dot-template') {
+    <ng-container
+      *ngTemplateOutlet="parent.dotTemplate() ?? null; context: iconContext()"
+    />
+    } @case ('icon') {
+    <ng-icon class="andes-step__glyph" [name]="iconName() ?? ''" />
+    } @case ('check') {
+    <ng-icon class="andes-step__glyph" name="lucideCheck" />
+    } @case ('cross') {
+    <ng-icon class="andes-step__glyph" name="lucideX" />
+    } @case ('number') {
+    <span class="andes-step__number">{{ displayNumber() }}</span>
+    } } @if (ringPercent() !== null) {
+    <svg class="andes-step__ring" viewBox="0 0 100 100" focusable="false">
+      <circle
+        class="andes-step__ring-track"
+        cx="50"
+        cy="50"
+        r="46"
+        pathLength="100"
+      />
+      <circle
+        class="andes-step__ring-arc"
+        cx="50"
+        cy="50"
+        r="46"
+        pathLength="100"
+        [attr.stroke-dasharray]="ringPercent() + ' 100'"
+      />
+    </svg>
+    }
+  </span>
+  }
+  <span
+    class="andes-step__main"
+    [class]="classes().content"
+    [style]="styles().content"
+  >
+    <span
+      class="andes-step__title"
+      [class]="classes().title"
+      [style]="styles().title"
+    >
+      <span class="andes-step__title-text" #titleText [id]="titleId">
+        @if (titleTemplate(); as template) {
+        <ng-container *ngTemplateOutlet="template" />
+        } @else {{{ titleString() }}}
+      </span>
+      <span class="andes-step__status-text">
+        <span class="andes-step__sr">, {{ statusLabel() }}</span>
+        @if (ringPercent() !== null) {
+        <span class="andes-step__sr">, {{ ringPercent() }}%</span>
+        }
+      </span>
+    </span>
+    @if (optionalLabel()) {
+    <span class="andes-step__optional">{{ optionalLabel() }}</span>
+    } @if (subtitleTemplate(); as template) {
+    <span
+      class="andes-step__subtitle"
+      [class]="classes().subtitle"
+      [style]="styles().subtitle"
+    >
+      <ng-container *ngTemplateOutlet="template" />
+    </span>
+    } @else if (subtitleString()) {
+    <span
+      class="andes-step__subtitle"
+      [class]="classes().subtitle"
+      [style]="styles().subtitle"
+      >{{ subtitleString() }}</span
+    >
+    }
+  </span>
+  <span
+    class="andes-step__description"
+    [class]="classes().description"
+    [style]="styles().description"
+    [id]="descriptionId"
+  >
+    @if (descriptionTemplate(); as template) {
+    <ng-container *ngTemplateOutlet="template" />
+    } @else {{{ descriptionString() }}}
+  </span>
+  <span class="andes-step__extra"><ng-content /></span>
+</ng-template>

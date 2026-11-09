@@ -1,0 +1,16 @@
+<ol
+  class="andes-steps"
+  [attr.aria-label]="ariaLabel() ?? null"
+  [attr.aria-labelledby]="ariaLabelledby() ?? null"
+>
+  <ng-content />
+  @for (range of hiddenRanges(); track range.start) {
+  <andes-steps-more [start]="range.start" [end]="range.end" />
+  }
+</ol>
+<span class="andes-steps__live" role="status" aria-live="polite"
+  >{{ liveMessage() }}</span
+>
+<div class="andes-steps__panels">
+  <ng-content select="andes-step-panel" />
+</div>

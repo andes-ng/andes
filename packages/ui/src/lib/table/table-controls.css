@@ -82,6 +82,11 @@
   --ng-icon__stroke-width: 2.5;
 }
 
+/* In a right-to-left page the closed toggle points to the start, which is the left. */
+.andes-table-control__chevron:dir(rtl) {
+  transform: rotate(180deg);
+}
+
 /* prettier-ignore */
 .andes-table-control__expand[aria-expanded='true'] .andes-table-control__chevron {
   transform: rotate(90deg);

@@ -6,6 +6,7 @@ import {
   bar,
   grid,
   placementBoard,
+  stage,
   PLACEMENT_OPTIONS,
   PLACEMENT_RING,
   wideStage,
@@ -244,6 +245,47 @@ export const ArrowAlignment: Story = {
             </andes-popover>
           </div>
         }
+      </div>
+    `,
+  }),
+};
+
+/** Edges of the window. */
+export const EdgesOfTheWindow: Story = {
+  name: 'Near the edges of the window',
+  parameters: about(
+    'Triggers fixed at each corner and edge of the window: a panel that does not fit on its side flips to the other one, and one that overflows along the edge slides back in, with the arrow still on its trigger.',
+  ),
+  render: () => ({
+    template: `
+      <div>
+        <andes-popover placement="top" content="Flipped below" [showArrow]="true"><andes-button size="sm" variant="outline" andesPopoverTrigger style="position: fixed; top: 0.5rem; left: 0.5rem;">top left</andes-button></andes-popover>
+        <andes-popover placement="top" content="Flipped below" [showArrow]="true"><andes-button size="sm" variant="outline" andesPopoverTrigger style="position: fixed; top: 0.5rem; left: 50%; transform: translateX(-50%);">top</andes-button></andes-popover>
+        <andes-popover placement="top" content="Flipped below and shifted in" [showArrow]="true"><andes-button size="sm" variant="outline" andesPopoverTrigger style="position: fixed; top: 0.5rem; right: 0.5rem;">top right</andes-button></andes-popover>
+        <andes-popover placement="left" content="Flipped to the right" [showArrow]="true"><andes-button size="sm" variant="outline" andesPopoverTrigger style="position: fixed; top: 50%; left: 0.5rem;">left</andes-button></andes-popover>
+        <andes-popover placement="right" content="Flipped to the left" [showArrow]="true"><andes-button size="sm" variant="outline" andesPopoverTrigger style="position: fixed; top: 50%; right: 0.5rem;">right</andes-button></andes-popover>
+        <andes-popover placement="bottom" content="Flipped above" [showArrow]="true"><andes-button size="sm" variant="outline" andesPopoverTrigger style="position: fixed; bottom: 0.5rem; left: 0.5rem;">bottom left</andes-button></andes-popover>
+        <andes-popover placement="bottom" content="Flipped above" [showArrow]="true"><andes-button size="sm" variant="outline" andesPopoverTrigger style="position: fixed; bottom: 0.5rem; left: 50%; transform: translateX(-50%);">bottom</andes-button></andes-popover>
+        <andes-popover placement="bottom" content="Flipped above and shifted in" [showArrow]="true"><andes-button size="sm" variant="outline" andesPopoverTrigger style="position: fixed; bottom: 0.5rem; right: 0.5rem;">bottom right</andes-button></andes-popover>
+      </div>
+    `,
+  }),
+};
+
+/** Scaled ancestor. */
+export const InsideScaledAncestor: Story = {
+  name: 'Inside a scaled ancestor',
+  parameters: about(
+    'A trigger inside a transformed or scaled ancestor still gets a panel against its visible box, because the panel is measured from the trigger; only the container input needs an ancestor without a transform.',
+  ),
+  render: () => ({
+    template: `
+      <div style="${stage}">
+        <div style="transform: scale(1.4) rotate(-3deg); transform-origin: center; padding: 1.5rem; border: 1px dashed var(--andes-color-border); border-radius: var(--andes-radius-lg);">
+          <andes-popover title="Scaled" content="Measured from the trigger, wherever it is drawn." placement="bottom" [showArrow]="true">
+            <andes-button variant="outline" andesPopoverTrigger>Scaled and rotated</andes-button>
+          </andes-popover>
+        </div>
       </div>
     `,
   }),

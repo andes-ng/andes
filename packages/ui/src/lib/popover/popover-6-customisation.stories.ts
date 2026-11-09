@@ -1,3 +1,4 @@
+import { Component, type OnDestroy } from '@angular/core';
 import { NgIcon } from '@ng-icons/core';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 
@@ -5,6 +6,8 @@ import {
   about,
   addStoryCss,
   bar,
+  darkBox,
+  OPEN_FOR_GOOD,
   stage,
   withDescription,
   withPopoverKit,
@@ -304,5 +307,83 @@ export const GapToTheTrigger: Story = {
         </andes-popover>
       </div>
     `,
+  }),
+};
+
+/** Colours, light and dark. */
+export const ColoursLightAndDark: Story = {
+  name: 'Colours, light and dark',
+  parameters: about(
+    'Every preset and a custom colour open at once on a light and on a dark surface, each with its arrow and shadow, to compare the fill, the text and the border.',
+  ),
+  render: () => ({
+    props: { colours: [...ANDES_POPOVER_PRESET_COLORS, '#7c3aed'] },
+    template: `
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div id="story-colours-light" style="padding: 5rem 1rem 1rem; display: grid; grid-template-columns: repeat(4, 9.5rem); gap: 6rem 1rem; justify-content: center;">
+          @for (colour of colours; track colour) {
+            <andes-popover container="#story-colours-light" placement="top" [color]="colour" [title]="colour" content="Light surface." [showArrow]="true" ${OPEN_FOR_GOOD}>
+              <andes-button size="sm" variant="outline" andesPopoverTrigger>{{ colour }}</andes-button>
+            </andes-popover>
+          }
+        </div>
+        <div id="story-colours-dark" data-andes-theme="dark" style="${darkBox} padding-top: 5rem; display: grid; grid-template-columns: repeat(4, 9.5rem); gap: 6rem 1rem; justify-content: center;">
+          @for (colour of colours; track colour) {
+            <andes-popover container="#story-colours-dark" placement="top" [color]="colour" [title]="colour" content="Dark surface." [showArrow]="true" ${OPEN_FOR_GOOD}>
+              <andes-button size="sm" variant="outline" andesPopoverTrigger>{{ colour }}</andes-button>
+            </andes-popover>
+          }
+        </div>
+      </div>
+    `,
+  }),
+};
+
+/** Lets the root font size be changed for the demo, and puts it back when the demo goes. */
+@Component({
+  selector: 'andes-popover-root-size',
+  imports: [AndesButton, AndesPopover, AndesPopoverTrigger],
+  template: `
+    <div style="${stage}">
+      <div style="${bar}">
+        @for (size of sizes; track size) {
+          <andes-button size="sm" variant="outline" (click)="setRoot(size)"
+            >Root {{ size }}</andes-button
+          >
+        }
+      </div>
+      <andes-popover
+        title="Sized in rem"
+        content="Change the root size, then open me."
+        [showArrow]="true"
+        [defaultOpen]="true"
+        [closeOnOutsideClick]="false"
+      >
+        <andes-button variant="outline" andesPopoverTrigger>Open</andes-button>
+      </andes-popover>
+    </div>
+  `,
+})
+class RootSizeDemo implements OnDestroy {
+  protected readonly sizes = ['16px', '18px', '20px'];
+
+  protected setRoot(size: string): void {
+    document.documentElement.style.fontSize = size === '16px' ? '' : size;
+  }
+
+  ngOnDestroy(): void {
+    document.documentElement.style.fontSize = '';
+  }
+}
+
+/** Root font size. */
+export const RootFontSize: Story = {
+  name: 'Larger root text',
+  parameters: about(
+    'The panel, its padding and its gap are sized in rem, so raising the root font size to 18px or 20px, as a larger browser text setting does, scales the text and the padding, and the arrow stays the same fixed shape.',
+  ),
+  render: () => ({
+    moduleMetadata: { imports: [RootSizeDemo] },
+    template: `<andes-popover-root-size />`,
   }),
 };

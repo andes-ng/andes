@@ -273,3 +273,68 @@ export const LongWords: Story = {
     `,
   }),
 };
+
+/** Very long title and text. */
+export const VeryLongTitleAndText: Story = {
+  name: 'Very long title and text',
+  parameters: about(
+    'A title and a text far longer than the panel wrap inside the 24rem maximum width and stay inside the window, and a long unbroken word breaks instead of widening the panel.',
+  ),
+  render: () => ({
+    template: `
+      <div style="${stage}">
+        <andes-popover
+          placement="bottomLeft"
+          title="An extremely long title that goes on for several lines because nobody told the author that titles should be short"
+          content="This text is longer still. It keeps going with more words than any panel should carry, to check that the lines wrap at the maximum width, that the spacing stays even, and that supercalifragilisticexpialidocious-and-an-even-longer-hyphenated-word-without-spaces-0123456789 does not push the panel past the edge of the window."
+          [showArrow]="true"
+        >
+          <andes-button variant="outline" andesPopoverTrigger>Long copy</andes-button>
+        </andes-popover>
+      </div>
+    `,
+  }),
+};
+
+/** A table cell. */
+export const InsideATableCell: Story = {
+  name: 'Trigger inside a table cell',
+  parameters: about(
+    'A trigger in a table cell opens its panel against the button, not against the cell, and the panel is not clipped by the table.',
+  ),
+  render: () => ({
+    props: {
+      rows: [
+        { name: 'report-2024.pdf', size: '2.4 MB' },
+        { name: 'budget.xlsx', size: '310 KB' },
+        { name: 'notes.md', size: '4 KB' },
+      ],
+    },
+    template: `
+      <div style="${stage}">
+        <table style="border-collapse: collapse; width: min(32rem, 100%); font-size: 0.875rem; font-family: var(--andes-font-family), sans-serif; color: var(--andes-color-foreground);">
+          <thead>
+            <tr style="text-align: start; border-bottom: 1px solid var(--andes-color-border);">
+              <th style="padding: 0.5rem 0.75rem; font-weight: 500;">Name</th>
+              <th style="padding: 0.5rem 0.75rem; font-weight: 500;">Size</th>
+              <th style="padding: 0.5rem 0.75rem; font-weight: 500; width: 100%;">Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rows; track row.name) {
+              <tr style="border-bottom: 1px solid var(--andes-color-border);">
+                <td style="padding: 0.5rem 0.75rem;">{{ row.name }}</td>
+                <td style="padding: 0.5rem 0.75rem;">{{ row.size }}</td>
+                <td style="padding: 0.5rem 0.75rem;">
+                  <andes-popover placement="bottomLeft" [title]="row.name" [content]="'Size: ' + row.size" [showArrow]="true">
+                    <andes-button size="sm" variant="outline" andesPopoverTrigger>Details</andes-button>
+                  </andes-popover>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    `,
+  }),
+};

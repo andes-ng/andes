@@ -23,6 +23,8 @@ import { AndesSelect } from '../select/select';
 import { AndesTextarea } from '../textarea/textarea';
 import { AndesSwitch } from '../switch/switch';
 import { AndesTag } from '../tag/tag';
+import { AndesTooltip } from '../tooltip/tooltip';
+import { AndesTooltipTrigger } from '../tooltip/tooltip-trigger';
 import { AndesPopover } from './popover';
 import { AndesPopoverContent } from './popover-content';
 import { AndesPopoverTrigger } from './popover-trigger';
@@ -44,6 +46,8 @@ const meta: Meta<AndesPopover> = {
         AndesTextarea,
         AndesSwitch,
         AndesTag,
+        AndesTooltip,
+        AndesTooltipTrigger,
         NgIcon,
         AndesPopoverTrigger,
         AndesPopoverContent,
@@ -441,4 +445,76 @@ export const PinnedOutsideClick: Story = {
       `,
     };
   },
+};
+
+/** Stretched trigger. */
+export const StretchedTrigger: Story = {
+  name: 'Trigger stretched by its cell',
+  parameters: about(
+    'A button whose host is stretched across a grid column or a flex row still gets its panel against the visible button against the button, not against the empty stretch around it.',
+  ),
+  render: () => ({
+    template: `
+      <div style="${stage}">
+        <div style="display: grid; grid-template-columns: 18rem; gap: 2rem;">
+          <andes-popover placement="bottom" title="Grid item" content="Against the button, not the cell." [showArrow]="true">
+            <andes-button size="sm" variant="outline" andesPopoverTrigger style="width: 100%;">Stretched in a grid</andes-button>
+          </andes-popover>
+          <div style="display: flex; flex-direction: column; align-items: stretch;">
+            <andes-popover placement="right" title="Flex item" content="Against the button too." [showArrow]="true">
+              <andes-button size="sm" variant="outline" andesPopoverTrigger style="align-self: stretch;">Stretched in a flex column</andes-button>
+            </andes-popover>
+          </div>
+        </div>
+      </div>
+    `,
+  }),
+};
+
+/** Ghost and icon buttons. */
+export const GhostAndIconTriggers: Story = {
+  name: 'Ghost and icon buttons',
+  parameters: about(
+    'A ghost button, a link button and an icon-only button draw little or nothing around themselves, and the panel still sits against the control and points at its middle.',
+  ),
+  render: () => ({
+    template: `
+      <div style="${wideStage}">
+        <andes-popover title="Ghost" content="A button with no border." [showArrow]="true">
+          <andes-button variant="ghost" andesPopoverTrigger style="width: 10rem;">Ghost</andes-button>
+        </andes-popover>
+        <andes-popover title="Link" content="A link-style button." [showArrow]="true">
+          <andes-button variant="link" andesPopoverTrigger>Link style</andes-button>
+        </andes-popover>
+        <andes-popover title="Icon" content="An icon-only button." [showArrow]="true">
+          <andes-button size="icon" variant="ghost" andesPopoverTrigger aria-label="Settings"><ng-icon name="lucideSettings" aria-hidden="true" /></andes-button>
+        </andes-popover>
+        <andes-popover title="Icon" content="With a border." [showArrow]="true">
+          <andes-button size="icon" variant="outline" andesPopoverTrigger aria-label="Notifications"><ng-icon name="lucideBell" aria-hidden="true" /></andes-button>
+        </andes-popover>
+      </div>
+    `,
+  }),
+};
+
+/** Disabled with a tooltip. */
+export const DisabledWithTooltip: Story = {
+  name: 'Disabled trigger with a tooltip',
+  parameters: about(
+    'A disabled button explains itself through a tooltip on a wrapper, while the popover on an enabled sibling keeps working beside it.',
+  ),
+  render: () => ({
+    template: `
+      <div style="${wideStage}">
+        <andes-tooltip content="Publishing needs an approved review." [openDelay]="0">
+          <span andesTooltipTrigger tabindex="0" style="display: inline-block; cursor: not-allowed;">
+            <andes-button variant="outline" disabled style="pointer-events: none;">Publish</andes-button>
+          </span>
+        </andes-tooltip>
+        <andes-popover title="Draft" content="An enabled button next to it." [showArrow]="true">
+          <andes-button variant="outline" andesPopoverTrigger>Save draft</andes-button>
+        </andes-popover>
+      </div>
+    `,
+  }),
 };

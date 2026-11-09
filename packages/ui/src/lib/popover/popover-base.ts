@@ -437,6 +437,7 @@ export abstract class AndesPopoverBase {
   private openTimer: ReturnType<typeof setTimeout> | undefined;
   private closeTimer: ReturnType<typeof setTimeout> | undefined;
   private frame: number | null = null;
+  private anchorFrame: number | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private defaultOpenApplied = false;
   private readonly _mode = signal<AndesPopoverMode>('click');
@@ -1012,6 +1013,31 @@ export abstract class AndesPopoverBase {
       this.resizeObserver = new ResizeObserver(this.scheduleReposition);
       this.resizeObserver.observe(content);
     }
+    this.watchAnchor(view);
+  }
+
+  /**
+   * A panel stays against its trigger when the trigger moves without a scroll or a resize - a
+   * larger root font size, a sibling that appears above it, a toolbar that wraps: nothing
+   * reports those, so while the panel is open the trigger's box is compared once a frame.
+   */
+  private watchAnchor(view: Window): void {
+    const key = () => {
+      const box = this.overlay.anchor()?.getBoundingClientRect();
+      return box ? `${box.left}|${box.top}|${box.width}|${box.height}` : '';
+    };
+    let last = key();
+    const step = () => {
+      this.anchorFrame = view.requestAnimationFrame(() => {
+        const next = key();
+        if (next !== last) {
+          last = next;
+          this.scheduleReposition();
+        }
+        step();
+      });
+    };
+    step();
   }
 
   private stopTracking(): void {
@@ -1025,6 +1051,10 @@ export abstract class AndesPopoverBase {
     if (this.frame !== null) {
       view?.cancelAnimationFrame(this.frame);
       this.frame = null;
+    }
+    if (this.anchorFrame !== null) {
+      view?.cancelAnimationFrame(this.anchorFrame);
+      this.anchorFrame = null;
     }
   }
 

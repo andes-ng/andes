@@ -1,9 +1,15 @@
+import { Component, ErrorHandler, signal } from '@angular/core';
 import { NgIcon } from '@ng-icons/core';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 
 import {
   about,
+  addStoryCss,
+  bar,
   muted,
+  OPEN_FOR_GOOD,
+  placementBoard,
+  PLACEMENT_RING,
   stage,
   withDescription,
   withPopoverKit,
@@ -13,6 +19,93 @@ import { AndesButton } from '../button/button';
 import { AndesPopconfirmTrigger } from '../popover/popover-trigger';
 import { ANDES_POPOVER_PRESET_COLORS } from '../popover/popover-types';
 import { AndesPopconfirm } from './popconfirm';
+
+const MOTION_CSS = `
+.story-confirm-motion-off { --andes-popover-duration: 0ms; --andes-popover-exit-duration: 0ms; --andes-popover-distance: 0px; --andes-popover-scale: 1; }
+`;
+
+/** Questions that open and close in quick succession, to watch for flicker. */
+@Component({
+  selector: 'andes-popconfirm-rapid-demo',
+  imports: [AndesButton, AndesPopconfirm, AndesPopconfirmTrigger],
+  template: `
+    <div style="${stage} flex-direction: column; padding-top: 9rem;">
+      <div style="${bar}">
+        <andes-button (click)="replay()">Replay</andes-button>
+        <andes-button variant="outline" (click)="flip()">Flip all</andes-button>
+      </div>
+      <div style="${bar}">
+        @for (index of indexes; track index) {
+          <andes-popconfirm
+            [open]="states()[index]"
+            [trigger]="['hover']"
+            [openDelay]="0"
+            [closeDelay]="0"
+            [closeOnOutsideClick]="false"
+            [title]="'Question ' + (index + 1)"
+            [showCancel]="false"
+            okText="OK"
+            (openChange)="set(index, $event)"
+          >
+            <andes-button variant="outline" andesPopconfirmTrigger
+              >Question {{ index + 1 }}</andes-button
+            >
+          </andes-popconfirm>
+        }
+      </div>
+    </div>
+  `,
+})
+class RapidDemo {
+  protected readonly indexes = [0, 1, 2];
+  protected readonly states = signal([false, false, false]);
+
+  protected set(index: number, open: boolean): void {
+    this.states.update((all) =>
+      all.map((one, i) => (i === index ? open : one)),
+    );
+  }
+
+  protected flip(): void {
+    this.states.update((all) => all.map((one) => !one));
+  }
+
+  protected replay(): void {
+    for (let step = 0; step < 12; step++) {
+      setTimeout(() => this.flip(), step * 90);
+    }
+  }
+}
+
+/** An asynchronous confirmation under a right-to-left document. */
+@Component({
+  selector: 'andes-popconfirm-rtl-async',
+  imports: [AndesButton, AndesPopconfirm, AndesPopconfirmTrigger],
+  template: `
+    <div style="${stage} flex-direction: column;">
+      <andes-popconfirm
+        title="هل تريد حفظ التغييرات؟"
+        description="سيتم إرسال التغييرات إلى الخادم."
+        okText="حفظ"
+        cancelText="إلغاء"
+        [onConfirm]="save"
+      >
+        <andes-button variant="outline" andesPopconfirmTrigger
+          >حفظ</andes-button
+        >
+      </andes-popconfirm>
+      <span role="status" style="${muted}">{{ status() }}</span>
+    </div>
+  `,
+})
+class RtlAsyncDemo {
+  protected readonly status = signal('');
+  protected readonly save = async () => {
+    this.status.set('...جارٍ الحفظ');
+    await new Promise((done) => setTimeout(done, 1200));
+    this.status.set('تم الحفظ.');
+  };
+}
 
 const meta: Meta<AndesPopconfirm> = {
   title: 'Feedback/Popconfirm/Accessibility and motion',
@@ -167,5 +260,108 @@ export const NarrowScreens: Story = {
         </andes-popconfirm>
       </div>
     `,
+  }),
+};
+
+/** Rapid toggling. */
+export const RapidToggling: Story = {
+  name: 'Rapid opening and closing',
+  parameters: about(
+    'Replay flips three questions twelve times in a second and sweeping the pointer across the buttons opens and closes them at once, so any flicker from the shadow filter would show.',
+  ),
+  render: () => ({
+    moduleMetadata: { imports: [RapidDemo] },
+    template: `<andes-popconfirm-rapid-demo />`,
+  }),
+};
+
+/** Reduced motion. */
+export const ReducedMotion: Story = {
+  name: 'Reduced motion',
+  parameters: about(
+    'With the motion tokens off, which is what the panel resolves to when the system asks for reduced motion apart from a short fade, the question appears without drift or scale.',
+  ),
+  render: () => {
+    addStoryCss('story-popconfirm-motion-css', MOTION_CSS);
+    return {
+      template: `
+        <div style="${wideStage}">
+          <andes-popconfirm trigger="hover" title="Normal motion" [showCancel]="false" okText="OK">
+            <andes-button variant="outline" andesPopconfirmTrigger>Normal</andes-button>
+          </andes-popconfirm>
+          <andes-popconfirm trigger="hover" panelClass="story-confirm-motion-off" title="No motion" [showCancel]="false" okText="OK">
+            <andes-button variant="outline" andesPopconfirmTrigger>Tokens off</andes-button>
+          </andes-popconfirm>
+        </div>
+      `,
+    };
+  },
+};
+
+/** Arrow alignment, dark. */
+export const ArrowAlignmentDark: Story = {
+  name: 'Arrow alignment, dark',
+  globals: { theme: 'dark' },
+  parameters: about(
+    'All twelve placements open at once on the dark theme: the border, the arrow outline, the fill and the shadow stay one silhouette.',
+  ),
+  render: () => ({
+    props: { placements: PLACEMENT_RING },
+    template: `
+      <div style="${placementBoard}">
+        @for (placement of placements; track placement) {
+          <div style="display: flex; align-items: center; justify-content: center; min-height: 9.5rem;">
+            <andes-popconfirm [placement]="placement" ${OPEN_FOR_GOOD} [title]="placement" [showCancel]="false" okText="OK">
+              <andes-button size="sm" variant="outline" andesPopconfirmTrigger>{{ placement }}</andes-button>
+            </andes-popconfirm>
+          </div>
+        }
+      </div>
+    `,
+  }),
+};
+
+/** Arrow alignment, right to left. */
+export const ArrowAlignmentRtl: Story = {
+  name: 'Arrow alignment, right to left',
+  parameters: {
+    dir: 'rtl',
+    ...about(
+      'All twelve placements open at once under a right-to-left document, where the start and end edges swap but the left and right sides do not.',
+    ),
+  },
+  render: () => ({
+    props: { placements: PLACEMENT_RING },
+    template: `
+      <div style="${placementBoard}">
+        @for (placement of placements; track placement) {
+          <div style="display: flex; align-items: center; justify-content: center; min-height: 9.5rem;">
+            <andes-popconfirm [placement]="placement" ${OPEN_FOR_GOOD} [title]="placement" [showCancel]="false" okText="OK">
+              <andes-button size="sm" variant="outline" andesPopconfirmTrigger>{{ placement }}</andes-button>
+            </andes-popconfirm>
+          </div>
+        }
+      </div>
+    `,
+  }),
+};
+
+/** RTL async. */
+export const RtlAsyncConfirm: Story = {
+  name: 'Right to left, async confirm',
+  parameters: {
+    dir: 'rtl',
+    ...about(
+      'Under a right-to-left document an asynchronous confirmation keeps its spinner on the OK button and closes when the request ends, with the icon, the text and the buttons mirrored.',
+    ),
+  },
+  render: () => ({
+    moduleMetadata: {
+      imports: [RtlAsyncDemo],
+      providers: [
+        { provide: ErrorHandler, useValue: { handleError: () => undefined } },
+      ],
+    },
+    template: `<andes-popconfirm-rtl-async />`,
   }),
 };

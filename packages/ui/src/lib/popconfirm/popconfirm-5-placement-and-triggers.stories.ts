@@ -228,3 +228,118 @@ export const PreviewThenConfirm: Story = {
     `,
   }),
 };
+
+/** Edges of the window. */
+export const EdgesOfTheWindow: Story = {
+  name: 'Near the edges of the window',
+  parameters: about(
+    'Triggers fixed at each corner and edge of the window: a question that does not fit on its side flips to the other one, and one that overflows along the edge slides back in, with the arrow still on its trigger.',
+  ),
+  render: () => ({
+    template: `
+      <div>
+        <andes-popconfirm placement="top" title="Flipped below" [showCancel]="false" okText="OK"><andes-button size="sm" variant="outline" andesPopconfirmTrigger style="position: fixed; top: 0.5rem; left: 0.5rem;">top left</andes-button></andes-popconfirm>
+        <andes-popconfirm placement="top" title="Flipped below and shifted in" [showCancel]="false" okText="OK"><andes-button size="sm" variant="outline" andesPopconfirmTrigger style="position: fixed; top: 0.5rem; right: 0.5rem;">top right</andes-button></andes-popconfirm>
+        <andes-popconfirm placement="left" title="Flipped to the right" [showCancel]="false" okText="OK"><andes-button size="sm" variant="outline" andesPopconfirmTrigger style="position: fixed; top: 50%; left: 0.5rem;">left</andes-button></andes-popconfirm>
+        <andes-popconfirm placement="right" title="Flipped to the left" [showCancel]="false" okText="OK"><andes-button size="sm" variant="outline" andesPopconfirmTrigger style="position: fixed; top: 50%; right: 0.5rem;">right</andes-button></andes-popconfirm>
+        <andes-popconfirm placement="bottom" title="Flipped above" [showCancel]="false" okText="OK"><andes-button size="sm" variant="outline" andesPopconfirmTrigger style="position: fixed; bottom: 0.5rem; left: 0.5rem;">bottom left</andes-button></andes-popconfirm>
+        <andes-popconfirm placement="bottom" title="Flipped above and shifted in" [showCancel]="false" okText="OK"><andes-button size="sm" variant="outline" andesPopconfirmTrigger style="position: fixed; bottom: 0.5rem; right: 0.5rem;">bottom right</andes-button></andes-popconfirm>
+      </div>
+    `,
+  }),
+};
+
+/** Stretched trigger. */
+export const StretchedTrigger: Story = {
+  name: 'Trigger stretched by its cell',
+  parameters: about(
+    'A button whose host is stretched across a grid column or a flex row still gets its question against the visible button, not against the empty stretch around it.',
+  ),
+  render: () => ({
+    template: `
+      <div style="${stage}">
+        <div style="display: grid; grid-template-columns: 18rem; gap: 2rem;">
+          <andes-popconfirm placement="bottom" title="Grid item" [showCancel]="false" okText="OK">
+            <andes-button size="sm" variant="outline" andesPopconfirmTrigger style="width: 100%;">Stretched in a grid</andes-button>
+          </andes-popconfirm>
+          <div style="display: flex; flex-direction: column; align-items: stretch;">
+            <andes-popconfirm placement="right" title="Flex item" [showCancel]="false" okText="OK">
+              <andes-button size="sm" variant="outline" andesPopconfirmTrigger style="align-self: stretch;">Stretched in a flex column</andes-button>
+            </andes-popconfirm>
+          </div>
+        </div>
+      </div>
+    `,
+  }),
+};
+
+/** Ghost and icon triggers. */
+export const GhostAndIconTriggers: Story = {
+  name: 'Ghost and icon buttons',
+  parameters: about(
+    'A ghost button and an icon-only button draw little or nothing around themselves, and the question still sits against the control and points at its middle.',
+  ),
+  render: () => ({
+    template: `
+      <div style="${wideStage}">
+        <andes-popconfirm title="Remove it?" okType="danger" okText="Remove">
+          <andes-button variant="ghost" andesPopconfirmTrigger style="width: 9rem;">Ghost</andes-button>
+        </andes-popconfirm>
+        <andes-popconfirm title="Delete the task?" icon="lucideTrash2" okType="danger" okText="Delete">
+          <andes-button size="icon" variant="ghost" andesPopconfirmTrigger aria-label="Delete"><ng-icon name="lucideTrash2" aria-hidden="true" /></andes-button>
+        </andes-popconfirm>
+        <andes-popconfirm title="Delete the task?" icon="lucideTrash2" okType="danger" okText="Delete">
+          <andes-button size="icon" variant="outline" andesPopconfirmTrigger aria-label="Delete"><ng-icon name="lucideTrash2" aria-hidden="true" /></andes-button>
+        </andes-popconfirm>
+      </div>
+    `,
+  }),
+};
+
+/** In a table cell. */
+export const InATableCell: Story = {
+  name: 'Trigger inside a table cell',
+  parameters: about(
+    'A trigger in a table cell opens its question against the button, not against the cell, and the table does not clip it.',
+  ),
+  render: () => ({
+    props: { rows: ['report-2024.pdf', 'budget.xlsx', 'notes.md'] },
+    template: `
+      <div style="${stage}">
+        <table style="border-collapse: collapse; width: min(30rem, 100%); font-size: 0.875rem; font-family: var(--andes-font-family), sans-serif; color: var(--andes-color-foreground);">
+          <tbody>
+            @for (row of rows; track row) {
+              <tr style="border-bottom: 1px solid var(--andes-color-border);">
+                <td style="padding: 0.5rem 0.75rem; width: 100%;">{{ row }}</td>
+                <td style="padding: 0.5rem 0.75rem;">
+                  <andes-popconfirm placement="left" [title]="'Delete ' + row + '?'" okType="danger" okText="Delete">
+                    <andes-button size="sm" variant="outline" andesPopconfirmTrigger>Delete</andes-button>
+                  </andes-popconfirm>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    `,
+  }),
+};
+
+/** Scaled ancestor. */
+export const InsideScaledAncestor: Story = {
+  name: 'Inside a scaled ancestor',
+  parameters: about(
+    'A trigger inside a transformed or scaled ancestor still gets its question against its visible box, because the panel is measured from the trigger; only the container input needs an ancestor without a transform.',
+  ),
+  render: () => ({
+    template: `
+      <div style="${stage}">
+        <div style="transform: scale(1.4) rotate(-3deg); transform-origin: center; padding: 1.5rem; border: 1px dashed var(--andes-color-border); border-radius: var(--andes-radius-lg);">
+          <andes-popconfirm placement="bottom" title="Delete the task?" okType="danger" okText="Delete">
+            <andes-button variant="outline" andesPopconfirmTrigger>Scaled and rotated</andes-button>
+          </andes-popconfirm>
+        </div>
+      </div>
+    `,
+  }),
+};

@@ -81,6 +81,14 @@ export const grid =
 export const placementBoard =
   'display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: 0.5rem; padding: 0.5rem;';
 
+/** A dark scope: panels drawn into it (through `container`) take the dark theme whatever the page is. */
+export const darkBox =
+  'padding: 1rem; border-radius: var(--andes-radius-lg); background: #0f172a; color: #f8fafc;';
+
+/** Keeps every panel of a demo open, so they can be compared side by side. */
+export const OPEN_FOR_GOOD =
+  '[defaultOpen]="true" [closeOnEscape]="false" [closeOnOutsideClick]="false"';
+
 /** A block of code. */
 export const code = `${font} display: block; box-sizing: border-box; margin: 0; padding: 0.75rem 1rem; max-width: min(40rem, 100%); overflow-x: auto; border-radius: var(--andes-radius-md); background: var(--andes-color-muted); color: var(--andes-color-foreground); font-family: ui-monospace, monospace; font-size: 0.8125rem; line-height: 1.25rem; white-space: pre;`;
 

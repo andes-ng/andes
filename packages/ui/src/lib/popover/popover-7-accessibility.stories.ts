@@ -1,9 +1,15 @@
+import { Component, signal } from '@angular/core';
 import { NgIcon } from '@ng-icons/core';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 
 import {
   about,
   muted,
+  addStoryCss,
+  bar,
+  OPEN_FOR_GOOD,
+  placementBoard,
+  PLACEMENT_RING,
   stage,
   wideStage,
   withDescription,
@@ -22,6 +28,64 @@ import {
 } from './popover-parts';
 import { AndesPopoverTrigger } from './popover-trigger';
 import { ANDES_POPOVER_PRESET_COLORS } from './popover-types';
+
+const MOTION_CSS = `
+.story-motion-off { --andes-popover-duration: 0ms; --andes-popover-exit-duration: 0ms; --andes-popover-distance: 0px; --andes-popover-scale: 1; }
+`;
+
+/** Panels that open and close in quick succession, to watch for flicker. */
+@Component({
+  selector: 'andes-popover-rapid-demo',
+  imports: [AndesButton, AndesPopover, AndesPopoverTrigger],
+  template: `
+    <div style="${stage} flex-direction: column; padding-top: 8rem;">
+      <div style="${bar}">
+        <andes-button (click)="replay()">Replay</andes-button>
+        <andes-button variant="outline" (click)="flip()">Flip all</andes-button>
+      </div>
+      <div style="${bar}">
+        @for (index of indexes; track index) {
+          <andes-popover
+            [open]="states()[index]"
+            [trigger]="['hover']"
+            [openDelay]="0"
+            [closeDelay]="0"
+            [showArrow]="true"
+            [closeOnOutsideClick]="false"
+            [title]="'Panel ' + (index + 1)"
+            content="Sweep the pointer across the buttons."
+            (openChange)="set(index, $event)"
+          >
+            <andes-button variant="outline" andesPopoverTrigger
+              >Panel {{ index + 1 }}</andes-button
+            >
+          </andes-popover>
+        }
+      </div>
+    </div>
+  `,
+})
+class RapidDemo {
+  protected readonly indexes = [0, 1, 2];
+  protected readonly states = signal([false, false, false]);
+
+  protected set(index: number, open: boolean): void {
+    this.states.update((all) =>
+      all.map((one, i) => (i === index ? open : one)),
+    );
+  }
+
+  protected flip(): void {
+    this.states.update((all) => all.map((one) => !one));
+  }
+
+  /** Twelve flips, 90ms apart: each panel opens and closes before its motion has ended. */
+  protected replay(): void {
+    for (let step = 0; step < 12; step++) {
+      setTimeout(() => this.flip(), step * 90);
+    }
+  }
+}
 
 const meta: Meta<AndesPopover> = {
   title: 'Data Display/Popover/Accessibility and motion',
@@ -244,6 +308,89 @@ export const NarrowScreens: Story = {
         <andes-popover title="Terms of use" content="By continuing you agree to the terms of service and the privacy policy, which describe how your data is stored and for how long it is kept on our servers." [showArrow]="true">
           <andes-button variant="outline" andesPopoverTrigger>Read the terms</andes-button>
         </andes-popover>
+      </div>
+    `,
+  }),
+};
+
+/** Rapid toggling. */
+export const RapidToggling: Story = {
+  name: 'Rapid opening and closing',
+  parameters: about(
+    'Replay flips three panels twelve times in a second and sweeping the pointer across the buttons opens and closes them at once, so any flicker from the shadow filter or a restarted motion would show.',
+  ),
+  render: () => ({
+    moduleMetadata: { imports: [RapidDemo] },
+    template: `<andes-popover-rapid-demo />`,
+  }),
+};
+
+/** Reduced motion. */
+export const ReducedMotion: Story = {
+  name: 'Reduced motion',
+  parameters: about(
+    'With the motion tokens off, which is what the panel resolves to when the system asks for reduced motion apart from a short fade, the panel appears without drift or scale.',
+  ),
+  render: () => {
+    addStoryCss('story-popover-motion-css', MOTION_CSS);
+    return {
+      template: `
+        <div style="${wideStage}">
+          <andes-popover trigger="hover" title="Default" content="With its normal motion." [showArrow]="true">
+            <andes-button variant="outline" andesPopoverTrigger>Normal</andes-button>
+          </andes-popover>
+          <andes-popover trigger="hover" panelClass="story-motion-off" title="No motion" content="Duration, drift and scale are all off." [showArrow]="true">
+            <andes-button variant="outline" andesPopoverTrigger>Tokens off</andes-button>
+          </andes-popover>
+        </div>
+      `,
+    };
+  },
+};
+
+/** Arrow alignment, dark. */
+export const ArrowAlignmentDark: Story = {
+  name: 'Arrow alignment, dark',
+  globals: { theme: 'dark' },
+  parameters: about(
+    'All twelve placements open at once on the dark theme: the border, the arrow outline, the fill and the shadow stay one silhouette.',
+  ),
+  render: () => ({
+    props: { placements: PLACEMENT_RING },
+    template: `
+      <div style="${placementBoard}">
+        @for (placement of placements; track placement) {
+          <div style="display: flex; align-items: center; justify-content: center; min-height: 9.5rem;">
+            <andes-popover [placement]="placement" [showArrow]="true" ${OPEN_FOR_GOOD} [content]="placement">
+              <andes-button size="sm" variant="outline" andesPopoverTrigger>{{ placement }}</andes-button>
+            </andes-popover>
+          </div>
+        }
+      </div>
+    `,
+  }),
+};
+
+/** Arrow alignment, right to left. */
+export const ArrowAlignmentRtl: Story = {
+  name: 'Arrow alignment, right to left',
+  parameters: {
+    dir: 'rtl',
+    ...about(
+      'All twelve placements open at once under a right-to-left document, where the start and end edges swap but the left and right sides do not.',
+    ),
+  },
+  render: () => ({
+    props: { placements: PLACEMENT_RING },
+    template: `
+      <div style="${placementBoard}">
+        @for (placement of placements; track placement) {
+          <div style="display: flex; align-items: center; justify-content: center; min-height: 9.5rem;">
+            <andes-popover [placement]="placement" [showArrow]="true" ${OPEN_FOR_GOOD} [content]="placement">
+              <andes-button size="sm" variant="outline" andesPopoverTrigger>{{ placement }}</andes-button>
+            </andes-popover>
+          </div>
+        }
       </div>
     `,
   }),

@@ -14,6 +14,8 @@ import {
 } from '../../testing/popover-story-kit';
 import { AndesButton } from '../button/button';
 import { AndesSwitch } from '../switch/switch';
+import { AndesTooltip } from '../tooltip/tooltip';
+import { AndesTooltipTrigger } from '../tooltip/tooltip-trigger';
 import { AndesPopconfirmTrigger } from '../popover/popover-trigger';
 import { AndesPopconfirm } from './popconfirm';
 
@@ -27,7 +29,14 @@ const meta: Meta<AndesPopconfirm> = {
     withDescription,
     withPopoverKit,
     moduleMetadata({
-      imports: [AndesButton, AndesSwitch, NgIcon, AndesPopconfirmTrigger],
+      imports: [
+        AndesButton,
+        AndesSwitch,
+        AndesTooltip,
+        AndesTooltipTrigger,
+        NgIcon,
+        AndesPopconfirmTrigger,
+      ],
       // A rejected handler is reported to the app's error handler; the story keeps the console quiet.
       providers: [
         { provide: ErrorHandler, useValue: { handleError: () => undefined } },
@@ -224,6 +233,28 @@ export const ManyAtOnce: Story = {
       <div style="${wideStage}">
         <andes-popconfirm title="Delete the first?"><andes-button variant="outline" andesPopconfirmTrigger>First</andes-button></andes-popconfirm>
         <andes-popconfirm title="Delete the second?"><andes-button variant="outline" andesPopconfirmTrigger>Second</andes-button></andes-popconfirm>
+      </div>
+    `,
+  }),
+};
+
+/** Disabled with a tooltip. */
+export const DisabledWithTooltip: Story = {
+  name: 'Disabled trigger with a tooltip',
+  parameters: about(
+    'A disabled button explains itself through a tooltip on a wrapper, while the popconfirm on an enabled sibling keeps working beside it.',
+  ),
+  render: () => ({
+    template: `
+      <div style="${wideStage}">
+        <andes-tooltip content="Only owners can delete." [openDelay]="0">
+          <span andesTooltipTrigger tabindex="0" style="display: inline-block; cursor: not-allowed;">
+            <andes-button variant="danger" disabled style="pointer-events: none;">Delete</andes-button>
+          </span>
+        </andes-tooltip>
+        <andes-popconfirm title="Archive the task?" okText="Archive">
+          <andes-button variant="outline" andesPopconfirmTrigger>Archive</andes-button>
+        </andes-popconfirm>
       </div>
     `,
   }),

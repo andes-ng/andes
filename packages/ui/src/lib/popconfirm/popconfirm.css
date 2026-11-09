@@ -93,3 +93,22 @@
   justify-content: flex-end;
   gap: var(--andes-space-2);
 }
+
+/* On a coloured panel (a `color` preset or any colour) the warning amber would sit on a fill it
+   cannot be read on (amber on amber, amber on blue), and the Cancel button's own dark label on a
+   dark fill: both take the panel's text colour instead, and the button an outline of it. */
+::ng-deep .andes-popover-content[data-color] .andes-popconfirm-icon {
+  color: var(--andes-popover-foreground, currentcolor);
+}
+
+::ng-deep
+  .andes-popover-content[data-color]
+  .andes-popconfirm-icon-default
+  line {
+  stroke: var(--andes-popover-background);
+}
+
+::ng-deep .andes-popover-content[data-color] .andes-popconfirm-cancel button {
+  color: var(--andes-popover-foreground, currentcolor);
+  border-color: color-mix(in srgb, currentcolor 55%, transparent);
+}

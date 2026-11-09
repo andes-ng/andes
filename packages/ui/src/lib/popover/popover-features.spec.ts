@@ -1311,3 +1311,52 @@ describe('AndesPopover - a trigger host stretched by its grid cell', () => {
     },
   );
 });
+
+describe('AndesPopover - a trigger that moves under an open panel', () => {
+  withElementGeometry();
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('puts the panel back against the trigger when the trigger moves without a scroll or a resize', async () => {
+    vi.useFakeTimers();
+    const fixture = TestBed.createComponent(GapHost);
+    fixture.detectChanges();
+    const trigger = document.getElementById('trigger') as HTMLElement;
+    let top = 100;
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+      function (this: HTMLElement) {
+        const box =
+          this === trigger
+            ? { left: 100, top, width: 80, height: 30 }
+            : { left: 0, top: 0, width: 0, height: 0 };
+        return {
+          ...box,
+          x: box.left,
+          y: box.top,
+          right: box.left + box.width,
+          bottom: box.top + box.height,
+          toJSON: () => ({}),
+        } as DOMRect;
+      },
+    );
+    trigger.click();
+    fixture.detectChanges();
+    await vi.advanceTimersByTimeAsync(60);
+    const overlay = (
+      fixture.componentInstance.popover() as unknown as {
+        overlay: { updatePosition(): void };
+      }
+    ).overlay;
+    const update = vi.spyOn(overlay, 'updatePosition');
+
+    await vi.advanceTimersByTimeAsync(60);
+    expect(update).not.toHaveBeenCalled();
+
+    top = 160;
+    await vi.advanceTimersByTimeAsync(60);
+
+    expect(update).toHaveBeenCalled();
+  });
+});

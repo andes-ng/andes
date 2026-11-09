@@ -1,9 +1,13 @@
+import { Component, type OnDestroy } from '@angular/core';
 import { NgIcon } from '@ng-icons/core';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 
 import {
   about,
   addStoryCss,
+  bar,
+  darkBox,
+  OPEN_FOR_GOOD,
   stage,
   withDescription,
   withPopoverKit,
@@ -206,4 +210,83 @@ export const Motion: Story = {
       `,
     };
   },
+};
+
+/** Colours, light and dark. */
+export const ColoursLightAndDark: Story = {
+  name: 'Colours, light and dark',
+  parameters: about(
+    'Every preset and a custom colour open at once on a light and on a dark surface, with the buttons restyled for the fill, to compare the text, the arrow and the shadow.',
+  ),
+  render: () => ({
+    props: { colours: [...ANDES_POPOVER_PRESET_COLORS, '#7c3aed'] },
+    template: `
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div id="story-confirm-light" style="padding: 7rem 1rem 1rem; display: grid; grid-template-columns: repeat(4, 10rem); gap: 8.5rem 1rem; justify-content: center;">
+          @for (colour of colours; track colour) {
+            <andes-popconfirm container="#story-confirm-light" [color]="colour" [title]="colour" description="Light surface." [okButtonProps]="{ variant: 'secondary' }" [cancelButtonProps]="{ variant: 'ghost' }" ${OPEN_FOR_GOOD}>
+              <andes-button size="sm" variant="outline" andesPopconfirmTrigger>{{ colour }}</andes-button>
+            </andes-popconfirm>
+          }
+        </div>
+        <div id="story-confirm-dark" data-andes-theme="dark" style="${darkBox} padding-top: 7rem; display: grid; grid-template-columns: repeat(4, 10rem); gap: 8.5rem 1rem; justify-content: center;">
+          @for (colour of colours; track colour) {
+            <andes-popconfirm container="#story-confirm-dark" [color]="colour" [title]="colour" description="Dark surface." [okButtonProps]="{ variant: 'secondary' }" [cancelButtonProps]="{ variant: 'ghost' }" ${OPEN_FOR_GOOD}>
+              <andes-button size="sm" variant="outline" andesPopconfirmTrigger>{{ colour }}</andes-button>
+            </andes-popconfirm>
+          }
+        </div>
+      </div>
+    `,
+  }),
+};
+
+/** Changes the root font size for the demo and puts it back when the demo goes. */
+@Component({
+  selector: 'andes-popconfirm-root-size',
+  imports: [AndesButton, AndesPopconfirm, AndesPopconfirmTrigger],
+  template: `
+    <div style="${stage}">
+      <div style="${bar}">
+        @for (size of sizes; track size) {
+          <andes-button size="sm" variant="outline" (click)="setRoot(size)"
+            >Root {{ size }}</andes-button
+          >
+        }
+      </div>
+      <andes-popconfirm
+        title="Sized in rem"
+        description="Change the root size to see the text and padding follow."
+        [defaultOpen]="true"
+        [closeOnOutsideClick]="false"
+      >
+        <andes-button variant="outline" andesPopconfirmTrigger
+          >Open</andes-button
+        >
+      </andes-popconfirm>
+    </div>
+  `,
+})
+class RootSizeDemo implements OnDestroy {
+  protected readonly sizes = ['16px', '18px', '20px'];
+
+  protected setRoot(size: string): void {
+    document.documentElement.style.fontSize = size === '16px' ? '' : size;
+  }
+
+  ngOnDestroy(): void {
+    document.documentElement.style.fontSize = '';
+  }
+}
+
+/** Root font size. */
+export const RootFontSize: Story = {
+  name: 'Larger root text',
+  parameters: about(
+    'Raising the root font size to 18px or 20px scales the question, the description, the padding and the gap, while the buttons and the arrow keep their designed shape.',
+  ),
+  render: () => ({
+    moduleMetadata: { imports: [RootSizeDemo] },
+    template: `<andes-popconfirm-root-size />`,
+  }),
 };

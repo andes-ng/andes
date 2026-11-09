@@ -16,9 +16,15 @@ import { AndesAvatar } from '../avatar/avatar';
 import { AndesAvatarFallback } from '../avatar/avatar-fallback';
 import { AndesButton } from '../button/button';
 import { AndesInput } from '../input/input';
+import { AndesDropdownMenu } from '../dropdown-menu/dropdown-menu';
+import { AndesDropdownMenuContent } from '../dropdown-menu/dropdown-menu-content';
+import { AndesDropdownMenuItem } from '../dropdown-menu/dropdown-menu-item';
+import { AndesDropdownMenuTrigger } from '../dropdown-menu/dropdown-menu-trigger';
 import { AndesSelect } from '../select/select';
 import { AndesSwitch } from '../switch/switch';
 import { AndesTag } from '../tag/tag';
+import { AndesTooltip } from '../tooltip/tooltip';
+import { AndesTooltipTrigger } from '../tooltip/tooltip-trigger';
 import { AndesPopover } from './popover';
 import { AndesPopoverContent } from './popover-content';
 import {
@@ -41,8 +47,14 @@ const meta: Meta<AndesPopover> = {
         AndesAvatarFallback,
         AndesButton,
         AndesInput,
+        AndesDropdownMenu,
+        AndesDropdownMenuContent,
+        AndesDropdownMenuItem,
+        AndesDropdownMenuTrigger,
         AndesSelect,
         AndesSwitch,
+        AndesTooltip,
+        AndesTooltipTrigger,
         AndesTag,
         NgIcon,
         AndesPopoverTrigger,
@@ -154,32 +166,6 @@ export const NotificationSettings: Story = {
               <andes-switch size="sm" [(checked)]="push">Push</andes-switch>
               <andes-switch size="sm" [(checked)]="digest">Weekly digest</andes-switch>
             </div>
-          </andes-popover-content>
-        </andes-popover>
-      </div>
-    `,
-  }),
-};
-
-/** Nested. */
-export const NestedPopovers: Story = {
-  name: 'Nested popovers',
-  parameters: about(
-    'A popover can open another from inside: a press in the inner panel does not close the outer one, and Escape closes the inner panel first.',
-  ),
-  render: () => ({
-    template: `
-      <div style="${stage}">
-        <andes-popover title="Outer" [showArrow]="true" placement="bottomLeft">
-          <andes-button variant="outline" andesPopoverTrigger>Outer</andes-button>
-          <andes-popover-content style="width: 15rem;">
-            <div andesPopoverHeader>
-              <h3 andesPopoverTitle>Outer</h3>
-              <p andesPopoverDescription>Open the inner one from here.</p>
-            </div>
-            <andes-popover placement="right" title="Inner" content="Escape closes me first." [showArrow]="true">
-              <andes-button size="sm" variant="outline" andesPopoverTrigger>Inner</andes-button>
-            </andes-popover>
           </andes-popover-content>
         </andes-popover>
       </div>
@@ -329,6 +315,100 @@ export const Toolbar: Story = {
             <andes-button size="icon-sm" variant="outline" andesPopoverTrigger aria-label="Lock"><ng-icon name="lucideLock" aria-hidden="true" /></andes-button>
           </andes-popover>
         </div>
+      </div>
+    `,
+  }),
+};
+
+/** Two levels. */
+export const NestedTwoLevels: Story = {
+  name: 'Nested, two levels',
+  parameters: about(
+    'A popover opened from inside another: its panel and arrow cast their own shadow over the parent, Escape closes the inner one first, and a press on the page closes both while a press inside the inner panel closes neither.',
+  ),
+  render: () => ({
+    template: `
+      <div style="${stage} padding-top: 8rem;">
+        <andes-popover placement="bottomLeft" [showArrow]="true">
+          <andes-button variant="outline" andesPopoverTrigger>Level 1</andes-button>
+          <andes-popover-content style="width: 16rem;">
+            <div andesPopoverHeader>
+              <h3 andesPopoverTitle>Level 1</h3>
+              <p andesPopoverDescription>Open the next level from here.</p>
+            </div>
+            <andes-popover placement="right" title="Level 2" content="Escape closes me first." [showArrow]="true">
+              <andes-button size="sm" variant="outline" andesPopoverTrigger>Level 2</andes-button>
+            </andes-popover>
+          </andes-popover-content>
+        </andes-popover>
+      </div>
+    `,
+  }),
+};
+
+/** Three levels. */
+export const NestedThreeLevels: Story = {
+  name: 'Nested, three levels',
+  parameters: about(
+    'Three panels stacked over each other, each above its parent: Escape closes them one level at a time from the top, a press on the page closes all three, and a press inside the top one closes none.',
+  ),
+  render: () => ({
+    template: `
+      <div style="${stage} padding-top: 8rem;">
+        <andes-popover placement="bottomLeft" [showArrow]="true">
+          <andes-button variant="outline" andesPopoverTrigger>Level 1</andes-button>
+          <andes-popover-content style="width: 15rem;">
+            <p style="margin: 0 0 0.5rem;">Level 1</p>
+            <andes-popover placement="right" [showArrow]="true">
+              <andes-button size="sm" variant="outline" andesPopoverTrigger>Level 2</andes-button>
+              <andes-popover-content style="width: 13rem;">
+                <p style="margin: 0 0 0.5rem;">Level 2</p>
+                <andes-popover placement="right" title="Level 3" content="The last one." [showArrow]="true">
+                  <andes-button size="sm" variant="outline" andesPopoverTrigger>Level 3</andes-button>
+                </andes-popover>
+              </andes-popover-content>
+            </andes-popover>
+          </andes-popover-content>
+        </andes-popover>
+      </div>
+    `,
+  }),
+};
+
+/** Controls inside. */
+export const ControlsInsidePopover: Story = {
+  name: 'Select, menu and tooltip inside a popover',
+  parameters: about(
+    'A select list, a dropdown menu and a tooltip all open over the panel that holds them without closing it, and each closes on its own before the popover does.',
+  ),
+  render: () => ({
+    props: {
+      status: signal<unknown>('open'),
+      options: [
+        { value: 'open', label: 'Open' },
+        { value: 'closed', label: 'Closed' },
+      ],
+    },
+    template: `
+      <div style="${stage} padding-top: 8rem;">
+        <andes-popover placement="bottomLeft" [showArrow]="true">
+          <andes-button variant="outline" andesPopoverTrigger>Open the panel</andes-button>
+          <andes-popover-content style="width: 17rem;">
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+              <andes-select aria-label="Status" size="sm" [options]="options" [(value)]="status" />
+              <andes-dropdown-menu>
+                <andes-button size="sm" variant="outline" andesDropdownMenuTrigger>Menu</andes-button>
+                <andes-dropdown-menu-content>
+                  <andes-dropdown-menu-item>Rename</andes-dropdown-menu-item>
+                  <andes-dropdown-menu-item>Duplicate</andes-dropdown-menu-item>
+                </andes-dropdown-menu-content>
+              </andes-dropdown-menu>
+              <andes-tooltip content="A tooltip over the panel" side="right" [openDelay]="0">
+                <andes-button size="sm" variant="outline" andesTooltipTrigger>Tooltip</andes-button>
+              </andes-tooltip>
+            </div>
+          </andes-popover-content>
+        </andes-popover>
       </div>
     `,
   }),

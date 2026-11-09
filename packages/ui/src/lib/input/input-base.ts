@@ -158,6 +158,11 @@ export abstract class AndesInputBase implements ControlValueAccessor {
   readonly maxLength = input<number | undefined>(undefined);
   readonly id = input<string | undefined>(undefined);
   readonly name = input<string | undefined>(undefined);
+  /**
+   * The virtual keyboard to offer (`numeric`, `decimal`, `tel`, `email`...), written on the
+   * native field as `inputmode`.
+   */
+  readonly inputMode = input<string | undefined>(undefined);
   readonly ariaLabel = input<string | undefined>(undefined, {
     alias: 'aria-label',
   });

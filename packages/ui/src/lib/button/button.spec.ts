@@ -298,6 +298,35 @@ describe('AndesButton', () => {
     expect(host.hasAttribute('aria-invalid')).toBe(false);
   });
 
+  it('puts aria-current on the real button or link, not the host, and omits it by default', () => {
+    @Component({
+      imports: [AndesButton],
+      template: `<andes-button class="plain">1</andes-button>
+        <andes-button class="current" aria-current="page">2</andes-button>
+        <andes-button class="link" href="/page/3" aria-current="page"
+          >3</andes-button
+        >`,
+    })
+    class CurrentHost {}
+
+    const fixture = TestBed.createComponent(CurrentHost);
+    fixture.detectChanges();
+    const root: HTMLElement = fixture.nativeElement;
+
+    expect(
+      root.querySelector('.plain button')?.hasAttribute('aria-current'),
+    ).toBe(false);
+    expect(
+      root.querySelector('.current button')?.getAttribute('aria-current'),
+    ).toBe('page');
+    expect(root.querySelector('.current')?.hasAttribute('aria-current')).toBe(
+      false,
+    );
+    expect(root.querySelector('.link a')?.getAttribute('aria-current')).toBe(
+      'page',
+    );
+  });
+
   it('defaults to type="button", never the native submit default', () => {
     const { button } = createHost();
 

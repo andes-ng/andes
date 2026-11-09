@@ -99,7 +99,7 @@ export * from './lib/palette';
 
 // @slot progress
 
-// @slot qr-code
+export * from './lib/qr-code';
 
 export * from './lib/radio-group';
 

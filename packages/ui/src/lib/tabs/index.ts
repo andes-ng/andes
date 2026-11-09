@@ -13,6 +13,7 @@ export type {
   AndesTabsMoreContext,
   AndesTabsMoreTab,
   AndesTabsMoreTrigger,
+  AndesTabsMotion,
   AndesTabsOrientation,
   AndesTabsPosition,
   AndesTabsReorderEvent,

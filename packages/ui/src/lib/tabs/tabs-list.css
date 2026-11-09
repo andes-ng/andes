@@ -24,18 +24,13 @@
   flex: 1 1 auto;
 }
 
-/* The pill track: a muted rounded strip the raised tab sits in. */
+/* The thumb types: the track and the thumb belong to the bar (see tabs.css). Pill tabs sit
+   4px apart so the tinted thumbs never touch; segmented tabs share the track edge to edge and
+   carry their own padding, as the options of a segmented control do. */
 :host([data-variant='pill']) {
-  gap: 0;
-  padding: 2px;
-  border-radius: var(--andes-radius-lg);
-  background: var(--andes-tabs-pill-track-background, var(--andes-color-muted));
+  gap: var(--andes-space-1);
 }
 
-/* The segmented group: one outlined, rounded box whose seams the tabs draw. */
 :host([data-variant='segmented']) {
   gap: 0;
-  overflow: hidden;
-  border: 1px solid var(--andes-color-border);
-  border-radius: var(--andes-radius-lg);
 }

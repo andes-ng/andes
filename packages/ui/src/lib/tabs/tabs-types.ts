@@ -26,8 +26,10 @@ export type AndesTabsActivationMode = 'automatic' | 'manual';
  * - `editable-card` — `card`, plus a per-tab remove button and an add button in the bar.
  *   Neither adds nor removes anything itself: both only emit `(edit)`, and the consumer
  *   updates its own list of tabs in response.
- * - `pill` — the tabs sit in a muted rounded track and the active one is raised out of it.
- * - `segmented` — joined, outlined buttons like a radio-button group; the active one is filled.
+ * - `pill` — a tinted, rounded thumb glides behind the active tab, whose label takes the
+ *   primary colour; the track is transparent.
+ * - `segmented` — the tabs sit in a muted track and a white, raised thumb glides behind the
+ *   active one.
  */
 export type AndesTabsType =
   'line' | 'card' | 'editable-card' | 'pill' | 'segmented';
@@ -47,13 +49,26 @@ export type AndesTabsVariant = 'line' | 'card' | 'pill' | 'segmented';
 
 /** Fine-grained form of the `animated` input. */
 export interface AndesTabsAnimated {
-  /** Whether the ink bar slides between tabs. Default `true`. */
+  /** Whether the ink bar (and the thumb of the `pill` and `segmented` types) slides between
+   * tabs. Default `true`. */
   inkBar?: boolean;
   /**
    * How a newly shown panel enters: `true` or `'fade'` fades in, `'slide'` also moves in from
    * the side the new tab sits on. Default `false`.
    */
   tabPane?: boolean | 'fade' | 'slide';
+}
+
+/**
+ * Timing of the sliding indicator (the ink bar of the `line` type and the thumb of the `pill`
+ * and `segmented` types). Both parts are optional; the defaults are 200ms for the ink bar and
+ * 300ms for the thumb, and `prefers-reduced-motion: reduce` still removes the slide.
+ */
+export interface AndesTabsMotion {
+  /** Milliseconds (a number) or any CSS time such as `'0.3s'`. `0` snaps without sliding. */
+  duration?: number | string;
+  /** Any CSS easing function, e.g. `'ease-in-out'` or `'cubic-bezier(0.2, 0, 0, 1)'`. */
+  easing?: string;
 }
 
 /** How a newly shown panel enters, once `animated` has been resolved. */
@@ -219,6 +234,8 @@ export interface AndesTabsContext {
   /** The visual variant the type resolves to: `line`, `card`, `pill` or `segmented`. */
   readonly variant: Signal<AndesTabsVariant>;
   readonly stretch: Signal<boolean>;
+  /** Whether the thumb is in place (`ready`) or the selected tab draws it itself (`pending`). */
+  readonly thumbState: Signal<'ready' | 'pending'>;
   /** Resolved per-part classes from the `classNames` input. */
   readonly partClasses: Signal<Partial<Record<AndesTabsSemanticPart, string>>>;
   /** Resolved per-part inline styles from the `styles` input. */

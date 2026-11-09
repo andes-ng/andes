@@ -37,7 +37,8 @@
   position: relative;
   display: flex;
   align-items: stretch;
-  gap: var(--andes-space-2);
+  /* 12px between the extra content and the tabs. */
+  gap: var(--andes-space-3);
   flex: none;
   min-width: 0;
   min-height: 0;
@@ -248,10 +249,94 @@
    trailing visibly behind the click. */
 .andes-tabs__ink-bar--animated {
   transition:
-    left 0.2s cubic-bezier(0.2, 0, 0, 1),
-    width 0.2s cubic-bezier(0.2, 0, 0, 1),
-    top 0.2s cubic-bezier(0.2, 0, 0, 1),
-    height 0.2s cubic-bezier(0.2, 0, 0, 1);
+    left var(--andes-tabs-duration, 200ms)
+      var(--andes-tabs-easing, cubic-bezier(0.2, 0, 0, 1)),
+    width var(--andes-tabs-duration, 200ms)
+      var(--andes-tabs-easing, cubic-bezier(0.2, 0, 0, 1)),
+    top var(--andes-tabs-duration, 200ms)
+      var(--andes-tabs-easing, cubic-bezier(0.2, 0, 0, 1)),
+    height var(--andes-tabs-duration, 200ms)
+      var(--andes-tabs-easing, cubic-bezier(0.2, 0, 0, 1));
+}
+
+/* ---- Thumb (pill and segmented) ----------------------------------------------------------- */
+
+/* The two thumb types share one recipe: a 2px inset around the tabs, in which a thumb glides
+   from the previous tab to the new one. The segment is 24px, 32px or 40px tall (see
+   tabs-trigger.css), so the whole control is 28px, 36px or 44px. The colours are private
+   properties on the bar so the tabs (separate components) inherit them. `segmented` is a muted
+   track under a raised white thumb; `pill` has no track and a thumb tinted with the primary
+   colour. */
+.andes-tabs__bar--pill,
+.andes-tabs__bar--segmented {
+  --_radius: var(--andes-radius-md, 0.375rem);
+  --_item-radius: calc(var(--_radius) - 2px);
+  --_track-bg: var(--andes-tabs-track-bg, transparent);
+  --_thumb-bg: var(
+    --andes-tabs-thumb-bg,
+    color-mix(in srgb, var(--andes-color-primary) 11%, transparent)
+  );
+  --_thumb-border: var(--andes-tabs-thumb-border, transparent);
+  --_thumb-shadow: var(--andes-tabs-thumb-shadow, none);
+  /* The primary text colour, pulled toward the foreground so it keeps 4.5:1 on the tint. */
+  --_thumb-fg: var(
+    --andes-tabs-thumb-fg,
+    color-mix(
+      in srgb,
+      var(--andes-color-primary-text) 70%,
+      var(--andes-color-foreground)
+    )
+  );
+}
+
+.andes-tabs__bar--segmented {
+  --_track-bg: var(--andes-tabs-track-bg, var(--andes-color-muted));
+  --_thumb-bg: var(--andes-tabs-thumb-bg, var(--andes-color-background));
+  --_thumb-border: var(
+    --andes-tabs-thumb-border,
+    color-mix(in srgb, var(--andes-color-border) 55%, transparent)
+  );
+  --_thumb-shadow: var(--andes-tabs-thumb-shadow, var(--andes-shadow-sm));
+  --_thumb-fg: var(--andes-tabs-thumb-fg, var(--andes-color-foreground));
+}
+
+.andes-tabs__bar--pill .andes-tabs__nav-group,
+.andes-tabs__bar--segmented .andes-tabs__nav-group {
+  border-radius: var(--_radius);
+  background: var(--_track-bg);
+}
+
+.andes-tabs__bar--pill .andes-tabs__nav,
+.andes-tabs__bar--segmented .andes-tabs__nav {
+  padding: 2px;
+}
+
+/* Placed with measured pixels, so it uses physical left/top on purpose: the measured offsets
+   are physical in right-to-left layouts too. It lives in the scrolling nav, so it scrolls
+   along with the tabs. */
+.andes-tabs__thumb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  box-sizing: border-box;
+  pointer-events: none;
+  border: 1px solid var(--_thumb-border);
+  border-radius: var(--_item-radius);
+  background: var(--_thumb-bg);
+  box-shadow: var(--_thumb-shadow);
+}
+
+/* Only drawn once measured, and created in place, so the first placement never glides in from
+   a corner; every later change of tab (or of size) glides. */
+.andes-tabs__thumb--animated {
+  transition:
+    transform var(--andes-tabs-duration, 300ms)
+      var(--andes-tabs-easing, cubic-bezier(0.645, 0.045, 0.355, 1)),
+    width var(--andes-tabs-duration, 300ms)
+      var(--andes-tabs-easing, cubic-bezier(0.645, 0.045, 0.355, 1)),
+    height var(--andes-tabs-duration, 300ms)
+      var(--andes-tabs-easing, cubic-bezier(0.645, 0.045, 0.355, 1));
 }
 
 /* ---- Scroll arrows and add button --------------------------------------------------------- */
@@ -430,7 +515,26 @@
     scroll-behavior: auto;
   }
 
-  .andes-tabs__ink-bar--animated {
+  .andes-tabs__ink-bar--animated,
+  .andes-tabs__thumb--animated {
     transition: none;
+  }
+}
+
+/* Forced colors (Windows high contrast) replace the author colours, which would leave the thumb
+   invisible and drop the track: map the outline, the thumb and, in tabs-trigger.css, the
+   selected label onto the system palette. */
+@media (forced-colors: active) {
+  .andes-tabs__bar--pill .andes-tabs__nav-group,
+  .andes-tabs__bar--segmented .andes-tabs__nav-group {
+    outline: 1px solid CanvasText;
+    outline-offset: -1px;
+  }
+
+  .andes-tabs__thumb {
+    forced-color-adjust: none;
+    border-color: Highlight;
+    background-color: Highlight;
+    box-shadow: none;
   }
 }

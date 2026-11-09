@@ -65,6 +65,7 @@ import {
   AndesTabsMoreContext,
   AndesTabsMoreTab,
   AndesTabsMoreTrigger,
+  AndesTabsMotion,
   AndesTabsOrientation,
   AndesTabsPaneMotion,
   AndesTabsPosition,
@@ -80,6 +81,9 @@ let nextTabsId = 0;
 
 /** `Node.DOCUMENT_POSITION_FOLLOWING`, inlined so this file never touches the `Node` global. */
 const DOCUMENT_POSITION_FOLLOWING = 4;
+
+/** The size in px of the fade at each scrollable edge of the bar (2rem in tabs.css). */
+const EDGE_FADE = 32;
 
 /** How far one click on a scroll arrow moves the tab bar, as a fraction of its visible length. */
 const SCROLL_PAGE_FRACTION = 0.8;
@@ -129,6 +133,26 @@ function sameKeys(a: readonly string[], b: readonly string[]): boolean {
 
 /** How long the pointer may be outside a hover-opened overflow menu before it closes. */
 const MORE_HOVER_CLOSE_DELAY = 150;
+
+/** Where the thumb sits, in px from the nav's padding edge, and how big it is. */
+interface ThumbBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+function sameThumb(a: ThumbBox | null, b: ThumbBox | null) {
+  return (
+    a === b ||
+    (!!a &&
+      !!b &&
+      a.x === b.x &&
+      a.y === b.y &&
+      a.width === b.width &&
+      a.height === b.height)
+  );
+}
 
 function sameInkBar(a: InkBarGeometry | null, b: InkBarGeometry | null) {
   return (
@@ -198,6 +222,8 @@ function sameInkBar(a: InkBarGeometry | null, b: InkBarGeometry | null) {
   host: {
     '[attr.data-position]': 'position()',
     '[attr.data-type]': 'type()',
+    '[style.--andes-tabs-duration]': 'motionDuration()',
+    '[style.--andes-tabs-easing]': 'motion()?.easing ?? null',
     '[class]': 'partClasses().root ?? null',
     '[style]': 'partStyles().root ?? null',
   },
@@ -269,6 +295,13 @@ export class AndesTabs implements AndesTabsContext {
     inkBar: true,
     tabPane: false,
   });
+
+  /**
+   * Timing of the sliding ink bar and thumb (`{ duration, easing }`), written to the
+   * `--andes-tabs-duration` and `--andes-tabs-easing` custom properties, which can also be set
+   * from CSS instead. Reduced-motion users never get a slide.
+   */
+  readonly motion = input<AndesTabsMotion | undefined>(undefined);
 
   /** Customizes the `line`-type ink bar's length and alignment. */
   readonly indicator = input<AndesTabsIndicator | undefined>(undefined);
@@ -403,6 +436,16 @@ export class AndesTabs implements AndesTabsContext {
   readonly paneMotion = computed(() => this.resolvedAnimated().tabPane);
 
   readonly tabPaneAnimated = computed(() => this.paneMotion() !== 'none');
+
+  protected readonly motionDuration = computed(() => {
+    const duration = this.motion()?.duration;
+    if (duration === undefined) {
+      return null;
+    }
+    return typeof duration === 'number'
+      ? `${Math.max(0, duration)}ms`
+      : duration;
+  });
 
   private readonly _paneDirection = signal<'forward' | 'backward'>('forward');
   readonly paneDirection = this._paneDirection.asReadonly();
@@ -542,6 +585,13 @@ export class AndesTabs implements AndesTabsContext {
     equal: sameInkBar,
   });
 
+  private readonly thumb = signal<ThumbBox | null>(null, { equal: sameThumb });
+
+  /** Whether this type slides a thumb behind the active tab (`pill` and `segmented`). */
+  protected readonly hasThumb = computed(
+    () => this.variant() === 'pill' || this.variant() === 'segmented',
+  );
+
   /** Values of the tabs at least partly scrolled out of view, in bar order. */
   private readonly hiddenKeys = signal<readonly string[]>([], {
     equal: sameKeys,
@@ -550,6 +600,15 @@ export class AndesTabs implements AndesTabsContext {
   // The ink bar would mark the dragged tab's old place, so it steps aside during a drag.
   protected readonly showInkBar = computed(
     () => this.type() === 'line' && this.inkBar() !== null && !this.sorting(),
+  );
+
+  // Like the ink bar, the thumb steps aside during a drag; the dragged tab then draws it.
+  protected readonly showThumb = computed(
+    () => this.hasThumb() && this.thumb() !== null && !this.sorting(),
+  );
+
+  readonly thumbState = computed<'ready' | 'pending'>(() =>
+    this.showThumb() ? 'ready' : 'pending',
   );
 
   protected readonly showMore = computed(
@@ -617,6 +676,29 @@ export class AndesTabs implements AndesTabsContext {
     return { ...this.partStyles().indicator, ...geometry };
   });
 
+  protected readonly thumbClasses = computed(() =>
+    clsx(
+      'andes-tabs__thumb',
+      this.resolvedAnimated().inkBar && 'andes-tabs__thumb--animated',
+      this.partClasses().indicator,
+    ),
+  );
+
+  protected readonly thumbStyle = computed(() => {
+    const box = this.thumb();
+    if (!box) {
+      return {};
+    }
+    return {
+      ...this.partStyles().indicator,
+      width: `${box.width}px`,
+      height: `${box.height}px`,
+      transform: `translate(${box.x}px, ${box.y}px)`,
+    };
+  });
+
+  private triggerObserver: ResizeObserver | undefined;
+  private readonly observedTriggers = new Set<HTMLElement>();
   private lastScrollPosition = 0;
   private lastScrollIntoViewKey: string | undefined;
 
@@ -685,7 +767,10 @@ export class AndesTabs implements AndesTabsContext {
     // measurement, instead of sliding from the old orientation's numbers.
     effect(() => {
       this.resolvedOrientation();
-      untracked(() => this.inkBar.set(null));
+      untracked(() => {
+        this.inkBar.set(null);
+        this.thumb.set(null);
+      });
     });
 
     // Which way the selection moved along the bar, for the sliding panel motion.
@@ -746,7 +831,13 @@ export class AndesTabs implements AndesTabsContext {
       const nav = this.nav()?.nativeElement;
       if (scroller) observer.observe(scroller);
       if (nav) observer.observe(nav);
+      this.triggerObserver = observer;
+      this.observeTriggers();
       this.destroyRef.onDestroy(() => observer.disconnect());
+      // Web fonts change the label widths after the first measurement.
+      void host.ownerDocument.fonts?.ready.then(() =>
+        this.layoutVersion.update((v) => v + 1),
+      );
     });
   }
 
@@ -992,6 +1083,53 @@ export class AndesTabs implements AndesTabsContext {
     return value instanceof TemplateRef ? value : undefined;
   }
 
+  /**
+   * Re-measures when a single tab is resized (a count appearing in its label, a web font, an
+   * icon), which the bar's own size need not change for, so the ink bar and the thumb follow.
+   */
+  private observeTriggers(): void {
+    const observer = this.triggerObserver;
+    if (!observer) {
+      return;
+    }
+    const current = new Set(this._triggers().map((t) => t.element));
+    for (const element of this.observedTriggers) {
+      if (!current.has(element)) {
+        observer.unobserve(element);
+        this.observedTriggers.delete(element);
+      }
+    }
+    for (const element of current) {
+      if (!this.observedTriggers.has(element)) {
+        observer.observe(element);
+        this.observedTriggers.add(element);
+      }
+    }
+  }
+
+  /** The box of the active tab inside the nav, from layout offsets where they apply. */
+  private measureThumb(nav: HTMLElement, tab: HTMLElement): ThumbBox | null {
+    let box: ThumbBox;
+    if (tab.offsetParent === nav) {
+      box = {
+        x: tab.offsetLeft,
+        y: tab.offsetTop,
+        width: tab.offsetWidth,
+        height: tab.offsetHeight,
+      };
+    } else {
+      const navRect = nav.getBoundingClientRect();
+      const rect = tab.getBoundingClientRect();
+      box = {
+        x: rect.left - navRect.left,
+        y: rect.top - navRect.top,
+        width: rect.width,
+        height: rect.height,
+      };
+    }
+    return box.width > 0 && box.height > 0 ? box : null;
+  }
+
   private isRtl(element: HTMLElement): boolean {
     return getComputedStyle(element).direction === 'rtl';
   }
@@ -1018,8 +1156,12 @@ export class AndesTabs implements AndesTabsContext {
     );
     if (!active) {
       this.inkBar.set(null);
+      this.thumb.set(null);
       return;
     }
+    this.thumb.set(
+      this.hasThumb() ? this.measureThumb(nav, active.element) : null,
+    );
 
     const navRect = nav.getBoundingClientRect();
     const tabRect = active.element.getBoundingClientRect();
@@ -1040,6 +1182,7 @@ export class AndesTabs implements AndesTabsContext {
           ? origin - length
           : (origin - length) / 2);
     this.inkBar.set(origin > 0 ? { offset, length } : null);
+    this.observeTriggers();
 
     // Re-checked when the selection changes *and* when the visible length does - the scroll
     // arrows appearing on the first overflow shrink the viewport right after this first
@@ -1059,14 +1202,23 @@ export class AndesTabs implements AndesTabsContext {
   ): void {
     const view = scroller.getBoundingClientRect();
     const rect = tab.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) {
+      return;
+    }
+    // A tab brought into view is kept clear of the edge fade, which is the same size, so a
+    // tab (or the thumb behind it) never sits half faded under it. The browser clamps this at
+    // the ends of the bar.
+    const margin = EDGE_FADE;
     if (vertical) {
-      if (rect.top < view.top) scroller.scrollTop -= view.top - rect.top;
-      else if (rect.bottom > view.bottom)
-        scroller.scrollTop += rect.bottom - view.bottom;
+      if (rect.top < view.top + margin)
+        scroller.scrollTop -= view.top + margin - rect.top;
+      else if (rect.bottom > view.bottom - margin)
+        scroller.scrollTop += rect.bottom - (view.bottom - margin);
     } else {
-      if (rect.left < view.left) scroller.scrollLeft -= view.left - rect.left;
-      else if (rect.right > view.right)
-        scroller.scrollLeft += rect.right - view.right;
+      if (rect.left < view.left + margin)
+        scroller.scrollLeft -= view.left + margin - rect.left;
+      else if (rect.right > view.right - margin)
+        scroller.scrollLeft += rect.right - (view.right - margin);
     }
   }
 

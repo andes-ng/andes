@@ -1541,8 +1541,9 @@ describe('tabs motion', () => {
     const css = read('tabs.css');
     const rule =
       /\.andes-tabs__ink-bar--animated\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
-    expect(rule).toContain('0.2s');
-    expect(rule).not.toContain('0.3s');
+    // 200ms by default, through the same custom property the thumb of the pill type uses.
+    expect(rule).toContain('var(--andes-tabs-duration, 200ms)');
+    expect(rule).not.toContain('300ms');
   });
 
   it('opens the more menu with the shared soft entry and none under reduced motion', () => {

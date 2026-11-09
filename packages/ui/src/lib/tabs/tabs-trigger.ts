@@ -54,6 +54,7 @@ import { ANDES_TABS, AndesTabsTriggerRef } from './tabs-types';
   host: {
     '[attr.data-variant]': 'tabs.variant()',
     '[attr.data-stretch]': 'tabs.stretch() ? "" : null',
+    '[attr.data-thumb]': 'tabs.thumbState()',
     '[attr.data-size]': 'tabs.size()',
     '[attr.data-position]': 'tabs.position()',
     '[attr.data-orientation]': 'tabs.resolvedOrientation()',

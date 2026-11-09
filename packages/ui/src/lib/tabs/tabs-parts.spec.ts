@@ -1,6 +1,10 @@
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 
+import { readFileSync } from 'node:fs';
+
+import { atRule } from '../../testing/at-rule';
 import { AndesTabs } from './tabs';
 import { AndesTabsContent } from './tabs-content';
 import { AndesTabsList } from './tabs-list';
@@ -13,6 +17,7 @@ import { AndesTabsTrigger } from './tabs-trigger';
 import type {
   AndesTabsAnimated,
   AndesTabsIndicator,
+  AndesTabsMotion,
   AndesTabsPosition,
   AndesTabsSize,
   AndesTabsType,
@@ -37,6 +42,7 @@ import type {
       [styles]="styles()"
       [indicator]="indicator()"
       [animated]="animated()"
+      [motion]="motion()"
       [(value)]="value"
     >
       <andes-tabs-list>
@@ -63,6 +69,7 @@ class Host {
   readonly indicator = signal<AndesTabsIndicator | undefined>(undefined);
   readonly animated = signal<boolean | AndesTabsAnimated>(true);
   readonly value = signal<string | undefined>(undefined);
+  readonly motion = signal<AndesTabsMotion | undefined>(undefined);
 }
 
 /** A `ResizeObserver` the test drives by hand. */
@@ -414,6 +421,364 @@ describe('AndesTabs parts and types', () => {
         panels()[2].classList.contains('andes-tabs-content--backward'),
       ).toBe(false);
       expect(q('andes-tabs')).not.toBeNull();
+    });
+  });
+
+  describe('thumb (pill and segmented)', () => {
+    let original: typeof HTMLElement.prototype.getBoundingClientRect;
+
+    /** Lays the nav out by hand: tab `i` is 50px wide and starts at 60 * i (or 30 * i tall). */
+    function layOut(vertical: boolean) {
+      HTMLElement.prototype.getBoundingClientRect = function () {
+        let left = 0;
+        let top = 0;
+        let width = 200;
+        let height = 28;
+        if (this.tagName === 'ANDES-TABS-TRIGGER') {
+          const index = Array.from(this.parentElement?.children ?? []).indexOf(
+            this,
+          );
+          width = 50;
+          height = 24;
+          if (vertical) {
+            top = 2 + index * 30;
+            left = 2;
+          } else {
+            left = 2 + index * 60;
+            top = 2;
+          }
+        }
+        return {
+          left,
+          top,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+          x: left,
+          y: top,
+          toJSON: () => ({}),
+        } as DOMRect;
+      };
+    }
+
+    beforeEach(() => {
+      original = HTMLElement.prototype.getBoundingClientRect;
+      layOut(false);
+    });
+    afterEach(() => {
+      HTMLElement.prototype.getBoundingClientRect = original;
+    });
+
+    it.each(['pill', 'segmented'] as const)(
+      'draws one thumb under the %s active tab, in the scrolling nav',
+      async (type) => {
+        const { q, root } = await create((host) => host.type.set(type));
+        const thumb = q('.andes-tabs__nav > .andes-tabs__thumb');
+
+        expect(thumb).not.toBeNull();
+        expect(root.querySelectorAll('.andes-tabs__thumb').length).toBe(1);
+        expect(thumb?.getAttribute('aria-hidden')).toBe('true');
+        expect(thumb?.style.width).toBe('50px');
+        expect(thumb?.style.height).toBe('24px');
+        expect(thumb?.style.transform).toBe('translate(2px, 2px)');
+      },
+    );
+
+    it('draws no thumb in the line and card types', async () => {
+      for (const type of ['line', 'card', 'editable-card'] as const) {
+        TestBed.resetTestingModule();
+        const { q } = await create((host) => host.type.set(type));
+
+        expect(q('.andes-tabs__thumb')).toBeNull();
+      }
+    });
+
+    it('moves the same thumb to the newly selected tab', async () => {
+      const { q, host, settle } = await create((h) => h.type.set('segmented'));
+      const thumb = q('.andes-tabs__thumb');
+
+      host.value.set('c');
+      await settle();
+
+      expect(q('.andes-tabs__thumb')).toBe(thumb);
+      expect(thumb?.style.transform).toBe('translate(122px, 2px)');
+    });
+
+    it('moves along the height of a side bar', async () => {
+      layOut(true);
+      const { q } = await create((host) => {
+        host.type.set('pill');
+        host.position.set('left');
+        host.collapseBelow.set(null);
+        host.value.set('b');
+      });
+
+      expect(q('.andes-tabs__thumb')?.style.transform).toBe(
+        'translate(2px, 32px)',
+      );
+    });
+
+    it('keeps the styles of the indicator part on the thumb', async () => {
+      const { q } = await create((host) => {
+        host.type.set('pill');
+        host.styles.set({ indicator: { opacity: 0.5 } });
+        host.classNames.set({ indicator: 'on-indicator' });
+      });
+
+      expect(q('.andes-tabs__thumb')?.style.opacity).toBe('0.5');
+      expect(q('.andes-tabs__thumb')?.classList.contains('on-indicator')).toBe(
+        true,
+      );
+    });
+
+    it('slides only while animated allows it', async () => {
+      const { q, host, settle } = await create((h) => h.type.set('pill'));
+      expect(
+        q('.andes-tabs__thumb')?.classList.contains(
+          'andes-tabs__thumb--animated',
+        ),
+      ).toBe(true);
+
+      host.animated.set({ inkBar: false });
+      await settle();
+      expect(
+        q('.andes-tabs__thumb')?.classList.contains(
+          'andes-tabs__thumb--animated',
+        ),
+      ).toBe(false);
+    });
+
+    it('lets the selected tab draw the thumb until it is measured, and while dragging', async () => {
+      const { fixture, root, settle } = await create((host) =>
+        host.type.set('pill'),
+      );
+      const tabsInstance = fixture.debugElement.query(By.directive(AndesTabs))
+        .componentInstance as AndesTabs;
+      const trigger = () => root.querySelector('andes-tabs-trigger');
+      expect(trigger()?.getAttribute('data-thumb')).toBe('ready');
+
+      tabsInstance.setSorting(true);
+      await settle();
+
+      expect(root.querySelector('.andes-tabs__thumb')).toBeNull();
+      expect(trigger()?.getAttribute('data-thumb')).toBe('pending');
+
+      tabsInstance.setSorting(false);
+      await settle();
+      expect(root.querySelector('.andes-tabs__thumb')).not.toBeNull();
+    });
+
+    it('is pending, with no thumb, while nothing has a size', async () => {
+      HTMLElement.prototype.getBoundingClientRect = original;
+      const { q, root } = await create((host) => host.type.set('segmented'));
+
+      expect(q('.andes-tabs__thumb')).toBeNull();
+      expect(
+        root.querySelector('andes-tabs-trigger')?.getAttribute('data-thumb'),
+      ).toBe('pending');
+    });
+
+    it('re-measures when a tab is resized on its own', async () => {
+      const observers: { callback: () => void; observed: Element[] }[] = [];
+      const originalObserver = globalThis.ResizeObserver;
+      globalThis.ResizeObserver = class {
+        readonly entry: { callback: () => void; observed: Element[] };
+        constructor(callback: () => void) {
+          this.entry = { callback, observed: [] };
+          observers.push(this.entry);
+        }
+        observe(element: Element) {
+          this.entry.observed.push(element);
+        }
+        unobserve() {
+          /* Not needed here. */
+        }
+        disconnect() {
+          /* Not needed here. */
+        }
+      } as unknown as typeof ResizeObserver;
+      try {
+        const { q, root, settle } = await create((host) =>
+          host.type.set('segmented'),
+        );
+        const triggers = Array.from(
+          root.querySelectorAll('andes-tabs-trigger'),
+        );
+        expect(
+          observers.some((o) => triggers.every((t) => o.observed.includes(t))),
+        ).toBe(true);
+        expect(q('.andes-tabs__thumb')?.style.width).toBe('50px');
+
+        HTMLElement.prototype.getBoundingClientRect = function () {
+          const wide = this.tagName === 'ANDES-TABS-TRIGGER';
+          return {
+            left: 2,
+            top: 2,
+            width: wide ? 80 : 200,
+            height: wide ? 24 : 28,
+            right: 0,
+            bottom: 0,
+            x: 2,
+            y: 2,
+            toJSON: () => ({}),
+          } as DOMRect;
+        };
+        observers.forEach((o) => o.callback());
+        await settle();
+
+        expect(q('.andes-tabs__thumb')?.style.width).toBe('80px');
+      } finally {
+        globalThis.ResizeObserver = originalObserver;
+      }
+    });
+  });
+
+  describe('motion', () => {
+    it('writes the duration and the easing as custom properties', async () => {
+      const { q, host, settle } = await create((h) =>
+        h.motion.set({ duration: 450, easing: 'ease-out' }),
+      );
+
+      expect(
+        q('andes-tabs')?.style.getPropertyValue('--andes-tabs-duration'),
+      ).toBe('450ms');
+      expect(
+        q('andes-tabs')?.style.getPropertyValue('--andes-tabs-easing'),
+      ).toBe('ease-out');
+
+      host.motion.set({ duration: '0.5s' });
+      await settle();
+      expect(
+        q('andes-tabs')?.style.getPropertyValue('--andes-tabs-duration'),
+      ).toBe('0.5s');
+      expect(
+        q('andes-tabs')?.style.getPropertyValue('--andes-tabs-easing'),
+      ).toBe('');
+    });
+
+    it('sets nothing when there is no motion', async () => {
+      const { q } = await create();
+
+      expect(
+        q('andes-tabs')?.style.getPropertyValue('--andes-tabs-duration'),
+      ).toBe('');
+    });
+  });
+
+  describe('bringing a tab into view', () => {
+    let original: typeof HTMLElement.prototype.getBoundingClientRect;
+    beforeEach(() => {
+      original = HTMLElement.prototype.getBoundingClientRect;
+      HTMLElement.prototype.getBoundingClientRect = function () {
+        let left = 0;
+        let width = 0;
+        if (this.classList.contains('andes-tabs__nav-wrap')) {
+          width = 200;
+        } else if (this.tagName === 'ANDES-TABS-TRIGGER') {
+          const index = Array.from(this.parentElement?.children ?? []).indexOf(
+            this,
+          );
+          left = 10 + index * 90;
+          width = 80;
+        }
+        return {
+          left,
+          top: 0,
+          width,
+          height: width ? 30 : 0,
+          right: left + width,
+          bottom: 30,
+          x: left,
+          y: 0,
+          toJSON: () => ({}),
+        } as DOMRect;
+      };
+    });
+    afterEach(() => {
+      HTMLElement.prototype.getBoundingClientRect = original;
+    });
+
+    it('scrolls until the tab clears the 32px edge fade, not just the edge', async () => {
+      const { q, host, settle } = await create();
+      const scroller = q('.andes-tabs__nav-wrap') as HTMLElement;
+      Object.defineProperty(scroller, 'scrollLeft', {
+        configurable: true,
+        writable: true,
+        value: 0,
+      });
+
+      host.value.set('c');
+      await settle();
+      // The tab ends at 270 and the visible edge, less the fade, is 168.
+      expect(scroller.scrollLeft).toBe(102);
+
+      host.value.set('a');
+      await settle();
+      // The tab starts at 10 and must start at 32.
+      expect(scroller.scrollLeft).toBe(80);
+    });
+  });
+
+  describe('thumb stylesheet', () => {
+    const read = (file: string) =>
+      readFileSync(`packages/ui/src/lib/tabs/${file}`, 'utf8');
+
+    it('glides over 300ms by default, through the custom properties', () => {
+      const css = read('tabs.css');
+      const start = css.indexOf('.andes-tabs__thumb--animated {');
+      const rule = css.slice(start, css.indexOf('}', start));
+
+      expect(rule).toContain('var(--andes-tabs-duration, 300ms)');
+      expect(rule).toContain('var(--andes-tabs-easing,');
+      for (const property of ['transform', 'width', 'height']) {
+        expect(rule).toContain(property);
+      }
+    });
+
+    it('does not slide under reduced motion', () => {
+      const reduced = atRule(
+        read('tabs.css'),
+        '@media (prefers-reduced-motion',
+      );
+
+      expect(reduced).toContain('.andes-tabs__thumb--animated');
+      expect(reduced).toContain('transition: none');
+    });
+
+    it('maps the thumb and the selected label onto the system colours in forced colours', () => {
+      expect(atRule(read('tabs.css'), '@media (forced-colors')).toContain(
+        'background-color: Highlight',
+      );
+      expect(
+        atRule(read('tabs-trigger.css'), '@media (forced-colors'),
+      ).toContain('color: HighlightText');
+    });
+
+    it('sizes the segment 24px, 32px and 40px inside a 2px inset', () => {
+      const trigger = read('tabs-trigger.css');
+
+      expect(trigger).toContain('--_pad-y: 0.125rem');
+      expect(trigger).toContain('--_pad-y: 0.375rem');
+      expect(trigger).toContain('--_pad-y: 0.5rem');
+      expect(read('tabs.css')).toContain('padding: 2px');
+    });
+
+    it('pads the label 12px, 14px and 16px from the thumb edge', () => {
+      const trigger = read('tabs-trigger.css');
+
+      for (const padding of ['0.75rem', '0.875rem', '1rem']) {
+        expect(trigger).toContain(`--_pad-x: ${padding}`);
+      }
+    });
+
+    it('spaces pill tabs 4px apart and segmented tabs not at all', () => {
+      const list = read('tabs-list.css');
+
+      expect(list).toMatch(
+        /\[data-variant='pill'\]\)\s*\{\s*gap: var\(--andes-space-1\)/,
+      );
+      expect(list).toMatch(/\[data-variant='segmented'\]\)\s*\{\s*gap: 0/);
     });
   });
 

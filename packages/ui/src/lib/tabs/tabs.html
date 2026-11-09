@@ -54,6 +54,12 @@
           </andes-tabs-trigger>
           }
         </andes-tabs-list>
+        } @if (showThumb()) {
+        <span
+          [class]="thumbClasses()"
+          [style]="thumbStyle()"
+          aria-hidden="true"
+        ></span>
         } @if (showInkBar()) {
         <span
           [class]="inkBarClasses()"

@@ -59,8 +59,11 @@ describe('no hand-drawn icons', () => {
         return false;
       }
       const source = readFileSync(join(LIB, file), 'utf8');
-      // A stylesheet may name `<svg>` in a comment: only the data uri counts there.
-      const markers = file.endsWith('.css') ? MARKERS.slice(2) : MARKERS;
+      // A stylesheet may name `<svg>` in a comment: only the data uri counts there. A script
+      // or template may serve an svg as a data url (an export): only drawing one counts.
+      const markers = file.endsWith('.css')
+        ? MARKERS.slice(2)
+        : MARKERS.slice(0, 2);
       return markers.some((marker) => source.includes(marker));
     });
 

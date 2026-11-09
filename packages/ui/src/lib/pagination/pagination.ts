@@ -17,7 +17,6 @@ import {
   signal,
   TemplateRef,
   untracked,
-  viewChild,
 } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
@@ -30,7 +29,12 @@ import {
   lucideLoaderCircle,
 } from '@ng-icons/lucide';
 
-import { AndesButton } from '../button/button';
+import {
+  AndesButton,
+  type AndesButtonColor,
+  type AndesButtonVariant,
+} from '../button/button';
+import { AndesInput } from '../input/input';
 import { AndesSelect } from '../select/select';
 import { getAndesPaginationRange } from './pagination-range';
 
@@ -115,9 +119,9 @@ export interface AndesPaginationOriginalItemContext {
 
 /**
  * Context of an `itemRender` template. The template replaces the *content* of the
- * control, never the control itself - the pagination keeps owning the focusable
- * `<button>` (or `<a>`), its click handling, `aria-current`, `aria-label` and `disabled`
- * state, so a custom template can't accidentally drop the accessible semantics.
+ * control, never the control itself - the pagination keeps owning the focusable library
+ * button (a link with `linkFor`), its click handling, `aria-current`, `aria-label` and
+ * `disabled` state, so a custom template can't accidentally drop the accessible semantics.
  */
 export interface AndesPaginationItemRenderContext {
   /** The page the control navigates to. */
@@ -247,6 +251,8 @@ function fill(template: string, values: Record<string, string | number>) {
   return text;
 }
 
+let nextId = 0;
+
 /** Phone-sized viewports (`xs`, up to 575px wide). */
 const RESPONSIVE_QUERY = '(max-width: 575.98px)';
 
@@ -263,7 +269,7 @@ const RESPONSIVE_QUERY = '(max-width: 575.98px)';
       lucideLoaderCircle,
     }),
   ],
-  imports: [AndesButton, AndesSelect, NgIcon, NgTemplateOutlet],
+  imports: [AndesButton, AndesInput, AndesSelect, NgIcon, NgTemplateOutlet],
   templateUrl: './pagination.html',
   styleUrl: './pagination.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -342,6 +348,13 @@ export class AndesPagination {
 
   /** The corner shape of the items: `default` or `pill`. */
   readonly shape = input<AndesPaginationShape>('default');
+
+  /**
+   * The colour that marks the current page, from the library palette. The `default`,
+   * `outline` and `ghost` looks take their coloured text from the library button, which keeps
+   * 4.5:1 on the dark theme for `primary` only; the `filled` variant works with every colour.
+   */
+  readonly color = input<AndesButtonColor>('primary');
 
   /**
    * What the control draws: the numbered pages (`default`), a `compact` previous /
@@ -505,8 +518,16 @@ export class AndesPagination {
   /** Whether the quick jumper holds text that is not a page number. */
   protected readonly jumperInvalid = signal(false);
 
-  private readonly simpleInput =
-    viewChild<ElementRef<HTMLInputElement>>('simpleInput');
+  /** What was typed in the quick jumper and not yet committed. */
+  protected readonly jumpText = signal('');
+
+  /** What was typed in the simple-mode field; `null` while it shows the current page. */
+  protected readonly simpleDraft = signal<string | null>(null);
+
+  private readonly uid = nextId++;
+  /** Names the quick jumper's field: the "Go to" text, then the text after it. */
+  protected readonly jumpLabelId = `andes-pagination-jump-${this.uid}`;
+  protected readonly jumpSuffixId = `andes-pagination-jump-suffix-${this.uid}`;
 
   constructor() {
     const view = this.document.defaultView;
@@ -966,12 +987,42 @@ export class AndesPagination {
     if (entry.current) {
       names.push('andes-pagination__page--active');
     }
+    if (entry.disabled) {
+      names.push('andes-pagination__item--disabled');
+    }
     if (this.hasText(entry)) {
       names.push('andes-pagination__item--text');
+    } else if (entry.kind !== 'page') {
+      names.push('andes-pagination__item--icon');
     }
     names.push(this.partClass(...this.entryParts(entry)));
     return names.filter(Boolean).join(' ');
   }
+
+  /**
+   * The library button variant of a control: the current page is marked by the variant
+   * (an outline in the accent, a soft tint, or a solid fill), the rest are plain, and the
+   * `outline` look gives every item a border.
+   */
+  protected buttonVariant(entry: PaginationEntry): AndesButtonVariant {
+    const variant = this.variant();
+    if (entry.current) {
+      return variant === 'filled'
+        ? 'primary'
+        : variant === 'ghost'
+          ? 'filled'
+          : 'outline';
+    }
+    return variant === 'outline' ? 'outline' : 'ghost';
+  }
+
+  protected buttonColor(entry: PaginationEntry): AndesButtonColor | undefined {
+    return entry.current ? this.color() : undefined;
+  }
+
+  protected readonly buttonShape = computed(() =>
+    this.shape() === 'pill' ? 'round' : 'default',
+  );
 
   /** The native tooltip of a control: the page number, or the control's name. */
   protected titleFor(entry: PaginationEntry): string | null {
@@ -1030,6 +1081,7 @@ export class AndesPagination {
   /** A click on a control. A modifier or middle click on a link is left to the browser. */
   protected onControlClick(event: MouseEvent, entry: PaginationEntry): void {
     if (
+      entry.disabled ||
       event.button !== 0 ||
       event.ctrlKey ||
       event.metaKey ||
@@ -1064,7 +1116,7 @@ export class AndesPagination {
     }
     const controls = Array.from(
       this.host.nativeElement.querySelectorAll<HTMLElement>(
-        '.andes-pagination__list .andes-pagination__item:not(:disabled)',
+        '.andes-pagination__list [data-slot="button"]:not(:disabled)',
       ),
     );
     const index = controls.indexOf(target);
@@ -1135,10 +1187,10 @@ export class AndesPagination {
         const fallback =
           root.querySelector<HTMLElement>('[aria-current="page"]') ??
           root.querySelector<HTMLElement>(
-            '.andes-pagination__simple-input:not(:disabled)',
+            '.andes-pagination__simple-input input:not(:disabled)',
           ) ??
           root.querySelector<HTMLElement>(
-            '.andes-pagination__item:not(:disabled)',
+            '.andes-pagination__list [data-slot="button"]:not(:disabled)',
           );
         fallback?.focus();
       },
@@ -1181,29 +1233,25 @@ export class AndesPagination {
     this.pageChange.emit({ page: nextCurrent, pageSize: size });
   }
 
-  // The quick jumper and simple-mode input keep their uncommitted text in the DOM
-  // only. Resetting them is done on the element directly: a `[value]` binding can't
-  // be relied on for that, since the bound value often hasn't changed (e.g. invalid
-  // text reverting to the same current page), so Angular would never rewrite it.
+  // The quick jumper and the simple-mode field are library inputs: what is typed in them
+  // lives in a signal each, and committing a page resets that signal.
 
-  protected onJumperKeydown(
-    event: KeyboardEvent,
-    field: HTMLInputElement,
-  ): void {
-    if (event.key === 'Enter') {
+  protected onJumperKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Enter' && !event.isComposing) {
       event.preventDefault();
-      this.commitJumper(field);
+      this.commitJumper();
     }
   }
 
-  protected onJumperBlur(field: HTMLInputElement): void {
+  protected onJumperBlur(): void {
     // With a go button, blurring (e.g. tabbing to that button) must not jump yet.
     if (!this.hasGoButton()) {
-      this.commitJumper(field);
+      this.commitJumper();
     }
   }
 
-  protected onJumperInput(): void {
+  protected onJumperInput(text: string): void {
+    this.jumpText.set(text);
     this.jumperInvalid.set(false);
   }
 
@@ -1211,25 +1259,25 @@ export class AndesPagination {
    * Jumps to the typed page and clears the field. Text that is not a page number is
    * kept, and the field is marked invalid until the next keystroke.
    */
-  protected commitJumper(field: HTMLInputElement): void {
-    const page = parsePageInput(field.value);
+  protected commitJumper(): void {
+    const text = this.jumpText();
+    const page = parsePageInput(text);
     if (page === null) {
-      this.jumperInvalid.set(field.value.trim() !== '');
+      this.jumperInvalid.set(text.trim() !== '');
       return;
     }
     this.jumperInvalid.set(false);
-    field.value = '';
+    this.jumpText.set('');
     this.goToPage(page);
   }
 
-  protected onSimpleKeydown(
-    event: KeyboardEvent,
-    field: HTMLInputElement,
-  ): void {
+  protected onSimpleKeydown(event: KeyboardEvent): void {
     switch (event.key) {
       case 'Enter':
-        event.preventDefault();
-        this.commitSimple(field);
+        if (!event.isComposing) {
+          event.preventDefault();
+          this.commitSimple();
+        }
         return;
       case 'ArrowUp':
         event.preventDefault();
@@ -1242,29 +1290,25 @@ export class AndesPagination {
       default:
         return;
     }
-    field.value = this.simpleInputValue();
+    this.simpleDraft.set(null);
   }
 
-  protected onSimpleBlur(field: HTMLInputElement): void {
+  protected onSimpleBlur(): void {
     // With a go button, blurring (e.g. tabbing to that button) must not jump yet.
     if (!this.hasSimpleGoButton()) {
-      this.commitSimple(field);
+      this.commitSimple();
     }
   }
 
-  /** Go-button click in simple mode, which lives outside the input's template scope. */
-  protected commitSimpleInput(): void {
-    const field = this.simpleInput()?.nativeElement;
-    if (field) {
-      this.commitSimple(field);
+  /** Jumps to the typed page, or puts the current page back when the text is not a page. */
+  protected commitSimple(): void {
+    const draft = this.simpleDraft();
+    if (draft !== null) {
+      const page = parsePageInput(draft);
+      if (page !== null) {
+        this.goToPage(page);
+      }
     }
-  }
-
-  protected commitSimple(field: HTMLInputElement): void {
-    const page = parsePageInput(field.value);
-    if (page !== null) {
-      this.goToPage(page);
-    }
-    field.value = this.simpleInputValue();
+    this.simpleDraft.set(null);
   }
 }

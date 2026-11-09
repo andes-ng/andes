@@ -1,15 +1,14 @@
 /* Pagination: soft 24 / 32 / 40px items at 14px with an 8px radius, 4 / 6 / 8px apart, and a
-   24px gap before the page-size and jump-to fields. The current page is marked by a primary
-   border and text by default (`data-variant`: outline, ghost or filled for the others).
+   24px gap before the page-size and jump-to fields. Every item is a library button (the
+   current page is marked by its variant and colour: an accent outline by default; `data-variant`
+   is outline, ghost or filled for the others) and the two page fields are library inputs.
 
    Custom properties a consumer can set on the element or an ancestor:
      --andes-pagination-item-size       height and minimum width of an item
      --andes-pagination-gap             space between the items
      --andes-pagination-section-gap     space between the total, the items and the options
      --andes-pagination-radius          corner radius of an item
-     --andes-pagination-accent          the current page's colour (fill or border)
-     --andes-pagination-accent-text     the current page's text colour on a light fill
-     --andes-pagination-accent-foreground  text on a filled current page */
+   The current page's colour is the `color` input. */
 
 .andes-pagination {
   --_item-size: var(
@@ -18,22 +17,6 @@
   );
   --_gap: var(--andes-pagination-gap, 0.375rem);
   --_radius: var(--andes-pagination-radius, var(--andes-radius-lg, 0.5rem));
-  --_accent: var(--andes-pagination-accent, var(--andes-color-primary));
-  --_accent-text: var(
-    --andes-pagination-accent-text,
-    var(--andes-color-primary-text)
-  );
-  --_accent-foreground: var(
-    --andes-pagination-accent-foreground,
-    var(--andes-color-primary-foreground, #fff)
-  );
-  --_accent-hover: color-mix(in srgb, var(--_accent) 85%, #000);
-  /* 8%: the accent text on it stays at 4.5:1 or more in both themes. */
-  --_accent-soft: color-mix(
-    in srgb,
-    var(--_accent) 8%,
-    var(--andes-color-background)
-  );
 
   position: relative;
   display: flex;
@@ -62,6 +45,15 @@
     var(--andes-control-height-lg, 2.5rem)
   );
   --_gap: var(--andes-pagination-gap, 0.5rem);
+}
+
+/* Bordered items need a little more air than borderless ones. */
+.andes-pagination[data-variant='outline'] {
+  --_gap: var(--andes-pagination-gap, 0.5rem);
+}
+
+.andes-pagination--small[data-variant='outline'] {
+  --_gap: var(--andes-pagination-gap, 0.375rem);
 }
 
 .andes-pagination[data-shape='pill'] {
@@ -138,43 +130,59 @@
   user-select: none;
 }
 
-/* Native buttons and links rather than andes-button - see the comment in pagination.html
-   for why: page items need a real aria-current on the focusable element itself, and
-   prev/next/jumpers share the same box so size="small" and itemRender apply evenly.
-   The transparent border keeps every item the same size as the bordered active one. */
-.andes-pagination__item {
+/* The ellipsis that is not a control (jump links off). */
+.andes-pagination__ellipsis {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--andes-space-1, 0.25rem);
-  box-sizing: border-box;
   min-width: var(--_item-size);
   height: var(--_item-size);
-  padding-inline: 0.5rem;
-  border: 1px solid transparent;
-  border-radius: var(--_radius);
-  background-color: transparent;
-  color: var(--andes-color-foreground);
-  font-family: inherit;
-  font-size: var(--andes-control-font-size-md, 0.875rem);
-  font-weight: normal;
-  line-height: var(--andes-control-line-height, 1.375rem);
-  text-decoration: none;
-  white-space: nowrap;
-  cursor: pointer;
-  transition:
-    background-color 150ms ease,
-    color 150ms ease,
-    border-color 150ms ease;
+  color: var(--andes-color-muted-foreground);
+  user-select: none;
 }
 
-.andes-pagination--small .andes-pagination__item {
+/* An item is an `andes-button`: its host is the flex box here, and its own button or link is
+   sized from the control scale (24 / 32 / 40px). The rules below only set what the pagination
+   decides: the corner radius, the minimum width (so a page number is square), the padding
+   and a regular weight, the current page semibold. */
+.andes-pagination__item {
+  display: inline-flex;
+  /* A background a consumer gives the item through `styles` follows its corners. */
+  border-radius: var(--_radius);
+}
+
+.andes-pagination__item ::ng-deep .andes-button {
+  height: var(--_item-size);
+  min-width: var(--_item-size);
+  padding-inline: 0.5rem;
+  border-radius: var(--_radius);
+  font-weight: normal;
+  font-size: var(--andes-control-font-size-md, 0.875rem);
+}
+
+.andes-pagination--small .andes-pagination__item ::ng-deep .andes-button {
   padding-inline: 0.375rem;
 }
 
-/* Lucide chevrons in an `ng-icon` rather than text glyphs, so they sit on the item's optical
-   centre at any font; a flex box keeps their svg off a text baseline. They point along the
-   reading direction, hence the mirror in right-to-left text. */
+/* A control that shows an icon alone - the arrows, first, last and the jump links - is square. */
+.andes-pagination__item--icon ::ng-deep .andes-button {
+  padding-inline: 0;
+}
+
+.andes-pagination__item--text ::ng-deep .andes-button {
+  padding-inline: 0.75rem;
+}
+
+.andes-pagination--small .andes-pagination__item--text ::ng-deep .andes-button {
+  padding-inline: 0.5rem;
+}
+
+.andes-pagination__page--active ::ng-deep .andes-button {
+  font-weight: var(--andes-font-weight-semibold, 600);
+}
+
+/* Lucide chevrons in an `ng-icon` rather than text glyphs. They point along the reading
+   direction, hence the mirror in right-to-left text. */
 .andes-pagination__arrow,
 .andes-pagination__jumper-icon {
   display: flex;
@@ -189,8 +197,15 @@
   height: 1.125rem;
 }
 
-/* Lucide's ellipsis rather than the "…" character: the character sits on the text baseline, so
-   it read ~3px low next to the centred page numbers and arrows. */
+/* The button sizes a projected svg to its own font (14px); the items draw their icons at the
+   16px the line icons are made for, so the svg fills the icon box. */
+.andes-pagination__item ng-icon ::ng-deep svg,
+.andes-pagination__go ng-icon ::ng-deep svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Lucide's ellipsis rather than the "…" character, which sits on the text baseline. */
 .andes-pagination__jumper-dots {
   display: flex;
 }
@@ -202,156 +217,52 @@
   height: 1rem;
 }
 
-/* An item showing an icon alone - the default arrows and jumpers - stays square like the page
-   items (a jumper also keeps its width when hover swaps its dots for the icon); an item with
-   text, e.g. "Previous", keeps the inline padding. Anchored on the root so it also outranks the
-   small size's padding. */
-.andes-pagination
-  .andes-pagination__item:has(> ng-icon):not(.andes-pagination__item--text) {
-  padding-inline: 0;
-}
-
-.andes-pagination .andes-pagination__item--text {
-  padding-inline: 0.75rem;
-}
-
-.andes-pagination--small .andes-pagination__item--text {
-  padding-inline: 0.5rem;
-}
-
 .andes-pagination__arrow:dir(rtl),
 .andes-pagination__jumper-icon:dir(rtl) {
   transform: scaleX(-1);
 }
 
-.andes-pagination__item:hover:not(:disabled) {
-  background-color: var(--andes-color-accent);
+/* The control is square or wider, never clipped by the radius of a pill. */
+.andes-pagination[data-shape='pill']
+  .andes-pagination__item--text
+  ::ng-deep
+  .andes-button {
+  padding-inline: 1rem;
 }
 
-.andes-pagination__item:focus-visible {
-  outline: 2px solid var(--andes-color-focus-ring);
-  outline-offset: 2px;
-}
-
-.andes-pagination__item:disabled {
+/* Jumpers read as a plain ellipsis until hovered or focused, then reveal double chevrons. */
+.andes-pagination__jumper ::ng-deep .andes-button {
   color: var(--andes-color-muted-foreground);
-  cursor: not-allowed;
-}
-
-.andes-pagination__page--active {
-  border-color: var(--_accent);
-  background-color: var(--andes-color-background);
-  color: var(--_accent-text);
-  font-weight: var(--andes-font-weight-semibold, 600);
-}
-
-.andes-pagination__page--active:hover:not(:disabled) {
-  border-color: var(--_accent-hover);
-  background-color: var(--andes-color-background);
-  color: var(--_accent-text);
-}
-
-/* Disabled, the current page keeps its box but drops the accent. */
-.andes-pagination__page--active:disabled {
-  border-color: var(--andes-color-border);
-  background-color: var(--andes-color-muted);
-  color: var(--andes-color-muted-foreground);
-}
-
-/* Variants. outline: every item has a border. */
-.andes-pagination[data-variant='outline'] .andes-pagination__item {
-  border-color: var(--andes-color-border);
-}
-
-.andes-pagination[data-variant='outline']
-  .andes-pagination__item:hover:not(
-    :disabled,
-    .andes-pagination__page--active
-  ) {
-  border-color: color-mix(
-    in srgb,
-    var(--_accent) 55%,
-    var(--andes-color-border)
-  );
-  background-color: transparent;
-}
-
-.andes-pagination[data-variant='outline'] .andes-pagination__page--active {
-  border-color: var(--_accent);
-  background-color: var(--_accent-soft);
-}
-
-.andes-pagination[data-variant='outline']
-  .andes-pagination__page--active:hover:not(:disabled) {
-  background-color: var(--_accent-soft);
-}
-
-.andes-pagination[data-variant='outline'] .andes-pagination__item:disabled {
-  border-color: var(--andes-color-border);
-}
-
-/* ghost: no borders, the current page on a soft tint. */
-.andes-pagination[data-variant='ghost'] .andes-pagination__page--active {
-  border-color: transparent;
-  background-color: var(--_accent-soft);
-}
-
-.andes-pagination[data-variant='ghost']
-  .andes-pagination__page--active:hover:not(:disabled) {
-  border-color: transparent;
-  background-color: var(--_accent-soft);
-}
-
-.andes-pagination[data-variant='ghost']
-  .andes-pagination__page--active:disabled,
-.andes-pagination[data-variant='filled']
-  .andes-pagination__page--active:disabled {
-  border-color: transparent;
-  background-color: var(--andes-color-muted);
-  color: var(--andes-color-muted-foreground);
-}
-
-/* filled: the current page is a solid block. */
-.andes-pagination[data-variant='filled'] .andes-pagination__page--active {
-  border-color: var(--_accent);
-  background-color: var(--_accent);
-  color: var(--_accent-foreground);
-}
-
-.andes-pagination[data-variant='filled']
-  .andes-pagination__page--active:hover:not(:disabled) {
-  border-color: var(--_accent-hover);
-  background-color: var(--_accent-hover);
-  color: var(--_accent-foreground);
-}
-
-/* Jumpers read as a plain ellipsis until hovered/focused, then reveal their arrow. */
-.andes-pagination__jumper {
-  color: var(--andes-color-muted-foreground);
-}
-
-.andes-pagination__jumper:hover:not(:disabled) {
-  background-color: transparent;
 }
 
 .andes-pagination__jumper .andes-pagination__jumper-icon {
   display: none;
 }
 
-.andes-pagination__jumper:hover:not(:disabled) .andes-pagination__jumper-dots,
-.andes-pagination__jumper:focus-visible .andes-pagination__jumper-dots {
+.andes-pagination__jumper:hover:not(.andes-pagination__item--disabled)
+  .andes-pagination__jumper-dots,
+.andes-pagination__jumper:has(:focus-visible) .andes-pagination__jumper-dots {
   display: none;
 }
 
-.andes-pagination__jumper:hover:not(:disabled) .andes-pagination__jumper-icon,
-.andes-pagination__jumper:focus-visible .andes-pagination__jumper-icon {
+.andes-pagination__jumper:hover:not(.andes-pagination__item--disabled)
+  .andes-pagination__jumper-icon,
+.andes-pagination__jumper:has(:focus-visible) .andes-pagination__jumper-icon {
   display: flex;
-  color: var(--_accent-text);
+}
+
+.andes-pagination__jumper:hover:not(.andes-pagination__item--disabled)
+  ::ng-deep
+  .andes-button,
+.andes-pagination__jumper:has(:focus-visible) ::ng-deep .andes-button {
+  color: var(--andes-color-primary-text);
 }
 
 /* Loading: the current page shows a spinner and the rest waits. */
 .andes-pagination--loading
-  .andes-pagination__item:not(.andes-pagination__page--active) {
+  .andes-pagination__item:not(.andes-pagination__page--active)
+  ::ng-deep
+  .andes-button {
   cursor: progress;
 }
 
@@ -370,8 +281,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .andes-pagination__item,
-  .andes-pagination__input {
+  .andes-pagination__item ::ng-deep .andes-button {
     transition: none;
   }
 
@@ -398,106 +308,31 @@
   gap: var(--andes-space-3, 0.75rem);
 }
 
-/*
-  Fields: the quick-jumper and simple-mode inputs share the text-field box (32px, 11px
-  inline padding, 6px radius; 24px / 7px / 4px when small): one border that tints on hover,
-  and on focus a primary border plus a soft 2px ring instead of an outline around the
-  border. Form controls don't inherit font by default, so they opt in explicitly.
-*/
-.andes-pagination__input {
-  box-sizing: border-box;
-  height: var(--_item-size);
-  margin: 0;
-  padding-inline: var(--andes-control-padding-x-md, 0.6875rem);
-  border: 1px solid var(--andes-color-input);
-  border-radius: var(--andes-control-radius-md, 0.375rem);
-  background-color: var(--andes-color-background);
-  color: var(--andes-color-foreground);
-  font-family: inherit;
-  font-size: var(--andes-control-font-size-md, 0.875rem);
-  line-height: var(--andes-control-line-height, 1.375rem);
-  outline: none;
-  transition:
-    border-color 150ms ease,
-    box-shadow 150ms ease,
-    background-color 150ms ease;
+/* The simple-mode page field and the quick jumper are library inputs; this only sets how
+   wide their box is, and centres the page number. */
+.andes-pagination__simple-input,
+.andes-pagination__jump-input {
+  display: block;
+  width: 3.5rem;
 }
 
-.andes-pagination[data-shape='pill'] .andes-pagination__input {
-  border-radius: 9999px;
-}
-
-.andes-pagination--small .andes-pagination__input {
-  padding-inline: var(--andes-control-padding-x-sm, 0.4375rem);
-  border-radius: var(--andes-control-radius-sm, 0.25rem);
-  font-size: var(--andes-control-font-size-sm, 0.875rem);
-}
-
-.andes-pagination--small[data-shape='pill'] .andes-pagination__input {
-  border-radius: 9999px;
-}
-
-.andes-pagination__input::placeholder {
-  color: var(--andes-color-muted-foreground);
-}
-
-/* Hover never overrides the focused look. */
-.andes-pagination__input:hover:not(:disabled, [readonly], :focus) {
-  border-color: color-mix(
-    in srgb,
-    var(--_accent) 65%,
-    var(--andes-color-input)
-  );
-}
-
-.andes-pagination__input:focus {
-  border-color: var(--_accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--_accent) 20%, transparent);
-}
-
-/* The jumper holds text that is not a page number. */
-.andes-pagination__input--invalid,
-.andes-pagination__input--invalid:hover:not(:disabled, [readonly], :focus) {
-  border-color: var(--andes-color-danger);
-}
-
-.andes-pagination__input--invalid:focus {
-  border-color: var(--andes-color-danger);
-  box-shadow: 0 0 0 2px
-    color-mix(in srgb, var(--andes-color-danger) 20%, transparent);
-}
-
-/* The native text fields paint their chrome (caret, selection) from `color-scheme`, not
-   from the tokens - match it to the dark theme. */
-:host-context([data-andes-theme='dark']) .andes-pagination__input {
-  color-scheme: dark;
-}
-
-.andes-pagination__input:disabled {
-  background-color: var(--andes-color-muted);
-  color: var(--andes-color-muted-foreground);
-  cursor: not-allowed;
-}
-
-.andes-pagination__simple-input {
-  width: 3.125rem;
-  padding-inline: var(--andes-space-1, 0.25rem);
+.andes-pagination__simple-input ::ng-deep .andes-input__control {
   text-align: center;
 }
 
-.andes-pagination__jump-input {
-  width: 3.125rem;
-  margin-inline: var(--andes-space-2, 0.5rem) 0;
+.andes-pagination__jump-input ::ng-deep .andes-input__control {
+  text-align: center;
 }
 
 /* The size changer is a library select; this only sets how wide its box is. */
 .andes-pagination__size-changer {
   display: block;
-  width: 7.5rem;
+  width: fit-content;
+  min-width: 7.5rem;
 }
 
 .andes-pagination[data-layout='table'] .andes-pagination__size-changer {
-  width: 5rem;
+  min-width: 5rem;
 }
 
 .andes-pagination__jump {
@@ -506,14 +341,13 @@
   gap: var(--andes-space-2, 0.5rem);
 }
 
+/* The words before and after the quick jumper's field. */
 .andes-pagination__jump-label {
-  display: inline-flex;
-  align-items: center;
   white-space: nowrap;
 }
 
 .andes-pagination__jump-suffix {
-  margin-inline-start: var(--andes-space-2, 0.5rem);
+  white-space: nowrap;
 }
 
 /* andes-button's host has no display of its own. */

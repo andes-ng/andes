@@ -229,6 +229,24 @@ describe.each(modules)('Pagination stories: %s', (_, module) => {
         await settle(1000);
       }
       await settle(2000);
+
+      // Every native control on the page sits inside a library component.
+      const bare = Array.from(
+        root.querySelectorAll('button, input, select, textarea, a'),
+      ).filter((control) => {
+        for (
+          let parent = control.parentElement;
+          parent && parent !== root;
+          parent = parent.parentElement
+        ) {
+          if (parent.localName.startsWith('andes-')) {
+            return false;
+          }
+        }
+        return true;
+      });
+
+      expect(bare.map((control) => control.outerHTML.slice(0, 80))).toEqual([]);
     });
   });
 });
@@ -328,7 +346,7 @@ describe('Pagination stories: what a few of them promise', () => {
 
     expect(
       root
-        .querySelector('a.andes-pagination__page--active')
+        .querySelector('.andes-pagination__page--active a')
         ?.getAttribute('href'),
     ).toBe('#/blog/page/1');
   });

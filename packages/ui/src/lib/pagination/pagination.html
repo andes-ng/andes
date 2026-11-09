@@ -39,6 +39,7 @@
   @if (totalTemplate(); as totalTpl) {
   <span
     class="andes-pagination__total"
+    dir="auto"
     [class]="partClass('total')"
     [style]="partStyle('total')"
   >
@@ -47,6 +48,7 @@
   } @else if (totalText() !== null) {
   <span
     class="andes-pagination__total"
+    dir="auto"
     [class]="partClass('total')"
     [style]="partStyle('total')"
     >{{ totalText() }}</span
@@ -75,17 +77,17 @@
           >{{ simpleInputValue() }}</span
         >
         } @else {
-        <input
-          type="text"
-          inputmode="numeric"
+        <andes-input
+          class="andes-pagination__simple-input"
+          inputMode="numeric"
           autocomplete="off"
-          class="andes-pagination__input andes-pagination__simple-input"
-          #simpleInput
-          [value]="simpleInputValue()"
+          [size]="controlButtonSize()"
+          [value]="simpleDraft() ?? simpleInputValue()"
           [disabled]="disabled() || isEmpty()"
-          [attr.aria-label]="currentPageLabel()"
-          (keydown)="onSimpleKeydown($event, simpleInput)"
-          (blur)="onSimpleBlur(simpleInput)"
+          [aria-label]="currentPageLabel()"
+          (valueChange)="simpleDraft.set($event)"
+          (keydown)="onSimpleKeydown($event)"
+          (blurred)="onSimpleBlur()"
         />
         }
         <span class="andes-pagination__slash" aria-hidden="true">/</span>
@@ -94,13 +96,13 @@
         <ng-container
           *ngTemplateOutlet="
             goButtonContent;
-            context: { $implicit: null, simple: true }
+            context: { simple: true }
           "
         />
         }
       </span>
       } @case ('status') {
-      <span class="andes-pagination__status">{{ entry.text }}</span>
+      <span class="andes-pagination__status" dir="auto">{{ entry.text }}</span>
       } @case ('ellipsis') {
       <span class="andes-pagination__ellipsis" aria-hidden="true"
         ><ng-icon class="andes-pagination__dots" name="lucideEllipsis"
@@ -147,32 +149,31 @@
       [class]="partClass('jumper')"
       [style]="partStyle('jumper')"
     >
-      <label class="andes-pagination__jump-label">
-        {{ jumpToLabel() }}
-        <input
-          type="text"
-          inputmode="numeric"
-          autocomplete="off"
-          class="andes-pagination__input andes-pagination__jump-input"
-          #jumpInput
-          [class.andes-pagination__input--invalid]="jumperInvalid()"
-          [attr.aria-invalid]="jumperInvalid() ? 'true' : null"
-          [disabled]="disabled() || isEmpty()"
-          (input)="onJumperInput()"
-          (keydown)="onJumperKeydown($event, jumpInput)"
-          (blur)="onJumperBlur(jumpInput)"
-        />
-        @if (jumpToSuffixLabel()) {
-        <span class="andes-pagination__jump-suffix"
-          >{{ jumpToSuffixLabel() }}</span
-        >
-        }
-      </label>
-      <ng-container
-        *ngTemplateOutlet="
-          goButtonContent;
-          context: { $implicit: jumpInput, simple: false }
+      <span class="andes-pagination__jump-label" [id]="jumpLabelId"
+        >{{ jumpToLabel() }}</span
+      >
+      <andes-input
+        class="andes-pagination__jump-input"
+        inputMode="numeric"
+        autocomplete="off"
+        [size]="controlButtonSize()"
+        [value]="jumpText()"
+        [status]="jumperInvalid() ? 'error' : undefined"
+        [disabled]="disabled() || isEmpty()"
+        [aria-labelledby]="
+          jumpToSuffixLabel() ? jumpLabelId + ' ' + jumpSuffixId : jumpLabelId
         "
+        (valueChange)="onJumperInput($event)"
+        (keydown)="onJumperKeydown($event)"
+        (blurred)="onJumperBlur()"
+      />
+      @if (jumpToSuffixLabel()) {
+      <span class="andes-pagination__jump-suffix" [id]="jumpSuffixId"
+        >{{ jumpToSuffixLabel() }}</span
+      >
+      }
+      <ng-container
+        *ngTemplateOutlet="goButtonContent; context: { simple: false }"
       />
     </span>
     }
@@ -181,44 +182,30 @@
 </ng-template>
 
 <!--
-  One control: a button, or a link when `linkFor` gives its page an address. Native
-  elements rather than andes-button: AndesButton's host deliberately nulls out ad-hoc
-  [attr.aria-*] bindings (see button.ts) so only its own dedicated aria-* inputs reach the
-  real inner <button> - it has no aria-current input, so aria-current would be stuck on the
-  non-interactive <andes-button> wrapper instead of the focusable control a screen reader
-  actually reports it from.
+  One control, drawn by the library button: a link when `linkFor` gives its page an
+  address, a button otherwise. The button forwards the accessible name, the disabled state
+  and `aria-current` to the element a screen reader reports.
 -->
 <ng-template #control let-entry>
-  @if (hrefFor(entry); as href) {
-  <a
+  <andes-button
     [class]="controlClass(entry)"
     [style]="entryStyle(entry)"
-    [attr.href]="href"
-    [attr.aria-current]="entry.current ? 'page' : null"
-    [attr.aria-label]="entry.label"
-    [attr.title]="titleFor(entry)"
-    (click)="onControlClick($event, entry)"
-  >
-    <ng-container
-      *ngTemplateOutlet="controlContent; context: { $implicit: entry }"
-    />
-  </a>
-  } @else {
-  <button
-    type="button"
-    [class]="controlClass(entry)"
-    [style]="entryStyle(entry)"
+    [variant]="buttonVariant(entry)"
+    [color]="buttonColor(entry)"
+    [size]="controlButtonSize()"
+    [shape]="buttonShape()"
+    [ripple]="false"
     [disabled]="entry.disabled"
-    [attr.aria-current]="entry.current ? 'page' : null"
-    [attr.aria-label]="entry.label"
+    [href]="hrefFor(entry) ?? undefined"
+    [aria-current]="entry.current ? 'page' : undefined"
+    [aria-label]="entry.label"
     [attr.title]="titleFor(entry)"
     (click)="onControlClick($event, entry)"
   >
     <ng-container
       *ngTemplateOutlet="controlContent; context: { $implicit: entry }"
     />
-  </button>
-  }
+  </andes-button>
 </ng-template>
 
 <ng-template #controlContent let-entry>
@@ -235,14 +222,14 @@
 </ng-template>
 
 <!-- One go button for both the quick jumper and the simple-mode input. -->
-<ng-template #goButtonContent let-field let-simple="simple">
+<ng-template #goButtonContent let-simple="simple">
   @if (goButtonText(); as goText) {
   <andes-button
     class="andes-pagination__go"
     variant="outline"
     [size]="controlButtonSize()"
     [disabled]="disabled() || isEmpty()"
-    (click)="simple ? commitSimpleInput() : commitJumper(field)"
+    (click)="simple ? commitSimple() : commitJumper()"
     >{{ goText }} @if (jumperIcon()) {
     <ng-icon class="andes-pagination__go-icon" name="lucideArrowRight" />
     }</andes-button
@@ -255,7 +242,7 @@
   <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
   <span
     class="andes-pagination__go"
-    (click)="simple ? commitSimpleInput() : commitJumper(field)"
+    (click)="simple ? commitSimple() : commitJumper()"
   >
     <ng-container *ngTemplateOutlet="goTemplate" />
   </span>

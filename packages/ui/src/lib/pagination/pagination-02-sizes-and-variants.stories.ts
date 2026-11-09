@@ -110,7 +110,7 @@ export const SizesWithChanger: Story = {
 export const Outline: Story = {
   name: 'Outline items',
   parameters: about(
-    'Every item gets a border and the current page takes the primary colour on a soft tint.',
+    'Every item gets a border and the current page takes the primary colour on its border and its number.',
   ),
   render: () =>
     scene(

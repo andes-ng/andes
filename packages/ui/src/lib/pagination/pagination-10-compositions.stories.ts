@@ -91,7 +91,7 @@ export const Gallery: Story = {
           }
         </div>
         <andes-pagination aria-label="Gallery" align="center" shape="pill" variant="ghost" [(current)]="page"
-          [total]="120" [pageSize]="12" [showFirstLast]="true" />
+          [total]="120" [pageSize]="12" [showFirstLast]="true" [showSizeChanger]="false" />
       </div>`,
       {
         page: signal(2),
@@ -203,13 +203,13 @@ export const BlogWithLinks: Story = {
 export const Phone: Story = {
   name: 'On a phone',
   parameters: about(
-    'In a 360px column the responsive control folds into the small simple form, and the page-size select drops to its own row.',
+    'In a 360px card the control keeps few pages with showLessItems, and on a screen narrower than 576px responsive folds it into the small simple form.',
   ),
   render: () =>
     scene(
       `<div [style]="card + ' width: 360px; max-width: 100%; padding: 1rem;'">
         <andes-pagination aria-label="Phone" [total]="500" [defaultCurrent]="6" [responsive]="true"
-          [showSizeChanger]="true" [showTotal]="rangeSummary" />
+          [showLessItems]="true" [showSizeChanger]="true" [showTotal]="rangeSummary" />
       </div>`,
       {
         rangeSummary: (total: number, range: [number, number]) =>

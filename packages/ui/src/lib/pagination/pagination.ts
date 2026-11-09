@@ -718,13 +718,15 @@ export class AndesPagination {
       ),
     );
 
-    if (this.isCursor() || this.isCompact()) {
+    if (this.isTable()) {
+      // The footer says where the page is in its total, so the list is only the buttons.
+    } else if (this.isCursor() || this.isCompact()) {
       result.push(
         entry('status', 'status', current, '', false, false, this.statusText()),
       );
     } else if (this.isSimple()) {
       result.push(entry('simple', 'simple', current, '', false));
-    } else if (!this.isTable() && !this.isEmpty()) {
+    } else if (!this.isEmpty()) {
       for (const item of this.items()) {
         if (typeof item === 'number') {
           result.push(
@@ -762,7 +764,8 @@ export class AndesPagination {
         off || current >= last,
       ),
     );
-    if (this.resolvedShowFirstLast()) {
+    // Without a known total there is no last page to go to.
+    if (this.resolvedShowFirstLast() && !this.isCursor()) {
       result.push(
         entry('last', 'last', last, this.lastLabel(), off || current >= last),
       );

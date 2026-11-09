@@ -1,174 +1,152 @@
 @if (!isHidden()) {
 <nav
   [attr.aria-label]="ariaLabel()"
+  [attr.aria-busy]="loading() ? 'true' : null"
   class="andes-pagination"
+  [class]="partClass('root')"
+  [style]="partStyle('root')"
   [class.andes-pagination--small]="isSmall()"
   [class.andes-pagination--large]="isLarge()"
   [class.andes-pagination--simple]="isSimple()"
   [class.andes-pagination--disabled]="disabled()"
+  [class.andes-pagination--loading]="loading()"
   [attr.data-align]="align()"
+  [attr.data-variant]="variant()"
+  [attr.data-shape]="shape()"
+  [attr.data-layout]="layout()"
 >
+  @if (isTable()) {
+  <ng-container *ngTemplateOutlet="optionsBlock" />
+  <ng-container *ngTemplateOutlet="totalBlock" />
+  <ng-container *ngTemplateOutlet="listBlock" />
+  } @else {
+  <ng-container *ngTemplateOutlet="totalBlock" />
+  <ng-container *ngTemplateOutlet="listBlock" />
+  <ng-container *ngTemplateOutlet="optionsBlock" />
+  }
+
+  <!-- Read out after every change: the page, and the item range. -->
+  <span
+    class="andes-pagination__announcer"
+    aria-live="polite"
+    aria-atomic="true"
+    >{{ announcement() }}</span
+  >
+</nav>
+}
+
+<ng-template #totalBlock>
   @if (totalTemplate(); as totalTpl) {
-  <span class="andes-pagination__total">
+  <span
+    class="andes-pagination__total"
+    [class]="partClass('total')"
+    [style]="partStyle('total')"
+  >
     <ng-container *ngTemplateOutlet="totalTpl; context: totalContext()" />
   </span>
   } @else if (totalText() !== null) {
-  <span class="andes-pagination__total">{{ totalText() }}</span>
+  <span
+    class="andes-pagination__total"
+    [class]="partClass('total')"
+    [style]="partStyle('total')"
+    >{{ totalText() }}</span
+  >
   }
+</ng-template>
 
-  <ul class="andes-pagination__list">
+<ng-template #listBlock>
+  <!--
+    Arrow keys, Home and End move between the items; Tab still reaches each one. The
+    list is not itself focusable: the key events bubble up from the focused item.
+  -->
+  <!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus -->
+  <ul
+    class="andes-pagination__list"
+    [class]="partClass('list')"
+    [style]="partStyle('list')"
+    (keydown)="onListKeydown($event)"
+  >
+    @for (entry of entries(); track entry.key) {
     <li>
-      <button
-        type="button"
-        class="andes-pagination__item andes-pagination__item--prev"
-        [disabled]="disabled() || isFirstPage()"
-        [attr.aria-label]="previousLabel()"
-        [attr.title]="showTitle() ? previousLabel() : null"
-        (click)="goToPrevious()"
-      >
+      @switch (entry.kind) { @case ('simple') {
+      <span class="andes-pagination__simple">
+        @if (simple().readOnly) {
+        <span class="andes-pagination__simple-current"
+          >{{ simpleInputValue() }}</span
+        >
+        } @else {
+        <input
+          type="text"
+          inputmode="numeric"
+          autocomplete="off"
+          class="andes-pagination__input andes-pagination__simple-input"
+          #simpleInput
+          [value]="simpleInputValue()"
+          [disabled]="disabled() || isEmpty()"
+          [attr.aria-label]="currentPageLabel()"
+          (keydown)="onSimpleKeydown($event, simpleInput)"
+          (blur)="onSimpleBlur(simpleInput)"
+        />
+        }
+        <span class="andes-pagination__slash" aria-hidden="true">/</span>
+        <span>{{ resolvedTotalPages() }}</span>
+        @if (hasSimpleGoButton()) {
         <ng-container
           *ngTemplateOutlet="
-            itemContent;
-            context: { $implicit: clampedCurrentPage() - 1, type: 'prev' }
+            goButtonContent;
+            context: { $implicit: null, simple: true }
           "
         />
-      </button>
-    </li>
-
-    @if (isSimple()) {
-    <li class="andes-pagination__simple">
-      @if (simple().readOnly) {
-      <span class="andes-pagination__simple-current"
-        >{{ simpleInputValue() }}</span
-      >
-      } @else {
-      <input
-        type="text"
-        inputmode="numeric"
-        autocomplete="off"
-        class="andes-pagination__input andes-pagination__simple-input"
-        #simpleInput
-        [value]="simpleInputValue()"
-        [disabled]="disabled() || isEmpty()"
-        [attr.aria-label]="currentPageLabel()"
-        (keydown)="onSimpleKeydown($event, simpleInput)"
-        (blur)="onSimpleBlur(simpleInput)"
-      />
-      }
-      <span class="andes-pagination__slash" aria-hidden="true">/</span>
-      <span>{{ resolvedTotalPages() }}</span>
-      @if (hasSimpleGoButton()) {
-      <ng-container
-        *ngTemplateOutlet="
-          goButtonContent;
-          context: { $implicit: null, simple: true }
-        "
-      />
-      }
-    </li>
-    } @else { @for (item of items(); track item) {
-    <li>
-      @if (isEllipsis(item)) { @if (showPrevNextJumpers()) {
-      <button
-        type="button"
-        class="andes-pagination__item andes-pagination__jumper"
-        [disabled]="disabled()"
-        [attr.aria-label]="jumpLabel(item)"
-        [attr.title]="showTitle() ? jumpLabel(item) : null"
-        (click)="goToPage(jumpTarget(item))"
-      >
-        <ng-container
-          *ngTemplateOutlet="
-            itemContent;
-            context: {
-              $implicit: jumpTarget(item),
-              type: item === 'start-ellipsis' ? 'jump-prev' : 'jump-next'
-            }
-          "
-        />
-      </button>
-      } @else {
+        }
+      </span>
+      } @case ('status') {
+      <span class="andes-pagination__status">{{ entry.text }}</span>
+      } @case ('ellipsis') {
       <span class="andes-pagination__ellipsis" aria-hidden="true"
         ><ng-icon class="andes-pagination__dots" name="lucideEllipsis"
       /></span>
-      } } @else {
-      <!--
-        Native buttons rather than andes-button: AndesButton's host deliberately nulls
-        out ad-hoc [attr.aria-*] bindings (see button.ts) so only its own dedicated
-        aria-* inputs reach the real inner <button> - it has no aria-current input, so
-        aria-current would be stuck on the non-interactive <andes-button> wrapper
-        instead of the focusable control a screen reader actually reports it from.
-      -->
-      <button
-        type="button"
-        class="andes-pagination__item andes-pagination__page"
-        [class.andes-pagination__page--active]="item === clampedCurrentPage()"
-        [disabled]="disabled()"
-        [attr.aria-current]="item === clampedCurrentPage() ? 'page' : null"
-        [attr.aria-label]="pageLabel() + ' ' + item"
-        [attr.title]="showTitle() ? item : null"
-        (click)="goToPage(item)"
-      >
-        <ng-container
-          *ngTemplateOutlet="itemContent; context: { $implicit: item, type: 'page' }"
-        />
-      </button>
-      }
+      } @default {
+      <ng-container
+        *ngTemplateOutlet="control; context: { $implicit: entry }"
+      />
+      } }
     </li>
-    } }
-
-    <li>
-      <button
-        type="button"
-        class="andes-pagination__item andes-pagination__item--next"
-        [disabled]="disabled() || isLastPage()"
-        [attr.aria-label]="nextLabel()"
-        [attr.title]="showTitle() ? nextLabel() : null"
-        (click)="goToNext()"
-      >
-        <ng-container
-          *ngTemplateOutlet="
-            itemContent;
-            context: { $implicit: clampedCurrentPage() + 1, type: 'next' }
-          "
-        />
-      </button>
-    </li>
+    }
   </ul>
+</ng-template>
 
+<ng-template #optionsBlock>
   @if (isSizeChangerVisible() || isQuickJumperVisible()) {
-  <div class="andes-pagination__options">
-    @if (isSizeChangerVisible()) { @if (sizeChangerRender(); as sizeChangerTpl)
-    {
+  <div
+    class="andes-pagination__options"
+    [class]="partClass('options')"
+    [style]="partStyle('options')"
+  >
+    @if (isSizeChangerVisible()) { @if (isTable()) {
+    <span class="andes-pagination__rows-label">{{ rowsPerPageLabel() }}</span>
+    } @if (sizeChangerRender(); as sizeChangerTpl) {
     <ng-container
       *ngTemplateOutlet="sizeChangerTpl; context: sizeChangerContext()"
     />
     } @else {
-    <!--
-      A minimal native <select> until AndesSelect lands on develop - swap it in then.
-      The native arrow is hidden and this chevron drawn instead, so the box matches
-      AndesSelect's trigger in every browser and theme.
-    -->
-    <span class="andes-pagination__size-changer-wrap">
-      <select
-        class="andes-pagination__input andes-pagination__size-changer"
-        [disabled]="disabled()"
-        [attr.aria-label]="pageSizeLabel()"
-        (change)="onSizeSelected($any($event.target).value)"
-      >
-        @for (option of sizeOptions(); track option) {
-        <option [value]="option" [selected]="option === resolvedPageSize()">
-          {{ option }} {{ itemsPerPageLabel() }}
-        </option>
-        }
-      </select>
-      <ng-icon
-        class="andes-pagination__size-changer-icon"
-        name="lucideChevronDown"
-      />
-    </span>
+    <andes-select
+      class="andes-pagination__size-changer"
+      [class]="partClass('sizeChanger')"
+      [style]="partStyle('sizeChanger')"
+      [size]="controlButtonSize()"
+      [options]="sizeSelectOptions()"
+      [value]="resolvedPageSize()"
+      [disabled]="disabled()"
+      [loading]="loading()"
+      [aria-label]="sizeChangerLabel()"
+      (valueChange)="onSizeSelected($event)"
+    />
     } } @if (isQuickJumperVisible()) {
-    <span class="andes-pagination__jump">
+    <span
+      class="andes-pagination__jump"
+      [class]="partClass('jumper')"
+      [style]="partStyle('jumper')"
+    >
       <label class="andes-pagination__jump-label">
         {{ jumpToLabel() }}
         <input
@@ -177,7 +155,10 @@
           autocomplete="off"
           class="andes-pagination__input andes-pagination__jump-input"
           #jumpInput
+          [class.andes-pagination__input--invalid]="jumperInvalid()"
+          [attr.aria-invalid]="jumperInvalid() ? 'true' : null"
           [disabled]="disabled() || isEmpty()"
+          (input)="onJumperInput()"
           (keydown)="onJumperKeydown($event, jumpInput)"
           (blur)="onJumperBlur(jumpInput)"
         />
@@ -197,8 +178,61 @@
     }
   </div>
   }
-</nav>
-}
+</ng-template>
+
+<!--
+  One control: a button, or a link when `linkFor` gives its page an address. Native
+  elements rather than andes-button: AndesButton's host deliberately nulls out ad-hoc
+  [attr.aria-*] bindings (see button.ts) so only its own dedicated aria-* inputs reach the
+  real inner <button> - it has no aria-current input, so aria-current would be stuck on the
+  non-interactive <andes-button> wrapper instead of the focusable control a screen reader
+  actually reports it from.
+-->
+<ng-template #control let-entry>
+  @if (hrefFor(entry); as href) {
+  <a
+    [class]="controlClass(entry)"
+    [style]="entryStyle(entry)"
+    [attr.href]="href"
+    [attr.aria-current]="entry.current ? 'page' : null"
+    [attr.aria-label]="entry.label"
+    [attr.title]="titleFor(entry)"
+    (click)="onControlClick($event, entry)"
+  >
+    <ng-container
+      *ngTemplateOutlet="controlContent; context: { $implicit: entry }"
+    />
+  </a>
+  } @else {
+  <button
+    type="button"
+    [class]="controlClass(entry)"
+    [style]="entryStyle(entry)"
+    [disabled]="entry.disabled"
+    [attr.aria-current]="entry.current ? 'page' : null"
+    [attr.aria-label]="entry.label"
+    [attr.title]="titleFor(entry)"
+    (click)="onControlClick($event, entry)"
+  >
+    <ng-container
+      *ngTemplateOutlet="controlContent; context: { $implicit: entry }"
+    />
+  </button>
+  }
+</ng-template>
+
+<ng-template #controlContent let-entry>
+  @if (entry.current && loading()) {
+  <ng-icon class="andes-pagination__spinner" name="lucideLoaderCircle" />
+  } @else {
+  <ng-container
+    *ngTemplateOutlet="
+      itemContent;
+      context: { $implicit: entry.page, type: entry.kind, entry: entry }
+    "
+  />
+  }
+</ng-template>
 
 <!-- One go button for both the quick jumper and the simple-mode input. -->
 <ng-template #goButtonContent let-field let-simple="simple">
@@ -209,7 +243,9 @@
     [size]="controlButtonSize()"
     [disabled]="disabled() || isEmpty()"
     (click)="simple ? commitSimpleInput() : commitJumper(field)"
-    >{{ goText }}</andes-button
+    >{{ goText }} @if (jumperIcon()) {
+    <ng-icon class="andes-pagination__go-icon" name="lucideArrowRight" />
+    }</andes-button
   >
   } @else if (goButtonTemplate(); as goTemplate) {
   <!--
@@ -226,23 +262,34 @@
   }
 </ng-template>
 
-<ng-template #itemContent let-page let-type="type">
+<ng-template #itemContent let-page let-type="type" let-entry="entry">
   @if (itemRender(); as render) {
   <ng-container
     *ngTemplateOutlet="render; context: itemContext(page, type, defaultItem)"
   />
   } @else {
   <ng-container
-    *ngTemplateOutlet="defaultItem; context: { $implicit: page, type: type }"
+    *ngTemplateOutlet="
+      defaultItem;
+      context: { $implicit: page, type: type, entry: entry }
+    "
   />
   }
 </ng-template>
 
-<ng-template #defaultItem let-page let-type="type">
-  @switch (type) { @case ('prev') {
+<ng-template #defaultItem let-page let-type="type" let-entry="entry">
+  @switch (type) { @case ('prev') { @if (showNavIcons() || !prevText()) {
   <ng-icon class="andes-pagination__arrow" name="lucideChevronLeft" />
-  } @case ('next') {
+  } @if (prevText()) {
+  <span class="andes-pagination__text">{{ prevText() }}</span>
+  } } @case ('next') { @if (nextText()) {
+  <span class="andes-pagination__text">{{ nextText() }}</span>
+  } @if (showNavIcons() || !nextText()) {
   <ng-icon class="andes-pagination__arrow" name="lucideChevronRight" />
+  } } @case ('first') {
+  <ng-icon class="andes-pagination__arrow" name="lucideChevronsLeft" />
+  } @case ('last') {
+  <ng-icon class="andes-pagination__arrow" name="lucideChevronsRight" />
   } @case ('jump-prev') {
   <span class="andes-pagination__jumper-dots" aria-hidden="true"
     ><ng-icon class="andes-pagination__dots" name="lucideEllipsis"

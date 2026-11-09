@@ -13,6 +13,10 @@ const LIB = 'packages/ui/src/lib';
 const ILLUSTRATIONS: readonly string[] = [
   // The two Empty illustrations (the default box scene and the simple tray).
   'empty/empty.html',
+  // The QR symbol itself: its modules are drawn as one svg path (a picture of the data).
+  'qr-code/qr-code.html',
+  // The QR code's svg export, serialised as text for the download.
+  'qr-code/qr-render.ts',
 ];
 
 /** What drawing an SVG by hand looks like, in a template or through `Renderer2`. */

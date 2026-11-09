@@ -94,27 +94,31 @@ describe('table stylesheet contract', () => {
   describe('header and rows', () => {
     it('makes the header and data rows 44px tall by default', () => {
       expect(rule('.andes-table--default')).toContain(
-        '--andes-table-row-height: 2.75rem',
+        '--andes-table-row-height-base: 2.75rem',
       );
-      const cells = rule('.andes-table ::ng-deep .andes-table__head');
-      expect(cells).toContain('height: var(--andes-table-row-height, 2.75rem)');
+      const cells = rule('.andes-table ::ng-deep .andes-table__cell');
+      expect(cells.replace(/\s+/g, '')).toContain(
+        'height:var(--andes-table-row-height,var(--andes-table-row-height-base,2.75rem))',
+      );
     });
 
     it('sizes the rows 36, 44 and 52px, with 12, 16 and 20px of inline padding', () => {
       const padding = (density: string) => rule(`.andes-table--${density}`);
 
-      expect(padding('compact')).toContain('--andes-table-row-height: 2.25rem');
       expect(padding('compact')).toContain(
-        '--andes-table-cell-padding-inline: var(--andes-space-3, 0.75rem)',
+        '--andes-table-row-height-base: 2.25rem',
+      );
+      expect(padding('compact')).toContain(
+        '--andes-table-cell-padding-inline-base: var(--andes-space-3, 0.75rem)',
       );
       expect(padding('default')).toContain(
-        '--andes-table-cell-padding-inline: var(--andes-space-4, 1rem)',
+        '--andes-table-cell-padding-inline-base: var(--andes-space-4, 1rem)',
       );
       expect(padding('comfortable')).toContain(
-        '--andes-table-cell-padding-inline: var(--andes-space-5, 1.25rem)',
+        '--andes-table-cell-padding-inline-base: var(--andes-space-5, 1.25rem)',
       );
       expect(padding('comfortable')).toContain(
-        '--andes-table-row-height: 3.25rem',
+        '--andes-table-row-height-base: 3.25rem',
       );
     });
 
@@ -130,7 +134,7 @@ describe('table stylesheet contract', () => {
 
     it('separates rows with a bottom hairline only, and none under the last row', () => {
       expect(rule('.andes-table ::ng-deep .andes-table__row')).toContain(
-        'border-bottom: 1px solid var(--andes-table-line)',
+        'border-bottom: 1px solid var(--andes-table-line, var(--andes-table-line-base))',
       );
       expect(
         rule(
@@ -147,7 +151,9 @@ describe('table stylesheet contract', () => {
     it('draws the cell grid only for bordered tables', () => {
       expect(
         rule('.andes-table--bordered ::ng-deep .andes-table__cell'),
-      ).toContain('border: 1px solid var(--andes-table-line)');
+      ).toContain(
+        'border: 1px solid var(--andes-table-line, var(--andes-table-line-base))',
+      );
     });
   });
 
@@ -156,19 +162,21 @@ describe('table stylesheet contract', () => {
       const table = rule('.andes-table');
 
       expect(table).toMatch(
-        /--andes-table-line: color-mix\( ?in srgb, var\(--andes-color-border, #d1d5db\) 60%, transparent ?\)/,
+        /--andes-table-line-base: color-mix\( ?in srgb, var\(--andes-color-border, #d1d5db\) 60%, transparent ?\)/,
       );
       expect(table).toMatch(
-        /--andes-table-tint: color-mix\( ?in srgb, var\(--andes-color-muted, #f1f5f9\) 55%, var\(--andes-color-background, #fff\) ?\)/,
+        /--andes-table-tint-base: color-mix\( ?in srgb, var\(--andes-color-muted, #f1f5f9\) 55%, var\(--andes-color-background, #fff\) ?\)/,
       );
     });
 
     it('tints the header, the footer and the hovered row alike', () => {
       expect(rule('.andes-table ::ng-deep .andes-table__header')).toContain(
-        'background-color: var(--andes-table-tint)',
+        'background-color: var(--andes-table-tint, var(--andes-table-tint-base))',
       );
       const footer = rule('.andes-table ::ng-deep .andes-table__footer');
-      expect(footer).toContain('background-color: var(--andes-table-tint)');
+      expect(footer).toContain(
+        'background-color: var(--andes-table-tint, var(--andes-table-tint-base))',
+      );
       expect(footer).toContain(
         'font-weight: var(--andes-font-weight-medium, 500)',
       );
@@ -177,7 +185,9 @@ describe('table stylesheet contract', () => {
         rule(
           '.andes-table--hoverable ::ng-deep .andes-table__body .andes-table__row:not(.andes-table__expanded-row, :has(> td > andes-table-empty)):hover',
         ),
-      ).toContain('background-color: var(--andes-table-tint)');
+      ).toContain(
+        'background-color: var(--andes-table-tint, var(--andes-table-tint-base))',
+      );
     });
 
     it('keeps a selected row stronger than a hovered one', () => {

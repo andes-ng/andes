@@ -116,12 +116,12 @@
   /* Row separators are softer than the frame; the header, footer, row hover and expanded
      row share one very light tint of the muted colour, opaque so that sticky and pinned
      cells can paint it over the rows scrolling beneath them. */
-  --andes-table-line: color-mix(
+  --andes-table-line-base: color-mix(
     in srgb,
     var(--andes-color-border, #d1d5db) 60%,
     transparent
   );
-  --andes-table-tint: color-mix(
+  --andes-table-tint-base: color-mix(
     in srgb,
     var(--andes-color-muted, #f1f5f9) 55%,
     var(--andes-color-background, #fff)
@@ -172,17 +172,17 @@
 
 /* The caption lives inside the frame, set off from the rows by a hairline. */
 .andes-table--caption-bottom ::ng-deep .andes-table__caption {
-  border-top: 1px solid var(--andes-table-line);
+  border-top: 1px solid var(--andes-table-line, var(--andes-table-line-base));
 }
 
 .andes-table--caption-top ::ng-deep .andes-table__caption {
-  border-bottom: 1px solid var(--andes-table-line);
+  border-bottom: 1px solid var(--andes-table-line, var(--andes-table-line-base));
 }
 
 /* Header */
 
 .andes-table ::ng-deep .andes-table__header {
-  background-color: var(--andes-table-tint);
+  background-color: var(--andes-table-tint, var(--andes-table-tint-base));
 }
 
 /* Header text is the strong foreground, not `--andes-color-muted-foreground`: that token
@@ -242,7 +242,7 @@
 
 .andes-table ::ng-deep .andes-table__footer {
   border-top: 1px solid var(--andes-color-border, #d1d5db);
-  background-color: var(--andes-table-tint);
+  background-color: var(--andes-table-tint, var(--andes-table-tint-base));
   font-weight: var(--andes-font-weight-medium, 500);
 }
 
@@ -253,7 +253,7 @@
 /* Rows and cells */
 
 .andes-table ::ng-deep .andes-table__row {
-  border-bottom: 1px solid var(--andes-table-line);
+  border-bottom: 1px solid var(--andes-table-line, var(--andes-table-line-base));
   transition: background-color var(--andes-motion-duration-fast, 0.1s)
     var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1));
 }
@@ -273,7 +273,7 @@
 /* The row holding the empty state is not data, so it does not answer the pointer. */
 /* prettier-ignore */
 .andes-table--hoverable ::ng-deep .andes-table__body .andes-table__row:not(.andes-table__expanded-row, :has(> td > andes-table-empty)):hover {
-  background-color: var(--andes-table-tint);
+  background-color: var(--andes-table-tint, var(--andes-table-tint-base));
 }
 
 /* Selected rows: a light primary tint. There is no dedicated
@@ -306,7 +306,7 @@
 
 /* Expanded detail row: set apart from the data rows around it. */
 .andes-table ::ng-deep .andes-table__expanded-row {
-  background-color: var(--andes-table-tint);
+  background-color: var(--andes-table-tint, var(--andes-table-tint-base));
 }
 
 .andes-table ::ng-deep .andes-table__cell {
@@ -316,7 +316,7 @@
 /* Bordered: grid lines between every cell, as light as the row separators. */
 .andes-table--bordered ::ng-deep .andes-table__cell,
 .andes-table--bordered ::ng-deep .andes-table__head {
-  border: 1px solid var(--andes-table-line);
+  border: 1px solid var(--andes-table-line, var(--andes-table-line-base));
 }
 
 /* Alignment */
@@ -340,29 +340,38 @@
    it, and the block padding is what keeps a one-line cell at exactly that height. */
 
 .andes-table--compact {
-  --andes-table-cell-padding-block: 0.4375rem;
-  --andes-table-cell-padding-inline: var(--andes-space-3, 0.75rem);
-  --andes-table-row-height: 2.25rem;
+  --andes-table-cell-padding-block-base: 0.4375rem;
+  --andes-table-cell-padding-inline-base: var(--andes-space-3, 0.75rem);
+  --andes-table-row-height-base: 2.25rem;
 }
 
 .andes-table--default {
-  --andes-table-cell-padding-block: 0.6875rem;
-  --andes-table-cell-padding-inline: var(--andes-space-4, 1rem);
-  --andes-table-row-height: 2.75rem;
+  --andes-table-cell-padding-block-base: 0.6875rem;
+  --andes-table-cell-padding-inline-base: var(--andes-space-4, 1rem);
+  --andes-table-row-height-base: 2.75rem;
 }
 
 .andes-table--comfortable {
-  --andes-table-cell-padding-block: 0.9375rem;
-  --andes-table-cell-padding-inline: var(--andes-space-5, 1.25rem);
-  --andes-table-row-height: 3.25rem;
+  --andes-table-cell-padding-block-base: 0.9375rem;
+  --andes-table-cell-padding-inline-base: var(--andes-space-5, 1.25rem);
+  --andes-table-row-height-base: 3.25rem;
 }
 
 .andes-table ::ng-deep .andes-table__head,
 .andes-table ::ng-deep .andes-table__cell {
   box-sizing: border-box;
-  height: var(--andes-table-row-height, 2.75rem);
-  padding-block: var(--andes-table-cell-padding-block, 0.6875rem);
-  padding-inline: var(--andes-table-cell-padding-inline, 1rem);
+  height: var(
+    --andes-table-row-height,
+    var(--andes-table-row-height-base, 2.75rem)
+  );
+  padding-block: var(
+    --andes-table-cell-padding-block,
+    var(--andes-table-cell-padding-block-base, 0.6875rem)
+  );
+  padding-inline: var(
+    --andes-table-cell-padding-inline,
+    var(--andes-table-cell-padding-inline-base, 1rem)
+  );
 }
 
 /* Sortable headers */
@@ -412,6 +421,15 @@
   .andes-table__head[data-sort='desc']
   .andes-table__sorter {
   color: var(--andes-color-primary-text, #2563eb);
+}
+
+/* The rank of a column among several sorted ones (`multiSort`): a small number after the arrow. */
+.andes-table ::ng-deep .andes-table__sorter-priority {
+  margin-inline-start: 0.125rem;
+  color: var(--andes-color-primary-text, #2563eb);
+  font-size: 0.75rem;
+  font-weight: var(--andes-font-weight-medium, 500);
+  line-height: 1;
 }
 
 /* The pin of a fixed column: a small lucide pin leading the title. */
@@ -535,7 +553,7 @@
 /* prettier-ignore */
 .andes-table ::ng-deep .andes-table__cell.andes-table__cell--indent {
   padding-inline-start: calc(
-    var(--andes-table-cell-padding-inline, 1rem) +
+    var(--andes-table-cell-padding-inline, var(--andes-table-cell-padding-inline-base, 1rem)) +
       var(--andes-table-level, 0) * var(--andes-table-indent-size, 1rem)
   );
   white-space: nowrap;
@@ -581,7 +599,7 @@
     var(--andes-table-sticky-offset, 0px) + var(--andes-table-header-top, 0px)
   );
   z-index: 2;
-  background-color: var(--andes-table-tint);
+  background-color: var(--andes-table-tint, var(--andes-table-tint-base));
   box-shadow: inset 0 -1px 0 var(--andes-color-border, #d1d5db);
 }
 
@@ -636,7 +654,7 @@
   position: sticky;
   bottom: 0;
   z-index: 2;
-  background-color: var(--andes-table-tint);
+  background-color: var(--andes-table-tint, var(--andes-table-tint-base));
   box-shadow: inset 0 1px 0 var(--andes-color-border, #d1d5db);
 }
 
@@ -658,17 +676,17 @@
 
 .andes-table ::ng-deep thead .andes-table__fixed {
   z-index: 3;
-  background-color: var(--andes-table-tint);
+  background-color: var(--andes-table-tint, var(--andes-table-tint-base));
 }
 
 .andes-table ::ng-deep .andes-table__footer .andes-table__fixed {
   z-index: 3;
-  background-color: var(--andes-table-tint);
+  background-color: var(--andes-table-tint, var(--andes-table-tint-base));
 }
 
 /* prettier-ignore */
 .andes-table--hoverable ::ng-deep .andes-table__body .andes-table__row:not(.andes-table__expanded-row):hover > .andes-table__fixed {
-  background-color: var(--andes-table-tint);
+  background-color: var(--andes-table-tint, var(--andes-table-tint-base));
 }
 
 .andes-table ::ng-deep .andes-table__row--selected > .andes-table__fixed {
@@ -780,11 +798,11 @@
 .andes-table--striped ::ng-deep :where(.andes-table__body .andes-table__row:nth-child(even of .andes-table__row:not(.andes-table__expanded-row))),
 /* prettier-ignore */
 .andes-table--striped ::ng-deep :where(.andes-table__body .andes-table__row:nth-child(even of .andes-table__row:not(.andes-table__expanded-row)) > .andes-table__fixed) {
-  background-color: var(--andes-table-stripe);
+  background-color: var(--andes-table-stripe, var(--andes-table-stripe-base));
 }
 
 .andes-table--striped {
-  --andes-table-stripe: color-mix(
+  --andes-table-stripe-base: color-mix(
     in srgb,
     var(--andes-color-muted, #f1f5f9) 40%,
     var(--andes-color-background, #fff)
@@ -957,5 +975,45 @@
     color: var(--andes-color-muted-foreground, #64748b);
     font-size: 0.8125rem;
     text-align: start;
+  }
+}
+
+/* Print: the whole table on the page, no scroll box or frame shadow, no interactive marks, and a
+   row is never split across two pages. The header repeats on every page. */
+@media print {
+  :host {
+    break-inside: auto;
+  }
+
+  .andes-table__container {
+    max-height: none !important;
+    overflow: visible !important;
+    border-color: currentcolor;
+  }
+
+  .andes-table__loading,
+  .andes-table
+    ::ng-deep
+    :is(
+      .andes-table__resize-handle,
+      .andes-table__sorter,
+      .andes-table-filter,
+      .andes-table-control__expand
+    ) {
+    display: none !important;
+  }
+
+  .andes-table ::ng-deep thead {
+    display: table-header-group;
+  }
+
+  .andes-table ::ng-deep tr {
+    break-inside: avoid;
+  }
+
+  .andes-table ::ng-deep :is(th, td) {
+    position: static !important;
+    background: transparent !important;
+    box-shadow: none !important;
   }
 }

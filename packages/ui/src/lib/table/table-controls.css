@@ -90,7 +90,7 @@
 /* Empty state */
 
 /* The default is an `andes-empty`, which brings its own size and margins (the simple picture,
-   32px above and below like Ant's table); the host only has to span the cell. */
+   32px above and below); the host only has to span the cell. */
 :host(.andes-table-empty) {
   display: block;
   color: var(--andes-color-muted-foreground);

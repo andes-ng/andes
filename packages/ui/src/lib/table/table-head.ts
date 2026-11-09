@@ -130,6 +130,9 @@ function optionalBoolean(value: unknown): boolean | undefined {
               />
             }
           }
+          @if (sortPriority(); as priority) {
+            <span class="andes-table__sorter-priority">{{ priority }}</span>
+          }
         </span>
       }
       <ng-content select="andes-table-filter" />

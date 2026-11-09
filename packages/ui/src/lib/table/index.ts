@@ -3,6 +3,8 @@ export type {
   AndesTableAlign,
   AndesTableCaptionSide,
   AndesTableChange,
+  AndesTableChangeInfo,
+  AndesTableChangeText,
   AndesTableChangeAction,
   AndesTableColumnMovedText,
   AndesTableColumnReorder,

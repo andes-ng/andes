@@ -111,6 +111,20 @@ export interface AndesTableColumnReorder {
   readonly order: readonly string[];
 }
 
+/** What `changeText` is asked to describe: the change a user just made. */
+export interface AndesTableChangeInfo {
+  readonly action: AndesTableChangeAction;
+  /** Title of the column the user operated, or an empty text for `reset`. */
+  readonly column: string;
+  /** The direction the column is now sorted in, or `null` when it is not. */
+  readonly direction: AndesSortDirection | null;
+  /** Number of values selected in the column's filter. */
+  readonly filterCount: number;
+}
+
+/** Builds the message announced after a sort, a filter or a reset. */
+export type AndesTableChangeText = (info: AndesTableChangeInfo) => string;
+
 /** Builds the message announced after a keyboard column move. */
 export type AndesTableColumnMovedText = (
   column: string,
@@ -413,6 +427,23 @@ export class AndesTable {
   readonly columnReorder = output<AndesTableColumnReorder>();
 
   /** Announcement after a keyboard move, e.g. "Status moved to position 2 of 4". */
+  /** The text announced (politely, to assistive tech) after a user sorts, filters or resets. */
+  readonly changeText = input<AndesTableChangeText>(
+    ({ action, column, direction, filterCount }) => {
+      if (action === 'reset') {
+        return 'Sorting and filters reset';
+      }
+      if (action === 'sort') {
+        return direction
+          ? `Sorted by ${column}, ${direction === 'asc' ? 'ascending' : 'descending'}`
+          : `Sorting by ${column} removed`;
+      }
+      return filterCount
+        ? `${column} filtered by ${filterCount} ${filterCount === 1 ? 'value' : 'values'}`
+        : `${column} filter cleared`;
+    },
+  );
+
   readonly columnMovedText = input<AndesTableColumnMovedText>(
     (column, position, total) =>
       `${column} moved to position ${position} of ${total}`,
@@ -898,9 +929,38 @@ export class AndesTable {
       sort: this.sort(),
       sorts: this.activeSorts(),
     });
+    this.announceChange(action, columnId, filters);
     if (scroll && this.scrollToFirstRowOnChange()) {
       this.scrollTo({ top: 0 });
     }
+  }
+
+  private announceChange(
+    action: AndesTableChangeAction,
+    columnId: string | undefined,
+    filters: AndesTableFilters,
+  ): void {
+    const head =
+      columnId === undefined
+        ? null
+        : Array.from(
+            this.container().nativeElement.querySelectorAll<HTMLElement>(
+              'thead th[data-column-key]',
+            ),
+          ).find((th) => th.dataset['columnKey'] === columnId);
+    const column =
+      head?.querySelector('.andes-table__head-title')?.textContent?.trim() ||
+      columnId ||
+      '';
+    this.announcement.set(
+      this.changeText()({
+        action,
+        column,
+        direction: columnId === undefined ? null : this.directionFor(columnId),
+        filterCount:
+          columnId === undefined ? 0 : (filters[columnId]?.length ?? 0),
+      }),
+    );
   }
 
   /**

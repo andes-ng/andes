@@ -17,6 +17,7 @@ import {
   lucideArrowDown,
   lucideArrowUp,
   lucideChevronsUpDown,
+  lucideGripVertical,
   lucidePin,
 } from '@ng-icons/lucide';
 import clsx from 'clsx';
@@ -96,6 +97,7 @@ function optionalBoolean(value: unknown): boolean | undefined {
       lucideArrowDown,
       lucideArrowUp,
       lucideChevronsUpDown,
+      lucideGripVertical,
       lucidePin,
     }),
   ],
@@ -174,6 +176,11 @@ function optionalBoolean(value: unknown): boolean | undefined {
         (mousedown)="$event.stopPropagation()"
         (touchstart)="$event.stopPropagation()"
       >
+        <ng-icon
+          class="andes-table__resize-icon"
+          name="lucideGripVertical"
+          aria-hidden="true"
+        />
         <span class="andes-table__sr-only" [id]="id + '-resize'">{{
           resizeText()
         }}</span>

@@ -32,6 +32,7 @@
       #panelEl
       class="andes-table-filter__body"
       tabindex="-1"
+      [attr.dir]="dir()"
       [attr.aria-label]="label()"
       (keydown)="onPanelKeydown($event)"
     >

@@ -3,7 +3,7 @@
   <div
     #container
     class="andes-table__container"
-    [class.andes-table__container--scroll-y]="scrollYLength()"
+    [class.andes-table__container--scroll-y]="scrollYLength() || fill()"
     [class.andes-table__container--sticky]="stickyOffsetLength()"
     [class.andes-table__container--framed]="framed()"
     [class.andes-table__container--bordered]="bordered()"

@@ -334,7 +334,11 @@ export class AndesTableFilter implements AndesTableFilterable, OnInit {
 
   protected readonly id = `andes-table-filter-${nextFilterId++}`;
 
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+
   protected readonly open = signal(false);
+  /** The writing direction of the table, handed to the panel (drawn in the overlay layer). */
+  protected readonly dir = signal<'ltr' | 'rtl'>('ltr');
   private readonly draftState = signal<readonly AndesFilterValue[]>([]);
 
   /** Whether the panel is showing. */
@@ -719,6 +723,11 @@ export class AndesTableFilter implements AndesTableFilterable, OnInit {
   }
 
   private openPanel(): void {
+    this.dir.set(
+      getComputedStyle(this.host.nativeElement).direction === 'rtl'
+        ? 'rtl'
+        : 'ltr',
+    );
     this.draftState.set([...this.applied()]);
     this.query.set('');
     this.open.set(true);

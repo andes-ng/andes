@@ -184,6 +184,18 @@ export const FixedHeader: Story = {
 export const AutoHeight: Story = {
   name: 'Auto height',
   parameters: about(
+    'With fill the table takes the height of its container, here a box of 22rem, keeps the header in view and scrolls only the rows.',
+  ),
+  render: () => ({
+    props: { rows: users(60), statusColor },
+    template: `<div style="max-width: 46rem; height: 22rem;">${wideTable({ attributes: 'fill', count: 6 })}</div>`,
+  }),
+};
+
+/** Height from the viewport. */
+export const ViewportHeight: Story = {
+  name: 'Height from the viewport',
+  parameters: about(
     'scrollY takes any CSS length, so a calc of the viewport height makes the table fill the window and scroll its rows inside it.',
   ),
   render: () => ({

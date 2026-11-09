@@ -87,7 +87,11 @@ export type AndesTablePinned = Readonly<Record<string, AndesTableFixed>>;
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './table-column-settings.css',
-  host: { class: 'andes-table-column-settings' },
+  host: {
+    class: 'andes-table-column-settings',
+    // The panel is drawn in the overlay layer: it is told the direction of the table.
+    '(click)': 'captureDirection()',
+  },
   template: `
     <andes-popover placement="bottomRight" [maxWidth]="320">
       <andes-button andesPopoverTrigger variant="outline" size="sm">
@@ -97,6 +101,7 @@ export type AndesTablePinned = Readonly<Record<string, AndesTableFixed>>;
       <andes-popover-content class="andes-table-column-settings__panel">
         <ul
           #list
+          [attr.dir]="dir()"
           class="andes-table-column-settings__list"
           [attr.aria-label]="label()"
         >
@@ -192,6 +197,8 @@ export type AndesTablePinned = Readonly<Record<string, AndesTableFixed>>;
 })
 export class AndesTableColumnSettings implements OnInit {
   private readonly injector = inject(Injector);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  protected readonly dir = signal<'ltr' | 'rtl'>('ltr');
   private readonly list = viewChild<ElementRef<HTMLElement>>('list');
 
   /** The columns the menu lists, in any order; the menu follows `order`. */
@@ -263,6 +270,14 @@ export class AndesTableColumnSettings implements OnInit {
       hidden: this.hidden(),
       pinned: this.pinned(),
     });
+  }
+
+  protected captureDirection(): void {
+    this.dir.set(
+      getComputedStyle(this.host.nativeElement).direction === 'rtl'
+        ? 'rtl'
+        : 'ltr',
+    );
   }
 
   protected isHidden(key: string): boolean {

@@ -235,6 +235,7 @@ let nextTableId = 0;
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     '[class]': "partClass('root')",
+    '[class.andes-table--fill]': 'fill()',
     '[style]': "partStyle('root')",
     '(keydown)': 'onGridKeydown($event)',
     '(focusin)': 'onGridFocusIn($event)',
@@ -261,6 +262,13 @@ export class AndesTable {
 
   /** Highlight the row under the pointer. */
   readonly rowHover = input(true, { transform: booleanAttribute });
+
+  /**
+   * Fills the height of its container: the table takes the height the parent gives it, keeps
+   * the header in view and scrolls the rows. Give the parent a height (a fixed one, or a flex
+   * or grid cell); without one the table is as tall as its rows.
+   */
+  readonly fill = input(false, { transform: booleanAttribute });
 
   /** Tints every other row, so long rows are easier to follow across the width. */
   readonly striped = input(false, { transform: booleanAttribute });
@@ -724,7 +732,8 @@ export class AndesTable {
       this.tableLayout() === 'fixed' && 'andes-table--layout-fixed',
       this.bordered() && 'andes-table--bordered',
       this.rowHover() && 'andes-table--hoverable',
-      (this.scrollYLength() || this.sticky()) && 'andes-table--sticky-header',
+      (this.scrollYLength() || this.sticky() || this.fill()) &&
+        'andes-table--sticky-header',
       this.pingStart() && 'andes-table--ping-start',
       this.pingEnd() && 'andes-table--ping-end',
       this.resizing() && 'andes-table--resizing',

@@ -45,6 +45,28 @@
   overflow: visible;
 }
 
+/* `fill`: the table takes the height of its parent; the wrapper and the scroll box stretch
+   to it, so only the rows scroll. */
+:host(.andes-table--fill) {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+:host(.andes-table--fill) .andes-table__wrapper {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+:host(.andes-table--fill) .andes-table__container {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 /* Also reachable from projected content, e.g. to name an otherwise empty header cell. */
 .andes-table__sr-only,
 .andes-table ::ng-deep .andes-table__sr-only {
@@ -520,6 +542,35 @@
   background-color: var(--andes-color-primary, #2563eb);
 }
 
+/* The grip icon of the handle: a small lucide pill that shows while the handle is hovered,
+   focused or dragged, so the edge reads as something to grab. */
+.andes-table ::ng-deep .andes-table__resize-icon {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: -0.4375rem;
+  z-index: 1;
+  translate: 0 -50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.875rem;
+  height: 1.25rem;
+  border: 1px solid var(--andes-color-border, #d1d5db);
+  border-radius: var(--andes-radius-sm, 0.25rem);
+  background-color: var(--andes-color-background, #fff);
+  color: var(--andes-color-muted-foreground, #64748b);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--andes-motion-duration-fast, 0.1s)
+    var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1));
+  --ng-icon__size: 0.75rem;
+}
+
+/* prettier-ignore */
+.andes-table ::ng-deep .andes-table__resize-handle:is(:hover, :focus-visible, .andes-table__resize-handle--active) > .andes-table__resize-icon {
+  opacity: 1;
+}
+
 .andes-table--resizing {
   cursor: col-resize;
   user-select: none;
@@ -790,6 +841,7 @@
   .andes-table ::ng-deep .cdk-drop-list-dragging > .andes-table__head--reorderable:not(.cdk-drag-placeholder),
   .andes-table ::ng-deep .andes-table__head--reorderable.cdk-drag-animating,
   .andes-table ::ng-deep .andes-table__resize-handle::after,
+  .andes-table ::ng-deep .andes-table__resize-icon,
   .andes-table ::ng-deep .andes-table__row,
   .andes-table ::ng-deep .andes-table__sorter-icon,
   .andes-table ::ng-deep .andes-table__resize-handle::after,

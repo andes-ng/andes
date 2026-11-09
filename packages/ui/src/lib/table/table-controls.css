@@ -4,6 +4,8 @@
 :host(.andes-table-control) {
   display: inline-flex;
   align-items: center;
+  /* Clear air between the select-all box and its menu button. */
+  gap: var(--andes-space-1, 0.25rem);
   vertical-align: middle;
 }
 

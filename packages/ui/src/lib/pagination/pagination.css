@@ -28,9 +28,10 @@
     var(--andes-color-primary-foreground, #fff)
   );
   --_accent-hover: color-mix(in srgb, var(--_accent) 85%, #000);
+  /* 8%: the accent text on it stays at 4.5:1 or more in both themes. */
   --_accent-soft: color-mix(
     in srgb,
-    var(--_accent) 12%,
+    var(--_accent) 8%,
     var(--andes-color-background)
   );
 
@@ -75,30 +76,20 @@
   justify-content: flex-end;
 }
 
-/* The table footer: the rows-per-page control at the start; the range and the buttons at the
-   end. It wraps on a narrow screen instead of squeezing. */
-.andes-pagination[data-layout='table'] {
-  justify-content: space-between;
-}
+/* The table footer: the rows-per-page control at the start; the range and the buttons
+   together at the end. It wraps on a narrow screen instead of squeezing. */
 
 .andes-pagination[data-layout='table'] .andes-pagination__total {
   margin-inline-start: auto;
 }
 
-.andes-pagination[data-layout='table'] .andes-pagination__list {
-  margin-inline-start: auto;
-}
-
-.andes-pagination[data-layout='table']
-  .andes-pagination__total
-  + .andes-pagination__list {
-  margin-inline-start: 0;
-}
-
+/* The items wrap onto a second line on a narrow screen instead of running off it. */
 .andes-pagination__list {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--_gap);
+  min-width: 0;
   list-style: none;
   margin: 0;
   padding: 0;

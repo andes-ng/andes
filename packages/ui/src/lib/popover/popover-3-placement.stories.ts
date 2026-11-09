@@ -56,7 +56,7 @@ export const TwelvePlacements: Story = {
       <div style="${grid}">
         @for (placement of placements; track placement) {
           <andes-popover [placement]="placement" [showArrow]="true" [content]="placement">
-            <andes-button size="sm" variant="outline" andesPopoverTrigger style="width: 100%;">{{ placement }}</andes-button>
+            <andes-button size="sm" variant="outline" andesPopoverTrigger>{{ placement }}</andes-button>
           </andes-popover>
         }
       </div>
@@ -80,7 +80,7 @@ export const SideAndAlign: Story = {
         @for (side of sides; track side) {
           @for (align of aligns; track align) {
             <andes-popover [side]="side" [align]="align" [showArrow]="true" [content]="side + ' / ' + align">
-              <andes-button size="sm" variant="outline" andesPopoverTrigger style="width: 100%;">{{ side }} / {{ align }}</andes-button>
+              <andes-button size="sm" variant="outline" andesPopoverTrigger>{{ side }} / {{ align }}</andes-button>
             </andes-popover>
           }
         }

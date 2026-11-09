@@ -431,6 +431,7 @@ export abstract class AndesPopoverBase {
   private openedBy: AndesPopoverOpenSource | null = null;
   private triggerHost: HTMLElement | null = null;
   private focusTarget: HTMLElement | null = null;
+  private anchorResolver: (() => HTMLElement) | null = null;
   private swapHeight: number | null = null;
   private pointerDownOnTrigger = false;
   private openTimer: ReturnType<typeof setTimeout> | undefined;
@@ -574,6 +575,11 @@ export abstract class AndesPopoverBase {
     const height = this.swapHeight;
     this.swapHeight = null;
     return height;
+  }
+
+  /** @internal Lets the trigger pick its visible box as the anchor each time the panel opens. */
+  registerAnchorResolver(resolver: () => HTMLElement): void {
+    this.anchorResolver = resolver;
   }
 
   /** @internal The focusable element inside a wrapper trigger, where focus returns on close. */
@@ -837,6 +843,13 @@ export abstract class AndesPopoverBase {
       this._originOffset.set(null);
     }
 
+    // Layout exists by now: anchor to what the trigger visibly is, whatever its host stretches to.
+    if (!this.overlay.panelElement()) {
+      const box = this.anchorResolver?.();
+      if (box && box !== this.overlay.anchor()) {
+        this.overlay.registerAnchor(box);
+      }
+    }
     this.scopedContainer?.setTarget(
       resolveAndesPopoverContainer(this.container(), this.document),
     );

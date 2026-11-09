@@ -74,6 +74,7 @@ export class AndesPopoverTrigger {
     const host = this.elementRef.nativeElement;
     this.popover.registerTriggerHost(host);
     this.popover.registerAnchor(host);
+    this.popover.registerAnchorResolver(() => this.visibleBox());
 
     // `AndesOverlayTriggerPrimitive` registers *this* host as the anchor and as the element
     // focus returns to on close. The anchor is right for any host with a box of its own -
@@ -90,9 +91,6 @@ export class AndesPopoverTrigger {
       const focusable = host.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
       if (!focusable) {
         return;
-      }
-      if (!this.hasLayout(host) && this.hasLayout(focusable)) {
-        this.popover.registerAnchor(focusable);
       }
       this.popover.registerFocusTarget(focusable);
       this.innerTarget.set(focusable);
@@ -119,6 +117,71 @@ export class AndesPopoverTrigger {
         }
       }
     });
+  }
+
+  /**
+   * The trigger's visible border box, which is what the panel must sit against. The host is
+   * that box for a field (`<andes-input>`: the group with the border *is* the host), but a
+   * host can be stretched far wider than what it draws - an `<andes-button>` as a grid or
+   * flex item with `width: 100%` or `align-self: stretch` has a visible button only as wide
+   * as its label. So: the outermost element, from the focusable control up to the host, that
+   * draws something of its own (a border, a background or a shadow); failing that the
+   * focusable control when the host is a wrapper around it and has no box of its own; else
+   * the host.
+   */
+  private visibleBox(): HTMLElement {
+    const host = this.elementRef.nativeElement;
+    const focusable = this.innerTarget();
+    if (!focusable) {
+      return host;
+    }
+    let outermost: HTMLElement | null = null;
+    for (
+      let element: HTMLElement | null = focusable;
+      element;
+      element = element === host ? null : element.parentElement
+    ) {
+      if (this.drawsABox(element)) {
+        outermost = element;
+      }
+    }
+    if (outermost) {
+      // The host itself when it is exactly that box (a field): it is the more stable anchor.
+      const a = outermost.getBoundingClientRect();
+      const b = host.getBoundingClientRect();
+      const same =
+        Math.abs(a.left - b.left) < 0.5 &&
+        Math.abs(a.right - b.right) < 0.5 &&
+        Math.abs(a.top - b.top) < 0.5 &&
+        Math.abs(a.bottom - b.bottom) < 0.5;
+      return same ? host : outermost;
+    }
+    if (!this.hasLayout(host) && this.hasLayout(focusable)) {
+      return focusable;
+    }
+    // A bare host stretched wider than its control still anchors to the control.
+    const hostBox = host.getBoundingClientRect();
+    const controlBox = focusable.getBoundingClientRect();
+    return this.hasLayout(focusable) &&
+      host.localName.includes('-') &&
+      focusable.tagName !== 'INPUT' &&
+      focusable.tagName !== 'TEXTAREA' &&
+      hostBox.width > controlBox.width + 1
+      ? focusable
+      : host;
+  }
+
+  /** Whether an element paints a border, a background or a shadow of its own. */
+  private drawsABox(element: HTMLElement): boolean {
+    const style = getComputedStyle(element);
+    const border =
+      Number.parseFloat(style.borderTopWidth) > 0 &&
+      style.borderTopStyle !== 'none' &&
+      style.borderTopStyle !== 'hidden';
+    const background =
+      style.backgroundColor !== 'transparent' &&
+      style.backgroundColor !== 'rgba(0, 0, 0, 0)';
+    return border || background || style.boxShadow !== 'none';
   }
 
   /** Whether an element has a box (false under jsdom, where nothing is laid out). */

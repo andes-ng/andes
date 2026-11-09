@@ -75,7 +75,7 @@ export const wideStage =
 
 /** A three-column grid of triggers with room for a panel on every side. */
 export const grid =
-  'display: grid; grid-template-columns: repeat(3, minmax(0, 8.5rem)); justify-content: center; gap: 3.5rem 1.5rem; padding: 6rem 1rem;';
+  'display: grid; grid-template-columns: repeat(3, minmax(0, 8.5rem)); justify-items: start; justify-content: center; gap: 3.5rem 1.5rem; padding: 6rem 1rem;';
 
 /** A board for the stories that keep every placement open at once: one wide cell per placement. */
 export const placementBoard =

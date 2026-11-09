@@ -18,6 +18,7 @@ import type {
   AndesPopoverContainer,
   AndesPopoverContentInput,
   AndesPopoverOpenChange,
+  AndesPopoverPlacement,
   AndesPopoverStylesInput,
   AndesPopoverTriggerAction,
 } from './popover-types';
@@ -764,7 +765,8 @@ describe('AndesPopover - on a field', () => {
     // The field is 224 x 80 at (100, 100); the input sits 13px in, and is shorter.
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
       function (this: HTMLElement) {
-        if (this === host) {
+        // The field's own boxes (the host and the bordered group inside it) are all 224 x 80.
+        if (this === host || (host.contains(this) && this !== input)) {
           return rect({ left: 100, top: 100, width: 224, height: 80 });
         }
         if (this === input) {
@@ -1181,4 +1183,131 @@ describe('AndesPopover - distance to the trigger', () => {
     }
     vi.useRealTimers();
   });
+});
+
+@Component({
+  imports: [AndesPopover, AndesPopoverTrigger],
+  template: `
+    <div style="display: grid; grid-template-columns: 136px;">
+      <andes-popover
+        [placement]="placement()"
+        [showArrow]="true"
+        content="Body"
+      >
+        <span
+          id="stretched"
+          andesPopoverTrigger
+          style="display: block; width: 100%"
+        >
+          <button
+            type="button"
+            id="visible"
+            style="border: 1px solid #000; background: #fff"
+          >
+            Open
+          </button>
+        </span>
+      </andes-popover>
+    </div>
+  `,
+})
+class StretchedHost {
+  readonly placement = signal<AndesPopoverPlacement>('bottom');
+  readonly popover = viewChild.required(AndesPopover);
+}
+
+describe('AndesPopover - a trigger host stretched by its grid cell', () => {
+  withElementGeometry();
+  afterEach(() => vi.restoreAllMocks());
+
+  const rect = (r: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  }) =>
+    ({
+      ...r,
+      x: r.left,
+      y: r.top,
+      right: r.left + r.width,
+      bottom: r.top + r.height,
+      toJSON: () => ({}),
+    }) as DOMRect;
+
+  const PLACEMENTS: AndesPopoverPlacement[] = [
+    'top',
+    'topLeft',
+    'topRight',
+    'bottom',
+    'bottomLeft',
+    'bottomRight',
+    'left',
+    'leftTop',
+    'leftBottom',
+    'right',
+    'rightTop',
+    'rightBottom',
+  ];
+
+  it.each(PLACEMENTS)(
+    '%s anchors to the visible button, not to the 136px cell, 14px away',
+    async (placement) => {
+      const fixture = TestBed.createComponent(StretchedHost);
+      fixture.componentInstance.placement.set(placement);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const host = document.getElementById('stretched') as HTMLElement;
+      const button = document.getElementById('visible') as HTMLElement;
+      // The cell stretches the host to 136px; the button inside is only 64px wide.
+      vi.spyOn(
+        HTMLElement.prototype,
+        'getBoundingClientRect',
+      ).mockImplementation(function (this: HTMLElement) {
+        if (this === host) {
+          return rect({ left: 400, top: 300, width: 136, height: 32 });
+        }
+        if (this === button) {
+          return rect({ left: 400, top: 300, width: 64, height: 32 });
+        }
+        return this.classList.contains('cdk-overlay-pane')
+          ? rect({ left: 0, top: 0, width: 150, height: 60 })
+          : rect({ left: 0, top: 0, width: 0, height: 0 });
+      });
+
+      button.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const overlay = fixture.componentInstance.popover() as unknown as {
+        overlay: {
+          anchor(): HTMLElement | null;
+          config(): {
+            positioning: { sideOffset?: number; side?: string; align?: string };
+          };
+        };
+      };
+      expect(overlay.overlay.anchor()).toBe(button);
+      const positioning = overlay.overlay.config().positioning;
+      // 8px of arrow and 6px of air, measured from the button's border box.
+      expect(positioning.sideOffset).toBe(14);
+      expect(positioning.side).toBe(
+        placement.replace(/(Left|Right|Top|Bottom)$/, '').toLowerCase() ||
+          placement,
+      );
+      const surface = document.querySelector(
+        '.andes-popover-content',
+      ) as HTMLElement;
+      expect(surface.getAttribute('data-side')).toBe(positioning.side);
+      expect(positioning.align).toBe(
+        /Left$|Top$/.test(placement)
+          ? 'start'
+          : /Right$|Bottom$/.test(placement)
+            ? 'end'
+            : 'center',
+      );
+      fixture.destroy();
+    },
+  );
 });

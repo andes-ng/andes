@@ -1,7 +1,7 @@
 /*
  * The popover surface, in the slim language the toast and the alert share: a 12px by
  * 16px padding (measured to the outer edge of the border, so the 1px border is taken out
- * of it), an 8px radius, a soft layered shadow, and a neutral border a little softer than
+ * of it), an 8px radius, a soft layered shadow that follows the arrow too, and a neutral border a little softer than
  * a form control's. Titles are 14px/20px, the text under them 13px/20px in the muted ink.
  *
  * Every visual property reads an `--andes-popover-*` custom property first and falls back
@@ -29,9 +29,15 @@
       var(--andes-color-popover)
     )
   );
-  --_shadow:
-    0 6px 16px 0 rgb(0 0 0 / 8%), 0 3px 6px -4px rgb(0 0 0 / 12%),
-    0 9px 28px 8px rgb(0 0 0 / 5%);
+  /* A filter, not a shadow on the box: a drop shadow follows the silhouette of the surface
+     together with the arrow that hangs off it (a box shadow only follows the rectangle, and a
+     `clip-path` clips the shadow of the arrow itself). `--andes-popover-shadow` is such a
+     filter list (`none` for no shadow). The same three soft layers as before,
+     as drop shadows (a blur radius here is about half a box blur, and there is no
+     spread). Each layer is faint, so the shadow of one layer's shadow is invisible. */
+  --_shadow: drop-shadow(0 6px 8px rgb(0 0 0 / 8%))
+    drop-shadow(0 2px 3px rgb(0 0 0 / 7%))
+    drop-shadow(0 9px 14px rgb(0 0 0 / 5%));
   position: relative;
   display: block;
   box-sizing: border-box;
@@ -43,7 +49,7 @@
   border: 1px solid var(--_border);
   background-color: var(--andes-popover-background, var(--andes-color-popover));
   color: var(--andes-popover-foreground, var(--andes-color-popover-foreground));
-  box-shadow: var(--andes-popover-shadow, var(--_shadow));
+  filter: var(--andes-popover-shadow, var(--_shadow));
   /* The panel renders in the overlay container, outside the consumer's tree, so
      it sets its own type instead of inheriting the page's 16px body text. */
   font-family: var(--andes-font-family), sans-serif;
@@ -65,9 +71,9 @@
 /* On the dark surface the border keeps its full strength and the shadow deepens. */
 [data-andes-theme='dark'] .andes-popover-content {
   --_border: var(--andes-popover-border-color, var(--andes-color-border));
-  --_shadow:
-    0 6px 16px 0 rgb(0 0 0 / 32%), 0 3px 6px -4px rgb(0 0 0 / 48%),
-    0 9px 28px 8px rgb(0 0 0 / 20%);
+  --_shadow: drop-shadow(0 6px 8px rgb(0 0 0 / 32%))
+    drop-shadow(0 2px 3px rgb(0 0 0 / 28%))
+    drop-shadow(0 9px 14px rgb(0 0 0 / 20%));
 }
 
 /* Motion. The panel is a plain panel with a transition on opacity, translate and scale, so

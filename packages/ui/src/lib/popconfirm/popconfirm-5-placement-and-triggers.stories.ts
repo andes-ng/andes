@@ -53,7 +53,7 @@ export const TwelvePlacements: Story = {
       <div style="${grid}">
         @for (placement of placements; track placement) {
           <andes-popconfirm [placement]="placement" [title]="placement" [showCancel]="false" okText="OK">
-            <andes-button size="sm" variant="outline" andesPopconfirmTrigger style="width: 100%;">{{ placement }}</andes-button>
+            <andes-button size="sm" variant="outline" andesPopconfirmTrigger>{{ placement }}</andes-button>
           </andes-popconfirm>
         }
       </div>

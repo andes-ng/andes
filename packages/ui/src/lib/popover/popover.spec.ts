@@ -552,6 +552,28 @@ describe('AndesPopover - extended features', () => {
       expectLength(body.lineHeight, '1.25rem');
     });
 
+    it('casts its shadow with a filter on the surface, so it follows the arrow as well', () => {
+      const css = readFileSync(
+        'packages/ui/src/lib/popover/popover-content.css',
+        'utf8',
+      );
+      // The surface's filter covers the arrow it contains; a box-shadow would stop at the
+      // rectangle, and the arrow's clip-path would clip a shadow of its own.
+      expect(css).toContain(
+        'filter: var(--andes-popover-shadow, var(--_shadow));',
+      );
+      expect(css).not.toContain('box-shadow');
+      expect(css).toContain("[data-andes-theme='dark'] .andes-popover-content");
+      expect(css).toMatch(
+        /\[data-andes-theme='dark'\] \.andes-popover-content \{[^}]*--_shadow: drop-shadow\(0 6px 8px rgb\(0 0 0 \/ 32%\)\)/,
+      );
+      // Not on the arrow itself, which is cut by clip-path.
+      const arrowRule =
+        /\.andes-popover-arrow \{([^}]*)\}/.exec(css)?.[1] ?? '';
+      expect(arrowRule).not.toContain('filter');
+      expect(arrowRule).not.toContain('shadow');
+    });
+
     it('pads 12px by 16px measured to the outer edge, with the soft shadow and an 8px radius', () => {
       const css = readFileSync(
         'packages/ui/src/lib/popover/popover-content.css',
@@ -560,7 +582,7 @@ describe('AndesPopover - extended features', () => {
       expect(css).toContain('var(--andes-popover-padding, 0.75rem)');
       expect(css).toContain('var(--andes-popover-padding, 1rem)');
       expect(css).toContain('calc(var(--_pad-block) - 1px)');
-      expect(css).toContain('0 6px 16px 0 rgb(0 0 0 / 8%)');
+      expect(css).toContain('drop-shadow(0 6px 8px rgb(0 0 0 / 8%))');
       expect(css).toContain(
         'var(--andes-popover-radius, var(--andes-radius-lg))',
       );

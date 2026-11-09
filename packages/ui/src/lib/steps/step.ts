@@ -17,6 +17,7 @@ import { lucideCheck, lucideX } from '@ng-icons/lucide';
 import {
   ANDES_STEPS,
   AndesStepContent,
+  AndesStepIcon,
   AndesStepIconContext,
   AndesStepStatus,
 } from './steps-types';
@@ -24,7 +25,15 @@ import {
 let nextStepId = 0;
 
 /** What the marker shows. */
-type StepMarker = 'custom' | 'number' | 'check' | 'cross' | 'dot' | 'none';
+type StepMarker =
+  | 'template'
+  | 'icon'
+  | 'number'
+  | 'check'
+  | 'cross'
+  | 'dot'
+  | 'dot-template'
+  | 'none';
 
 /**
  * One stage of an `andes-steps` trail. The status comes from the parent's `current` unless
@@ -42,9 +51,14 @@ type StepMarker = 'custom' | 'number' | 'check' | 'cross' | 'dot' | 'none';
     'data-slot': 'step',
     '[attr.data-status]': 'resolvedStatus()',
     '[attr.data-orientation]': 'parent.layoutOrientation()',
+    '[attr.data-type]': 'parent.type()',
     '[attr.data-variant]': 'parent.variant()',
     '[attr.data-size]': 'parent.size()',
-    '[attr.data-label-placement]': 'parent.layoutLabelPlacement()',
+    '[attr.data-title-placement]': 'parent.layoutTitlePlacement()',
+    '[attr.data-connector]': 'parent.connector()',
+    '[attr.data-ready]': 'parent.ready() ? "" : null',
+    '[attr.data-folded]': 'folded() ? "" : null',
+    '[attr.data-optional]': 'optional() !== false ? "" : null',
     '[attr.data-clickable]': 'parent.clickable() ? "" : null',
     '[attr.data-disabled]': 'disabled() ? "" : null',
     '[attr.data-current]': 'isCurrent() ? "" : null',
@@ -54,6 +68,9 @@ type StepMarker = 'custom' | 'number' | 'check' | 'cross' | 'dot' | 'none';
     // A static `title="..."` would otherwise stay on the host and show a native tooltip that
     // repeats the visible title.
     '[attr.title]': 'null',
+    '[class]': 'classes().item',
+    '[style]': 'styles().item',
+    '[style.order]': 'order()',
   },
 })
 export class AndesStep {
@@ -64,10 +81,21 @@ export class AndesStep {
   /** Secondary text beside the title. */
   readonly subtitle = input<AndesStepContent | undefined>(undefined);
   readonly description = input<AndesStepContent | undefined>(undefined);
-  /** Replaces the numbered marker. Ignored by the `dot`, `navigation` and `inline` variants. */
-  readonly icon = input<TemplateRef<AndesStepIconContext> | undefined>(
-    undefined,
-  );
+  /**
+   * Replaces the numbered marker: a lucide icon name (registered with `provideIcons`) or a
+   * template. Ignored by the `dot`, `navigation` and `inline` types.
+   */
+  readonly icon = input<AndesStepIcon | undefined>(undefined);
+  /**
+   * Marks the step as skippable and shows "Optional" after its title. A string replaces the
+   * word.
+   */
+  readonly optional = input<boolean | string, unknown>(false, {
+    transform: (value: unknown) =>
+      typeof value === 'string' && value !== ''
+        ? value
+        : booleanAttribute(value),
+  });
   /** Overrides the status derived from the parent's `current`. */
   readonly status = input<AndesStepStatus | undefined>(undefined);
   /** A disabled step cannot be selected even when the trail is `clickable`. */
@@ -89,6 +117,7 @@ export class AndesStep {
 
   private readonly uid = `andes-step-${nextStepId++}`;
   protected readonly descriptionId = `${this.uid}-description`;
+  readonly titleId = `${this.uid}-title`;
 
   readonly index = computed(() => this.parent.indexOf(this));
   readonly isCurrent = computed(() => this.index() === this.parent.current());
@@ -131,21 +160,73 @@ export class AndesStep {
     () => this.parent.resolvedLabels()[this.resolvedStatus()],
   );
 
+  protected readonly folded = computed(() =>
+    this.parent.isHidden(this.index()),
+  );
+
+  /** Flex order, only when `maxCount` folds steps, so the overflow marker can sit between them. */
+  protected readonly order = computed(() =>
+    this.parent.hiddenRanges().length > 0 ? this.index() * 2 : null,
+  );
+
+  protected readonly classes = computed(() =>
+    this.parent.classNamesFor(this.index(), this.resolvedStatus()),
+  );
+  protected readonly styles = computed(() =>
+    this.parent.stylesFor(this.index(), this.resolvedStatus()),
+  );
+
+  protected readonly tabindex = computed(() =>
+    this.parent.tabStop() === this.index() ? 0 : -1,
+  );
+
+  /** The number the marker shows: the trail's `initial` plus the position. */
+  protected readonly displayNumber = computed(
+    () => this.parent.initial() + this.index(),
+  );
+
+  protected readonly optionalLabel = computed(() => {
+    const value = this.optional();
+    if (value === false) {
+      return '';
+    }
+    return typeof value === 'string'
+      ? value
+      : this.parent.resolvedLabels().optional;
+  });
+
+  /** The icon that replaces the marker: the step's own, else the trail's for this status. */
+  private readonly resolvedIcon = computed<AndesStepIcon | null>(
+    () =>
+      this.icon() ?? this.parent.statusIcons()?.[this.resolvedStatus()] ?? null,
+  );
+  protected readonly iconName = computed(() => {
+    const icon = this.resolvedIcon();
+    return typeof icon === 'string' ? icon : null;
+  });
+  protected readonly iconTemplate = computed(() => {
+    const icon = this.resolvedIcon();
+    return icon instanceof TemplateRef ? icon : null;
+  });
+
   protected readonly showMarker = computed(() => {
-    const variant = this.parent.variant();
-    return variant === 'default' || variant === 'dot';
+    const type = this.parent.type();
+    return type === 'default' || type === 'dot' || type === 'panel';
   });
 
   protected readonly marker = computed<StepMarker>(() => {
-    const variant = this.parent.variant();
-    if (variant === 'dot') {
-      return 'dot';
+    const type = this.parent.type();
+    if (type === 'dot') {
+      return this.parent.dotTemplate() ? 'dot-template' : 'dot';
     }
-    if (variant !== 'default') {
+    if (type !== 'default' && type !== 'panel') {
       return 'none';
     }
-    if (this.icon()) {
-      return 'custom';
+    if (this.iconName()) {
+      return 'icon';
+    }
+    if (this.iconTemplate()) {
+      return 'template';
     }
     switch (this.resolvedStatus()) {
       case 'finish':
@@ -167,7 +248,7 @@ export class AndesStep {
   /** Ring progress, only on an in-progress step of the numbered variant. */
   protected readonly ringPercent = computed<number | null>(() => {
     if (
-      this.parent.variant() !== 'default' ||
+      this.parent.type() !== 'default' ||
       this.resolvedStatus() !== 'process'
     ) {
       return null;
@@ -188,6 +269,14 @@ export class AndesStep {
 
   focus(): void {
     this.trigger()?.nativeElement.focus();
+  }
+
+  protected onFocus(): void {
+    this.parent.noteFocus(this.index());
+  }
+
+  protected onBlur(): void {
+    this.parent.noteBlur(this.index());
   }
 
   protected activate(): void {

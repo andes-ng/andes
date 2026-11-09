@@ -5,9 +5,12 @@
     type="button"
     class="andes-step__trigger"
     [disabled]="disabled()"
+    [attr.tabindex]="tabindex()"
     [attr.aria-describedby]="descriptionId"
     (click)="activate()"
     (keydown)="onKeydown($event)"
+    (focus)="onFocus()"
+    (blur)="onBlur()"
   >
     <ng-container *ngTemplateOutlet="body" />
   </button>
@@ -16,21 +19,43 @@
     <ng-container *ngTemplateOutlet="body" />
   </div>
   } @if (!isLast()) {
-  <span class="andes-step__tail" aria-hidden="true"></span>
+  <span
+    class="andes-step__tail"
+    [class]="classes().tail"
+    [style]="styles().tail"
+    aria-hidden="true"
+    ><span
+      class="andes-step__rail"
+      [class]="classes().rail"
+      [style]="styles().rail"
+    ></span
+  ></span>
   }
 </div>
 
 <ng-template #body>
   @if (showMarker()) {
-  <span class="andes-step__marker" aria-hidden="true">
-    @switch (marker()) { @case ('custom') {
-    <ng-container *ngTemplateOutlet="icon() ?? null; context: iconContext()" />
+  <span
+    class="andes-step__marker"
+    [attr.data-marker]="marker()"
+    [class]="classes().icon"
+    [style]="styles().icon"
+    aria-hidden="true"
+  >
+    @switch (marker()) { @case ('template') {
+    <ng-container *ngTemplateOutlet="iconTemplate(); context: iconContext()" />
+    } @case ('dot-template') {
+    <ng-container
+      *ngTemplateOutlet="parent.dotTemplate() ?? null; context: iconContext()"
+    />
+    } @case ('icon') {
+    <ng-icon class="andes-step__glyph" [name]="iconName() ?? ''" />
     } @case ('check') {
     <ng-icon class="andes-step__glyph" name="lucideCheck" />
     } @case ('cross') {
     <ng-icon class="andes-step__glyph" name="lucideX" />
     } @case ('number') {
-    <span class="andes-step__number">{{ index() + 1 }}</span>
+    <span class="andes-step__number">{{ displayNumber() }}</span>
     } } @if (ringPercent() !== null) {
     <svg class="andes-step__ring" viewBox="0 0 100 100" focusable="false">
       <circle
@@ -52,9 +77,17 @@
     }
   </span>
   }
-  <span class="andes-step__main">
-    <span class="andes-step__title">
-      <span class="andes-step__title-text" #titleText>
+  <span
+    class="andes-step__main"
+    [class]="classes().content"
+    [style]="styles().content"
+  >
+    <span
+      class="andes-step__title"
+      [class]="classes().title"
+      [style]="styles().title"
+    >
+      <span class="andes-step__title-text" #titleText [id]="titleId">
         @if (titleTemplate(); as template) {
         <ng-container *ngTemplateOutlet="template" />
         } @else {{{ titleString() }}}
@@ -66,18 +99,34 @@
         }
       </span>
     </span>
-    @if (subtitleTemplate(); as template) {
-    <span class="andes-step__subtitle">
+    @if (optionalLabel()) {
+    <span class="andes-step__optional">{{ optionalLabel() }}</span>
+    } @if (subtitleTemplate(); as template) {
+    <span
+      class="andes-step__subtitle"
+      [class]="classes().subtitle"
+      [style]="styles().subtitle"
+    >
       <ng-container *ngTemplateOutlet="template" />
     </span>
     } @else if (subtitleString()) {
-    <span class="andes-step__subtitle">{{ subtitleString() }}</span>
+    <span
+      class="andes-step__subtitle"
+      [class]="classes().subtitle"
+      [style]="styles().subtitle"
+      >{{ subtitleString() }}</span
+    >
     }
   </span>
-  <span class="andes-step__description" [id]="descriptionId">
+  <span
+    class="andes-step__description"
+    [class]="classes().description"
+    [style]="styles().description"
+    [id]="descriptionId"
+  >
     @if (descriptionTemplate(); as template) {
     <ng-container *ngTemplateOutlet="template" />
     } @else {{{ descriptionString() }}}
-    <ng-content />
   </span>
+  <span class="andes-step__extra"><ng-content /></span>
 </ng-template>

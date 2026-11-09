@@ -6,10 +6,10 @@ import { AndesStep } from './step';
 import { AndesSteps } from './steps';
 import {
   AndesStepStatus,
-  AndesStepsLabelPlacement,
+  AndesStepsTitlePlacement,
   AndesStepsOrientation,
   AndesStepsSize,
-  AndesStepsVariant,
+  AndesStepsType,
 } from './steps-types';
 
 @Component({
@@ -18,9 +18,9 @@ import {
     <andes-steps
       [(current)]="current"
       [orientation]="orientation()"
-      [variant]="variant()"
+      [type]="type()"
       [size]="size()"
-      [labelPlacement]="labelPlacement()"
+      [titlePlacement]="titlePlacement()"
       [clickable]="clickable()"
       [status]="status()"
       [percent]="percent()"
@@ -52,9 +52,9 @@ import {
 class HostComponent {
   readonly current = signal(1);
   readonly orientation = signal<AndesStepsOrientation>('horizontal');
-  readonly variant = signal<AndesStepsVariant>('default');
+  readonly type = signal<AndesStepsType>('default');
   readonly size = signal<AndesStepsSize>('default');
-  readonly labelPlacement = signal<AndesStepsLabelPlacement>('horizontal');
+  readonly titlePlacement = signal<AndesStepsTitlePlacement>('horizontal');
   readonly clickable = signal(false);
   readonly status = signal<AndesStepStatus>('process');
   readonly percent = signal<number | undefined>(undefined);
@@ -334,49 +334,49 @@ describe('AndesSteps', () => {
     });
   });
 
-  describe('variants and layout attributes', () => {
-    it('mirrors orientation, variant and size onto host and steps', () => {
+  describe('types and layout attributes', () => {
+    it('mirrors orientation, type and size onto host and steps', () => {
       const { fixture, host, root, items } = create();
       host.orientation.set('vertical');
-      host.variant.set('navigation');
+      host.type.set('navigation');
       host.size.set('small');
       flush(fixture);
 
       expect(root.getAttribute('data-orientation')).toBe('vertical');
-      expect(root.getAttribute('data-variant')).toBe('navigation');
+      expect(root.getAttribute('data-type')).toBe('navigation');
       expect(root.getAttribute('data-size')).toBe('small');
       expect(items()[0].getAttribute('data-orientation')).toBe('vertical');
-      expect(items()[0].getAttribute('data-variant')).toBe('navigation');
+      expect(items()[0].getAttribute('data-type')).toBe('navigation');
       expect(items()[0].getAttribute('data-size')).toBe('small');
     });
 
-    it('puts the title below the marker for the dot variant', () => {
+    it('puts the title below the marker for the dot type', () => {
       const { fixture, host, items } = create();
-      host.variant.set('dot');
+      host.type.set('dot');
       flush(fixture);
 
-      expect(items()[0].getAttribute('data-label-placement')).toBe('vertical');
+      expect(items()[0].getAttribute('data-title-placement')).toBe('vertical');
       expect(items()[0].querySelector('.andes-step__number')).toBeNull();
       expect(items()[0].querySelector('.andes-step__marker')).toBeTruthy();
     });
 
-    it('renders no marker for the navigation and inline variants', () => {
+    it('renders no marker for the navigation and inline types', () => {
       const { fixture, host, items } = create();
 
-      for (const variant of ['navigation', 'inline'] as const) {
-        host.variant.set(variant);
+      for (const type of ['navigation', 'inline'] as const) {
+        host.type.set(type);
         flush(fixture);
         expect(items()[0].querySelector('.andes-step__marker')).toBeNull();
         expect(items()[0].textContent).toContain('Account');
       }
     });
 
-    it('honours labelPlacement for the default variant', () => {
+    it('honours titlePlacement for the default type', () => {
       const { fixture, host, items } = create();
-      host.labelPlacement.set('vertical');
+      host.titlePlacement.set('vertical');
       flush(fixture);
 
-      expect(items()[0].getAttribute('data-label-placement')).toBe('vertical');
+      expect(items()[0].getAttribute('data-title-placement')).toBe('vertical');
     });
   });
 
@@ -624,14 +624,14 @@ describe('AndesSteps', () => {
       expect(root.hasAttribute('data-collapsed')).toBe(false);
     });
 
-    it('keeps the compact inline variant horizontal', () => {
+    it('keeps the compact inline type horizontal', () => {
       vi.stubGlobal('ResizeObserver', FakeResizeObserver);
       const fixture = TestBed.createComponent(HostComponent);
       const root = fixture.nativeElement.querySelector(
         'andes-steps',
       ) as HTMLElement;
       stubWidth(root, 200);
-      fixture.componentInstance.variant.set('inline');
+      fixture.componentInstance.type.set('inline');
       fixture.detectChanges();
       flush(fixture);
 

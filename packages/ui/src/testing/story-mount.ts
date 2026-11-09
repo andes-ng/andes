@@ -1,4 +1,9 @@
-import { Component, type Provider, type Type } from '@angular/core';
+import {
+  Component,
+  type EnvironmentProviders,
+  type Provider,
+  type Type,
+} from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { Meta, StoryObj } from '@storybook/angular';
 
@@ -24,6 +29,8 @@ export interface ResolvedStory {
   props: Record<string, unknown>;
   imports: Type<unknown>[];
   providers: Provider[];
+  /** What a story's `applicationConfig` provides (a router, say): app-wide, not per component. */
+  applicationProviders: (Provider | EnvironmentProviders)[];
 }
 
 /** Runs the render function and the decorators of a story, and returns what Storybook mounts. */
@@ -53,6 +60,7 @@ export function resolveStory(
     template: string;
     props?: Record<string, unknown>;
     moduleMetadata?: { imports?: Type<unknown>[]; providers?: Provider[] };
+    applicationConfig?: { providers?: (Provider | EnvironmentProviders)[] };
   };
   return {
     template: result.template,
@@ -63,6 +71,7 @@ export function resolveStory(
       ...(result.moduleMetadata?.imports ?? []),
     ],
     providers: result.moduleMetadata?.providers ?? [],
+    applicationProviders: result.applicationConfig?.providers ?? [],
   };
 }
 
@@ -74,6 +83,7 @@ export function mountStory(resolved: ResolvedStory) {
   TestBed.configureTestingModule({
     errorOnUnknownElements: true,
     errorOnUnknownProperties: true,
+    providers: resolved.applicationProviders,
   });
   // The story's template is only known at run time, so it is swapped in (JIT) over the stub.
   TestBed.overrideComponent(StoryHost, {

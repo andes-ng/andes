@@ -15,19 +15,32 @@ import {
   numberAttribute,
   output,
   signal,
+  TemplateRef,
   untracked,
 } from '@angular/core';
 
 import { AndesStep } from './step';
+import { AndesStepPanel } from './step-panel';
+import { AndesStepsMore } from './steps-more';
+import { hiddenRanges, isFolded } from './steps-overflow';
 import {
   ANDES_STEPS,
   ANDES_STEPS_DEFAULT_LABELS,
+  AndesStepIconContext,
   AndesStepStatus,
+  AndesStepsClassNames,
+  AndesStepsClassNamesInput,
+  AndesStepsConnector,
   AndesStepsContext,
-  AndesStepsLabelPlacement,
   AndesStepsLabels,
   AndesStepsOrientation,
+  AndesStepsPartInfo,
   AndesStepsSize,
+  AndesStepsStatusIcons,
+  AndesStepsStyles,
+  AndesStepsStylesInput,
+  AndesStepsTitlePlacement,
+  AndesStepsType,
   AndesStepsVariant,
 } from './steps-types';
 
@@ -37,10 +50,10 @@ const NBSP = String.fromCharCode(160);
 /**
  * A progress trail for multi-stage flows such as wizards, onboarding or order tracking.
  *
- * Compose it with `andes-step` children. Every step derives its status from `current`
- * (earlier steps are finished, the current one is in progress, later ones are upcoming) unless
- * the step sets `status` itself. With `clickable`, steps become buttons: clicking one updates
- * `current` and emits `changed`.
+ * Compose it with `andes-step` children. Every step derives its status from `current` (earlier
+ * steps are finished, the current one is in progress, later ones are upcoming) unless the step
+ * sets `status` itself. With `clickable`, steps become buttons: clicking one updates `current`
+ * and emits `changed`. `andes-step-panel` children show the content of the step in progress.
  *
  * @example
  * <andes-steps [(current)]="index" clickable>
@@ -51,6 +64,7 @@ const NBSP = String.fromCharCode(160);
  */
 @Component({
   selector: 'andes-steps',
+  imports: [AndesStepsMore],
   templateUrl: './steps.html',
   styleUrl: './steps.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -60,13 +74,20 @@ const NBSP = String.fromCharCode(160);
   host: {
     'data-slot': 'steps',
     '[attr.data-orientation]': 'layoutOrientation()',
+    '[attr.data-type]': 'type()',
     '[attr.data-variant]': 'variant()',
     '[attr.data-size]': 'size()',
-    '[attr.data-label-placement]': 'layoutLabelPlacement()',
+    '[attr.data-title-placement]': 'layoutTitlePlacement()',
+    '[attr.data-connector]': 'connector()',
     '[attr.data-clickable]': 'clickable() ? "" : null',
     '[attr.data-collapsed]': 'collapsed() ? "" : null',
+    '[attr.data-ready]': 'ready() ? "" : null',
     '[attr.aria-label]': 'null',
     '[attr.aria-labelledby]': 'null',
+    '[class]': 'rootClasses()',
+    '[style]': 'rootStyles()',
+    '[style.--andes-steps-offset]': 'offset()',
+    '[style.--andes-steps-count]': 'count()',
   },
 })
 export class AndesSteps implements AndesStepsContext {
@@ -77,25 +98,48 @@ export class AndesSteps implements AndesStepsContext {
   readonly current = model(0);
   /** Layout axis. Horizontal collapses to vertical in a narrow container (see `responsive`). */
   readonly orientation = input<AndesStepsOrientation>('horizontal');
-  readonly variant = input<AndesStepsVariant>('default');
+  /** What the trail looks like: numbered, dots, a segmented panel, navigation or inline. */
+  readonly type = input<AndesStepsType>('default');
+  /** How the numbered marker is filled. */
+  readonly variant = input<AndesStepsVariant>('soft');
   readonly size = input<AndesStepsSize>('default');
-  /** Title below (`vertical`) or beside (`horizontal`) the marker. The `dot` variant is always below. */
-  readonly labelPlacement = input<AndesStepsLabelPlacement>('horizontal');
+  /** Title beside (`horizontal`) or below (`vertical`) the marker. The `dot` type is always below. */
+  readonly titlePlacement = input<AndesStepsTitlePlacement>('horizontal');
+  /** How the line between two steps is drawn. */
+  readonly connector = input<AndesStepsConnector>('solid');
   /** Turns every step into a button that selects it. */
   readonly clickable = input(false, { transform: booleanAttribute });
   /** Status of the current step, e.g. `error` when its validation failed. */
   readonly status = input<AndesStepStatus>('process');
   /** 0-100. Draws a progress ring around the current step's marker. */
   readonly percent = input<number | undefined, unknown>(undefined, {
-    transform: (value: unknown) => {
-      if (value === undefined || value === null || value === '') {
-        return undefined;
-      }
-      const parsed = numberAttribute(value, NaN);
-      return Number.isNaN(parsed) ? undefined : parsed;
-    },
+    transform: optionalNumber,
   });
-  /** Switch a horizontal trail to vertical when the container is narrower than `breakpoint` (not the compact `inline` variant). */
+  /** The number shown on the first step; the rest count up from it. `current` stays zero-based. */
+  readonly initial = input(1, { transform: numberAttribute });
+  /**
+   * At most this many steps are drawn; the rest fold into overflow markers that list them.
+   * The first, the last and the current step always stay. Values under 3 turn it off.
+   */
+  readonly maxCount = input<number | undefined, unknown>(undefined, {
+    transform: optionalNumber,
+  });
+  /**
+   * Empty slots to leave before the first step of an `inline` trail, so rows with fewer steps
+   * line up with longer ones in the same list.
+   */
+  readonly offset = input(0, { transform: numberAttribute });
+  /** Icons that replace the marker of every step in a status. */
+  readonly statusIcons = input<AndesStepsStatusIcons | undefined>(undefined);
+  /** Draws every dot of the `dot` type from a template instead of the plain dot. */
+  readonly dotTemplate = input<TemplateRef<AndesStepIconContext> | undefined>(
+    undefined,
+  );
+  /** Extra classes per part, as an object or as a function of the trail and step state. */
+  readonly classNames = input<AndesStepsClassNamesInput | undefined>(undefined);
+  /** Inline styles per part, as an object or as a function of the trail and step state. */
+  readonly styles = input<AndesStepsStylesInput | undefined>(undefined);
+  /** Switch a horizontal trail to vertical when the container is narrower than `breakpoint` (not the compact `inline` type). */
   readonly responsive = input(true, { transform: booleanAttribute });
   /** Container width in px below which the responsive collapse applies. */
   readonly breakpoint = input(480, { transform: numberAttribute });
@@ -110,12 +154,23 @@ export class AndesSteps implements AndesStepsContext {
     alias: 'aria-labelledby',
   });
 
+  /**
+   * Asked before the user's click or Enter/Space moves to another step: return `false` (or a
+   * promise of it) to stay where you are, e.g. while the current step is not valid.
+   */
+  readonly beforeChange = input<
+    ((to: number, from: number) => boolean | Promise<boolean>) | undefined
+  >(undefined);
+
   /** Emits the zero-based index of a step the user selected (click or Enter/Space). */
   readonly changed = output<number>();
 
   private readonly steps = contentChildren(AndesStep);
+  private readonly panels = contentChildren(AndesStepPanel);
   private readonly narrow = signal(false);
+  private readonly focused = signal<number | null>(null);
   protected readonly liveMessage = signal('');
+  readonly ready = signal(false);
 
   readonly count = computed(() => this.steps().length);
   readonly resolvedLabels = computed(() => ({
@@ -125,21 +180,53 @@ export class AndesSteps implements AndesStepsContext {
   protected readonly collapsed = computed(
     () =>
       this.orientation() === 'horizontal' &&
-      this.variant() !== 'inline' &&
+      this.type() !== 'inline' &&
       this.responsive() &&
       this.narrow(),
   );
   readonly layoutOrientation = computed<AndesStepsOrientation>(() =>
     this.collapsed() ? 'vertical' : this.orientation(),
   );
-  readonly layoutLabelPlacement = computed<AndesStepsLabelPlacement>(() =>
-    this.variant() === 'dot' ? 'vertical' : this.labelPlacement(),
+  readonly layoutTitlePlacement = computed<AndesStepsTitlePlacement>(() =>
+    this.type() === 'dot' ? 'vertical' : this.titlePlacement(),
+  );
+  readonly hiddenRanges = computed(() =>
+    hiddenRanges(this.count(), this.maxCount(), this.current()),
+  );
+
+  /** Status of every step, in order; what each step shows and what the overflow lists. */
+  private readonly statuses = computed<AndesStepStatus[]>(() =>
+    this.steps().map((step) => step.resolvedStatus()),
+  );
+
+  /** The step that holds the single tab stop: the focused one, else the current, else the first. */
+  readonly tabStop = computed(() => {
+    const steps = this.steps();
+    const usable = (index: number) =>
+      !!steps[index]?.isInteractive() && !this.isHidden(index);
+    const focused = this.focused();
+    if (focused !== null && usable(focused)) {
+      return focused;
+    }
+    const current = this.current();
+    if (usable(current)) {
+      return current;
+    }
+    return steps.findIndex((_, index) => usable(index));
+  });
+
+  protected readonly rootClasses = computed(
+    () => this.classNamesFor(-1, this.status()).root ?? null,
+  );
+  protected readonly rootStyles = computed(
+    () => this.stylesFor(-1, this.status()).root ?? null,
   );
 
   private lastAnnounced: number | null = null;
 
   constructor() {
     afterNextRender(() => {
+      this.ready.set(true);
       if (typeof ResizeObserver === 'undefined') {
         return;
       }
@@ -186,7 +273,45 @@ export class AndesSteps implements AndesStepsContext {
     return this.steps().indexOf(step as AndesStep);
   }
 
+  panelIndexOf(panel: unknown): number {
+    return this.panels().indexOf(panel as AndesStepPanel);
+  }
+
+  isHidden(index: number): boolean {
+    return isFolded(this.hiddenRanges(), index);
+  }
+
+  titleTextAt(index: number): string {
+    return this.steps()[index]?.titleText() ?? '';
+  }
+
+  titleIdAt(index: number): string | null {
+    return this.steps()[index]?.titleId ?? null;
+  }
+
+  statusAt(index: number): AndesStepStatus {
+    return this.statuses()[index] ?? 'wait';
+  }
+
+  /**
+   * Selects a step as if the user had: asks `beforeChange` first, then updates `current` and
+   * emits `changed`.
+   */
   select(index: number): void {
+    const from = this.current();
+    if (index === from) {
+      return;
+    }
+    const guard = this.beforeChange();
+    const verdict = guard ? guard(index, from) : true;
+    if (verdict instanceof Promise) {
+      void verdict.then((allowed) => allowed && this.commit(index));
+    } else if (verdict) {
+      this.commit(index);
+    }
+  }
+
+  private commit(index: number): void {
     if (index === this.current()) {
       return;
     }
@@ -194,9 +319,70 @@ export class AndesSteps implements AndesStepsContext {
     this.changed.emit(index);
   }
 
+  /** Moves to the next step. Updates `current` without emitting `changed`. */
+  next(): void {
+    this.current.set(Math.min(this.current() + 1, this.count() - 1));
+  }
+
+  /** Moves to the previous step. Updates `current` without emitting `changed`. */
+  previous(): void {
+    this.current.set(Math.max(this.current() - 1, 0));
+  }
+
+  noteFocus(index: number): void {
+    this.focused.set(index);
+  }
+
+  noteBlur(index: number): void {
+    if (this.focused() === index) {
+      this.focused.set(null);
+    }
+  }
+
+  classNamesFor(
+    index: number,
+    stepStatus: AndesStepStatus,
+  ): AndesStepsClassNames {
+    const value = this.classNames();
+    if (!value) {
+      return NO_PARTS;
+    }
+    return typeof value === 'function'
+      ? value(this.partInfo(index, stepStatus))
+      : value;
+  }
+
+  stylesFor(index: number, stepStatus: AndesStepStatus): AndesStepsStyles {
+    const value = this.styles();
+    if (!value) {
+      return NO_PARTS;
+    }
+    return typeof value === 'function'
+      ? value(this.partInfo(index, stepStatus))
+      : value;
+  }
+
+  private partInfo(
+    index: number,
+    stepStatus: AndesStepStatus,
+  ): AndesStepsPartInfo {
+    return {
+      type: this.type(),
+      variant: this.variant(),
+      orientation: this.layoutOrientation(),
+      size: this.size(),
+      current: this.current(),
+      status: this.status(),
+      index,
+      stepStatus,
+    };
+  }
+
   moveFocus(step: unknown, key: 'next' | 'previous' | 'first' | 'last'): void {
     const steps = this.steps();
-    const enabled = steps.filter((candidate) => candidate.isInteractive());
+    const enabled = steps.filter(
+      (candidate, index) => candidate.isInteractive() && !this.isHidden(index),
+    );
     if (enabled.length === 0) {
       return;
     }
@@ -218,4 +404,14 @@ export class AndesSteps implements AndesStepsContext {
     }
     target?.focus();
   }
+}
+
+const NO_PARTS: Record<string, never> = {};
+
+function optionalNumber(value: unknown): number | undefined {
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+  const parsed = numberAttribute(value, NaN);
+  return Number.isNaN(parsed) ? undefined : parsed;
 }

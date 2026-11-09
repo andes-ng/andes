@@ -1,24 +1,36 @@
-/* Every visual decision flows through a handful of private custom properties set per status and
-   per variant, so the layout rules below never repeat colours. The parent mirrors its state onto
-   this host as data attributes; nothing here reaches into another component's DOM. */
+/* Every visual decision flows through a handful of private custom properties set per status,
+   per variant and per type, so the layout rules below never repeat colours. The parent mirrors
+   its state onto this host as data attributes; nothing here reaches into another component's
+   DOM. Sizes: a 24px marker (20px small), 14px/20px titles, 13px/20px muted descriptions, 12px
+   between the marker and the title and around the connector. */
 :host {
-  --_icon: 2rem;
-  --_gap: var(--andes-space-2, 0.5rem);
-  --_row: max(var(--_icon), 1.375rem);
-  --_tail: var(--andes-color-border, #d1d5db);
-  --_marker-bg: transparent;
-  --_marker-fg: var(--andes-color-muted-foreground, #64748b);
-  --_marker-border: var(--andes-color-border, #d1d5db);
+  --_icon: 1.5rem;
+  --_gap: 0.75rem;
+  --_space: 0.75rem;
+  --_row: max(var(--_icon), 1.25rem);
+  --_marker-offset: calc((var(--_row) - var(--_icon)) / 2);
+  --_track: var(--andes-color-border, #d1d5db);
+  --_fill: var(--andes-color-primary, #2563eb);
+  --_bg: transparent;
+  --_fg: var(--andes-color-muted-foreground, #64748b);
+  --_bd: var(--andes-color-border, #d1d5db);
+  --_halo: transparent;
   --_title-color: var(--andes-color-muted-foreground, #64748b);
   --_title-weight: 500;
+  --_primary: var(--andes-color-primary, #2563eb);
+  --_on-primary: var(--andes-color-primary-foreground, #ffffff);
   --_primary-text: var(
     --andes-color-primary-text,
     var(--andes-color-primary, #2563eb)
   );
+  --_danger: var(--andes-color-danger, #dc2626);
+  --_on-danger: var(--andes-color-danger-foreground, #ffffff);
   --_danger-text: var(
     --andes-color-danger-text,
     var(--andes-color-danger, #dc2626)
   );
+  --_muted: var(--andes-color-muted, #f1f5f9);
+  --_muted-fg: var(--andes-color-muted-foreground, #64748b);
 
   position: relative;
   display: block;
@@ -26,56 +38,138 @@
   min-width: 0;
   font-family: var(--andes-font-family), sans-serif;
   font-size: var(--andes-text-font-size, 0.875rem);
-  line-height: var(--andes-text-line-height, 1.375rem);
+  line-height: 1.25rem;
   color: var(--andes-color-foreground);
 }
 
-:host([data-size='small']) {
-  --_icon: 1.5rem;
+:host([hidden]),
+:host([data-folded]) {
+  display: none;
 }
 
-:host([data-variant='dot']) {
+/* A horizontal step never shrinks below its longest word: a trail that does not fit scrolls
+   (see steps.css) instead of breaking its titles letter by letter. */
+:host([data-orientation='horizontal']:not([data-type='inline'])) {
+  min-inline-size: min-content;
+}
+
+:host([data-size='small']) {
+  --_icon: 1.25rem;
+  --_gap: 0.625rem;
+}
+
+:host([data-type='dot']) {
   --_icon: 0.5rem;
+}
+
+:host([data-type='panel']) {
+  --_icon: 1.25rem;
+  --_gap: 0.625rem;
+}
+
+:host([data-type='panel'][data-size='small']) {
+  --_icon: 1rem;
 }
 
 :host([data-last]) {
   flex: none;
 }
 
-/* ---------------------------------------------------------------- Status */
+/* ------------------------------------------------------ Status x variant: marker colours */
+
+/* soft: tinted when finished, solid while in progress. */
+:host([data-variant='soft'][data-status='finish']) {
+  --_bg: color-mix(in srgb, var(--_primary) 12%, transparent);
+  --_fg: var(--_primary-text);
+  --_bd: transparent;
+}
+
+:host([data-variant='soft'][data-status='process']) {
+  --_bg: var(--_primary);
+  --_fg: var(--_on-primary);
+  --_bd: var(--_primary);
+}
+
+:host([data-variant='soft'][data-status='error']) {
+  --_bg: color-mix(in srgb, var(--_danger) 12%, transparent);
+  --_fg: var(--_danger-text);
+  --_bd: transparent;
+}
+
+/* solid: every reached step is a filled disc. */
+:host([data-variant='solid'][data-status='finish']) {
+  --_bg: var(--_primary);
+  --_fg: var(--_on-primary);
+  --_bd: var(--_primary);
+}
+
+:host([data-variant='solid'][data-status='process']) {
+  --_bg: var(--_primary);
+  --_fg: var(--_on-primary);
+  --_bd: var(--_primary);
+  --_halo: color-mix(in srgb, var(--_primary) 22%, transparent);
+}
+
+:host([data-variant='solid'][data-status='error']) {
+  --_bg: var(--_danger);
+  --_fg: var(--_on-danger);
+  --_bd: var(--_danger);
+}
+
+:host([data-variant='solid'][data-status='wait']) {
+  --_bg: var(--_muted);
+  --_fg: var(--_muted-fg);
+  --_bd: transparent;
+}
+
+/* outline: rings only. */
+:host([data-variant='outline'][data-status='finish']) {
+  --_fg: var(--_primary-text);
+  --_bd: var(--_primary);
+}
+
+:host([data-variant='outline'][data-status='process']) {
+  --_fg: var(--_primary-text);
+  --_bd: var(--_primary);
+  --_halo: color-mix(in srgb, var(--_primary) 22%, transparent);
+}
+
+:host([data-variant='outline'][data-status='error']) {
+  --_fg: var(--_danger-text);
+  --_bd: var(--_danger);
+}
+
+/* plain: no disc, the glyph alone carries the status. */
+:host([data-variant='plain']) {
+  --_bd: transparent;
+}
+
+:host([data-variant='plain'][data-status='finish']),
+:host([data-variant='plain'][data-status='process']) {
+  --_fg: var(--_primary-text);
+}
+
+:host([data-variant='plain'][data-status='error']) {
+  --_fg: var(--_danger-text);
+}
+
+/* ------------------------------------------------------ Status: text and connector */
 
 :host([data-status='finish']) {
-  --_marker-bg: color-mix(
-    in srgb,
-    var(--andes-color-primary, #2563eb) 12%,
-    transparent
-  );
-  --_marker-fg: var(--_primary-text);
-  --_marker-border: transparent;
   --_title-color: var(--andes-color-foreground);
-  --_tail: var(--andes-color-primary, #2563eb);
 }
 
 :host([data-status='process']) {
-  --_marker-bg: var(--andes-color-primary, #2563eb);
-  --_marker-fg: var(--andes-color-primary-foreground, #ffffff);
-  --_marker-border: var(--andes-color-primary, #2563eb);
   --_title-color: var(--andes-color-foreground);
   --_title-weight: 600;
 }
 
 :host([data-status='error']) {
-  --_marker-bg: color-mix(
-    in srgb,
-    var(--andes-color-danger, #dc2626) 12%,
-    transparent
-  );
-  --_marker-fg: var(--_danger-text);
-  --_marker-border: transparent;
   --_title-color: var(--_danger-text);
+  --_fill: var(--_danger);
 }
 
-/* ---------------------------------------------------------------- Trigger */
+/* ------------------------------------------------------ Trigger */
 
 .andes-step__head {
   display: flex;
@@ -87,9 +181,10 @@
   grid-template-columns: auto minmax(0, 1fr);
   grid-template-areas:
     'marker main'
-    '. description';
+    '. description'
+    '. extra';
   column-gap: var(--_gap);
-  align-items: center;
+  align-items: start;
   box-sizing: border-box;
   min-width: 0;
   margin: 0;
@@ -116,7 +211,7 @@ button.andes-step__trigger:disabled {
   opacity: 0.55;
 }
 
-/* ---------------------------------------------------------------- Marker */
+/* ------------------------------------------------------ Marker */
 
 .andes-step__marker {
   grid-area: marker;
@@ -125,14 +220,16 @@ button.andes-step__trigger:disabled {
   flex: none;
   align-items: center;
   justify-content: center;
-  align-self: center;
+  align-self: start;
   box-sizing: border-box;
   inline-size: var(--_icon);
   block-size: var(--_icon);
-  border: 1px solid var(--_marker-border);
+  margin-block-start: var(--_marker-offset);
+  border: 1px solid var(--_bd);
   border-radius: var(--andes-radius-full, 9999px);
-  background-color: var(--_marker-bg);
-  color: var(--_marker-fg);
+  background-color: var(--_bg);
+  box-shadow: 0 0 0 3px var(--_halo);
+  color: var(--_fg);
   font-size: 0.875rem;
   font-weight: 500;
   line-height: 1;
@@ -140,104 +237,152 @@ button.andes-step__trigger:disabled {
   transition:
     background-color var(--andes-motion-duration-mid, 150ms) ease,
     border-color var(--andes-motion-duration-mid, 150ms) ease,
+    box-shadow var(--andes-motion-duration-mid, 150ms) ease,
     color var(--andes-motion-duration-mid, 150ms) ease;
 }
 
-:host([data-size='small']) .andes-step__marker {
+:host([data-size='small']) .andes-step__marker,
+:host([data-type='panel']) .andes-step__marker {
   font-size: 0.75rem;
 }
 
+:host([data-variant='plain']) .andes-step__marker {
+  box-shadow: none;
+}
+
+:host([data-variant='plain']:not([data-type='dot'])) .andes-step__marker {
+  inline-size: auto;
+  min-inline-size: var(--_icon);
+}
+
+:host([data-variant='plain'][data-status='process']) .andes-step__number {
+  font-weight: 600;
+}
+
 /* The check and the cross are lucide icons in an `ng-icon`. The strokes keep the weight the
-   marker was drawn with: 1.75px at 16px, which is 2.625 units of lucide's 24-unit grid. */
+   marker was drawn with: 2px at 16px, which is 3 units of lucide's 24-unit grid. */
 .andes-step__glyph {
-  --ng-icon__stroke-width: 2.625;
+  --ng-icon__stroke-width: 2.25;
 
   display: inline-flex;
   flex: none;
-  inline-size: 1rem;
-  block-size: 1rem;
+  inline-size: 0.875rem;
+  block-size: 0.875rem;
 }
 
-:host([data-size='small']) .andes-step__glyph {
+:host([data-size='small']) .andes-step__glyph,
+:host([data-type='panel']) .andes-step__glyph {
   inline-size: 0.75rem;
   block-size: 0.75rem;
 }
 
-/* The dot variant swaps the numbered disc for a plain dot; the current one gets a soft halo. */
-:host([data-variant='dot']) .andes-step__marker {
+:host([data-variant='plain']) .andes-step__glyph {
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+}
+
+:host([data-variant='plain'][data-size='small']) .andes-step__glyph {
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+
+/* A consumer's icon or template draws at the glyph size; lucide scales with the font size. */
+.andes-step__marker[data-marker='icon'] .andes-step__glyph {
+  --ng-icon__stroke-width: 2;
+}
+
+/* The dot type swaps the disc for a plain dot; the current one gets a soft halo. */
+:host([data-type='dot']) .andes-step__marker {
   border: 0;
-  background-color: var(--_tail);
+  background-color: var(--_track);
 }
 
-:host([data-variant='dot'][data-status='finish']) .andes-step__marker,
-:host([data-variant='dot'][data-status='process']) .andes-step__marker {
-  background-color: var(--andes-color-primary, #2563eb);
+:host([data-type='dot'][data-status='finish']) .andes-step__marker,
+:host([data-type='dot'][data-status='process']) .andes-step__marker {
+  background-color: var(--_primary);
 }
 
-:host([data-variant='dot'][data-status='error']) .andes-step__marker {
-  background-color: var(--andes-color-danger, #dc2626);
+:host([data-type='dot'][data-status='error']) .andes-step__marker {
+  background-color: var(--_danger);
 }
 
-:host([data-variant='dot'][data-status='wait']) .andes-step__marker {
-  background-color: var(--andes-color-border, #d1d5db);
+:host([data-type='dot'][data-current]) .andes-step__marker {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--_primary) 20%, transparent);
 }
 
-:host([data-variant='dot'][data-current]) .andes-step__marker {
-  box-shadow: 0 0 0 4px
-    color-mix(in srgb, var(--andes-color-primary, #2563eb) 20%, transparent);
-}
-
-:host([data-variant='dot'][data-current][data-status='error'])
+:host([data-type='dot'][data-current][data-status='error'])
   .andes-step__marker {
-  box-shadow: 0 0 0 4px
-    color-mix(in srgb, var(--andes-color-danger, #dc2626) 20%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--_danger) 20%, transparent);
+}
+
+/* A dot drawn from a template keeps no disc of its own. */
+.andes-step__marker[data-marker='dot-template'] {
+  inline-size: auto;
+  block-size: auto;
+  min-inline-size: var(--_icon);
+  min-block-size: var(--_icon);
+  border: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--_fg);
+}
+
+:host([data-type='dot'][data-status='finish'])
+  .andes-step__marker[data-marker='dot-template'],
+:host([data-type='dot'][data-status='process'])
+  .andes-step__marker[data-marker='dot-template'] {
+  color: var(--_primary-text);
 }
 
 /* Progress ring around the in-progress marker. */
 .andes-step__ring {
   position: absolute;
-  inset: -0.375rem;
-  inline-size: calc(100% + 0.75rem);
-  block-size: calc(100% + 0.75rem);
+  inset: -0.3125rem;
+  inline-size: calc(100% + 0.625rem);
+  block-size: calc(100% + 0.625rem);
   transform: rotate(-90deg);
   fill: none;
-  stroke-width: 5;
+  stroke-width: 6;
   pointer-events: none;
 }
 
 .andes-step__ring-track {
-  stroke: var(--andes-color-border, #d1d5db);
+  stroke: color-mix(in srgb, var(--_track) 70%, transparent);
 }
 
 .andes-step__ring-arc {
-  stroke: var(--andes-color-primary, #2563eb);
+  stroke: var(--_primary);
   stroke-linecap: round;
-  transition: stroke-dasharray var(--andes-motion-duration-slow, 200ms) ease;
+  transition: stroke-dasharray var(--andes-motion-duration-slow, 300ms) ease;
 }
 
-/* ---------------------------------------------------------------- Text */
+/* ------------------------------------------------------ Text */
 
 .andes-step__main {
   grid-area: main;
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  align-self: center;
-  column-gap: var(--_gap);
+  align-content: center;
+  align-self: start;
+  column-gap: 0.5rem;
   min-width: 0;
+  min-block-size: var(--_row);
 }
 
 .andes-step__title {
   min-width: 0;
   color: var(--_title-color);
   font-weight: var(--_title-weight);
-  overflow-wrap: anywhere;
+  line-height: 1.25rem;
+  overflow-wrap: break-word;
   transition: color var(--andes-motion-duration-mid, 150ms) ease;
 }
 
-.andes-step__subtitle {
+.andes-step__subtitle,
+.andes-step__optional {
   color: var(--andes-color-muted-foreground, #64748b);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 400;
   line-height: 1.25rem;
 }
@@ -245,17 +390,25 @@ button.andes-step__trigger:disabled {
 .andes-step__description {
   grid-area: description;
   min-width: 0;
-  max-inline-size: var(--andes-steps-description-max-width, 8.75rem);
+  max-inline-size: var(--andes-steps-description-max-width, 10rem);
   color: var(--andes-color-muted-foreground, #64748b);
-  overflow-wrap: anywhere;
-}
-
-:host([data-size='small']) .andes-step__description {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   line-height: 1.25rem;
+  overflow-wrap: break-word;
 }
 
 .andes-step__description:empty {
+  display: none;
+}
+
+/* Whatever is placed inside the step, under its description. */
+.andes-step__extra {
+  grid-area: extra;
+  min-width: 0;
+  margin-block-start: 0.5rem;
+}
+
+.andes-step__extra:empty {
   display: none;
 }
 
@@ -272,61 +425,128 @@ button.andes-step__trigger:disabled {
   border: 0;
 }
 
-/* ---------------------------------------------------------------- Tail (horizontal, label beside) */
+/* ------------------------------------------------------ Connector (horizontal, title beside) */
 
 .andes-step__tail {
-  flex: 1 1 1.5rem;
-  min-inline-size: 1.5rem;
+  position: relative;
+  flex: 1 1 2rem;
+  min-inline-size: 2rem;
   block-size: 1px;
   margin-block-start: calc(var(--_row) / 2 - 0.5px);
-  margin-inline: var(--_gap);
-  background-color: var(--_tail);
+  margin-inline: var(--_space);
+  overflow: hidden;
+  background-color: var(--_track);
   transition: background-color var(--andes-motion-duration-mid, 150ms) ease;
 }
 
-/* ---------------------------------------------------------------- Label below the marker */
+/* The fill grows along the connector when the step finishes. */
+.andes-step__rail {
+  position: absolute;
+  inset: 0;
+  background-color: var(--_fill);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--andes-motion-duration-slow, 300ms) ease;
+}
 
-:host([data-orientation='horizontal'][data-label-placement='vertical'])
+:host(:dir(rtl)) .andes-step__rail {
+  transform-origin: right center;
+}
+
+:host([data-status='finish']) .andes-step__rail {
+  transform: scaleX(1);
+}
+
+/* Dashed and dotted connectors cut the same line with a mask, so the fill follows. */
+:host([data-connector='dashed']) .andes-step__tail {
+  -webkit-mask-image: repeating-linear-gradient(
+    to right,
+    #000 0 6px,
+    transparent 6px 10px
+  );
+  mask-image: repeating-linear-gradient(
+    to right,
+    #000 0 6px,
+    transparent 6px 10px
+  );
+}
+
+:host([data-connector='dotted']) .andes-step__tail {
+  -webkit-mask-image: repeating-linear-gradient(
+    to right,
+    #000 0 2px,
+    transparent 2px 6px
+  );
+  mask-image: repeating-linear-gradient(
+    to right,
+    #000 0 2px,
+    transparent 2px 6px
+  );
+}
+
+/* ------------------------------------------------------ Title below the marker */
+
+:host([data-orientation='horizontal'][data-title-placement='vertical']) {
+  --_marker-offset: 0px;
+}
+
+:host([data-orientation='horizontal'][data-title-placement='vertical'])
   .andes-step__trigger {
   grid-template-columns: minmax(0, auto);
   grid-template-areas:
     'marker'
     'main'
-    'description';
-  row-gap: 0.25rem;
+    'description'
+    'extra';
   justify-items: start;
   max-inline-size: 100%;
 }
 
-:host([data-orientation='horizontal'][data-label-placement='vertical'])
+:host([data-orientation='horizontal'][data-title-placement='vertical'])
   .andes-step__marker {
-  margin-block-end: 0.25rem;
+  margin-block-end: 0.5rem;
 }
 
-:host([data-orientation='horizontal'][data-label-placement='vertical'])
+:host(
+    [data-orientation='horizontal'][data-title-placement='vertical'][data-type='dot']
+  )
+  .andes-step__marker {
+  margin-block-end: 0.75rem;
+}
+
+:host([data-orientation='horizontal'][data-title-placement='vertical'])
+  .andes-step__main {
+  min-block-size: 0;
+}
+
+:host([data-orientation='horizontal'][data-title-placement='vertical'])
   .andes-step__description {
   max-inline-size: none;
 }
 
-:host([data-orientation='horizontal'][data-label-placement='vertical'])
+:host([data-orientation='horizontal'][data-title-placement='vertical'])
   .andes-step__head {
   display: block;
 }
 
-:host([data-orientation='horizontal'][data-label-placement='vertical'])
+:host([data-orientation='horizontal'][data-title-placement='vertical'])
   .andes-step__tail {
   position: absolute;
   inset-block-start: calc(var(--_icon) / 2 - 0.5px);
-  inset-inline: calc(var(--_icon) + var(--_gap)) var(--_gap);
+  inset-inline: calc(var(--_icon) + var(--_space)) var(--_space);
   margin: 0;
   min-inline-size: 0;
 }
 
-/* ---------------------------------------------------------------- Vertical orientation */
+/* ------------------------------------------------------ Vertical orientation */
 
 :host([data-orientation='vertical']) {
   flex: none;
-  padding-block-end: 1.5rem;
+  padding-block-end: 2rem;
+}
+
+:host([data-orientation='vertical'][data-size='small']) {
+  padding-block-end: 1.75rem;
 }
 
 :host([data-orientation='vertical'][data-last]) {
@@ -341,21 +561,62 @@ button.andes-step__trigger:disabled {
   max-inline-size: none;
 }
 
+:host([data-orientation='vertical']) .andes-step__trigger {
+  grid-template-columns: var(--_icon) minmax(0, 1fr);
+}
+
 :host([data-orientation='vertical']) .andes-step__tail {
   position: absolute;
   inset-inline-start: calc(var(--_icon) / 2 - 0.5px);
-  inset-block: calc(var(--_row) / 2 + var(--_icon) / 2 + 0.25rem) 0.25rem;
+  inset-block: calc(var(--_row) / 2 + var(--_icon) / 2 + 0.5rem) 0.5rem;
   inline-size: 1px;
   block-size: auto;
   margin: 0;
   min-inline-size: 0;
 }
 
-:host([data-orientation='vertical']) .andes-step__trigger {
-  grid-template-columns: var(--_icon) minmax(0, 1fr);
+:host([data-orientation='vertical'][data-type='dot']) .andes-step__tail {
+  inset-block-start: calc(var(--_row) / 2 + var(--_icon) / 2 + 0.75rem);
 }
 
-/* ---------------------------------------------------------------- Interaction */
+:host([data-orientation='vertical']) .andes-step__rail {
+  transform: scaleY(0);
+  transform-origin: center top;
+}
+
+:host([data-orientation='vertical'][data-status='finish']) .andes-step__rail {
+  transform: scaleY(1);
+}
+
+:host([data-orientation='vertical'][data-connector='dashed'])
+  .andes-step__tail {
+  -webkit-mask-image: repeating-linear-gradient(
+    to bottom,
+    #000 0 6px,
+    transparent 6px 10px
+  );
+  mask-image: repeating-linear-gradient(
+    to bottom,
+    #000 0 6px,
+    transparent 6px 10px
+  );
+}
+
+:host([data-orientation='vertical'][data-connector='dotted'])
+  .andes-step__tail {
+  -webkit-mask-image: repeating-linear-gradient(
+    to bottom,
+    #000 0 2px,
+    transparent 2px 6px
+  );
+  mask-image: repeating-linear-gradient(
+    to bottom,
+    #000 0 2px,
+    transparent 2px 6px
+  );
+}
+
+/* ------------------------------------------------------ Interaction */
 
 :host([data-clickable]:not([data-disabled]))
   .andes-step__trigger:hover
@@ -366,44 +627,145 @@ button.andes-step__trigger:disabled {
 :host([data-clickable]:not([data-disabled])[data-status='wait'])
   .andes-step__trigger:hover
   .andes-step__marker {
-  border-color: var(--andes-color-primary, #2563eb);
+  border-color: var(--_primary);
   color: var(--_primary-text);
 }
 
-/* ---------------------------------------------------------------- Navigation variant */
+/* ------------------------------------------------------ Entrance of a new glyph */
 
-:host([data-variant='navigation']) {
+@keyframes andes-step-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+:host([data-ready]) .andes-step__glyph,
+:host([data-ready]) .andes-step__number {
+  animation: andes-step-pop var(--andes-motion-duration-mid, 200ms)
+    cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+/* ------------------------------------------------------ Panel type */
+
+:host([data-type='panel']) {
+  flex: 1 1 0;
+}
+
+:host([data-type='panel']) .andes-step__head {
+  display: block;
+}
+
+:host([data-type='panel']) .andes-step__tail {
+  display: none;
+}
+
+:host([data-type='panel']) .andes-step__trigger {
+  display: grid;
+  grid-template-columns: var(--_icon) minmax(0, 1fr);
+  grid-template-areas:
+    'marker main'
+    '. description'
+    '. extra';
+  inline-size: 100%;
+  box-sizing: border-box;
+  padding: 0.625rem 1rem;
+  border-radius: 0;
+  transition: background-color var(--andes-motion-duration-mid, 150ms) ease;
+}
+
+:host([data-type='panel'][data-size='small']) .andes-step__trigger {
+  padding: 0.375rem 0.75rem;
+}
+
+:host([data-type='panel']) .andes-step__marker {
+  margin-block-start: calc((1.25rem - var(--_icon)) / 2);
+}
+
+:host([data-type='panel']) .andes-step__main {
+  min-block-size: 1.25rem;
+  align-content: flex-start;
+}
+
+:host([data-type='panel']) .andes-step__description {
+  margin-block-start: 0.125rem;
+  max-inline-size: none;
+}
+
+:host([data-type='panel']:not([data-first])) {
+  border-inline-start: 1px solid var(--andes-color-border, #d1d5db);
+}
+
+:host([data-type='panel'][data-orientation='vertical']:not([data-first])) {
+  border-inline-start: 0;
+  border-block-start: 1px solid var(--andes-color-border, #d1d5db);
+}
+
+:host([data-type='panel'][data-orientation='vertical']) {
+  padding-block-end: 0;
+  flex: none;
+}
+
+:host([data-type='panel'][data-current]) .andes-step__trigger {
+  background-color: var(--_muted);
+}
+
+:host([data-type='panel'][data-clickable]:not([data-disabled]))
+  .andes-step__trigger:hover {
+  background-color: var(--_muted);
+}
+
+:host([data-type='panel']) button.andes-step__trigger:focus-visible,
+:host([data-type='navigation']) button.andes-step__trigger:focus-visible,
+:host([data-type='inline']) button.andes-step__trigger:focus-visible {
+  outline-offset: -2px;
+}
+
+/* ------------------------------------------------------ Navigation type */
+
+:host([data-type='navigation']) {
   border-block-end: 1px solid var(--andes-color-border, #d1d5db);
 }
 
-:host([data-variant='navigation']) .andes-step__trigger {
+:host([data-type='navigation']) .andes-step__trigger {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   inline-size: 100%;
-  padding: var(--andes-space-2, 0.5rem) var(--andes-space-4, 1rem);
+  padding: 0.75rem 1rem;
+  border-radius: 0;
 }
 
-:host([data-variant='navigation']) .andes-step__head {
+:host([data-type='navigation'][data-size='small']) .andes-step__trigger {
+  padding: 0.5rem 1rem;
+}
+
+:host([data-type='navigation']) .andes-step__head {
   display: block;
 }
 
-:host([data-variant='navigation']) .andes-step__tail {
+:host([data-type='navigation']) .andes-step__tail {
   display: none;
 }
 
-:host([data-variant='navigation']) .andes-step__main,
-:host([data-variant='inline']) .andes-step__main {
+:host([data-type='navigation']) .andes-step__main,
+:host([data-type='inline']) .andes-step__main {
   align-self: stretch;
+  min-block-size: 0;
 }
 
-:host([data-variant='navigation']) .andes-step__description {
+:host([data-type='navigation']) .andes-step__description {
   max-inline-size: none;
 }
 
 /* Underline of the current step, straddling the row's bottom border. */
-:host([data-variant='navigation']) .andes-step__trigger::after {
+:host([data-type='navigation']) .andes-step__trigger::after {
   content: '';
   position: absolute;
   inset-inline: 0;
@@ -414,32 +776,34 @@ button.andes-step__trigger:disabled {
   transition: background-color var(--andes-motion-duration-mid, 150ms) ease;
 }
 
-:host([data-variant='navigation'][data-current]) .andes-step__trigger::after {
-  background-color: var(--andes-color-primary, #2563eb);
+:host([data-type='navigation'][data-current]) .andes-step__trigger::after {
+  background-color: var(--_primary);
 }
 
-:host([data-variant='navigation'][data-current][data-status='error'])
+:host([data-type='navigation'][data-current][data-status='error'])
   .andes-step__trigger::after {
-  background-color: var(--andes-color-danger, #dc2626);
+  background-color: var(--_danger);
 }
 
 /* Chevron between neighbours. */
 :host(
-  [data-variant='navigation'][data-orientation='horizontal']:not([data-last])
+  [data-type='navigation'][data-orientation='horizontal']:not([data-last])
 )::after {
   content: '';
   position: absolute;
-  inset-inline-end: 0;
+  inset-inline-end: 0.25rem;
   inset-block-start: 50%;
   inline-size: 0.5rem;
   block-size: 0.5rem;
-  border-block-start: 1px solid var(--andes-color-border, #d1d5db);
-  border-inline-end: 1px solid var(--andes-color-border, #d1d5db);
+  border-block-start: 1px solid
+    var(--andes-steps-nav-arrow-color, var(--andes-color-border, #d1d5db));
+  border-inline-end: 1px solid
+    var(--andes-steps-nav-arrow-color, var(--andes-color-border, #d1d5db));
   transform: translateY(-50%) rotate(45deg);
 }
 
 :host(
-  :dir(rtl)[data-variant='navigation'][data-orientation='horizontal']:not(
+  :dir(rtl)[data-type='navigation'][data-orientation='horizontal']:not(
       [data-last]
     )
 )::after {
@@ -447,13 +811,13 @@ button.andes-step__trigger:disabled {
 }
 
 /* Stacked navigation swaps the underline for a start-edge bar. */
-:host([data-variant='navigation'][data-orientation='vertical']) {
+:host([data-type='navigation'][data-orientation='vertical']) {
   padding-block-end: 0;
   border-block-end: 0;
   border-inline-start: 1px solid var(--andes-color-border, #d1d5db);
 }
 
-:host([data-variant='navigation'][data-orientation='vertical'])
+:host([data-type='navigation'][data-orientation='vertical'])
   .andes-step__trigger::after {
   inset-block: 0;
   inset-inline: -1px auto;
@@ -461,77 +825,248 @@ button.andes-step__trigger:disabled {
   block-size: auto;
 }
 
-/* ---------------------------------------------------------------- Inline (compact bars) variant */
+/* ------------------------------------------------------ Inline type (compact segments) */
 
-:host([data-variant='inline']) .andes-step__head {
+:host([data-type='inline']) .andes-step__head {
   display: block;
 }
 
-:host([data-variant='inline']) .andes-step__tail {
+:host([data-type='inline']) .andes-step__tail {
   display: none;
 }
 
-:host([data-variant='inline']) .andes-step__trigger {
+:host([data-type='inline']) .andes-step__trigger {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   inline-size: 100%;
-  gap: 0.375rem;
+  gap: 0.5rem;
 }
 
-:host([data-variant='inline']) .andes-step__trigger::before {
+:host([data-type='inline']) .andes-step__trigger::before {
   content: '';
   align-self: stretch;
   block-size: 0.25rem;
   border-radius: var(--andes-radius-full, 9999px);
-  background-color: var(--andes-color-border, #d1d5db);
+  background-color: var(--_track);
   transition: background-color var(--andes-motion-duration-mid, 150ms) ease;
 }
 
-:host([data-variant='inline'][data-status='finish'])
-  .andes-step__trigger::before,
-:host([data-variant='inline'][data-status='process'])
-  .andes-step__trigger::before {
-  background-color: var(--andes-color-primary, #2563eb);
+:host([data-type='inline'][data-status='finish']) .andes-step__trigger::before {
+  background-color: color-mix(in srgb, var(--_primary) 45%, var(--_track));
 }
 
-:host([data-variant='inline'][data-status='error'])
+:host([data-type='inline'][data-status='process'])
   .andes-step__trigger::before {
-  background-color: var(--andes-color-danger, #dc2626);
+  background-color: var(--_primary);
 }
 
-:host([data-variant='inline']) .andes-step__description {
+:host([data-type='inline'][data-status='error']) .andes-step__trigger::before {
+  background-color: var(--_danger);
+}
+
+:host([data-type='inline']) .andes-step__description {
   max-inline-size: none;
-  font-size: 0.75rem;
-  line-height: 1.25rem;
 }
 
-:host([data-variant='inline'][data-orientation='vertical']) {
+:host([data-type='inline'][data-size='small']) .andes-step__trigger {
+  gap: 0.375rem;
+}
+
+:host([data-type='inline'][data-size='small']) .andes-step__trigger::before {
+  block-size: 0.1875rem;
+}
+
+:host([data-type='inline'][data-first]) {
+  grid-column-start: calc(var(--andes-steps-offset, 0) + 1);
+}
+
+:host([data-type='inline'][data-orientation='vertical']),
+:host([data-type='navigation'][data-orientation='vertical']) {
+  flex: none;
   padding-block-end: 0;
 }
 
-:host([data-variant='inline'][data-last]) {
+:host([data-type='inline'][data-last]),
+:host([data-type='navigation'][data-last]),
+:host([data-type='panel'][data-last]) {
   flex: 1 1 0;
 }
 
-:host([data-variant='navigation'][data-last]) {
-  flex: 1 1 0;
-}
-
-:host([data-variant='inline'][data-orientation='vertical']),
-:host([data-variant='navigation'][data-orientation='vertical']) {
+:host([data-type='inline'][data-orientation='vertical'][data-last]),
+:host([data-type='navigation'][data-orientation='vertical'][data-last]),
+:host([data-type='panel'][data-orientation='vertical'][data-last]) {
   flex: none;
 }
 
-/* ---------------------------------------------------------------- Motion */
+/* ------------------------------------------------------ Folded steps (maxCount) */
+
+:host([data-slot='steps-more']) {
+  flex: 0.5 1 0;
+}
+
+:host([data-slot='steps-more'][data-orientation='vertical']) {
+  flex: none;
+}
+
+:host([data-slot='steps-more'][data-title-placement='vertical'])
+  .andes-step__trigger {
+  grid-template-columns: auto;
+  grid-template-areas: 'marker';
+}
+
+:host([data-slot='steps-more']) .andes-step__marker {
+  --_bd: var(--_track);
+  --_fg: var(--_muted-fg);
+
+  background-color: transparent;
+}
+
+:host([data-slot='steps-more'][data-status='finish']) .andes-step__marker {
+  --_fg: var(--_primary-text);
+}
+
+:host([data-slot='steps-more'][data-type='dot']) .andes-step__marker {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  margin-inline-start: -0.375rem;
+  margin-block-end: 0;
+  background-color: transparent;
+}
+
+:host([data-slot='steps-more'][data-type='dot'][data-orientation='vertical'])
+  .andes-step__marker {
+  margin-block-start: 0;
+}
+
+:host([data-slot='steps-more'][data-type='dot'][data-orientation='horizontal'])
+  .andes-step__marker {
+  margin-block-start: -0.375rem;
+}
+
+:host([data-slot='steps-more'][data-type='panel']),
+:host([data-slot='steps-more'][data-type='navigation']),
+:host([data-slot='steps-more'][data-type='inline']) {
+  flex: 0 0 auto;
+}
+
+:host([data-slot='steps-more'][data-status='finish']) .andes-step__rail {
+  transform: scaleX(1);
+}
+
+:host(
+    [data-slot='steps-more'][data-orientation='vertical'][data-status='finish']
+  )
+  .andes-step__rail {
+  transform: scaleY(1);
+}
+
+/* The list the overflow marker opens. */
+.andes-step__more-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-inline-size: 11rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--andes-font-family), sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.andes-step__more-entry {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  inline-size: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0.375rem 0.5rem;
+  border: 0;
+  border-radius: var(--andes-radius-sm, 0.25rem);
+  background: none;
+  color: var(--andes-color-foreground);
+  font: inherit;
+  text-align: start;
+}
+
+button.andes-step__more-entry {
+  cursor: pointer;
+}
+
+button.andes-step__more-entry:hover,
+button.andes-step__more-entry:focus-visible {
+  background-color: var(--andes-color-muted, #f1f5f9);
+}
+
+.andes-step__more-entry::before {
+  content: '';
+  flex: none;
+  inline-size: 0.375rem;
+  block-size: 0.375rem;
+  border-radius: 9999px;
+  background-color: var(--andes-color-border, #d1d5db);
+}
+
+.andes-step__more-item[data-status='finish'] .andes-step__more-entry::before {
+  background-color: var(--andes-color-primary, #2563eb);
+}
+
+.andes-step__more-item[data-status='process'] .andes-step__more-entry::before {
+  background-color: var(--andes-color-primary, #2563eb);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--andes-color-primary, #2563eb) 22%, transparent);
+}
+
+.andes-step__more-item[data-status='error'] .andes-step__more-entry::before {
+  background-color: var(--andes-color-danger, #dc2626);
+}
+
+.andes-step__more-item[data-status='wait'] .andes-step__more-title {
+  color: var(--andes-color-muted-foreground, #64748b);
+}
+
+/* ------------------------------------------------------ Motion and forced colours */
 
 @media (prefers-reduced-motion: reduce) {
   .andes-step__marker,
   .andes-step__title,
   .andes-step__tail,
+  .andes-step__rail,
   .andes-step__ring-arc,
-  :host([data-variant='navigation']) .andes-step__trigger::after,
-  :host([data-variant='inline']) .andes-step__trigger::before {
+  :host([data-type='navigation']) .andes-step__trigger::after,
+  :host([data-type='inline']) .andes-step__trigger::before,
+  :host([data-type='panel']) .andes-step__trigger {
     transition: none;
+  }
+
+  :host([data-ready]) .andes-step__glyph,
+  :host([data-ready]) .andes-step__number {
+    animation: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .andes-step__marker {
+    border-color: CanvasText;
+  }
+
+  .andes-step__tail,
+  .andes-step__rail {
+    forced-color-adjust: none;
+    background-color: CanvasText;
+  }
+
+  :host([data-status='process']) .andes-step__marker {
+    forced-color-adjust: none;
+    border-color: Highlight;
+    background-color: Highlight;
+    color: HighlightText;
+  }
+
+  :host([data-type='dot']) .andes-step__marker {
+    forced-color-adjust: none;
+    background-color: CanvasText;
   }
 }

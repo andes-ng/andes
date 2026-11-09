@@ -30,13 +30,13 @@ type Story = StoryObj<AndesTabs>;
 export const InCard: Story = {
   name: 'In a card',
   parameters: about(
-    'A card whose header carries the title and a pill switch, and whose body is the panel, with no rule of its own under the bar.',
+    'A card whose header carries the title and a pill switch, and whose body is the panel, with no rule of its own under the bar and the usual padding around both.',
   ),
   render: () => ({
     props: shared,
     template: `
-      <div [style]="card" style="width: min(34rem, calc(100vw - 2rem)); overflow: hidden;">
-        <andes-tabs type="pill" size="sm" style="gap: 0;">
+      <div [style]="card" style="width: min(34rem, calc(100vw - 2rem)); padding: 1rem 1.25rem 1.25rem;">
+        <andes-tabs type="pill" size="sm">
           <div andesTabsExtraLeft style="padding-inline-end: 1rem;"><h3 [style]="heading">Usage</h3></div>
           <andes-tabs-list>
             <andes-tabs-trigger value="day">Day</andes-tabs-trigger>

@@ -127,7 +127,7 @@ export * from './lib/slider';
 
 // @slot statistic
 
-// @slot steps
+export * from './lib/steps';
 
 export * from './lib/switch';
 

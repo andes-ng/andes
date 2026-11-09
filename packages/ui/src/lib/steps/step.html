@@ -90,7 +90,7 @@
       <span class="andes-step__title-text" #titleText [id]="titleId">
         @if (titleTemplate(); as template) {
         <ng-container *ngTemplateOutlet="template" />
-        } @else {{{ titleString() }}}
+        } @else { <ng-container>{{ titleString() }}</ng-container> }
       </span>
       <span class="andes-step__status-text">
         <span class="andes-step__sr">, {{ statusLabel() }}</span>
@@ -126,7 +126,7 @@
   >
     @if (descriptionTemplate(); as template) {
     <ng-container *ngTemplateOutlet="template" />
-    } @else {{{ descriptionString() }}}
+    } @else { <ng-container>{{ descriptionString() }}</ng-container> }
   </span>
   <span class="andes-step__extra"><ng-content /></span>
 </ng-template>

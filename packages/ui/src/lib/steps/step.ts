@@ -44,7 +44,7 @@ type StepMarker =
   viewProviders: [provideIcons({ lucideCheck, lucideX })],
   imports: [NgIcon, NgTemplateOutlet],
   templateUrl: './step.html',
-  styleUrl: './step.css',
+  styleUrls: ['./step.css', './step-chevron.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     role: 'listitem',
@@ -71,6 +71,7 @@ type StepMarker =
     '[class]': 'classes().item',
     '[style]': 'styles().item',
     '[style.order]': 'order()',
+    '[style.--_percent]': 'panelPercent()',
   },
 })
 export class AndesStep {
@@ -209,9 +210,13 @@ export class AndesStep {
     return icon instanceof TemplateRef ? icon : null;
   });
 
+  /** The panel draws a marker only for an icon; the numbers and checks are left to the colours. */
   protected readonly showMarker = computed(() => {
     const type = this.parent.type();
-    return type === 'default' || type === 'dot' || type === 'panel';
+    if (type === 'panel') {
+      return this.resolvedIcon() !== null;
+    }
+    return type === 'default' || type === 'dot';
   });
 
   protected readonly marker = computed<StepMarker>(() => {
@@ -247,8 +252,9 @@ export class AndesStep {
 
   /** Ring progress, only on an in-progress step of the numbered variant. */
   protected readonly ringPercent = computed<number | null>(() => {
+    const type = this.parent.type();
     if (
-      this.parent.type() !== 'default' ||
+      (type !== 'default' && type !== 'panel') ||
       this.resolvedStatus() !== 'process'
     ) {
       return null;
@@ -256,6 +262,14 @@ export class AndesStep {
     const value =
       this.percent() ?? (this.isCurrent() ? this.parent.percent() : undefined);
     return value === undefined ? null : Math.min(100, Math.max(0, value));
+  });
+
+  /** How far the segment of the panel type is filled, as a CSS percentage. */
+  protected readonly panelPercent = computed(() => {
+    const value = this.ringPercent();
+    return this.parent.type() === 'panel' && value !== null
+      ? `${value}%`
+      : null;
   });
 
   /** Plain-text title, for announcements and tests. */

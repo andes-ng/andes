@@ -33,13 +33,6 @@
   gap: var(--andes-space-3, 0.75rem);
 }
 
-/* The panel is one bar cut into segments. */
-:host([data-type='panel']) .andes-steps {
-  overflow: hidden;
-  border: 1px solid var(--andes-color-border, #d1d5db);
-  border-radius: var(--andes-radius-lg, 0.5rem);
-}
-
 /* A horizontal trail that does not fit scrolls. The padding and the negative margin give the
    progress ring, the halo and the focus ring room that the scroll container would clip. */
 :host([data-orientation='horizontal'][data-type='default']) .andes-steps,

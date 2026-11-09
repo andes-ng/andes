@@ -37,12 +37,6 @@ export default meta;
 
 type Story = StoryObj<AndesSteps>;
 
-const LOGIN = `
-  <andes-step title="Login" />
-  <andes-step title="Verification" />
-  <andes-step title="Pay" />
-  <andes-step title="Done" />`;
-
 const REPORT = `
   <andes-step title="Filters" subtitle="Period" description="Choose the dates and the branches" />
   <andes-step title="Columns" subtitle="Layout" description="Pick what to include" />
@@ -66,40 +60,114 @@ export const DefaultType: Story = {
   }),
 };
 
-export const PanelBasic: Story = {
-  name: 'Panel',
+const SIGN_IN = `
+  <andes-step title="Login" />
+  <andes-step title="Verification" />
+  <andes-step title="Pay" />
+  <andes-step title="Done" />`;
+
+const CONTENT = `
+  <andes-step title="Step 1" subtitle="00:00" description="This is a content." />
+  <andes-step title="Step 2" subtitle="00:00" description="This is a content." />
+  <andes-step title="Step 3" subtitle="00:00" description="This is a content." />`;
+
+const PANEL_FRAME = 'max-width: 44rem';
+
+export const PanelFilled: Story = {
+  name: 'Panel, filled',
   parameters: about(
-    'The panel type is one bar cut into segments, one per step, with the current segment shaded.',
+    'The panel type is one bar of chevron-shaped segments that interlock, with the current step in a solid fill, finished steps tinted and the ones to come in a grey wash.',
   ),
   render: () => ({
-    template: `<andes-steps aria-label="Panel" type="panel" [current]="1">${LOGIN}</andes-steps>`,
+    template: `<andes-steps aria-label="Sign in" type="panel" [current]="1" style="${PANEL_FRAME}">${SIGN_IN}</andes-steps>`,
+  }),
+};
+
+export const PanelOutlined: Story = {
+  name: 'Panel, outlined',
+  parameters: about(
+    'The outline variant draws the chevron as a line in the colour of each status around a pale fill, with the edge between two segments drawn once.',
+  ),
+  render: () => ({
+    template: `<andes-steps aria-label="Sign in" type="panel" variant="outline" [current]="1" style="${PANEL_FRAME}">${SIGN_IN}</andes-steps>`,
+  }),
+};
+
+export const PanelSolid: Story = {
+  name: 'Panel, every step solid',
+  parameters: about(
+    'The solid variant fills every reached segment, the finished ones in a deeper blue than the current one.',
+  ),
+  render: () => ({
+    template: `<andes-steps aria-label="Sign in" type="panel" variant="solid" [current]="2" style="${PANEL_FRAME}">${SIGN_IN}</andes-steps>`,
+  }),
+};
+
+export const PanelPlain: Story = {
+  name: 'Panel, neutral outline',
+  parameters: about(
+    'The plain variant keeps the chevron outline in one neutral line and lets only the text carry the status.',
+  ),
+  render: () => ({
+    template: `<andes-steps aria-label="Sign in" type="panel" variant="plain" [current]="1" style="${PANEL_FRAME}">${SIGN_IN}</andes-steps>`,
   }),
 };
 
 export const PanelDescriptions: Story = {
-  name: 'Panel with descriptions',
+  name: 'Panel with sub titles and descriptions',
   parameters: about(
-    'Each segment can carry a description under its title, and the segments share the width equally.',
-  ),
-  render: () => ({
-    template: `<andes-steps aria-label="Panel" type="panel" [current]="2">${FOUR_DESCRIBED}</andes-steps>`,
-  }),
-};
-
-export const PanelStatuses: Story = {
-  name: 'Panel with an error',
-  parameters: about(
-    'Finished segments show a check, the current one is shaded, and a failed step turns its marker and title red.',
+    'Each segment shows a title with a sub title beside it and a description under it, left aligned with room before the arrow tip.',
   ),
   render: () => ({
     template: demos(
       demo(
-        'in progress',
-        `<andes-steps aria-label="Panel" type="panel" [current]="2">${LOGIN}</andes-steps>`,
+        'filled',
+        `<andes-steps aria-label="Filled" type="panel" [current]="1" style="${PANEL_FRAME}">${CONTENT}</andes-steps>`,
       ),
       demo(
-        'error',
-        `<andes-steps aria-label="Panel with an error" type="panel" status="error" [current]="1">${LOGIN}</andes-steps>`,
+        'outlined',
+        `<andes-steps aria-label="Outlined" type="panel" variant="outline" [current]="1" style="${PANEL_FRAME}">${CONTENT}</andes-steps>`,
+      ),
+    ),
+  }),
+};
+
+export const PanelStatuses: Story = {
+  name: 'Panel statuses',
+  parameters: about(
+    'Finished, in progress, waiting and failed segments side by side, in the filled and the outlined look.',
+  ),
+  render: () => ({
+    template: demos(
+      ...['soft', 'outline'].map((variant) =>
+        demo(
+          variant,
+          `<andes-steps aria-label="${variant}" type="panel" variant="${variant}" [current]="1" style="${PANEL_FRAME}">
+            <andes-step title="Finished" description="This is a content." />
+            <andes-step title="In progress" description="This is a content." />
+            <andes-step title="Waiting" description="This is a content." />
+            <andes-step title="Failed" status="error" description="This is a content." />
+          </andes-steps>`,
+        ),
+      ),
+    ),
+  }),
+};
+
+export const PanelError: Story = {
+  name: 'Panel with an error on the current step',
+  parameters: about(
+    'A status of error on the trail gives the current segment a pale red wash and red text, and a red outline in the outlined look.',
+  ),
+  render: () => ({
+    template: demos(
+      demo(
+        'filled',
+        `<andes-steps aria-label="Filled error" type="panel" status="error" [current]="1" style="${PANEL_FRAME}">${CONTENT}</andes-steps>`,
+      ),
+      demo(
+        'outlined',
+        `<andes-steps aria-label="Outlined error" type="panel" variant="outline" status="error" [current]="1" style="${PANEL_FRAME}">${CONTENT}</andes-steps>`,
       ),
     ),
   }),
@@ -108,39 +176,80 @@ export const PanelStatuses: Story = {
 export const PanelClickable: Story = {
   name: 'Clickable panel',
   parameters: about(
-    'A clickable panel highlights the segment under the pointer and keeps a focus ring inside the bar.',
+    'A clickable panel shades the segment under the pointer, darkens it while pressed and draws a focus ring that follows the chevron.',
   ),
   render: () => ({
     props: { picked: 1 },
-    template: `<andes-steps aria-label="Panel" type="panel" clickable [(current)]="picked">${LOGIN}</andes-steps>`,
+    template: demos(
+      demo(
+        'filled',
+        `<andes-steps aria-label="Filled" type="panel" clickable [(current)]="picked" style="${PANEL_FRAME}">${CONTENT}</andes-steps>`,
+      ),
+      demo(
+        'outlined',
+        `<andes-steps aria-label="Outlined" type="panel" variant="outline" clickable [(current)]="picked" style="${PANEL_FRAME}">${CONTENT}</andes-steps>`,
+      ),
+    ),
   }),
 };
 
-export const PanelVariants: Story = {
-  name: 'Panel variants',
+export const PanelDisabled: Story = {
+  name: 'Panel with a disabled step',
   parameters: about(
-    'The marker variants apply inside the panel, so a segment can carry a solid, outlined or plain number.',
+    'A disabled segment is dimmed, cannot be selected and is skipped by the arrow keys.',
+  ),
+  render: () => ({
+    template: `
+      <andes-steps aria-label="Sign in" type="panel" clickable [current]="1" style="${PANEL_FRAME}">
+        <andes-step title="Login" />
+        <andes-step title="Verification" />
+        <andes-step title="Pay" [disabled]="true" />
+        <andes-step title="Done" [disabled]="true" />
+      </andes-steps>`,
+  }),
+};
+
+export const PanelSmall: Story = {
+  name: 'Small panel',
+  parameters: about(
+    'The small size shortens the tip to 16px and trims the padding, for the top of a dialog or a toolbar.',
   ),
   render: () => ({
     template: demos(
-      ...['soft', 'solid', 'outline', 'plain'].map((variant) =>
-        demo(
-          variant,
-          `<andes-steps aria-label="${variant}" type="panel" variant="${variant}" [current]="1">${LOGIN}</andes-steps>`,
-        ),
+      demo(
+        'filled',
+        `<andes-steps aria-label="Filled" type="panel" size="small" [current]="1" style="${PANEL_FRAME}">${SIGN_IN}</andes-steps>`,
+      ),
+      demo(
+        'outlined',
+        `<andes-steps aria-label="Outlined" type="panel" size="small" variant="outline" [current]="1" style="${PANEL_FRAME}">${SIGN_IN}</andes-steps>`,
       ),
     ),
+  }),
+};
+
+export const PanelVertical: Story = {
+  name: 'Stacked panel',
+  parameters: about(
+    'In the vertical orientation the arrows point down: each segment has a V-shaped notch on top and a tip at the bottom.',
+  ),
+  render: () => ({
+    template: `
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 18rem)); gap: 2rem">
+        ${demo('filled', `<andes-steps aria-label="Filled" type="panel" orientation="vertical" [current]="1">${CONTENT}</andes-steps>`)}
+        ${demo('outlined', `<andes-steps aria-label="Outlined" type="panel" orientation="vertical" variant="outline" [current]="1">${CONTENT}</andes-steps>`)}
+      </div>`,
   }),
 };
 
 export const PanelIcons: Story = {
   name: 'Panel with icons',
   parameters: about(
-    'Icons replace the numbers inside the segments, here for a short sign-in flow.',
+    'A step icon is drawn before the title with no circle around it, here for a short sign-in flow.',
   ),
   render: () => ({
     template: `
-      <andes-steps aria-label="Sign in" type="panel" [current]="1">
+      <andes-steps aria-label="Sign in" type="panel" [current]="1" style="${PANEL_FRAME}">
         <andes-step title="Login" icon="lucideUser" />
         <andes-step title="Verification" icon="lucideShieldCheck" />
         <andes-step title="Pay" icon="lucideCreditCard" />
@@ -149,23 +258,139 @@ export const PanelIcons: Story = {
   }),
 };
 
-export const PanelSmall: Story = {
-  name: 'Small panel',
+export const PanelOptional: Story = {
+  name: 'Panel with an optional step',
   parameters: about(
-    'The small size trims the padding of the segments, to fit a toolbar or the top of a dialog.',
+    'An optional step shows its muted label after the title, inside the segment.',
   ),
   render: () => ({
-    template: `<andes-steps aria-label="Panel" type="panel" size="small" [current]="1">${LOGIN}</andes-steps>`,
+    template: `
+      <andes-steps aria-label="Setup" type="panel" [current]="1" style="${PANEL_FRAME}">
+        <andes-step title="Account" />
+        <andes-step title="Photo" optional />
+        <andes-step title="Invite" optional="Skippable" />
+        <andes-step title="Done" />
+      </andes-steps>`,
   }),
 };
 
-export const PanelVertical: Story = {
-  name: 'Stacked panel',
+export const PanelProgress: Story = {
+  name: 'Panel with progress',
   parameters: about(
-    'In the vertical orientation the segments stack in one bordered column, divided by thin lines.',
+    'The percent input fills the current segment from its start, as a lighter band inside the solid colour or the pale fill.',
   ),
   render: () => ({
-    template: `<andes-steps aria-label="Panel" type="panel" orientation="vertical" [current]="1" style="max-width: 22rem">${FOUR_DESCRIBED}</andes-steps>`,
+    template: demos(
+      demo(
+        'filled',
+        `<andes-steps aria-label="Filled" type="panel" [current]="1" [percent]="60" style="${PANEL_FRAME}">${CONTENT}</andes-steps>`,
+      ),
+      demo(
+        'outlined',
+        `<andes-steps aria-label="Outlined" type="panel" variant="outline" [current]="1" [percent]="60" style="${PANEL_FRAME}">${CONTENT}</andes-steps>`,
+      ),
+    ),
+  }),
+};
+
+export const PanelInCard: Story = {
+  name: 'Panel in a card',
+  parameters: about(
+    'On a card the fills are mixed over the card colour when the --andes-steps-surface custom property names it.',
+  ),
+  render: () => ({
+    template: `
+      <div style="${surface} max-width: 48rem; --andes-steps-surface: var(--andes-color-card)">
+        <p style="margin: 0 0 1rem; font-weight: 600">Verify your account</p>
+        <andes-steps aria-label="Verify" type="panel" variant="outline" [current]="1">${CONTENT}</andes-steps>
+      </div>`,
+  }),
+};
+
+export const PanelMany: Story = {
+  name: 'Panel with many steps',
+  parameters: about(
+    'A long panel that does not fit scrolls sideways when it must stay horizontal, and stacks below 480px otherwise.',
+  ),
+  render: () => ({
+    template: `
+      <div style="max-width: 30rem; border: 1px dashed var(--andes-color-border); padding: 1rem; border-radius: var(--andes-radius-lg)">
+        <andes-steps aria-label="Many" type="panel" [responsive]="false" [current]="2">
+          ${['Plan', 'Design', 'Build', 'Test', 'Review', 'Release'].map((title) => `<andes-step title="${title}" />`).join('')}
+        </andes-steps>
+      </div>`,
+  }),
+};
+
+export const PanelFolded: Story = {
+  name: 'Panel with folded steps',
+  parameters: about(
+    'With maxCount the middle of a long panel folds into one chevron with an ellipsis that opens the list of hidden steps.',
+  ),
+  render: () => ({
+    template: `
+      <andes-steps aria-label="Folded" type="panel" [maxCount]="5" [current]="5" style="max-width: 52rem">
+        ${['Plan', 'Design', 'Build', 'Test', 'Review', 'Stage', 'Approve', 'Release'].map((title) => `<andes-step title="${title}" />`).join('')}
+      </andes-steps>`,
+  }),
+};
+
+export const PanelNarrow: Story = {
+  name: 'Panel on a narrow screen',
+  parameters: about(
+    'In a container narrower than 480px the panel stacks into a vertical bar with down arrows instead of overflowing.',
+  ),
+  render: () => ({
+    template: `
+      <div style="box-sizing: border-box; width: 22.5rem; max-width: 100%; padding: 1rem; border: 1px dashed var(--andes-color-border); border-radius: var(--andes-radius-lg)">
+        <andes-steps aria-label="Narrow" type="panel" [current]="1">${CONTENT}</andes-steps>
+      </div>`,
+  }),
+};
+
+export const PanelRightToLeft: Story = {
+  name: 'Panel, right to left',
+  parameters: {
+    dir: 'rtl',
+    ...about(
+      'Under a right-to-left document the arrows point left, the notch moves to the right edge and the rounded ends swap sides.',
+    ),
+  },
+  render: () => ({
+    template: demos(
+      demo(
+        'filled',
+        `<andes-steps aria-label="Filled" type="panel" clickable [current]="1" style="${PANEL_FRAME}">${CONTENT}</andes-steps>`,
+      ),
+      demo(
+        'outlined',
+        `<andes-steps aria-label="Outlined" type="panel" variant="outline" [current]="1" style="${PANEL_FRAME}">${CONTENT}</andes-steps>`,
+      ),
+    ),
+  }),
+};
+
+export const PanelDark: Story = {
+  name: 'Panel, dark theme',
+  globals: { theme: 'dark' },
+  parameters: about(
+    'The filled and the outlined panel in the dark theme, with their text at least 4.5:1 against every fill.',
+  ),
+  render: () => ({
+    template: demos(
+      demo(
+        'filled',
+        `<andes-steps aria-label="Filled" type="panel" [current]="1" style="${PANEL_FRAME}">${CONTENT}</andes-steps>`,
+      ),
+      demo(
+        'error',
+        `<andes-steps aria-label="Error" type="panel" status="error" [current]="1" style="${PANEL_FRAME}">${CONTENT}</andes-steps>`,
+      ),
+      demo(
+        'outlined',
+        `<andes-steps aria-label="Outlined" type="panel" variant="outline" [current]="1" style="${PANEL_FRAME}">${CONTENT}</andes-steps>`,
+      ),
+    ),
   }),
 };
 

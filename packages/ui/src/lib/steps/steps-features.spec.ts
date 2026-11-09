@@ -32,6 +32,7 @@ import type {
       [initial]="initial()"
       [maxCount]="maxCount()"
       [offset]="offset()"
+      [percent]="percent()"
       [clickable]="clickable()"
       [statusIcons]="statusIcons()"
       [dotTemplate]="dotTemplate()"
@@ -65,6 +66,7 @@ class Host {
   readonly initial = signal(1);
   readonly maxCount = signal<number | undefined>(undefined);
   readonly offset = signal(0);
+  readonly percent = signal<number | undefined>(undefined);
   readonly clickable = signal(false);
   readonly statusIcons = signal<AndesStepsStatusIcons | undefined>(undefined);
   readonly dotTemplate = signal<TemplateRef<never> | undefined>(undefined);
@@ -143,17 +145,65 @@ describe('AndesSteps features', () => {
       expect(root.getAttribute('data-type')).toBe('default');
     });
 
-    it('draws a marker in the panel type and none in navigation or inline', () => {
+    it('draws no marker in the panel, navigation or inline types unless a step has an icon', () => {
+      const { fixture, host, items } = create();
+
+      for (const type of ['panel', 'navigation', 'inline'] as const) {
+        host.type.set(type);
+        flush(fixture);
+
+        expect(items()[0].querySelector('.andes-step__marker')).toBeNull();
+      }
+
+      host.type.set('panel');
+      host.icons.set({ A: 'lucideStar' });
+      flush(fixture);
+
+      expect(items()[0].querySelector('.andes-step__marker')).toBeTruthy();
+      expect(items()[1].querySelector('.andes-step__marker')).toBeNull();
+    });
+  });
+
+  describe('panel type', () => {
+    it('fills the current segment by the percent, as a custom property', () => {
+      const { fixture, host, items } = create();
+      host.type.set('panel');
+      host.percent.set(60);
+      flush(fixture);
+
+      expect(items()[1].style.getPropertyValue('--_percent')).toBe('60%');
+      expect(items()[0].style.getPropertyValue('--_percent')).toBe('');
+      expect(items()[2].style.getPropertyValue('--_percent')).toBe('');
+    });
+
+    it('draws no ring around an icon, the percent being a fill in this type', () => {
+      const { fixture, host, items } = create();
+      host.type.set('panel');
+      host.percent.set(60);
+      host.icons.set({ B: 'lucideStar' });
+      flush(fixture);
+
+      expect(items()[1].querySelector('.andes-step__ring')).toBeTruthy();
+      expect(items()[1].textContent).toContain('60%');
+    });
+
+    it('marks the first and the last segment so the ends can be rounded', () => {
       const { fixture, host, items } = create();
       host.type.set('panel');
       flush(fixture);
 
-      expect(items()[0].querySelector('.andes-step__marker')).toBeTruthy();
+      expect(items()[0].hasAttribute('data-first')).toBe(true);
+      expect(items()[3].hasAttribute('data-last')).toBe(true);
+      expect(items()[1].hasAttribute('data-first')).toBe(false);
+      expect(items()[1].hasAttribute('data-last')).toBe(false);
+    });
 
-      host.type.set('navigation');
+    it('keeps the status words for assistive technology', () => {
+      const { fixture, host, items } = create();
+      host.type.set('panel');
       flush(fixture);
 
-      expect(items()[0].querySelector('.andes-step__marker')).toBeNull();
+      expect(items()[1].textContent).toContain('In progress');
     });
   });
 
@@ -697,6 +747,147 @@ describe('AndesSteps features', () => {
     it('mirrors the fill under right-to-left', () => {
       expect(step).toContain(':host(:dir(rtl)) .andes-step__rail');
       expect(step).toContain('transform-origin: right center');
+    });
+  });
+
+  describe('panel geometry', () => {
+    // One line, no space inside parentheses, so a selector the formatter broke still matches.
+    const chevron = readFileSync(
+      'packages/ui/src/lib/steps/step-chevron.css',
+      'utf8',
+    )
+      .replace(/\s+/g, ' ')
+      .replace(/\( /g, '(')
+      .replace(/ \)/g, ')');
+    /** The points of every polygon that follows `selector {` and `clip-path:`. */
+    const polygons = (selector: string): string[][] => {
+      const found: string[][] = [];
+      for (
+        let at = chevron.indexOf(selector);
+        at !== -1;
+        at = chevron.indexOf(selector, at + 1)
+      ) {
+        const open = chevron.indexOf('polygon(', at);
+        const close = chevron.indexOf(');', open);
+        found.push(
+          chevron
+            .slice(open + 'polygon('.length, close)
+            .split(/,\s*(?![^()]*\))/)
+            .map((point) => point.trim()),
+        );
+      }
+      return found;
+    };
+    const host = (parts: string) => `:host(${parts}) .andes-step__trigger {`;
+
+    it('cuts a first segment with a tip, a middle one with a tip and a notch, and a last one with a notch', () => {
+      const base = "[data-type='panel'][data-orientation='horizontal']";
+      const [first] = polygons(host(`${base}[data-first]:not([data-last])`));
+      const [middle] = polygons(
+        host(`${base}:not([data-first]):not([data-last])`),
+      );
+      const [last] = polygons(host(`${base}[data-last]:not([data-first])`));
+
+      expect(first).toHaveLength(5);
+      expect(middle).toHaveLength(6);
+      expect(last).toHaveLength(5);
+      expect(first).toContain('100% 50%');
+      expect(middle).toContain('var(--_tip) 50%');
+      expect(last).toContain('var(--_tip) 50%');
+    });
+
+    it('gives the tip and the notch of two neighbours the same depth', () => {
+      const base = "[data-type='panel'][data-orientation='horizontal']";
+      const [middle] = polygons(
+        host(`${base}:not([data-first]):not([data-last])`),
+      );
+
+      expect(middle).toContain('calc(100% - var(--_tip)) 0');
+      expect(middle).toContain('calc(100% - var(--_tip)) 100%');
+      expect(chevron).toContain('--_tip: 1.25rem;');
+      expect(chevron).toContain(
+        'margin-inline-start: calc(var(--_tip) * -1 + var(--_line))',
+      );
+    });
+
+    it('mirrors every horizontal polygon under right-to-left', () => {
+      const base =
+        ":dir(rtl)[data-type='panel'][data-orientation='horizontal']";
+      const [first] = polygons(host(`${base}[data-first]:not([data-last])`));
+      const [last] = polygons(host(`${base}[data-last]:not([data-first])`));
+
+      expect(first).toContain('0 50%');
+      expect(first[0]).toBe('100% 0');
+      expect(last).toContain('calc(100% - var(--_tip)) 50%');
+    });
+
+    it('points down when stacked, with the notch on top and the tip at the bottom', () => {
+      const base = "[data-type='panel'][data-orientation='vertical']";
+      const [middle] = polygons(
+        host(`${base}:not([data-first]):not([data-last])`),
+      );
+
+      expect(middle).toContain('50% var(--_tip-v)');
+      expect(middle).toContain('50% 100%');
+      expect(middle).toHaveLength(6);
+    });
+
+    it('draws the outline with a second layer pulled in by the line width', () => {
+      expect(chevron).toContain('.andes-step__trigger::before {');
+      expect(chevron).toContain('inset-block: var(--_seg-b);');
+      expect(chevron).toContain('background: var(--_seg-edge);');
+      expect(chevron).toContain('--_seg-b: 1px;');
+      expect(chevron).toContain('calc(var(--_radius) - var(--_seg-b))');
+    });
+
+    it('does not pull the notch in, so the shared edge is drawn once, by the tip before it', () => {
+      const base = "[data-type='panel'][data-orientation='horizontal']";
+      const [inner] = polygons(
+        `:host(${base}:not([data-first]):not([data-last])) .andes-step__trigger::before {`,
+      );
+
+      expect(inner[0]).toBe('0 0');
+      expect(inner).toContain('var(--_tip) 50%');
+      expect(inner).toContain('calc(100% - var(--_tip) - var(--_s)) 0');
+    });
+
+    it('rings the focused segment by widening the line, so the ring follows the shape', () => {
+      expect(chevron).toContain('button.andes-step__trigger:focus-visible');
+      expect(chevron).toContain('--_seg-b: 2px;');
+      expect(chevron).toContain('outline: none;');
+    });
+
+    it('has a hover and a pressed colour for a clickable trail, and dims a disabled step', () => {
+      expect(chevron).toContain('button.andes-step__trigger:hover');
+      expect(chevron).toContain('button.andes-step__trigger:active');
+      expect(chevron).toContain('[data-disabled]) .andes-step__trigger');
+    });
+
+    it('is drawn with CSS only: no svg, no path, no physical offsets', () => {
+      expect(chevron).not.toContain('<svg');
+      expect(chevron).not.toContain('path(');
+      expect(chevron).not.toMatch(/\b(?:margin|padding)-(?:left|right)\b/);
+      expect(chevron).not.toMatch(/^\s*(?:left|right)\s*:/m);
+    });
+
+    it('keeps the segments visible in forced colours', () => {
+      const forced = atRule(chevron, '@media (forced-colors: active)');
+
+      expect(forced).toContain('Highlight');
+      expect(forced).toContain('CanvasText');
+    });
+
+    it('draws each look from the variant: filled for soft and solid, outlined for outline and plain', () => {
+      expect(chevron).toContain("[data-variant='soft'][data-status='process']");
+      expect(chevron).toContain("[data-variant='solid'][data-status='finish']");
+      expect(chevron).toContain(
+        "[data-variant='outline'][data-status='error']",
+      );
+      expect(chevron).toContain("[data-variant='plain']");
+    });
+
+    it('names the surface the fills are mixed over', () => {
+      expect(chevron).toContain('--andes-steps-surface');
     });
   });
 });

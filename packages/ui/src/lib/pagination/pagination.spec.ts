@@ -137,6 +137,11 @@ class GoTemplateHostComponent {
   readonly current = signal(1);
 }
 
+/** The real button or link inside an `andes-button` item. */
+function native(host: Element): HTMLButtonElement {
+  return required(host.querySelector<HTMLButtonElement>('button, a'));
+}
+
 function required<T>(value: T | null | undefined): T {
   if (value === null || value === undefined) {
     throw new Error('Expected element to be rendered');
@@ -144,9 +149,12 @@ function required<T>(value: T | null | undefined): T {
   return value;
 }
 
+let activeFixture: { detectChanges: () => void } | undefined;
+
 describe('AndesPagination', () => {
   function createHost(setup?: (host: Host) => void) {
     const fixture = TestBed.createComponent(HostComponent);
+    activeFixture = fixture;
     const host = fixture.componentInstance;
     setup?.(host);
     fixture.detectChanges();
@@ -155,22 +163,18 @@ describe('AndesPagination', () => {
     const q = <T extends Element>(selector: string) =>
       root.querySelector(selector) as T | null;
     const pageButtons = () =>
-      Array.from(
-        root.querySelectorAll<HTMLButtonElement>('.andes-pagination__page'),
-      );
+      Array.from(root.querySelectorAll('.andes-pagination__page')).map(native);
     const pageLabels = () =>
       pageButtons().map((button) => button.textContent?.trim());
     const pageButton = (label: number) =>
       pageButtons().find(
         (button) => button.textContent?.trim() === String(label),
       );
-    const prev = () =>
-      required(q<HTMLButtonElement>('.andes-pagination__item--prev'));
-    const next = () =>
-      required(q<HTMLButtonElement>('.andes-pagination__item--next'));
+    const prev = () => native(required(q('.andes-pagination__item--prev')));
+    const next = () => native(required(q('.andes-pagination__item--next')));
     const jumpers = () =>
-      Array.from(
-        root.querySelectorAll<HTMLButtonElement>('.andes-pagination__jumper'),
+      Array.from(root.querySelectorAll('.andes-pagination__jumper')).map(
+        native,
       );
     const update = (fn: (host: Host) => void) => {
       fn(host);
@@ -192,9 +196,11 @@ describe('AndesPagination', () => {
     };
   }
 
+  /** Types into a field the way a user does: the view settles after every keystroke. */
   function type(input: HTMLInputElement, value: string) {
     input.value = value;
     input.dispatchEvent(new Event('input'));
+    activeFixture?.detectChanges();
   }
 
   function key(element: HTMLElement, keyName: string) {
@@ -401,12 +407,15 @@ describe('AndesPagination', () => {
   describe('showTitle', () => {
     it('adds title attributes by default and removes them when off', () => {
       const { update, pageButton, prev } = createHost();
-      expect(pageButton(2)?.getAttribute('title')).toBe('2');
-      expect(prev().getAttribute('title')).toBe('Previous page');
+      // The tooltip is on the button's host, which wraps the real button.
+      const titled = (button: Element | undefined) =>
+        button?.closest('andes-button');
+      expect(titled(pageButton(2))?.getAttribute('title')).toBe('2');
+      expect(titled(prev())?.getAttribute('title')).toBe('Previous page');
 
       update((h) => h.showTitle.set(false));
-      expect(pageButton(2)?.hasAttribute('title')).toBe(false);
-      expect(prev().hasAttribute('title')).toBe(false);
+      expect(titled(pageButton(2))?.hasAttribute('title')).toBe(false);
+      expect(titled(prev())?.hasAttribute('title')).toBe(false);
     });
   });
 
@@ -598,7 +607,7 @@ describe('AndesPagination', () => {
 
   describe('quick jumper', () => {
     const jumper = (q: <T extends Element>(s: string) => T | null) =>
-      required(q<HTMLInputElement>('.andes-pagination__jump-input'));
+      required(q<HTMLInputElement>('.andes-pagination__jump-input input'));
 
     it('has a visible "Go to" label', () => {
       const { q } = createHost((h) => h.showQuickJumper.set(true));
@@ -648,9 +657,13 @@ describe('AndesPagination', () => {
         h.showQuickJumper.set(true);
         h.jumpToSuffixLabel.set('page');
       });
-      expect(q('.andes-pagination__jump-label')?.textContent?.trim()).toMatch(
-        /^Go to\s+page$/,
-      );
+      const suffix = required(q('.andes-pagination__jump-suffix'));
+      expect(suffix.textContent?.trim()).toBe('page');
+      // The field is named by the words before it and the words after it.
+      expect(jumper(q).getAttribute('aria-labelledby')?.split(' ')).toEqual([
+        required(q('.andes-pagination__jump-label')).id,
+        suffix.id,
+      ]);
     });
 
     it('renders no suffix by default', () => {
@@ -702,7 +715,9 @@ describe('AndesPagination', () => {
       fixture.detectChanges();
       const root = fixture.nativeElement as HTMLElement;
       const field = required(
-        root.querySelector<HTMLInputElement>('.andes-pagination__jump-input'),
+        root.querySelector<HTMLInputElement>(
+          '.andes-pagination__jump-input input',
+        ),
       );
       type(field, '8');
       field.dispatchEvent(new Event('blur'));
@@ -762,7 +777,7 @@ describe('AndesPagination', () => {
 
   describe('simple mode', () => {
     const input = (q: <T extends Element>(s: string) => T | null) =>
-      required(q<HTMLInputElement>('.andes-pagination__simple-input'));
+      required(q<HTMLInputElement>('.andes-pagination__simple-input input'));
 
     it('renders prev, "current / total" and next without page buttons', () => {
       const { q, pageButtons } = createHost((h) => {
@@ -819,7 +834,7 @@ describe('AndesPagination', () => {
         h.simple.set({ readOnly: true });
         h.current.set(3);
       });
-      expect(q('.andes-pagination__simple-input')).toBeNull();
+      expect(q('.andes-pagination__simple-input input')).toBeNull();
       expect(q('.andes-pagination__simple-current')?.textContent?.trim()).toBe(
         '3',
       );
@@ -830,7 +845,7 @@ describe('AndesPagination', () => {
         h.simple.set(true);
         h.showQuickJumper.set(true);
       });
-      expect(q('.andes-pagination__jump-input')).toBeNull();
+      expect(q('.andes-pagination__jump-input input')).toBeNull();
     });
 
     describe('with a go button', () => {
@@ -933,7 +948,7 @@ describe('AndesPagination', () => {
     it('collapses to small + simple on narrow viewports', () => {
       const { nav, q } = createHost((h) => h.responsive.set(true));
       expect(nav()?.classList).toContain('andes-pagination--small');
-      expect(q('.andes-pagination__simple-input')).not.toBeNull();
+      expect(q('.andes-pagination__simple-input input')).not.toBeNull();
     });
 
     it('overrides a large size on narrow viewports', () => {
@@ -948,7 +963,7 @@ describe('AndesPagination', () => {
     it('stays expanded without responsive', () => {
       const { nav, q } = createHost();
       expect(nav()?.classList).not.toContain('andes-pagination--small');
-      expect(q('.andes-pagination__simple-input')).toBeNull();
+      expect(q('.andes-pagination__simple-input input')).toBeNull();
     });
   });
 
@@ -1044,7 +1059,7 @@ describe('AndesPagination', () => {
       });
       activate(fixture, prev());
       expect(document.activeElement).toBe(
-        q<HTMLInputElement>('.andes-pagination__simple-input'),
+        q<HTMLInputElement>('.andes-pagination__simple-input input'),
       );
     });
 
@@ -1080,22 +1095,22 @@ describe('AndesPagination', () => {
       );
       expect(
         root
-          .querySelector('.andes-pagination__item--prev')
+          .querySelector('.andes-pagination__item--prev button')
           ?.getAttribute('aria-label'),
       ).toBe('Anterior');
       expect(
         root
-          .querySelector('.andes-pagination__item--next')
+          .querySelector('.andes-pagination__item--next button')
           ?.getAttribute('aria-label'),
       ).toBe('Siguiente');
       expect(
         root
-          .querySelector('.andes-pagination__page')
+          .querySelector('.andes-pagination__page button')
           ?.getAttribute('aria-label'),
       ).toBe('Página 1');
       expect(
         root
-          .querySelector('.andes-pagination__jumper')
+          .querySelector('.andes-pagination__jumper button')
           ?.getAttribute('aria-label'),
       ).toBe('5 anteriores');
     });

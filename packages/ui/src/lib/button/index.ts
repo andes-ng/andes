@@ -1,5 +1,6 @@
 export { AndesButton } from './button';
 export type {
+  AndesButtonAriaCurrent,
   AndesButtonColor,
   AndesButtonShape,
   AndesButtonSize,

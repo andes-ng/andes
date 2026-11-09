@@ -158,6 +158,28 @@ describe('AndesInput', () => {
     expect(host.hasAttribute('name')).toBe(false);
   });
 
+  it('writes inputmode on the native input, and none by default', () => {
+    @Component({
+      imports: [AndesInput],
+      template: `<andes-input class="plain" /><andes-input
+          class="numeric"
+          inputMode="numeric"
+        />`,
+    })
+    class ModeHost {}
+
+    const fixture = TestBed.createComponent(ModeHost);
+    fixture.detectChanges();
+    const root: HTMLElement = fixture.nativeElement;
+
+    expect(root.querySelector('.plain input')?.hasAttribute('inputmode')).toBe(
+      false,
+    );
+    expect(
+      root.querySelector('.numeric input')?.getAttribute('inputmode'),
+    ).toBe('numeric');
+  });
+
   it('treats bare boolean attributes (no brackets) as true, not the string ""', () => {
     @Component({
       imports: [AndesInput],

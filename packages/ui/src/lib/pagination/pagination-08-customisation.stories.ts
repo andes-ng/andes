@@ -235,23 +235,28 @@ export const StylesPerPart: Story = {
 export const StylesFunction: Story = {
   name: 'styles from the state',
   parameters: about(
-    'styles can also be a function of the state, here tinting the current page by how far along the list it is.',
+    'styles can also be a function of the state; here it hands each current page a custom property for how far along the list it is, and one class turns that into a tint.',
   ),
-  render: () =>
-    scene(
+  render: () => {
+    injectStyle(
+      'pagination-demo-progress',
+      `.demo-pg-progress .andes-button { background-color: var(--demo-progress); color: #0f172a; }`,
+    );
+    return scene(
       pg(
-        '[total]="100" [defaultCurrent]="4" [styles]="demoStyles" variant="ghost"',
+        '[total]="100" [defaultCurrent]="4" [styles]="demoStyles" [classNames]="demoClasses" variant="ghost"',
         'Styles from the state',
       ),
       {
+        demoClasses: { activeItem: 'demo-pg-progress' },
         demoStyles: (state: AndesPaginationState): AndesPaginationStyles => ({
           activeItem: {
-            'background-color': `hsl(${Math.round((state.current / state.totalPages) * 120)} 70% 90%)`,
-            color: 'var(--andes-color-foreground)',
+            '--demo-progress': `hsl(${Math.round((state.current / state.totalPages) * 120)} 70% 85%)`,
           },
         }),
       },
-    ),
+    );
+  },
 };
 
 export const Tokens: Story = {
@@ -285,17 +290,20 @@ export const Tokens: Story = {
 export const AccentColour: Story = {
   name: 'Accent colour',
   parameters: about(
-    'One custom property changes the colour of the current page in every variant.',
+    'The color input takes any colour of the library palette and marks the current page with it, here as a solid block.',
   ),
   render: () =>
     scene(
       stack(
-        ...(['default', 'outline', 'ghost', 'filled'] as const).map((variant) =>
-          labelled(
-            variant,
-            `<andes-pagination aria-label="Accent ${variant}" [total]="100" [defaultCurrent]="3" variant="${variant}"
-              style="--andes-pagination-accent: #15803d; --andes-pagination-accent-text: #15803d;" />`,
-          ),
+        ...(['primary', 'success', 'warning', 'danger', 'info'] as const).map(
+          (color) =>
+            labelled(
+              `color="${color}"`,
+              pg(
+                `[total]="100" [defaultCurrent]="3" color="${color}" variant="filled"`,
+                `Accent ${color}`,
+              ),
+            ),
         ),
       ),
     ),

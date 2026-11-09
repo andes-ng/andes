@@ -40,6 +40,9 @@ export type AndesButtonShape = 'default' | 'full' | 'round' | 'circle';
 export type AndesButtonColor =
   'primary' | 'danger' | 'success' | 'warning' | 'info';
 export type AndesButtonType = 'button' | 'submit' | 'reset';
+/** The values `aria-current` takes: which item of a set is the current one. */
+export type AndesButtonAriaCurrent =
+  'page' | 'step' | 'location' | 'date' | 'time' | 'true' | 'false';
 
 const RIPPLE_DURATION_MS = 400;
 
@@ -57,6 +60,7 @@ const RIPPLE_DURATION_MS = 400;
     '[attr.aria-labelledby]': 'null',
     '[attr.aria-describedby]': 'null',
     '[attr.aria-invalid]': 'null',
+    '[attr.aria-current]': 'null',
   },
 })
 export class AndesButton {
@@ -99,6 +103,13 @@ export class AndesButton {
   readonly ariaInvalid = input(false, {
     alias: 'aria-invalid',
     transform: booleanAttribute,
+  });
+  /**
+   * Marks the button as the current item of a set (`page` for the current page of a
+   * pagination, `step`, `location`...), on the real button or link a screen reader reports.
+   */
+  readonly ariaCurrent = input<AndesButtonAriaCurrent | undefined>(undefined, {
+    alias: 'aria-current',
   });
 
   protected readonly visibleLoading = signal(false);

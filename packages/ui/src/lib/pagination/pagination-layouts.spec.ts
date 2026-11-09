@@ -95,8 +95,12 @@ function setup(configure?: (host: Host) => void) {
   return { fixture, host: fixture.componentInstance, root, q, all, update };
 }
 
+/** The real button or link inside an `andes-button` item. */
+const inner = (host: Element | null) =>
+  host?.querySelector<HTMLButtonElement>('button, a') ?? null;
+
 const names = (items: Element[]) =>
-  items.map((item) => item.getAttribute('aria-label'));
+  items.map((item) => inner(item)?.getAttribute('aria-label'));
 
 function key(element: Element, name: string) {
   element.dispatchEvent(
@@ -125,19 +129,15 @@ describe('AndesPagination layouts and options', () => {
         h.current.set(4);
       });
 
-      q<HTMLButtonElement>('.andes-pagination__item--last')?.click();
+      q<HTMLElement>('.andes-pagination__item--last')?.click();
       fixture.detectChanges();
       expect(host.current()).toBe(10);
-      expect(
-        q<HTMLButtonElement>('.andes-pagination__item--last')?.disabled,
-      ).toBe(true);
+      expect(inner(q('.andes-pagination__item--last'))?.disabled).toBe(true);
 
-      q<HTMLButtonElement>('.andes-pagination__item--first')?.click();
+      q<HTMLElement>('.andes-pagination__item--first')?.click();
       fixture.detectChanges();
       expect(host.current()).toBe(1);
-      expect(
-        q<HTMLButtonElement>('.andes-pagination__item--first')?.disabled,
-      ).toBe(true);
+      expect(inner(q('.andes-pagination__item--first'))?.disabled).toBe(true);
     });
 
     it('is off by default', () => {
@@ -160,7 +160,7 @@ describe('AndesPagination layouts and options', () => {
       expect(prev?.querySelector('ng-icon')).not.toBeNull();
       expect(prev?.classList).toContain('andes-pagination__item--text');
       // The accessible name stays the localised label.
-      expect(prev?.getAttribute('aria-label')).toBe('Previous page');
+      expect(inner(prev)?.getAttribute('aria-label')).toBe('Previous page');
     });
 
     it('can drop the chevrons', () => {
@@ -226,7 +226,7 @@ describe('AndesPagination layouts and options', () => {
       );
       expect(all('.andes-pagination__page')).toEqual([]);
 
-      q<HTMLButtonElement>('.andes-pagination__item--next')?.click();
+      q<HTMLElement>('.andes-pagination__item--next')?.click();
       update(() => undefined);
       expect(q('.andes-pagination__status')?.textContent?.trim()).toBe(
         'Page 2 of 10',
@@ -244,21 +244,15 @@ describe('AndesPagination layouts and options', () => {
       expect(q('.andes-pagination__status')?.textContent?.trim()).toBe(
         'Page 3',
       );
-      expect(
-        q<HTMLButtonElement>('.andes-pagination__item--next')?.disabled,
-      ).toBe(false);
+      expect(inner(q('.andes-pagination__item--next'))?.disabled).toBe(false);
 
-      q<HTMLButtonElement>('.andes-pagination__item--next')?.click();
+      q<HTMLElement>('.andes-pagination__item--next')?.click();
       fixture.detectChanges();
       expect(host.current()).toBe(4);
 
       update((h) => h.hasNextPage.set(false));
-      expect(
-        q<HTMLButtonElement>('.andes-pagination__item--next')?.disabled,
-      ).toBe(true);
-      expect(
-        q<HTMLButtonElement>('.andes-pagination__item--prev')?.disabled,
-      ).toBe(false);
+      expect(inner(q('.andes-pagination__item--next'))?.disabled).toBe(true);
+      expect(inner(q('.andes-pagination__item--prev'))?.disabled).toBe(false);
     });
 
     it('ignores total and totalPages', () => {
@@ -268,9 +262,7 @@ describe('AndesPagination layouts and options', () => {
       });
 
       expect(q('.andes-pagination__page')).toBeNull();
-      expect(
-        q<HTMLButtonElement>('.andes-pagination__item--next')?.disabled,
-      ).toBe(true);
+      expect(inner(q('.andes-pagination__item--next'))?.disabled).toBe(true);
     });
   });
 
@@ -285,7 +277,7 @@ describe('AndesPagination layouts and options', () => {
       expect(
         q('.andes-pagination__page--active ng-icon')?.getAttribute('name'),
       ).toBe('lucideLoaderCircle');
-      q<HTMLButtonElement>('.andes-pagination__item--next')?.click();
+      q<HTMLElement>('.andes-pagination__item--next')?.click();
       fixture.detectChanges();
       expect(host.current()).toBe(2);
       expect(host.changes).toEqual([]);
@@ -298,7 +290,7 @@ describe('AndesPagination layouts and options', () => {
         h.linkFor.set((page) => `/results?page=${page}`);
         h.current.set(3);
       });
-      const links = all<HTMLAnchorElement>('a.andes-pagination__page');
+      const links = all<HTMLAnchorElement>('.andes-pagination__page a');
 
       expect(links.length).toBeGreaterThan(0);
       expect(
@@ -306,7 +298,7 @@ describe('AndesPagination layouts and options', () => {
           .find((link) => link.textContent?.trim() === '4')
           ?.getAttribute('href'),
       ).toBe('/results?page=4');
-      expect(q('a.andes-pagination__item--next')?.getAttribute('href')).toBe(
+      expect(q('.andes-pagination__item--next a')?.getAttribute('href')).toBe(
         '/results?page=4',
       );
 
@@ -314,7 +306,7 @@ describe('AndesPagination layouts and options', () => {
         bubbles: true,
         cancelable: true,
       });
-      q('a.andes-pagination__item--next')?.dispatchEvent(click);
+      q('.andes-pagination__item--next a')?.dispatchEvent(click);
       fixture.detectChanges();
       expect(click.defaultPrevented).toBe(true);
       expect(host.current()).toBe(4);
@@ -330,7 +322,7 @@ describe('AndesPagination layouts and options', () => {
         cancelable: true,
         ctrlKey: true,
       });
-      q('a.andes-pagination__item--next')?.dispatchEvent(click);
+      q('.andes-pagination__item--next a')?.dispatchEvent(click);
       fixture.detectChanges();
 
       expect(click.defaultPrevented).toBe(false);
@@ -341,8 +333,8 @@ describe('AndesPagination layouts and options', () => {
       const { q } = setup((h) => h.linkFor.set((page) => `#${page}`));
 
       expect(q('a[aria-current="page"]')?.textContent?.trim()).toBe('1');
-      expect(q('button.andes-pagination__item--prev')).not.toBeNull();
-      expect(q('a.andes-pagination__item--prev')).toBeNull();
+      expect(q('.andes-pagination__item--prev button')).not.toBeNull();
+      expect(q('.andes-pagination__item--prev a')).toBeNull();
     });
   });
 
@@ -453,18 +445,22 @@ describe('AndesPagination layouts and options', () => {
   });
 
   describe('keyboard', () => {
+    const buttons = (all: <T extends Element>(s: string) => T[]) =>
+      all<HTMLElement>('.andes-pagination__list .andes-pagination__item').map(
+        (host) => inner(host) as HTMLElement,
+      );
+
     it('moves focus with the arrow keys, Home and End', () => {
       const { fixture, q, all } = setup((h) => h.current.set(5));
-      const items = all<HTMLElement>(
-        '.andes-pagination__list .andes-pagination__item',
-      );
-      const active = q<HTMLElement>(
-        '.andes-pagination__page--active',
-      ) as HTMLElement;
+      const items = buttons(all);
+      const active = inner(q('.andes-pagination__page--active')) as HTMLElement;
       active.focus();
 
       key(active, 'ArrowRight');
       expect(document.activeElement).toBe(items[items.indexOf(active) + 1]);
+
+      key(document.activeElement as Element, 'ArrowLeft');
+      expect(document.activeElement).toBe(active);
 
       key(document.activeElement as Element, 'End');
       expect(document.activeElement).toBe(items[items.length - 1]);
@@ -476,9 +472,7 @@ describe('AndesPagination layouts and options', () => {
 
     it('skips disabled controls', () => {
       const { all } = setup();
-      const items = all<HTMLElement>(
-        '.andes-pagination__list .andes-pagination__item',
-      );
+      const items = buttons(all);
       // On page 1 Previous is disabled, so Home lands on page 1.
       items[1]?.focus();
       key(items[1] as Element, 'Home');
@@ -491,10 +485,11 @@ describe('AndesPagination layouts and options', () => {
     it('marks text that is not a page number, until it is edited', () => {
       const { fixture, q } = setup((h) => h.showQuickJumper.set(true));
       const field = q<HTMLInputElement>(
-        '.andes-pagination__jump-input',
+        '.andes-pagination__jump-input input',
       ) as HTMLInputElement;
 
       field.value = 'abc';
+      field.dispatchEvent(new Event('input'));
       key(field, 'Enter');
       fixture.detectChanges();
       expect(field.getAttribute('aria-invalid')).toBe('true');

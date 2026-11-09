@@ -1,5 +1,5 @@
 /**
- * Layout for the Empty stories. The empty state keeps Ant Design's own margins (8px, and 32px
+ * Layout for the Empty stories. The empty state keeps its own margins (8px, and 32px
  * above and below the simple illustration), so a story gives the box that holds it room of its
  * own: 2rem above and below and 1rem at the sides, 1.5rem between sibling boxes, 0.75rem under
  * a caption.

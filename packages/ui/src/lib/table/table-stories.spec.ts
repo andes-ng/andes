@@ -189,10 +189,7 @@ describe('Table stories: the sidebar', () => {
         (file) =>
           [file, readFileSync(`.nx/version-plans/${file}`, 'utf8')] as const,
       )
-      .filter(
-        ([, source]) =>
-          source.includes('@andes-ng/ui') && /table/i.test(source),
-      );
+      .filter(([, source]) => /AndesTable|andes-table/.test(source));
 
     for (const [file, source] of [
       ...tableFiles(),

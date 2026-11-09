@@ -165,8 +165,7 @@ export const AdminUsers: Story = {
             }
           </tbody>
           <div andesTableBottom class="andes-table__toolbar">
-            <span [style]="muted">Page {{ page() }}</span>
-            <andes-pagination size="small" [current]="page()" (currentChange)="page.set($event)" [pageSize]="pageSize()" [total]="total()" [showSizeChanger]="false" />
+            <andes-pagination style="width: 100%;" layout="table" align="end" [(current)]="page" [(pageSize)]="pageSize" [total]="total()" [pageSizeOptions]="[8, 16, 24]" />
           </div>
         </andes-table>`,
     };

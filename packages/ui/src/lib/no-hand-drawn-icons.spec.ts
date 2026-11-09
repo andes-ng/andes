@@ -20,8 +20,6 @@ const ILLUSTRATIONS: readonly string[] = [
   'qr-code/qr-code.html',
   // The QR code's svg export, serialised as text for the download.
   'qr-code/qr-render.ts',
-  // The QR code's svg data uri, built from that export.
-  'qr-code/qr-code.ts',
 ];
 
 /** What drawing an SVG by hand looks like: in a template, through `Renderer2`, or as a mask. */

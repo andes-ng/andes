@@ -337,22 +337,22 @@
    is a dense table (36px rows, 12px of inline padding), `default` the standard one (44px
    rows, 16px) and `comfortable` adds breathing room (52px rows, 20px). The height is a floor
    a taller cell (a button, a tag, an avatar) still grows past; header and data rows share
-   it, and the block padding is what keeps a one-line cell at exactly that height. */
+   it, and the block padding is a little under half of the free space, so a one-line cell is exactly that height with its 1px separator. */
 
 .andes-table--compact {
-  --andes-table-cell-padding-block-base: 0.4375rem;
+  --andes-table-cell-padding-block-base: 0.375rem;
   --andes-table-cell-padding-inline-base: var(--andes-space-3, 0.75rem);
   --andes-table-row-height-base: 2.25rem;
 }
 
 .andes-table--default {
-  --andes-table-cell-padding-block-base: 0.6875rem;
+  --andes-table-cell-padding-block-base: 0.625rem;
   --andes-table-cell-padding-inline-base: var(--andes-space-4, 1rem);
   --andes-table-row-height-base: 2.75rem;
 }
 
 .andes-table--comfortable {
-  --andes-table-cell-padding-block-base: 0.9375rem;
+  --andes-table-cell-padding-block-base: 0.875rem;
   --andes-table-cell-padding-inline-base: var(--andes-space-5, 1.25rem);
   --andes-table-row-height-base: 3.25rem;
 }
@@ -366,7 +366,7 @@
   );
   padding-block: var(
     --andes-table-cell-padding-block,
-    var(--andes-table-cell-padding-block-base, 0.6875rem)
+    var(--andes-table-cell-padding-block-base, 0.625rem)
   );
   padding-inline: var(
     --andes-table-cell-padding-inline,

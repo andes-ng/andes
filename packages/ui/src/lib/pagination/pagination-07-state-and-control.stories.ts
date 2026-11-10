@@ -3,6 +3,7 @@ import type { Meta, StoryObj } from '@storybook/angular';
 
 import {
   about,
+  injectStyle,
   labelled,
   people,
   pg,
@@ -183,7 +184,7 @@ export const DisabledToggle: Story = {
 export const Loading: Story = {
   name: 'Loading',
   parameters: about(
-    'loading puts a spinner on the current page, marks the control busy and ignores clicks until the data arrives.',
+    'loading puts a spinner on the current page, switches the other controls off and keeps the last total until the data arrives.',
   ),
   render: () =>
     scene(
@@ -396,6 +397,48 @@ export const LoadMore: Story = {
         </div>
       </div>`,
       { shown, people: people(20) },
+    );
+  },
+};
+
+export const NoTrail: Story = {
+  name: 'Page change without a trail',
+  parameters: about(
+    'Exactly one item is selected at every frame after a click: the old current page loses its look at once and the new one has it at once, in every variant, the pill shape and the table footer.',
+  ),
+  render: () => {
+    const page = signal(4);
+    const slow = signal(false);
+    return scene(
+      `<div [style]="column">
+        <andes-switch [(checked)]="slow" (checkedChange)="setSlow($event)">Slow motion: stretch the hover fade to two seconds</andes-switch>
+        <span [style]="muted">Click Next, a page number or First and Last in any row: the selected look never lingers on the old page, even in slow motion.</span>
+        ${['default', 'outline', 'ghost', 'filled']
+          .map((variant) =>
+            labelled(
+              variant,
+              pg(
+                `[(current)]="page" [total]="500" variant="${variant}" [showFirstLast]="true"`,
+                `No trail, ${variant}`,
+              ),
+            ),
+          )
+          .join('')}
+        ${labelled('pill', pg('[(current)]="page" [total]="500" shape="pill" variant="filled" [showFirstLast]="true"', 'No trail, pill'))}
+        ${labelled('table footer', pg('[(current)]="page" [total]="500" layout="table"', 'No trail, table footer'))}
+        <span [style]="muted">Current page: {{ page() }}</span>
+      </div>`,
+      {
+        page,
+        slow,
+        setSlow: (on: boolean) =>
+          injectStyle(
+            'pagination-demo-slow',
+            on
+              ? '.andes-pagination__item .andes-button { transition-duration: 2s !important; }'
+              : '',
+          ),
+      },
     );
   },
 };

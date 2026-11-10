@@ -543,6 +543,26 @@ export class AndesPagination {
     }
 
     effect(() => {
+      const loading = this.loading();
+      const total = Math.max(0, Math.trunc(this.total()) || 0);
+      const pages = this.totalPages();
+      untracked(() => {
+        if (!loading) {
+          this.settledTotal.set(total);
+          this.settledTotalPages.set(pages);
+        }
+      });
+    });
+
+    // Every control but the current page is disabled while loading: if one of them held
+    // focus, hand it to the current page so keyboard users are not dropped on the page body.
+    effect(() => {
+      if (this.loading()) {
+        untracked(() => this.restoreFocusAfterRender());
+      }
+    });
+
+    effect(() => {
       const startPage = this.defaultCurrent();
       const startSize = this.defaultPageSize();
       untracked(() => {
@@ -568,9 +588,21 @@ export class AndesPagination {
     () => this.hasNextPage() !== undefined,
   );
 
-  protected readonly resolvedTotal = computed(() =>
-    this.isCursor() ? 0 : Math.max(0, Math.trunc(this.total()) || 0),
-  );
+  /** The total and the page count as they were when the control last settled. */
+  private readonly settledTotal = signal(0);
+  private readonly settledTotalPages = signal<number | undefined>(undefined);
+
+  /**
+   * The total. While the control loads it keeps the last one it settled on, so a source
+   * that empties its total during a fetch does not make the range and the pages vanish.
+   */
+  protected readonly resolvedTotal = computed(() => {
+    if (this.isCursor()) {
+      return 0;
+    }
+    const total = Math.max(0, Math.trunc(this.total()) || 0);
+    return this.loading() && total === 0 ? this.settledTotal() : total;
+  });
 
   /** The current page as asked for, before it is held to the page count. */
   private readonly requestedPage = computed(() =>
@@ -585,7 +617,9 @@ export class AndesPagination {
     if (this.isCursor()) {
       return this.requestedPage() + (this.hasNextPage() ? 1 : 0);
     }
-    const explicitTotalPages = this.totalPages();
+    const asked = this.totalPages();
+    const explicitTotalPages =
+      this.loading() && !asked ? this.settledTotalPages() : asked;
     if (explicitTotalPages !== undefined && explicitTotalPages !== null) {
       return Math.max(0, Math.trunc(explicitTotalPages) || 0);
     }
@@ -705,6 +739,7 @@ export class AndesPagination {
     const current = this.clampedCurrentPage();
     const last = this.resolvedTotalPages();
     const off = this.disabled();
+    const busy = this.loading();
     const entry = (
       key: string,
       kind: PaginationEntry['kind'],
@@ -726,7 +761,13 @@ export class AndesPagination {
 
     if (this.resolvedShowFirstLast()) {
       result.push(
-        entry('first', 'first', 1, this.firstLabel(), off || current <= 1),
+        entry(
+          'first',
+          'first',
+          1,
+          this.firstLabel(),
+          off || busy || current <= 1,
+        ),
       );
     }
     result.push(
@@ -735,7 +776,7 @@ export class AndesPagination {
         'prev',
         current - 1,
         this.previousLabel(),
-        off || current <= 1,
+        off || busy || current <= 1,
       ),
     );
 
@@ -756,7 +797,8 @@ export class AndesPagination {
               'page',
               item,
               `${this.pageLabel()} ${item}`,
-              off,
+              // The current page stays focusable while loading: it carries the spinner.
+              off || (busy && item !== current),
               item === current,
             ),
           );
@@ -767,7 +809,7 @@ export class AndesPagination {
               item === 'start-ellipsis' ? 'jump-prev' : 'jump-next',
               this.jumpTarget(item),
               this.jumpLabel(item),
-              off,
+              off || busy,
             ),
           );
         } else {
@@ -782,13 +824,19 @@ export class AndesPagination {
         'next',
         current + 1,
         this.nextLabel(),
-        off || current >= last,
+        off || busy || current >= last,
       ),
     );
     // Without a known total there is no last page to go to.
     if (this.resolvedShowFirstLast() && !this.isCursor()) {
       result.push(
-        entry('last', 'last', last, this.lastLabel(), off || current >= last),
+        entry(
+          'last',
+          'last',
+          last,
+          this.lastLabel(),
+          off || busy || current >= last,
+        ),
       );
     }
     return result;

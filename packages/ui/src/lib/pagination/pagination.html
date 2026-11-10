@@ -83,7 +83,7 @@
           autocomplete="off"
           [size]="controlButtonSize()"
           [value]="simpleDraft() ?? simpleInputValue()"
-          [disabled]="disabled() || isEmpty()"
+          [disabled]="disabled() || loading() || isEmpty()"
           [aria-label]="currentPageLabel()"
           (valueChange)="simpleDraft.set($event)"
           (keydown)="onSimpleKeydown($event)"
@@ -124,26 +124,29 @@
     [class]="partClass('options')"
     [style]="partStyle('options')"
   >
-    @if (isSizeChangerVisible()) { @if (isTable()) {
-    <span class="andes-pagination__rows-label">{{ rowsPerPageLabel() }}</span>
-    } @if (sizeChangerRender(); as sizeChangerTpl) {
-    <ng-container
-      *ngTemplateOutlet="sizeChangerTpl; context: sizeChangerContext()"
-    />
-    } @else {
-    <andes-select
-      class="andes-pagination__size-changer"
-      [class]="partClass('sizeChanger')"
-      [style]="partStyle('sizeChanger')"
-      [size]="controlButtonSize()"
-      [options]="sizeSelectOptions()"
-      [value]="resolvedPageSize()"
-      [disabled]="disabled()"
-      [loading]="loading()"
-      [aria-label]="sizeChangerLabel()"
-      (valueChange)="onSizeSelected($event)"
-    />
-    } } @if (isQuickJumperVisible()) {
+    @if (isSizeChangerVisible()) {
+    <span class="andes-pagination__size-group">
+      @if (isTable()) {
+      <span class="andes-pagination__rows-label">{{ rowsPerPageLabel() }}</span>
+      } @if (sizeChangerRender(); as sizeChangerTpl) {
+      <ng-container
+        *ngTemplateOutlet="sizeChangerTpl; context: sizeChangerContext()"
+      />
+      } @else {
+      <andes-select
+        class="andes-pagination__size-changer"
+        [class]="partClass('sizeChanger')"
+        [style]="partStyle('sizeChanger')"
+        [size]="controlButtonSize()"
+        [options]="sizeSelectOptions()"
+        [value]="resolvedPageSize()"
+        [disabled]="disabled() || loading()"
+        [aria-label]="sizeChangerLabel()"
+        (valueChange)="onSizeSelected($event)"
+      />
+      }
+    </span>
+    } @if (isQuickJumperVisible()) {
     <span
       class="andes-pagination__jump"
       [class]="partClass('jumper')"
@@ -159,7 +162,7 @@
         [size]="controlButtonSize()"
         [value]="jumpText()"
         [status]="jumperInvalid() ? 'error' : undefined"
-        [disabled]="disabled() || isEmpty()"
+        [disabled]="disabled() || loading() || isEmpty()"
         [aria-labelledby]="
           jumpToSuffixLabel() ? jumpLabelId + ' ' + jumpSuffixId : jumpLabelId
         "
@@ -228,7 +231,8 @@
     class="andes-pagination__go"
     variant="outline"
     [size]="controlButtonSize()"
-    [disabled]="disabled() || isEmpty()"
+    [shape]="buttonShape()"
+    [disabled]="disabled() || loading() || isEmpty()"
     (click)="simple ? commitSimple() : commitJumper()"
     >{{ goText }} @if (jumperIcon()) {
     <ng-icon class="andes-pagination__go-icon" name="lucideArrowRight" />
@@ -278,14 +282,14 @@
   } @case ('last') {
   <ng-icon class="andes-pagination__arrow" name="lucideChevronsRight" />
   } @case ('jump-prev') {
-  <span class="andes-pagination__jumper-dots" aria-hidden="true"
-    ><ng-icon class="andes-pagination__dots" name="lucideEllipsis"
-  /></span>
-  <ng-icon class="andes-pagination__jumper-icon" name="lucideChevronsLeft" />
+  <span class="andes-pagination__jumper-glyph" aria-hidden="true">
+    <ng-icon class="andes-pagination__dots" name="lucideEllipsis" />
+    <ng-icon class="andes-pagination__jumper-icon" name="lucideChevronsLeft" />
+  </span>
   } @case ('jump-next') {
-  <span class="andes-pagination__jumper-dots" aria-hidden="true"
-    ><ng-icon class="andes-pagination__dots" name="lucideEllipsis"
-  /></span>
-  <ng-icon class="andes-pagination__jumper-icon" name="lucideChevronsRight" />
+  <span class="andes-pagination__jumper-glyph" aria-hidden="true">
+    <ng-icon class="andes-pagination__dots" name="lucideEllipsis" />
+    <ng-icon class="andes-pagination__jumper-icon" name="lucideChevronsRight" />
+  </span>
   } @default { {{ page }} } }
 </ng-template>

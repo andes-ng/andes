@@ -262,7 +262,7 @@ export const StylesFunction: Story = {
 export const Tokens: Story = {
   name: 'Custom properties',
   parameters: about(
-    'The size, the gap, the radius and the accent are custom properties you can set on the element or any ancestor.',
+    'The item size, the gap, the section gap and the radius are custom properties you can set on the element or any ancestor.',
   ),
   render: () =>
     scene(

@@ -18,8 +18,7 @@ import { AndesPagination } from './pagination';
 
 /*
  * How many items a page holds: the page-size select, its options and default, when it shows,
- * its labels, and a control of your own in its place (a segmented control, a row of buttons,
- * a select).
+ * its labels, and a control of your own in its place (a stepper, a row of buttons, a select).
  */
 
 const meta: Meta<AndesPagination> = {
@@ -175,7 +174,7 @@ export const ChangerLabels: Story = {
 export const ChangerLoading: Story = {
   name: 'Page-size changer while loading',
   parameters: about(
-    'While the control is loading, the select shows its own spinner and ignores new sizes.',
+    'While the control is loading, the select is switched off and the spinner stays on the current page only.',
   ),
   render: () =>
     scene(
@@ -183,22 +182,37 @@ export const ChangerLoading: Story = {
     ),
 };
 
-export const CustomSegmented: Story = {
-  name: 'Custom component: segmented control',
+export const CustomStepper: Story = {
+  name: 'Custom component: stepper',
   parameters: about(
-    'sizeChangerRender swaps the select for any control; here a segmented control calls change() with the picked size.',
+    'sizeChangerRender swaps the select for any control; here two icon buttons step through the sizes with change(), disabled at the ends.',
   ),
   render: () =>
     scene(
       `<div [style]="column">
-        <andes-pagination aria-label="Segmented sizes" style="width: 100%;" [total]="500" [showSizeChanger]="true"
+        <andes-pagination aria-label="Stepper sizes" style="width: 100%;" [total]="500" [showSizeChanger]="true"
           [sizeChangerRender]="sizes" />
-        <ng-template #sizes let-pageSize let-options="options" let-change="change" let-size="size" let-disabled="disabled" let-label="label">
-          <andes-segmented [aria-label]="label" [options]="options" [value]="pageSize"
-            [size]="controlSize(size)" [disabled]="disabled" (valueChange)="change($event)" />
+        <ng-template #sizes let-pageSize let-options="options" let-change="change" let-size="size" let-disabled="disabled">
+          <span [style]="row">
+            <andes-button variant="outline" [size]="iconSize(size)" aria-label="Fewer rows"
+              [disabled]="disabled || pageSize <= options[0]" (click)="change(step(options, pageSize, -1))"><ng-icon name="lucideMinus" /></andes-button>
+            <span [style]="strong">{{ pageSize }} rows</span>
+            <andes-button variant="outline" [size]="iconSize(size)" aria-label="More rows"
+              [disabled]="disabled || pageSize >= options[options.length - 1]" (click)="change(step(options, pageSize, 1))"><ng-icon name="lucidePlus" /></andes-button>
+          </span>
         </ng-template>
       </div>`,
-      { controlSize },
+      {
+        iconSize: (size: string) =>
+          size === 'small' ? 'icon-sm' : size === 'large' ? 'icon-lg' : 'icon',
+        step: (options: readonly number[], current: number, delta: number) =>
+          options[
+            Math.min(
+              Math.max(options.indexOf(current) + delta, 0),
+              options.length - 1,
+            )
+          ],
+      },
     ),
 };
 

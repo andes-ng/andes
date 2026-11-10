@@ -119,7 +119,7 @@ export const EditableCells: Story = {
                         <andes-input size="sm" [aria-label]="'Edit ' + field" [value]="draft()"
                           (valueChange)="draft.set($event)" (pressEnter)="commit()" (blurred)="commit()" (keydown.escape)="cancel()" />
                       } @else {
-                        <andes-button variant="ghost" size="sm" [aria-label]="'Edit ' + field + ' of ' + row.name" (click)="start(row, field, $event)">
+                        <andes-button variant="ghost" size="sm" style="margin-inline: -0.4375rem;" [aria-label]="'Edit ' + field + ' of ' + row.name" (click)="start(row, field, $event)">
                           {{ field === 'name' ? row.name : row.city }}
                         </andes-button>
                       }

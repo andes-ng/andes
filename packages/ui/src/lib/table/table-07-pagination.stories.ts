@@ -110,7 +110,7 @@ export const Positions: Story = {
       },
       template: `
         <div style="${stack} max-width: 44rem;">
-          <div class="andes-table__toolbar-group">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem;">
             <span [style]="control">Vertical
               <andes-segmented aria-label="Vertical" [value]="vertical()" (valueChange)="vertical.set($event)" [options]="['top', 'bottom', 'none']" />
             </span>
@@ -387,7 +387,7 @@ export const HideOnSinglePage: Story = {
       },
       template: `
         <div style="${stack} max-width: 44rem;">
-          <div class="andes-table__toolbar-group">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem;">
             <andes-button variant="outline" (click)="count.set(count() === 4 ? 14 : 4)">Switch to {{ count() === 4 ? 14 : 4 }} rows</andes-button>
           </div>
           <andes-table>
@@ -605,12 +605,12 @@ export const SettingsPlayground: Story = {
       },
       template: `
         <div style="${stack} max-width: 60rem;">
-          <div class="andes-table__toolbar-group">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem;">
             @for (toggle of toggles; track toggle[1]) {
               <span [style]="control"><andes-switch size="sm" [checked]="$any(flags)[toggle[1]]()" (checkedChange)="$any(flags)[toggle[1]].set($event)">{{ toggle[0] }}</andes-switch></span>
             }
           </div>
-          <div class="andes-table__toolbar-group">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem;">
             <span [style]="control">Size
               <andes-segmented aria-label="Size" [value]="density()" (valueChange)="density.set($event)" [options]="['compact', 'default', 'comfortable']" />
             </span>

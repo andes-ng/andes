@@ -455,7 +455,7 @@ export const ProjectTasks: Story = {
             @for (task of tasks(); track task.id) {
               <tr andesTableRow>
                 <td andesTableCell><span [style]="strong">{{ task.title }}</span></td>
-                <td andesTableCell>
+                <td andesTableCell style="white-space: nowrap;">
                   <span [style]="iconText">
                     <andes-avatar size="sm"><andes-avatar-fallback>{{ initials(task.owner) }}</andes-avatar-fallback></andes-avatar>
                     {{ task.owner }}
@@ -481,7 +481,7 @@ export const ProjectTasks: Story = {
                     <span [style]="muted">{{ task.progress }}%</span>
                   </span>
                 </td>
-                <td andesTableCell><span [style]="muted">{{ task.due }}</span></td>
+                <td andesTableCell style="white-space: nowrap;"><span [style]="muted">{{ task.due }}</span></td>
               </tr>
             }
           </tbody>
@@ -537,8 +537,8 @@ export const InventoryEditing: Story = {
                   </span>
                 </td>
                 <td andesTableCell>{{ item.category }}</td>
-                <td andesTableCell><andes-input-number size="sm" [min]="0" [aria-label]="'Stock of ' + item.name" [value]="item.stock" (valueChange)="set(item.sku, 'stock', $event)" /></td>
-                <td andesTableCell><andes-input-number size="sm" [min]="0" [precision]="2" [aria-label]="'Price of ' + item.name" [value]="item.price" (valueChange)="set(item.sku, 'price', $event)" /></td>
+                <td andesTableCell><andes-input-number style="width: 7rem;" size="sm" [min]="0" [aria-label]="'Stock of ' + item.name" [value]="item.stock" (valueChange)="set(item.sku, 'stock', $event)" /></td>
+                <td andesTableCell><andes-input-number style="width: 7rem;" size="sm" [min]="0" [precision]="2" [aria-label]="'Price of ' + item.name" [value]="item.price" (valueChange)="set(item.sku, 'price', $event)" /></td>
                 <td andesTableCell>
                   @if (item.stock < 20) {
                     <andes-tag color="warning"><ng-icon name="lucideTriangleAlert" style="width: 0.875rem; height: 0.875rem;" /> Low stock</andes-tag>

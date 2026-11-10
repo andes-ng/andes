@@ -147,7 +147,7 @@ export const stack = 'display: flex; flex-direction: column; gap: 0.75rem;';
 
 /** A wrapping row of controls. */
 export const bar =
-  'display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem;';
+  'display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem;';
 
 /** One labelled control of a bar (a switch or a select with its text). */
 export const control = `display: inline-flex; align-items: center; gap: 0.5rem; ${text}`;

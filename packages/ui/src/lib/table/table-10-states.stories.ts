@@ -74,7 +74,7 @@ export const Loading: Story = {
     },
     template: `
       <div style="${stack} max-width: 44rem;">
-        <div class="andes-table__toolbar-group">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem;">
           <span [style]="control"><andes-switch [checked]="loading()" (checkedChange)="loading.set($event)">Loading</andes-switch></span>
           <andes-segmented aria-label="Loading type" [value]="type()" (valueChange)="type.set($event)" [options]="['overlay', 'skeleton', 'spinner']" />
         </div>
@@ -111,7 +111,7 @@ export const FirstLoad: Story = {
       props: { rows, loading, load, money, statusColor, bar },
       template: `
         <div style="${stack} max-width: 44rem;">
-          <div class="andes-table__toolbar-group">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem;">
             <andes-button variant="outline" [disabled]="loading()" (click)="load()"><ng-icon slot="icon-start" name="lucideRefreshCw" />Load again</andes-button>
           </div>
           <andes-table [loading]="loading() ? { type: 'skeleton', rows: 5 } : false" loadingLabel="Loading invoices">
@@ -152,7 +152,7 @@ export const ReloadOverlay: Story = {
       },
       template: `
         <div style="${stack} max-width: 44rem;">
-          <div class="andes-table__toolbar-group">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem;">
             <andes-button variant="outline" [loading]="loading()" (click)="reload()"><ng-icon slot="icon-start" name="lucideRefreshCw" />Reload</andes-button>
           </div>
           <andes-table [loading]="loading()" loadingLabel="Reloading invoices">
@@ -298,7 +298,7 @@ export const Refresh: Story = {
       },
       template: `
         <div style="${stack} max-width: 44rem;">
-          <div class="andes-table__toolbar-group">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem;">
             <andes-button variant="outline" [loading]="loading()" (click)="refresh()">
               <ng-icon slot="icon-start" name="lucideRefreshCw" />
               Refresh
@@ -427,7 +427,7 @@ export const FilteredEmpty: Story = {
       },
       template: `
         <div style="${stack} max-width: 44rem;">
-          <div class="andes-table__toolbar-group">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem;">
             <andes-input style="width: 14rem;" aria-label="Search customers" placeholder="Search customers" [(value)]="search" />
           </div>
           <andes-table [(filters)]="filters">

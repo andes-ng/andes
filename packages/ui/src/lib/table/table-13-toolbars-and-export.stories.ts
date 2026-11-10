@@ -425,7 +425,7 @@ export const BulkActions: Story = {
           <div andesTableTop class="andes-table__toolbar">
             @if (selected().length) {
               <span [style]="strong">{{ selected().length }} selected</span>
-              <span [style]="iconText">
+              <span style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;">
                 <andes-button variant="outline"><ng-icon slot="icon-start" name="lucideMail" />Email</andes-button>
                 <andes-button variant="outline"><ng-icon slot="icon-start" name="lucideDownload" />Export</andes-button>
                 <andes-button variant="danger"><ng-icon slot="icon-start" name="lucideTrash2" />Delete</andes-button>
@@ -518,7 +518,7 @@ export const DataTableToolbar: Story = {
                 </andes-select-content>
               </andes-select>
             </span>
-            <span class="andes-table__toolbar-group">
+            <span style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem;">
               <andes-segmented [value]="density()" (valueChange)="density.set($event)" aria-label="Density" [options]="['compact', 'default', 'comfortable']" />
               <andes-table-column-settings [columns]="settings" [(order)]="order" [(hidden)]="hidden" />
               <andes-button variant="outline"><ng-icon slot="icon-start" name="lucideDownload" />Export</andes-button>

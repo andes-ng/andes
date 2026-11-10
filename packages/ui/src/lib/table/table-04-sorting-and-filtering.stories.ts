@@ -800,7 +800,7 @@ export const ControlledFiltersAndSorters: Story = {
       },
       template: `
         <div style="${stack} max-width: 44rem;">
-          <div class="andes-table__toolbar-group">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem;">
             <andes-button variant="outline" (click)="sortTotal()"><ng-icon slot="icon-start" name="lucideArrowDown" />Sort by total</andes-button>
             <andes-button variant="outline" (click)="showPaid()"><ng-icon slot="icon-start" name="lucideFunnel" />Show paid</andes-button>
             <andes-button variant="outline" (click)="table.clearFilters()">Clear filters</andes-button>
@@ -953,8 +953,8 @@ export const GlobalSearch: Story = {
       props: { query, sort, rows, bar, muted },
       template: `
         <div style="${stack} max-width: 44rem;">
-          <div class="andes-table__toolbar-group">
-            <andes-input class="andes-table__toolbar-search" placeholder="Search people" aria-label="Search people" [value]="query()" (valueChange)="query.set($event)">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem;">
+            <andes-input style="flex: 1 1 12.5rem; min-width: 12.5rem; max-width: 20rem;" placeholder="Search people" aria-label="Search people" [value]="query()" (valueChange)="query.set($event)">
               <ng-icon slot="prefix" name="lucideSearch" />
             </andes-input>
             <span [style]="muted">{{ rows().length }} of 14 people</span>
@@ -1064,7 +1064,7 @@ function remoteDemo(withSelection: boolean) {
             }
           </tbody>
         </andes-table>
-        <div class="andes-table__toolbar-group">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem;">
 <andes-pagination layout="table" [showSizeChanger]="false" [disabled]="loading()" [current]="page()" (currentChange)="go($event)" [pageSize]="pageSize" [total]="result().total || 1" />
           ${withSelection ? '<span [style]="muted">{{ selected().length }} selected over every page</span>' : ''}
         </div>

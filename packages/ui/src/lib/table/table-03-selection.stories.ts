@@ -282,7 +282,7 @@ export const SelectAllAndClear: Story = {
     },
     template: `
       <div style="${stack} max-width: 44rem;">
-        <div class="andes-table__toolbar-group">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem;">
           <andes-button variant="outline" (click)="table.selectAll()">Select all</andes-button>
           <andes-button variant="outline" (click)="table.invertSelection()">Invert</andes-button>
           <andes-button variant="ghost" (click)="table.clearSelection()">Clear</andes-button>
@@ -339,7 +339,7 @@ export const SelectionAndOperation: Story = {
       },
       template: `
         <div style="${stack} max-width: 44rem;">
-          <div class="andes-table__toolbar-group">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem;">
             <andes-button [disabled]="selected().length === 0" [loading]="loading()" (click)="reload()">
               <ng-icon slot="icon-start" name="lucideRefreshCw" />
               Reload
@@ -473,7 +473,7 @@ export const KeepSelectionAcrossPages: Story = {
               }
             </tbody>
           </andes-table>
-          <div class="andes-table__toolbar-group">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem;">
             <andes-pagination layout="table" [showSizeChanger]="false" [current]="page()" (currentChange)="page.set($event)" [pageSize]="pageSize" [total]="total" />
             <span [style]="muted">{{ selected().length }} selected over every page</span>
           </div>
@@ -529,7 +529,7 @@ export const SelectAllAcrossData: Story = {
               }
             </tbody>
           </andes-table>
-          <div class="andes-table__toolbar-group">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem;">
 <andes-pagination layout="table" [showSizeChanger]="false" [current]="page()" (currentChange)="page.set($event)" [pageSize]="pageSize" [total]="total" />
             <span [style]="muted">{{ selected().length }} of {{ total }} selected</span>
           </div>

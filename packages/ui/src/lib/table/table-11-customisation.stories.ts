@@ -171,7 +171,7 @@ export const ClassNamesFunction: Story = {
       },
       template: `
         <div class="story-cn" style="${stack} max-width: 40rem;">
-          <div [style]="bar">
+          <div class="andes-table__toolbar-group">
             <andes-segmented aria-label="Density" [options]="options" [(value)]="density" />
             <span [style]="control"><andes-switch [checked]="loading()" (checkedChange)="loading.set($event)">Loading</andes-switch></span>
           </div>
@@ -249,7 +249,7 @@ export const StylesFunction: Story = {
     },
     template: `
       <div style="${stack} max-width: 40rem;">
-        <div [style]="bar">
+        <div class="andes-table__toolbar-group">
           <span [style]="control"><andes-switch [checked]="loading()" (checkedChange)="loading.set($event)">Loading</andes-switch></span>
           <span [style]="control"><andes-switch [checked]="striped()" (checkedChange)="striped.set($event)">Striped</andes-switch></span>
         </div>
@@ -845,8 +845,8 @@ export const ChangedValues: Story = {
       },
       template: `
         <div class="story-cn" style="${stack} max-width: 40rem;">
-          <div [style]="bar">
-            <andes-button variant="outline" size="sm" (click)="update()">
+          <div class="andes-table__toolbar-group">
+            <andes-button variant="outline" (click)="update()">
               <ng-icon slot="icon-start" name="lucideTrendingUp" />
               Raise some prices
             </andes-button>

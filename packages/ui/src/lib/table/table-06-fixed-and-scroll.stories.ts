@@ -591,9 +591,9 @@ export const ScrollToRow: Story = {
     template: `
       <div style="${stack} max-width: 46rem;">
         <div style="${bar}">
-          <andes-button size="sm" variant="outline" (click)="table.scrollTo({ top: 0 })"><ng-icon slot="icon-start" name="lucideArrowUp" />Top</andes-button>
-          <andes-button size="sm" variant="outline" (click)="table.scrollTo({ index: 499 })">Row 500</andes-button>
-          <andes-button size="sm" variant="outline" (click)="table.scrollTo({ index: 1999 })"><ng-icon slot="icon-start" name="lucideArrowDown" />Last row</andes-button>
+          <andes-button variant="outline" (click)="table.scrollTo({ top: 0 })"><ng-icon slot="icon-start" name="lucideArrowUp" />Top</andes-button>
+          <andes-button variant="outline" (click)="table.scrollTo({ index: 499 })">Row 500</andes-button>
+          <andes-button variant="outline" (click)="table.scrollTo({ index: 1999 })"><ng-icon slot="icon-start" name="lucideArrowDown" />Last row</andes-button>
         </div>
         ${wideTable({
           attributes:

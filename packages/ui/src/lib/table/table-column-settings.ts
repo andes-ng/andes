@@ -94,7 +94,7 @@ export type AndesTablePinned = Readonly<Record<string, AndesTableFixed>>;
   },
   template: `
     <andes-popover placement="bottomRight" [maxWidth]="320">
-      <andes-button andesPopoverTrigger variant="outline" size="sm">
+      <andes-button andesPopoverTrigger variant="outline">
         <ng-icon slot="icon-start" name="lucideColumns3" />
         {{ label() }}
       </andes-button>

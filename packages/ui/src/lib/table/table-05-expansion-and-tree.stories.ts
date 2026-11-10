@@ -439,7 +439,7 @@ export const CustomExpandIcon: Story = {
               </tr>
               <tr *andesTableExpandedRow="variant.key">
                 <td andesTableCell></td>
-                <td andesTableCell><span style="${muted}">The toggle shows {{ variant.closed }} while closed and {{ variant.open }} once open.</span></td>
+                <td andesTableCell><span style="${muted}">The icon of the toggle is swapped for its open twin while this row is open.</span></td>
               </tr>
             }
           </tbody>
@@ -897,9 +897,9 @@ export const ControlledExpansion: Story = {
       template: `
         <div style="${stack} ${WRAP}">
           <div style="${bar}">
-            <andes-button size="sm" variant="outline" (click)="openAll()"><ng-icon slot="icon-start" name="lucideChevronsUpDown" />Expand all</andes-button>
-            <andes-button size="sm" variant="outline" (click)="closeAll()"><ng-icon slot="icon-start" name="lucideChevronsDownUp" />Collapse all</andes-button>
-            <andes-button size="sm" variant="ghost" (click)="firstLevel()">First level</andes-button>
+            <andes-button variant="outline" (click)="openAll()"><ng-icon slot="icon-start" name="lucideChevronsUpDown" />Expand all</andes-button>
+            <andes-button variant="outline" (click)="closeAll()"><ng-icon slot="icon-start" name="lucideChevronsDownUp" />Collapse all</andes-button>
+            <andes-button variant="ghost" (click)="firstLevel()">First level</andes-button>
           </div>
           ${accountTable()}
           <p style="${muted} margin: 0;">expandedKeys: {{ expanded().join(', ') || 'none' }}</p>

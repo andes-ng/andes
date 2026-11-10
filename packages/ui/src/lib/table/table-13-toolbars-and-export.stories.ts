@@ -63,8 +63,8 @@ export const ToolbarSlot: Story = {
         <div andesTableTop class="andes-table__toolbar">
           <span [style]="strong">Team members</span>
           <span [style]="iconText">
-            <andes-button variant="outline" size="sm"><ng-icon slot="icon-start" name="lucideDownload" />Export</andes-button>
-            <andes-button size="sm"><ng-icon slot="icon-start" name="lucidePlus" />Add member</andes-button>
+            <andes-button variant="outline"><ng-icon slot="icon-start" name="lucideDownload" />Export</andes-button>
+            <andes-button><ng-icon slot="icon-start" name="lucidePlus" />Add member</andes-button>
           </span>
         </div>
         <thead andesTableHeader>
@@ -108,7 +108,7 @@ export const SearchToolbar: Story = {
       template: `
         <andes-table style="max-width: 48rem;">
           <div andesTableTop class="andes-table__toolbar">
-            <andes-input placeholder="Search people" aria-label="Search people" style="width: 16rem;" [value]="query()" (valueChange)="query.set($event)">
+            <andes-input class="andes-table__toolbar-search" placeholder="Search people" aria-label="Search people" [value]="query()" (valueChange)="query.set($event)">
               <ng-icon slot="prefix" name="lucideSearch" />
             </andes-input>
             <span [style]="muted">{{ rows().length }} of {{ total }} people</span>
@@ -163,7 +163,10 @@ export const ColumnsMenu: Story = {
       },
       template: `
         <andes-table style="max-width: 48rem;">
-          <andes-table-column-settings andesTableTop [columns]="settings" [(order)]="order" [(hidden)]="hidden" />
+          <div andesTableTop class="andes-table__toolbar">
+            <span class="andes-table__toolbar-group"></span>
+            <andes-table-column-settings [columns]="settings" [(order)]="order" [(hidden)]="hidden" />
+          </div>
           <thead andesTableHeader>
             <tr andesTableRow>
               @for (column of visible(); track column.key) {
@@ -199,7 +202,7 @@ export const DensityToggle: Story = {
         <andes-table style="max-width: 44rem;" [density]="density()">
           <div andesTableTop class="andes-table__toolbar">
             <span [style]="muted">Row height</span>
-            <andes-segmented [value]="density()" (valueChange)="density.set($event)" aria-label="Density" size="sm" [options]="['compact', 'default', 'comfortable']" />
+            <andes-segmented [value]="density()" (valueChange)="density.set($event)" aria-label="Density" [options]="['compact', 'default', 'comfortable']" />
           </div>
           <thead andesTableHeader>
             <tr andesTableRow>
@@ -251,7 +254,7 @@ export const RefreshToolbar: Story = {
         <andes-table style="max-width: 44rem;" [loading]="loading()">
           <div andesTableTop class="andes-table__toolbar">
             <span [style]="muted">{{ stamp() }}</span>
-            <andes-button variant="outline" size="sm" [loading]="loading()" (click)="refresh()">
+            <andes-button variant="outline" [loading]="loading()" (click)="refresh()">
               <ng-icon slot="icon-start" name="lucideRefreshCw" />
               Refresh
             </andes-button>
@@ -313,7 +316,7 @@ export const CsvCopy: Story = {
           <andes-table>
             <div andesTableTop class="andes-table__toolbar">
               <span [style]="muted">{{ users.length }} rows</span>
-              <andes-button variant="outline" size="sm" (click)="copy()">
+              <andes-button variant="outline" (click)="copy()">
                 @if (copied()) {
                   <ng-icon slot="icon-start" name="lucideCheck" />
                   Copied
@@ -381,7 +384,7 @@ export const CsvDownload: Story = {
         <andes-table style="max-width: 48rem;">
           <div andesTableTop class="andes-table__toolbar">
             <span [style]="muted">{{ done() || 'Nothing exported yet' }}</span>
-            <andes-button size="sm" (click)="download()">
+            <andes-button (click)="download()">
               <ng-icon slot="icon-start" name="lucideDownload" />
               Download CSV
             </andes-button>
@@ -423,10 +426,10 @@ export const BulkActions: Story = {
             @if (selected().length) {
               <span [style]="strong">{{ selected().length }} selected</span>
               <span [style]="iconText">
-                <andes-button variant="outline" size="sm"><ng-icon slot="icon-start" name="lucideMail" />Email</andes-button>
-                <andes-button variant="outline" size="sm"><ng-icon slot="icon-start" name="lucideDownload" />Export</andes-button>
-                <andes-button variant="danger" size="sm"><ng-icon slot="icon-start" name="lucideTrash2" />Delete</andes-button>
-                <andes-button variant="ghost" size="sm" (click)="selected.set([])"><ng-icon slot="icon-start" name="lucideX" />Clear</andes-button>
+                <andes-button variant="outline"><ng-icon slot="icon-start" name="lucideMail" />Email</andes-button>
+                <andes-button variant="outline"><ng-icon slot="icon-start" name="lucideDownload" />Export</andes-button>
+                <andes-button variant="danger"><ng-icon slot="icon-start" name="lucideTrash2" />Delete</andes-button>
+                <andes-button variant="ghost" (click)="selected.set([])"><ng-icon slot="icon-start" name="lucideX" />Clear</andes-button>
               </span>
             } @else {
               <span [style]="muted">Select people to act on them</span>
@@ -500,8 +503,8 @@ export const DataTableToolbar: Story = {
       template: `
         <andes-table style="max-width: 56rem;" [density]="density()">
           <div andesTableTop class="andes-table__toolbar" style="flex-wrap: wrap;">
-            <span [style]="bar">
-              <andes-input placeholder="Search" aria-label="Search" style="width: 14rem;" [value]="query()" (valueChange)="query.set($event)">
+            <span class="andes-table__toolbar-group">
+              <andes-input class="andes-table__toolbar-search" placeholder="Search" aria-label="Search" [value]="query()" (valueChange)="query.set($event)">
                 <ng-icon slot="prefix" name="lucideSearch" />
               </andes-input>
               <andes-select aria-label="Role" [value]="role()" (valueChange)="role.set($any($event))" style="width: 9rem;">
@@ -515,10 +518,10 @@ export const DataTableToolbar: Story = {
                 </andes-select-content>
               </andes-select>
             </span>
-            <span [style]="bar">
-              <andes-segmented [value]="density()" (valueChange)="density.set($event)" aria-label="Density" size="sm" [options]="['compact', 'default', 'comfortable']" />
+            <span class="andes-table__toolbar-group">
+              <andes-segmented [value]="density()" (valueChange)="density.set($event)" aria-label="Density" [options]="['compact', 'default', 'comfortable']" />
               <andes-table-column-settings [columns]="settings" [(order)]="order" [(hidden)]="hidden" />
-              <andes-button variant="outline" size="sm"><ng-icon slot="icon-start" name="lucideDownload" />Export</andes-button>
+              <andes-button variant="outline"><ng-icon slot="icon-start" name="lucideDownload" />Export</andes-button>
             </span>
           </div>
           <thead andesTableHeader>

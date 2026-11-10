@@ -110,12 +110,12 @@ export const Positions: Story = {
       },
       template: `
         <div style="${stack} max-width: 44rem;">
-          <div [style]="bar">
+          <div class="andes-table__toolbar-group">
             <span [style]="control">Vertical
-              <andes-segmented size="sm" aria-label="Vertical" [value]="vertical()" (valueChange)="vertical.set($event)" [options]="['top', 'bottom', 'none']" />
+              <andes-segmented aria-label="Vertical" [value]="vertical()" (valueChange)="vertical.set($event)" [options]="['top', 'bottom', 'none']" />
             </span>
             <span [style]="control">Horizontal
-              <andes-segmented size="sm" aria-label="Horizontal" [value]="horizontal()" (valueChange)="horizontal.set($event)" [options]="['start', 'center', 'end']" />
+              <andes-segmented aria-label="Horizontal" [value]="horizontal()" (valueChange)="horizontal.set($event)" [options]="['start', 'center', 'end']" />
             </span>
           </div>
           <andes-table>
@@ -387,8 +387,8 @@ export const HideOnSinglePage: Story = {
       },
       template: `
         <div style="${stack} max-width: 44rem;">
-          <div [style]="bar">
-            <andes-button size="sm" variant="outline" (click)="count.set(count() === 4 ? 14 : 4)">Switch to {{ count() === 4 ? 14 : 4 }} rows</andes-button>
+          <div class="andes-table__toolbar-group">
+            <andes-button variant="outline" (click)="count.set(count() === 4 ? 14 : 4)">Switch to {{ count() === 4 ? 14 : 4 }} rows</andes-button>
           </div>
           <andes-table>
             ${HEAD}
@@ -474,7 +474,7 @@ export const SelectionAcrossPages: Story = {
         <andes-table style="max-width: 44rem;" [(selectedKeys)]="selected">
           <div andesTableTop class="andes-table__toolbar">
             <span [style]="strong">{{ selected().length }} selected</span>
-            <andes-button size="sm" variant="ghost" [disabled]="!selected().length" (click)="selected.set([])">Clear selection</andes-button>
+            <andes-button variant="ghost" [disabled]="!selected().length" (click)="selected.set([])">Clear selection</andes-button>
           </div>
           <thead andesTableHeader>
             <tr andesTableRow>
@@ -605,20 +605,20 @@ export const SettingsPlayground: Story = {
       },
       template: `
         <div style="${stack} max-width: 60rem;">
-          <div [style]="bar">
+          <div class="andes-table__toolbar-group">
             @for (toggle of toggles; track toggle[1]) {
               <span [style]="control"><andes-switch size="sm" [checked]="$any(flags)[toggle[1]]()" (checkedChange)="$any(flags)[toggle[1]].set($event)">{{ toggle[0] }}</andes-switch></span>
             }
           </div>
-          <div [style]="bar">
+          <div class="andes-table__toolbar-group">
             <span [style]="control">Size
-              <andes-segmented size="sm" aria-label="Size" [value]="density()" (valueChange)="density.set($event)" [options]="['compact', 'default', 'comfortable']" />
+              <andes-segmented aria-label="Size" [value]="density()" (valueChange)="density.set($event)" [options]="['compact', 'default', 'comfortable']" />
             </span>
             <span [style]="control">Pager above
-              <andes-segmented size="sm" aria-label="Pager above" [value]="top()" (valueChange)="top.set($event)" [options]="['none', 'start', 'center', 'end']" />
+              <andes-segmented aria-label="Pager above" [value]="top()" (valueChange)="top.set($event)" [options]="['none', 'start', 'center', 'end']" />
             </span>
             <span [style]="control">Pager below
-              <andes-segmented size="sm" aria-label="Pager below" [value]="bottom()" (valueChange)="bottom.set($event)" [options]="['none', 'start', 'center', 'end']" />
+              <andes-segmented aria-label="Pager below" [value]="bottom()" (valueChange)="bottom.set($event)" [options]="['none', 'start', 'center', 'end']" />
             </span>
           </div>
           <andes-table

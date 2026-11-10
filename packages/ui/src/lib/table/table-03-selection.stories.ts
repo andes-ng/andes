@@ -282,10 +282,10 @@ export const SelectAllAndClear: Story = {
     },
     template: `
       <div style="${stack} max-width: 44rem;">
-        <div [style]="bar">
-          <andes-button variant="outline" size="sm" (click)="table.selectAll()">Select all</andes-button>
-          <andes-button variant="outline" size="sm" (click)="table.invertSelection()">Invert</andes-button>
-          <andes-button variant="ghost" size="sm" (click)="table.clearSelection()">Clear</andes-button>
+        <div class="andes-table__toolbar-group">
+          <andes-button variant="outline" (click)="table.selectAll()">Select all</andes-button>
+          <andes-button variant="outline" (click)="table.invertSelection()">Invert</andes-button>
+          <andes-button variant="ghost" (click)="table.clearSelection()">Clear</andes-button>
         </div>
         <andes-table #table [(selectedKeys)]="selected">
           <thead andesTableHeader>
@@ -339,8 +339,8 @@ export const SelectionAndOperation: Story = {
       },
       template: `
         <div style="${stack} max-width: 44rem;">
-          <div [style]="bar">
-            <andes-button size="sm" [disabled]="selected().length === 0" [loading]="loading()" (click)="reload()">
+          <div class="andes-table__toolbar-group">
+            <andes-button [disabled]="selected().length === 0" [loading]="loading()" (click)="reload()">
               <ng-icon slot="icon-start" name="lucideRefreshCw" />
               Reload
             </andes-button>
@@ -473,8 +473,8 @@ export const KeepSelectionAcrossPages: Story = {
               }
             </tbody>
           </andes-table>
-          <div [style]="bar">
-            <andes-pagination layout="table" size="small" [showSizeChanger]="false" [current]="page()" (currentChange)="page.set($event)" [pageSize]="pageSize" [total]="total" />
+          <div class="andes-table__toolbar-group">
+            <andes-pagination layout="table" [showSizeChanger]="false" [current]="page()" (currentChange)="page.set($event)" [pageSize]="pageSize" [total]="total" />
             <span [style]="muted">{{ selected().length }} selected over every page</span>
           </div>
         </div>`,
@@ -529,8 +529,8 @@ export const SelectAllAcrossData: Story = {
               }
             </tbody>
           </andes-table>
-          <div [style]="bar">
-<andes-pagination layout="table" size="small" [showSizeChanger]="false" [current]="page()" (currentChange)="page.set($event)" [pageSize]="pageSize" [total]="total" />
+          <div class="andes-table__toolbar-group">
+<andes-pagination layout="table" [showSizeChanger]="false" [current]="page()" (currentChange)="page.set($event)" [pageSize]="pageSize" [total]="total" />
             <span [style]="muted">{{ selected().length }} of {{ total }} selected</span>
           </div>
         </div>`,
@@ -774,9 +774,9 @@ export const SelectedCountBar: Story = {
           @if (selected().length) {
             <span [style]="strong">{{ selected().length }} of {{ rows.length }} rows selected</span>
             <span [style]="iconText">
-              <andes-button variant="outline" size="sm"><ng-icon slot="icon-start" name="lucideMail" />Email</andes-button>
-              <andes-button variant="outline" size="sm"><ng-icon slot="icon-start" name="lucideTrash2" />Delete</andes-button>
-              <andes-button variant="ghost" size="sm" (click)="selected.set([])"><ng-icon slot="icon-start" name="lucideX" />Clear</andes-button>
+              <andes-button variant="outline"><ng-icon slot="icon-start" name="lucideMail" />Email</andes-button>
+              <andes-button variant="outline"><ng-icon slot="icon-start" name="lucideTrash2" />Delete</andes-button>
+              <andes-button variant="ghost" (click)="selected.set([])"><ng-icon slot="icon-start" name="lucideX" />Clear</andes-button>
             </span>
           } @else {
             <span [style]="muted">Select rows to act on them</span>

@@ -462,7 +462,7 @@ export const HiddenColumns: Story = {
       },
       template: `
         <div style="${stack} max-width: 44rem;">
-          <div [style]="bar">
+          <div class="andes-table__toolbar-group">
             <span [style]="strong">Columns displayed</span>
             @for (column of all; track column.key) {
               <andes-checkbox [checked]="!hidden().includes(column.key)" (checkedChange)="toggle(column.key, $event)">{{ column.title }}</andes-checkbox>

@@ -143,7 +143,7 @@ export const strong = `${font} font-size: 0.875rem; line-height: 1.375rem; font-
 export const heading = `${font} margin: 0; font-size: 1rem; line-height: 1.5rem; font-weight: 600; color: var(--andes-color-foreground);`;
 
 /** A vertical stack. */
-export const stack = 'display: flex; flex-direction: column; gap: 1rem;';
+export const stack = 'display: flex; flex-direction: column; gap: 0.75rem;';
 
 /** A wrapping row of controls. */
 export const bar =

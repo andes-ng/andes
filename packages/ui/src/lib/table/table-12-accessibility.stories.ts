@@ -176,8 +176,8 @@ export const AriaSortAndCounts: Story = {
       },
       template: `
         <div #root style="${stack} max-width: 44rem;">
-          <div [style]="bar">
-            <andes-button variant="outline" size="sm" (click)="read(root)">Read the attributes</andes-button>
+          <div class="andes-table__toolbar-group">
+            <andes-button variant="outline" (click)="read(root)">Read the attributes</andes-button>
             <span [style]="muted">{{ counts() }}</span>
           </div>
           <andes-table [rowCount]="200" [(sort)]="sort">
@@ -278,9 +278,9 @@ export const LiveAnnouncements: Story = {
       },
       template: `
         <div #root style="${stack} max-width: 44rem;">
-          <div [style]="bar">
+          <div class="andes-table__toolbar-group">
             <span [style]="control"><andes-switch [checked]="loading()" (checkedChange)="loading.set($event)">Loading</andes-switch></span>
-            <andes-button variant="outline" size="sm" (click)="read(root)">Read the status region</andes-button>
+            <andes-button variant="outline" (click)="read(root)">Read the status region</andes-button>
           </div>
           <p [style]="muted" style="margin: 0;">Table status: {{ heard() }}</p>
           <andes-table reorderable [loading]="loading()" loadingLabel="Loading the team" [(columnOrder)]="order" [(sort)]="sort">

@@ -89,18 +89,21 @@
   min-height: calc(var(--andes-table-head-height, 0px) + 8.25rem);
 }
 
-.andes-table--loading-overlay > tbody:not(.andes-table__skeleton) {
+/* prettier-ignore */
+.andes-table--loading-overlay ::ng-deep tbody:not(.andes-table__skeleton, .andes-table__body tbody, td tbody) {
   opacity: 0.5;
   pointer-events: none;
   transition: opacity 150ms ease;
 }
 
-.andes-table--loading-spinner > tbody:not(.andes-table__skeleton) {
+/* prettier-ignore */
+.andes-table--loading-spinner ::ng-deep tbody:not(.andes-table__skeleton, .andes-table__body tbody, td tbody) {
   visibility: hidden;
 }
 
 /* The skeleton replaces whatever body the consumer wrote, the empty state included. */
-.andes-table--loading-skeleton > tbody:not(.andes-table__skeleton) {
+/* prettier-ignore */
+.andes-table--loading-skeleton ::ng-deep tbody:not(.andes-table__skeleton, .andes-table__body tbody, td tbody) {
   display: none;
 }
 
@@ -114,6 +117,11 @@
   align-items: center;
   justify-content: center;
   gap: var(--andes-space-2, 0.5rem);
+  background-color: color-mix(
+    in srgb,
+    var(--andes-color-background, #fff) 30%,
+    transparent
+  );
   color: var(--andes-color-muted-foreground, #64748b);
   font-size: 0.875rem;
   cursor: progress;
@@ -193,18 +201,56 @@
   overflow: clip;
 }
 
-/* Table bar for the `andesTableTop` / `andesTableBottom` slots: a start side (a title, "n of
-   m rows selected") and an end side (actions, a pager), reachable from projected content. */
+/* Table bar for the `andesTableTop` / `andesTableBottom` slots: a start side (a title, a search box,
+   "n of m rows selected") and an end side (actions, a pager). Every control in it has the same
+   height (the library's default 32px size), is centred on the line, 8px from its neighbours in a
+   `.andes-table__toolbar-group` and 12px from the next group; the bar is 12px from the table.
+   On a phone the groups stack and the controls stretch. */
 :host ::ng-deep .andes-table__toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--andes-space-3, 0.75rem);
-  padding-block: var(--andes-space-3, 0.75rem);
+  padding-block: 0;
   color: var(--andes-color-muted-foreground, #64748b);
   font-family: var(--andes-font-family), sans-serif;
   font-size: var(--andes-text-font-size, 0.875rem);
   line-height: var(--andes-text-line-height, 1.375rem);
+}
+
+:host ::ng-deep [andesTableTop].andes-table__toolbar {
+  margin-block-end: var(--andes-space-3, 0.75rem);
+}
+
+:host ::ng-deep [andesTableBottom].andes-table__toolbar {
+  margin-block-start: var(--andes-space-3, 0.75rem);
+}
+
+:host ::ng-deep .andes-table__toolbar-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--andes-space-2, 0.5rem);
+}
+
+:host ::ng-deep .andes-table__toolbar-search {
+  flex: 1 1 12.5rem;
+  min-width: 12.5rem;
+  max-width: 20rem;
+}
+
+@media (width < 576px) {
+  :host ::ng-deep .andes-table__toolbar,
+  :host ::ng-deep .andes-table__toolbar-group {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--andes-space-2, 0.5rem);
+  }
+
+  :host ::ng-deep .andes-table__toolbar-search {
+    max-width: none;
+  }
 }
 
 /* Caption */
@@ -937,7 +983,7 @@
     animation-duration: 2.4s;
   }
 
-  .andes-table--loading-overlay > tbody {
+  .andes-table--loading-overlay ::ng-deep tbody {
     transition: none;
   }
 

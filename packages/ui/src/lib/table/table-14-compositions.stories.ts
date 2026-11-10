@@ -109,8 +109,8 @@ export const AdminUsers: Story = {
       template: `
         <andes-table style="max-width: 62rem;" [(sort)]="sort" [(selectedKeys)]="selected">
           <div andesTableTop class="andes-table__toolbar" style="flex-wrap: wrap;">
-            <span [style]="bar">
-              <andes-input placeholder="Search users" aria-label="Search users" style="width: 15rem;" [value]="query()" (valueChange)="query.set($event); page.set(1)">
+            <span class="andes-table__toolbar-group">
+              <andes-input class="andes-table__toolbar-search" placeholder="Search users" aria-label="Search users" [value]="query()" (valueChange)="query.set($event); page.set(1)">
                 <ng-icon slot="prefix" name="lucideSearch" />
               </andes-input>
               <andes-select aria-label="Role" [value]="role()" (valueChange)="role.set($any($event)); page.set(1)" style="width: 9rem;">

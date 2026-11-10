@@ -13,6 +13,7 @@
   [attr.aria-labelledby]="ariaLabelledby()"
   [attr.aria-describedby]="ariaDescribedby()"
   [attr.aria-invalid]="ariaInvalid() || null"
+  [attr.aria-current]="ariaCurrent() ?? null"
   [class]="classes()"
 >
   <ng-container *ngTemplateOutlet="content" />
@@ -31,6 +32,7 @@
   [attr.aria-labelledby]="ariaLabelledby()"
   [attr.aria-describedby]="ariaDescribedby()"
   [attr.aria-invalid]="ariaInvalid() || null"
+  [attr.aria-current]="ariaCurrent() ?? null"
   [class]="classes()"
 >
   <ng-container *ngTemplateOutlet="content" />

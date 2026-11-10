@@ -36,8 +36,8 @@ import type { AndesSortDirection } from './table-sort';
 /** `scope` values a header cell can declare. */
 export type AndesTableHeadScope = 'col' | 'row' | 'colgroup' | 'rowgroup';
 
-/** Keyboard resize step, in pixels (Shift multiplies it by 5). */
-const RESIZE_STEP = 10;
+/** Keyboard resize step, in pixels (Shift multiplies it by 4). */
+const RESIZE_STEP = 8;
 
 let nextHeadId = 0;
 
@@ -76,7 +76,7 @@ function optionalBoolean(value: unknown): boolean | undefined {
  * (`columnKey`, or else `sortKey`) gets a drag handle on its inline-end edge. The
  * width lands in `AndesTable.columnWidths` and `(columnResize)`, clamped to
  * `minWidth`/`maxWidth`. The handle is a focusable `role="separator"`: Arrow
- * Left/Right resize by 10px (50px with Shift, mirrored in right-to-left), Home/End
+ * Left/Right resize by 8px (32px with Shift, mirrored in right-to-left), Home/End
  * jump to the limits, and Enter - like a double-click - fits the column to its
  * content. `width` sets a starting width.
  *
@@ -181,6 +181,11 @@ function optionalBoolean(value: unknown): boolean | undefined {
           name="lucideGripVertical"
           aria-hidden="true"
         />
+        @if (dragging()) {
+          <span class="andes-table__resize-badge" aria-hidden="true"
+            >{{ currentWidth() }}px</span
+          >
+        }
         <span class="andes-table__sr-only" [id]="id + '-resize'">{{
           resizeText()
         }}</span>
@@ -387,6 +392,9 @@ export class AndesTableHead {
       this.sortKey() && 'andes-table__head--sortable',
       this.direction() && 'andes-table__head--sorted',
       this.isResizable() && 'andes-table__head--resizable',
+      this.isResizable() &&
+        (this.currentWidth() ?? Infinity) < 72 &&
+        'andes-table__head--narrow',
       this.canReorder() && 'andes-table__head--reorderable',
       andesCellModifiers(this.fixed(), this.ellipsis(), this.hideBelow()),
       this.table.partClass('headerCell'),
@@ -538,7 +546,7 @@ export class AndesTableHead {
     // Keys on the handle belong to it: never a sort, never a column move.
     event.stopPropagation();
 
-    const step = RESIZE_STEP * (event.shiftKey ? 5 : 1);
+    const step = RESIZE_STEP * (event.shiftKey ? 4 : 1);
     // The handle sits on the inline-end edge, so "toward the end" widens the column;
     // in right-to-left that is ArrowLeft.
     const grow = this.isRtl() ? 'ArrowLeft' : 'ArrowRight';
@@ -611,6 +619,9 @@ export class AndesTableHead {
     }
     const max = this.maxWidth() ?? Number.POSITIVE_INFINITY;
     const clamped = Math.round(Math.min(Math.max(width, this.minWidth()), max));
+    this.table.freezeColumns(
+      this.host.nativeElement.parentElement as HTMLTableRowElement | null,
+    );
     this.measuredWidth.set(clamped);
     this.table.resizeColumn(key, clamped);
   }

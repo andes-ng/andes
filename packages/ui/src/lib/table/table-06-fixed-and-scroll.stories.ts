@@ -128,11 +128,14 @@ function wideTable(options: TableOptions = {}): string {
   const columns = COLUMNS.slice(0, options.count ?? COLUMNS.length);
   const pin = (key: string) =>
     options.fixed?.[key] ? ` fixed="${options.fixed[key]}"` : '';
+  // In a fixed layout the width the table has beyond its columns is shared among them all, so
+  // the last column takes it instead of giving a leading one (the "#" column) an empty margin.
+  const last = columns[columns.length - 1];
   const heads = columns
-    .map(
-      (col) =>
-        `<th andesTableHead${pin(col.key)}${col.align ? ` align="${col.align}"` : ''} style="${options.ellipsis ? 'width' : 'min-width'}: ${col.width}">${col.title}</th>`,
-    )
+    .map((col) => {
+      const sized = options.ellipsis && col === last && !options.actions;
+      return `<th andesTableHead${pin(col.key)}${col.align ? ` align="${col.align}"` : ''}${sized ? '' : ` style="${options.ellipsis ? 'width' : 'min-width'}: ${col.width}"`}>${col.title}</th>`;
+    })
     .join('\n');
   const cells = columns
     .map(

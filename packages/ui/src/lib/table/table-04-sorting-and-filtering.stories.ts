@@ -1036,7 +1036,7 @@ function remoteDemo(withSelection: boolean) {
     },
     template: `
       <div style="${stack} max-width: 44rem;">
-        <andes-table [loading]="loading()" [(sort)]="sort" [(selectedKeys)]="selected" (tableChange)="onChange($event)">
+        <andes-table [loading]="loading() ? (result().rows.length ? true : { type: 'skeleton', rows: pageSize }) : false" loadingLabel="Loading people" [(sort)]="sort" [(selectedKeys)]="selected" (tableChange)="onChange($event)">
           <thead andesTableHeader>
             <tr andesTableRow>
               ${withSelection ? '<th andesTableHead><andes-table-select-all /></th>' : ''}
@@ -1065,7 +1065,7 @@ function remoteDemo(withSelection: boolean) {
           </tbody>
         </andes-table>
         <div [style]="bar">
-<andes-pagination layout="table" size="small" [showSizeChanger]="false" [loading]="loading()" [current]="page()" (currentChange)="go($event)" [pageSize]="pageSize" [total]="result().total" />
+<andes-pagination layout="table" size="small" [showSizeChanger]="false" [disabled]="loading()" [current]="page()" (currentChange)="go($event)" [pageSize]="pageSize" [total]="result().total || 1" />
           ${withSelection ? '<span [style]="muted">{{ selected().length }} selected over every page</span>' : ''}
         </div>
       </div>`,

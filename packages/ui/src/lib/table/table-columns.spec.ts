@@ -200,9 +200,9 @@ describe('AndesTable resizable columns', () => {
 
     separator.dispatchEvent(new FocusEvent('focus'));
     key(separator, 'ArrowRight');
-    expect(host.widths()['name']).toBe(110);
+    expect(host.widths()['name']).toBe(108);
     key(separator, 'ArrowLeft', { shiftKey: true });
-    expect(host.widths()['name']).toBe(60);
+    expect(host.widths()['name']).toBe(76);
     key(separator, 'End');
     expect(host.widths()['name']).toBe(300);
     key(separator, 'Home');
@@ -212,7 +212,7 @@ describe('AndesTable resizable columns', () => {
     // RTL: the inline end is on the left, so ArrowLeft widens.
     headers()[0].style.direction = 'rtl';
     key(separator, 'ArrowLeft');
-    expect(host.widths()['name']).toBe(58);
+    expect(host.widths()['name']).toBe(56);
 
     // Keys on the handle never reach the header's sort.
     key(separator, 'Enter');

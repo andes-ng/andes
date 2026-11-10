@@ -504,7 +504,7 @@ export const SelectionAcrossPages: Story = {
 export const ServerTotal: Story = {
   name: 'Server-side total',
   parameters: about(
-    'A pretend server returns one page and the total of rows, the table dims while the next page arrives and the pager is told to wait.',
+    'A pretend server returns one page and the total of rows: the first load shows skeleton rows, a new page dims the rows under a spinner, and the pager keeps its last total and waits.',
   ),
   render: () => {
     const page = signal(1);
@@ -531,7 +531,7 @@ export const ServerTotal: Story = {
         change: () => load(),
       },
       template: `
-        <andes-table style="max-width: 44rem;" [loading]="loading()">
+        <andes-table style="max-width: 44rem;" [loading]="loading() ? (rows().length ? true : { type: 'skeleton', rows: pageSize() }) : false" loadingLabel="Loading people">
           ${HEAD}
           <tbody andesTableBody>
             @for (user of rows(); track user.id) {
@@ -539,7 +539,7 @@ export const ServerTotal: Story = {
             }
           </tbody>
           <div andesTableBottom class="andes-table__toolbar">
-            <andes-pagination style="width: 100%;" layout="table" align="end" [loading]="loading()" [(current)]="page" [(pageSize)]="pageSize" [total]="total()" [pageSizeOptions]="[6, 12, 24]" (pageChange)="change()" />
+            <andes-pagination style="width: 100%;" layout="table" align="end" [disabled]="loading()" [(current)]="page" [(pageSize)]="pageSize" [total]="total() || 1" [pageSizeOptions]="[6, 12, 24]" (pageChange)="change()" />
           </div>
         </andes-table>`,
     };

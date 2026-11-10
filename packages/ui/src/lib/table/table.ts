@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import {
   afterEveryRender,
   afterNextRender,
@@ -13,9 +14,14 @@ import {
   model,
   output,
   signal,
+  type TemplateRef,
   viewChild,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideLoaderCircle } from '@ng-icons/lucide';
 import clsx from 'clsx';
+
+import { AndesSkeletonText } from '../skeleton/skeleton-text';
 
 import {
   ANDES_TABLE_FILTERABLE,
@@ -109,6 +115,31 @@ export interface AndesTableColumnReorder {
   readonly currentIndex: number;
   /** Every keyed column, in its new order - feed it to `andesOrderColumns`. */
   readonly order: readonly string[];
+}
+
+/** How a loading table shows it: see `AndesTable.loading`. */
+export type AndesTableLoadingType = 'overlay' | 'skeleton' | 'spinner';
+
+/** The loading state of a table, with its type and, for `skeleton`, the number of rows. */
+export interface AndesTableLoading {
+  readonly type?: AndesTableLoadingType;
+  /** Rows of placeholders for the `skeleton` type. Default 5. */
+  readonly rows?: number;
+}
+
+/** The loading state with its defaults filled in. */
+export interface AndesTableLoadingState {
+  readonly type: AndesTableLoadingType;
+  readonly rows: number;
+}
+
+/** `true`, an empty attribute or a config object turn it on; `false`, `null` and `'false'` off. */
+function toLoadingState(value: unknown): AndesTableLoadingState | null {
+  if (!value || value === 'false') {
+    return null;
+  }
+  const config = typeof value === 'object' ? (value as AndesTableLoading) : {};
+  return { type: config.type ?? 'overlay', rows: config.rows ?? 5 };
 }
 
 /** What `changeText` is asked to describe: the change a user just made. */
@@ -230,6 +261,8 @@ let nextTableId = 0;
  */
 @Component({
   selector: 'andes-table',
+  imports: [AndesSkeletonText, NgIcon, NgTemplateOutlet],
+  viewProviders: [provideIcons({ lucideLoaderCircle })],
   templateUrl: './table.html',
   styleUrl: './table.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -316,10 +349,24 @@ export class AndesTable {
   readonly tableLayout = input<AndesTableLayout>('auto');
 
   /**
-   * Show a loading overlay over the table and mark it `aria-busy`. The overlay
-   * blocks pointer interaction with the stale rows underneath.
+   * The table is loading: it is marked `aria-busy`, announces `loadingLabel`, and keeps its
+   * header as it is while the body shows the state. `true` is the `overlay` type; pass
+   * `{ type, rows }` for another:
+   * - `overlay`: the rows already there stay, dimmed and out of reach, with a spinner centred
+   *   over the body - for a reload, a new page, a sort or a filter;
+   * - `skeleton`: the body is `rows` rows of placeholders (the page size, so the layout does not
+   *   jump), as wide as the header - for the first load;
+   * - `spinner`: the body is a quiet area about three rows tall with the spinner in it.
    */
-  readonly loading = input(false, { transform: booleanAttribute });
+  readonly loading = input<AndesTableLoadingState | null, unknown>(null, {
+    transform: toLoadingState,
+  });
+
+  /** What the loading state draws instead of the spinner: your own template. */
+  readonly loadingContent = input<TemplateRef<unknown> | undefined>(undefined);
+
+  /** A short visible text under the spinner (`Loading the invoices`). */
+  readonly loadingTip = input('');
 
   /** Text announced to assistive tech while `loading`. */
   readonly loadingLabel = input('Loading');
@@ -681,7 +728,7 @@ export class AndesTable {
       density: this.density(),
       bordered: this.bordered(),
       striped: this.striped(),
-      loading: this.loading(),
+      loading: !!this.loadingState(),
       selectedCount: this.selectedKeys().length,
       expandedCount: this.expandedKeys().length,
       sortedCount: this.activeSorts().length,
@@ -722,9 +769,27 @@ export class AndesTable {
     return andesTableStyleObject(this.semanticStyles()[part]);
   }
 
+  /** The loading state with its defaults, or `null` while the table is not loading. */
+  protected readonly loadingState = this.loading;
+
+  protected readonly skeletonRows = computed(() =>
+    Array.from({ length: this.loadingState()?.rows ?? 0 }, (_, i) => i),
+  );
+
+  /** Height of the header, so the loading state covers the body only. */
+  protected readonly headHeight = signal(0);
+  /** Number of columns of the header, for the skeleton rows. */
+  protected readonly columnCount = signal(1);
+
+  protected readonly skeletonColumns = computed(() =>
+    Array.from({ length: this.columnCount() }, (_, i) => i),
+  );
+
   protected readonly tableClasses = computed(() =>
     clsx(
       'andes-table',
+      this.loadingState() &&
+        `andes-table--loading-${this.loadingState()?.type}`,
       `andes-table--${this.density()}`,
       this.striped() && 'andes-table--striped',
       this.cards() && `andes-table--cards andes-table--cards-${this.cards()}`,
@@ -747,6 +812,7 @@ export class AndesTable {
         this.restoreMovedFocus();
         this.syncHeaderOffsets();
         this.syncGrid();
+        this.syncLoadingGeometry();
       },
     });
 
@@ -1019,6 +1085,57 @@ export class AndesTable {
   }
 
   /** Stores `columnKey`'s width as a user resize and reports it. */
+  /** Keys of the columns whose width was pinned down when the first resize began. */
+  private readonly frozenKeys = signal<readonly string[]>([]);
+  /** Width of the columns without a key, measured at the same moment. */
+  private readonly frozenExtra = signal(0);
+
+  /**
+   * The table's own width once a column has been resized: the sum of every column's width.
+   * A fixed layout shares whatever width a table has beyond its columns among all of them, so
+   * without this a column would be rendered wider than the width it was given and every drag
+   * would run against a moving target. The freed or taken width is the table's, not the
+   * neighbours'.
+   */
+  protected readonly frozenWidth = computed(() => {
+    const keys = this.frozenKeys();
+    if (!keys.length) {
+      return null;
+    }
+    const widths = this.columnWidths() ?? {};
+    const sum = keys.reduce((total, key) => total + (widths[key] ?? 0), 0);
+    return `${sum + this.frozenExtra()}px`;
+  });
+
+  /**
+   * Pins every column of the header `row` to the width it is drawn at, once, before the first
+   * resize writes a width: all the columns start from what the user sees.
+   */
+  freezeColumns(row: HTMLTableRowElement | null): void {
+    if (!row || this.frozenKeys().length) {
+      return;
+    }
+    const widths = { ...(this.columnWidths() ?? {}) };
+    const keys: string[] = [];
+    let extra = 0;
+    for (const cell of Array.from(row.cells)) {
+      const key = cell.dataset['columnKey'];
+      const width = Math.round(cell.getBoundingClientRect().width);
+      if (!key) {
+        extra += width;
+        continue;
+      }
+      if (width <= 0) {
+        continue;
+      }
+      keys.push(key);
+      widths[key] ??= width;
+    }
+    this.frozenExtra.set(extra);
+    this.frozenKeys.set(keys);
+    this.columnWidths.set(widths);
+  }
+
   resizeColumn(columnKey: string, width: number): void {
     if (this.widthFor(columnKey) === width) {
       return;
@@ -1433,6 +1550,27 @@ export class AndesTable {
       }
       top += heights[index];
     });
+  }
+
+  /** Measures what the loading state needs: where the body starts and how many columns it has. */
+  private syncLoadingGeometry(): void {
+    if (!this.loadingState()) {
+      return;
+    }
+    const table = this.tableElement();
+    this.headHeight.set(
+      Math.round(table?.tHead?.getBoundingClientRect().height ?? 0),
+    );
+    const row = table?.tHead?.rows[table.tHead.rows.length - 1];
+    this.columnCount.set(
+      Math.max(
+        1,
+        Array.from(row?.cells ?? []).reduce(
+          (sum, cell) => sum + cell.colSpan,
+          0,
+        ),
+      ),
+    );
   }
 
   // Grid navigation and ARIA counts

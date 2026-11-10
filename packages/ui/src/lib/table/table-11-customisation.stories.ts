@@ -58,10 +58,9 @@ const CSS = `
   .story-cn table.andes-table th.cn-hot { color: var(--andes-color-primary-text); }
   .story-cn table.andes-table td.cn-tight { font-size: 0.8125rem; }
   .story-cn table.andes-table td.cn-summary { font-weight: 600; color: var(--andes-color-primary-text); }
-  .story-cn table.andes-table .cn-expand button { border-radius: 9999px; border-color: var(--andes-color-primary); color: var(--andes-color-primary-text); }
-  .story-cn table.andes-table .cn-selection { outline: 2px solid color-mix(in srgb, var(--andes-color-primary) 40%, transparent); outline-offset: 2px; border-radius: 4px; }
+  .story-cn table.andes-table .cn-expand button { color: var(--andes-color-primary-text); }
+  .story-cn table.andes-table .cn-selection { padding: 0.125rem; border-radius: 0.375rem; background: color-mix(in srgb, var(--andes-color-primary) 10%, transparent); }
   .story-cn table.andes-table .cn-sorter { color: var(--andes-color-primary-text); }
-  .story-cn table.andes-table .cn-filter button { border-radius: 9999px; }
   .story-cn table.andes-table tr.story-low { background: color-mix(in srgb, var(--andes-color-destructive) 8%, var(--andes-color-background)); }
   .story-cn table.andes-table tr.story-picked { background: color-mix(in srgb, var(--andes-color-primary) 12%, var(--andes-color-background)); }
   .story-cn table.andes-table td.story-hot { color: var(--andes-color-destructive); font-weight: 600; }

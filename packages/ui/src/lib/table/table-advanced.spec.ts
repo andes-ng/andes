@@ -601,13 +601,13 @@ describe('AndesTable header features', () => {
 
     key(handle, 'ArrowRight');
     fixture.detectChanges();
-    expect(host.widths()['notes']).toBe(110);
-    expect(heads[2].style.width).toBe('110px');
-    expect(handle.getAttribute('aria-valuenow')).toBe('110');
+    expect(host.widths()['notes']).toBe(108);
+    expect(heads[2].style.width).toBe('108px');
+    expect(handle.getAttribute('aria-valuenow')).toBe('108');
 
     key(handle, 'ArrowLeft', { shiftKey: true });
     fixture.detectChanges();
-    expect(host.widths()['notes']).toBe(60);
+    expect(host.widths()['notes']).toBe(76);
 
     key(handle, 'ArrowRight', { shiftKey: true });
     key(handle, 'ArrowRight', { shiftKey: true });

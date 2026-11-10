@@ -5,6 +5,8 @@
     class="andes-table__container"
     [class.andes-table__container--scroll-y]="scrollYLength() || fill()"
     [class.andes-table__container--sticky]="stickyOffsetLength()"
+    [class.andes-table__container--loading]="loadingState() && loadingState()?.type !== 'skeleton'"
+    [style.--andes-table-head-height.px]="headHeight()"
     [class.andes-table__container--framed]="framed()"
     [class.andes-table__container--bordered]="bordered()"
     [class]="partClass('container')"
@@ -15,28 +17,49 @@
     <table
       [class]="tableClasses()"
       [style.min-width]="scrollXLength()"
+      [style.width]="frozenWidth()"
       [style.--andes-table-indent-size]="indentLength()"
       [style.--andes-table-sticky-offset]="stickyOffsetLength()"
-      [attr.aria-busy]="loading() ? 'true' : null"
+      [attr.aria-busy]="loadingState() ? 'true' : null"
       [attr.role]="gridNavigation() ? 'grid' : null"
     >
       <ng-content />
+      @if (loadingState()?.type === 'skeleton') {
+      <tbody class="andes-table__skeleton" aria-hidden="true">
+        @for (row of skeletonRows(); track row) {
+        <tr class="andes-table__row">
+          @for (column of skeletonColumns(); track column) {
+          <td class="andes-table__cell andes-table__align--start">
+            <andes-skeleton-text [active]="true" [lines]="1" width="70%" />
+          </td>
+          }
+        </tr>
+        }
+      </tbody>
+      }
     </table>
   </div>
-  @if (loading()) {
+  @if (loadingState() && loadingState()?.type !== 'skeleton') {
   <div
     class="andes-table__loading"
     [class.andes-table__loading--framed]="framed()"
     [class]="partClass('loading')"
     [style]="partStyle('loading')"
+    [style.top.px]="headHeight()"
     aria-hidden="true"
   >
-    <span class="andes-table__spinner"></span>
+    @if (loadingContent(); as content) {
+    <ng-container [ngTemplateOutlet]="content" />
+    } @else {
+    <ng-icon class="andes-table__spinner" name="lucideLoaderCircle" />
+    @if (loadingTip()) {
+    <span class="andes-table__loading-tip">{{ loadingTip() }}</span>
+    } }
   </div>
   }
   <!-- Always present so the change of text is announced as a live-region update. -->
   <div class="andes-table__sr-only" role="status" aria-live="polite">
-    @if (loading()) { {{ loadingLabel() }} } @else { {{ announcement() }} }
+    @if (loadingState()) { {{ loadingLabel() }} } @else { {{ announcement() }} }
   </div>
 </div>
 <ng-content select="[andesTableBottom]" />

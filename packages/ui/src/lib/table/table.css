@@ -81,26 +81,49 @@
   border: 0;
 }
 
-/* Loading overlay: dims the stale rows and swallows pointer input until data lands. */
+/* Loading. The header stays as it is: the state covers the body only. `overlay` keeps the rows
+   there, dimmed and out of reach, with a spinner over them; `skeleton` swaps the rows for
+   placeholders; `spinner` empties the body to a quiet area with the spinner in it. The area is
+   never shorter than about three rows, so a table with no rows yet still has room for it. */
+.andes-table__container--loading {
+  min-height: calc(var(--andes-table-head-height, 0px) + 8.25rem);
+}
+
+.andes-table--loading-overlay > tbody:not(.andes-table__skeleton) {
+  opacity: 0.5;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+.andes-table--loading-spinner > tbody:not(.andes-table__skeleton) {
+  visibility: hidden;
+}
+
+/* The skeleton replaces whatever body the consumer wrote, the empty state included. */
+.andes-table--loading-skeleton > tbody:not(.andes-table__skeleton) {
+  display: none;
+}
+
 .andes-table__loading {
   position: absolute;
-  inset: 0;
+  inset-inline: 0;
+  bottom: 0;
   z-index: 4;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background-color: color-mix(
-    in srgb,
-    var(--andes-color-background, #fff) 60%,
-    transparent
-  );
+  gap: var(--andes-space-2, 0.5rem);
+  color: var(--andes-color-muted-foreground, #64748b);
+  font-size: 0.875rem;
   cursor: progress;
   /* Fades in rather than flashing over the rows for a quick reload. */
   animation: andes-table-loading-in 150ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .andes-table__loading--framed {
-  border-radius: var(--andes-radius-lg, 0.5rem);
+  border-end-start-radius: var(--andes-radius-lg, 0.5rem);
+  border-end-end-radius: var(--andes-radius-lg, 0.5rem);
 }
 
 @keyframes andes-table-loading-in {
@@ -109,13 +132,12 @@
   }
 }
 
+/* The lucide spinner, 24px, turning once a second. */
 .andes-table__spinner {
+  display: flex;
   width: 1.5rem;
   height: 1.5rem;
-  border: 2px solid var(--andes-color-border, #d1d5db);
-  border-top-color: var(--andes-color-primary, #2563eb);
-  border-radius: var(--andes-radius-full, 9999px);
-  /* A calm turn: one revolution a second, on a light track. */
+  color: var(--andes-color-primary, #2563eb);
   animation: andes-table-spin 1s linear infinite;
 }
 
@@ -497,32 +519,46 @@
   order: -1;
 }
 
+/* The resize handle: a 16px hit area centred on the column edge, reaching 8px into each of the two
+   cells (a wider one for a coarse pointer), above the neighbouring header cells. It draws a faint
+   hairline at rest; on hover, focus or drag a 2px primary line crosses the whole header and a
+   small pill with a grip comes up on it, both over 150ms. */
 .andes-table ::ng-deep .andes-table__resize-handle {
   position: absolute;
   inset-block: 0;
-  inset-inline-end: 0;
-  z-index: 1;
+  inset-inline-end: -0.5rem;
+  z-index: 3;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  width: 0.5rem;
+  justify-content: center;
+  width: 1rem;
   cursor: col-resize;
   touch-action: none;
 }
 
-/* A header separator - a short hairline on the cell edge - which becomes a
-   full-height primary bar while the handle is hovered, focused or dragged. The bar is
-   the focus indicator; the transparent outline stands in for it in forced colors. */
+@media (pointer: coarse) {
+  .andes-table ::ng-deep .andes-table__resize-handle {
+    inset-inline-end: -0.75rem;
+    width: 1.5rem;
+  }
+}
+
+/* The last column has no neighbour to reach into: its handle stays inside the table. */
+/* prettier-ignore */
+.andes-table ::ng-deep .andes-table__head:last-child > .andes-table__resize-handle {
+  inset-inline-end: 0;
+  justify-content: flex-end;
+}
+
 .andes-table ::ng-deep .andes-table__resize-handle::after {
   content: '';
   width: 1px;
   height: 1.6em;
   background-color: var(--andes-color-border, #d1d5db);
   transition:
-    height var(--andes-motion-duration-fast, 0.1s)
-      var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1)),
-    background-color var(--andes-motion-duration-fast, 0.1s)
-      var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1));
+    width 150ms ease,
+    height 150ms ease,
+    background-color 150ms ease;
 }
 
 /* prettier-ignore */
@@ -542,33 +578,78 @@
   background-color: var(--andes-color-primary, #2563eb);
 }
 
-/* The grip icon of the handle: a small lucide pill that shows while the handle is hovered,
-   focused or dragged, so the edge reads as something to grab. */
+/* The grip: a 16 by 24px pill with a lucide grip, centred on the line, never clipped (the header
+   cell lets it overflow). */
 .andes-table ::ng-deep .andes-table__resize-icon {
   position: absolute;
   inset-block-start: 50%;
-  inset-inline-end: -0.4375rem;
+  inset-inline-start: 50%;
   z-index: 1;
-  translate: 0 -50%;
+  translate: -50% -50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 0.875rem;
-  height: 1.25rem;
+  width: 1rem;
+  height: 1.5rem;
   border: 1px solid var(--andes-color-border, #d1d5db);
-  border-radius: var(--andes-radius-sm, 0.25rem);
-  background-color: var(--andes-color-background, #fff);
+  border-radius: 0.375rem;
+  background-color: var(--andes-color-popover, #fff);
   color: var(--andes-color-muted-foreground, #64748b);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 12%);
   opacity: 0;
+  scale: 0.85;
   pointer-events: none;
-  transition: opacity var(--andes-motion-duration-fast, 0.1s)
-    var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1));
-  --ng-icon__size: 0.75rem;
+  transition:
+    opacity 150ms ease,
+    scale 150ms ease;
+  --ng-icon__size: 0.875rem;
+}
+
+/* prettier-ignore */
+.andes-table ::ng-deep .andes-table__head:last-child > .andes-table__resize-handle > .andes-table__resize-icon {
+  inset-inline-start: auto;
+  inset-inline-end: 0;
+  translate: 0 -50%;
 }
 
 /* prettier-ignore */
 .andes-table ::ng-deep .andes-table__resize-handle:is(:hover, :focus-visible, .andes-table__resize-handle--active) > .andes-table__resize-icon {
   opacity: 1;
+  scale: 1;
+}
+
+/* A header too narrow for the pill keeps the line only. */
+/* prettier-ignore */
+.andes-table ::ng-deep .andes-table__head--narrow > .andes-table__resize-handle > .andes-table__resize-icon {
+  display: none;
+}
+
+/* The live width while dragging, just under the header, next to the pointer. */
+.andes-table ::ng-deep .andes-table__resize-badge {
+  position: absolute;
+  inset-block-start: calc(100% + 0.25rem);
+  inset-inline-start: 50%;
+  translate: -50% 0;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.375rem;
+  background-color: var(--andes-color-foreground, #0f172a);
+  color: var(--andes-color-background, #fff);
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* A resizable cell keeps its handle visible: the text is clipped inside the cell, not the cell. */
+.andes-table ::ng-deep .andes-table__head--resizable.andes-table__ellipsis {
+  overflow: visible;
+}
+
+.andes-table
+  ::ng-deep
+  .andes-table__head--resizable.andes-table__ellipsis
+  .andes-table__head-tip {
+  overflow: hidden;
 }
 
 .andes-table--resizing {
@@ -639,6 +720,7 @@
 /* prettier-ignore */
 .andes-table ::ng-deep :is(td:has(> andes-table-selection, > andes-table-expand-toggle), th:has(> andes-table-selection, > andes-table-expand-toggle, > .andes-table__head-tip > .andes-table__head-content > .andes-table__head-title > :is(andes-table-select-all, andes-table-selection, andes-table-expand-toggle, andes-table-expand-all))) {
   width: 1px;
+  padding-inline: 0.75rem;
 }
 
 /* Ellipsis */
@@ -853,6 +935,10 @@
 
   .andes-table__spinner {
     animation-duration: 2.4s;
+  }
+
+  .andes-table--loading-overlay > tbody {
+    transition: none;
   }
 
   .andes-table__loading {
@@ -1085,4 +1171,65 @@
     background: transparent !important;
     box-shadow: none !important;
   }
+}
+
+/* Icon buttons placed in a cell by the consumer (the library's icon-only button, any variant):
+   the button's host is a flex box the size of the button with no line box around it, so the glyph
+   centres in the button and the button on the line of the text beside it. The ghost variant is
+   transparent at rest by the library's own rule; only the hover tint is softened here. */
+/* prettier-ignore */
+.andes-table ::ng-deep :is(td, th) andes-button:has(> .andes-button[data-size^='icon']) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  vertical-align: middle;
+}
+
+/* prettier-ignore */
+.andes-table ::ng-deep :is(td, th) andes-button > .andes-button--ghost[data-size^='icon']:hover:not(:disabled):not([data-disabled]) {
+  background-color: color-mix(in srgb, var(--andes-color-accent, #f1f5f9) 55%, transparent);
+}
+
+/* A cell that holds text and small controls side by side (an icon, a copy or edit button, an
+   avatar): one inline row, centred on its line, 8px between the parts. The controls keep their
+   size, the text shrinks and truncates, and a control that shows only on hover keeps its place
+   (give it `opacity` rather than `display`). */
+.andes-table ::ng-deep .andes-table__cell-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--andes-space-2, 0.5rem);
+  max-width: 100%;
+  min-width: 0;
+  vertical-align: middle;
+}
+
+/* prettier-ignore */
+.andes-table ::ng-deep .andes-table__cell-inline > :is(andes-button, ng-icon, andes-avatar, andes-tag, andes-badge, andes-checkbox) {
+  flex: none;
+}
+
+/* prettier-ignore */
+.andes-table ::ng-deep .andes-table__cell-inline > .andes-table__cell-inline-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Every icon drawn in a cell or a header, beside text or alone: an inline flex box of the icon's
+   own size, centred on the text's line (`vertical-align: middle`), with the svg filling it as a
+   block, so there is no baseline or descender space under the glyph that would lift it. */
+.andes-table ::ng-deep :is(td, th) ng-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  vertical-align: middle;
+}
+
+.andes-table ::ng-deep :is(td, th) ng-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }

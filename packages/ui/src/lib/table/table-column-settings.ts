@@ -124,12 +124,12 @@ export type AndesTablePinned = Readonly<Record<string, AndesTableFixed>>;
               </andes-checkbox>
               @if (pinnable() && column.pinnable !== false) {
                 <andes-button
-                  class="andes-table-column-settings__pin"
+                  class="andes-table-column-settings__pin andes-table-icon-button"
                   [class.andes-table-column-settings__pin--on]="
                     isPinned(column.key)
                   "
                   variant="ghost"
-                  size="icon-xs"
+                  size="icon-sm"
                   [ripple]="false"
                   [aria-label]="pinLabel()(column.label, isPinned(column.key))"
                   (click)="togglePinned(column.key)"
@@ -149,9 +149,9 @@ export type AndesTablePinned = Readonly<Record<string, AndesTableFixed>>;
               }
               @if (column.movable !== false) {
                 <andes-button
-                  class="andes-table-column-settings__move andes-table-column-settings__move--up"
+                  class="andes-table-column-settings__move andes-table-column-settings__move--up andes-table-icon-button"
                   variant="ghost"
-                  size="icon-xs"
+                  size="icon-sm"
                   [ripple]="false"
                   [aria-label]="moveLabel()(column.label, 'up')"
                   [disabled]="first"
@@ -163,9 +163,9 @@ export type AndesTablePinned = Readonly<Record<string, AndesTableFixed>>;
                   />
                 </andes-button>
                 <andes-button
-                  class="andes-table-column-settings__move andes-table-column-settings__move--down"
+                  class="andes-table-column-settings__move andes-table-column-settings__move--down andes-table-icon-button"
                   variant="ghost"
-                  size="icon-xs"
+                  size="icon-sm"
                   [ripple]="false"
                   [aria-label]="moveLabel()(column.label, 'down')"
                   [disabled]="last"

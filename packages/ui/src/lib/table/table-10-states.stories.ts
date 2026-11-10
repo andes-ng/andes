@@ -56,24 +56,29 @@ const ROWS = (source: string) => `
     </tr>
   }`;
 
-/** The loading overlay. */
+/** The three loading states. */
 export const Loading: Story = {
   name: 'Loading',
   parameters: about(
-    'While loading is on, a soft overlay with a spinner covers the rows, stops the pointer and announces the loading text to assistive tech.',
+    'While loading is on the header stays as it is and the body shows the state: dimmed rows with a spinner over them, skeleton rows, or a quiet area with the spinner.',
   ),
   render: () => ({
     props: {
       rows: makeOrders(4),
       loading: signal(true),
+      type: signal<string>('overlay'),
       money,
       statusColor,
       control,
+      bar,
     },
     template: `
       <div style="${stack} max-width: 44rem;">
-        <span [style]="control"><andes-switch [checked]="loading()" (checkedChange)="loading.set($event)">Loading</andes-switch></span>
-        <andes-table [loading]="loading()" loadingLabel="Loading invoices">
+        <div [style]="bar">
+          <span [style]="control"><andes-switch [checked]="loading()" (checkedChange)="loading.set($event)">Loading</andes-switch></span>
+          <andes-segmented aria-label="Loading type" [value]="type()" (valueChange)="type.set($event)" [options]="['overlay', 'skeleton', 'spinner']" />
+        </div>
+        <andes-table [loading]="loading() ? { type: $any(type()), rows: 4 } : false" loadingLabel="Loading invoices" loadingTip="Loading invoices">
           ${HEAD}
           <tbody andesTableBody>${ROWS('rows')}</tbody>
         </andes-table>
@@ -81,42 +86,189 @@ export const Loading: Story = {
   }),
 };
 
-/** Skeleton rows. */
-export const SkeletonRows: Story = {
-  name: 'Loading skeleton rows',
+/** First load. */
+export const FirstLoad: Story = {
+  name: 'First load with skeleton rows',
   parameters: about(
-    'Instead of an overlay, the cells of the first load can show skeleton lines of the same size as the values that will come.',
+    'On the first load the body is as many rows of skeleton as a page, as wide as the header, so the table keeps its size when the real rows arrive.',
+  ),
+  render: () => {
+    const rows = signal<ReturnType<typeof makeOrders>>([]);
+    const loading = signal(true);
+    const load = () => {
+      loading.set(true);
+      rows.set([]);
+      setTimeout(() => {
+        rows.set(makeOrders(5));
+        loading.set(false);
+      }, 1800);
+    };
+    setTimeout(() => {
+      rows.set(makeOrders(5));
+      loading.set(false);
+    }, 1800);
+    return {
+      props: { rows, loading, load, money, statusColor, bar },
+      template: `
+        <div style="${stack} max-width: 44rem;">
+          <div [style]="bar">
+            <andes-button variant="outline" [disabled]="loading()" (click)="load()"><ng-icon slot="icon-start" name="lucideRefreshCw" />Load again</andes-button>
+          </div>
+          <andes-table [loading]="loading() ? { type: 'skeleton', rows: 5 } : false" loadingLabel="Loading invoices">
+            ${HEAD}
+            <tbody andesTableBody>
+              ${ROWS('rows()')}
+              @empty {}
+            </tbody>
+          </andes-table>
+        </div>`,
+    };
+  },
+};
+
+/** Reload. */
+export const ReloadOverlay: Story = {
+  name: 'Reload keeping the rows',
+  parameters: about(
+    'When rows are already there, a reload keeps them dimmed and out of reach under a spinner placed over the body, and the header stays sharp and in place.',
+  ),
+  render: () => {
+    const loading = signal(false);
+    const batch = signal(0);
+    return {
+      props: {
+        loading,
+        rows: computed(() => makeOrders(5 + batch()).slice(batch())),
+        money,
+        statusColor,
+        bar,
+        reload: () => {
+          loading.set(true);
+          setTimeout(() => {
+            batch.update((value) => (value + 1) % 4);
+            loading.set(false);
+          }, 1800);
+        },
+      },
+      template: `
+        <div style="${stack} max-width: 44rem;">
+          <div [style]="bar">
+            <andes-button variant="outline" [loading]="loading()" (click)="reload()"><ng-icon slot="icon-start" name="lucideRefreshCw" />Reload</andes-button>
+          </div>
+          <andes-table [loading]="loading()" loadingLabel="Reloading invoices">
+            ${HEAD}
+            <tbody andesTableBody>${ROWS('rows()')}</tbody>
+          </andes-table>
+        </div>`,
+    };
+  },
+};
+
+/** Custom loading content. */
+export const CustomLoading: Story = {
+  name: 'Custom loading content',
+  parameters: about(
+    'A template of your own replaces the spinner over the body, here an icon with a line of text.',
   ),
   render: () => ({
-    props: {
-      rows: makeOrders(4),
-      skeleton: signal(true),
-      placeholders: [1, 2, 3, 4],
-      money,
-      statusColor,
-      control,
-    },
+    props: { rows: makeOrders(4), money, statusColor },
+    template: `
+      <ng-template #busy>
+        <ng-icon name="lucideRefreshCw" style="width: 1.5rem; height: 1.5rem; color: var(--andes-color-primary);" />
+        <span>Fetching the latest invoices</span>
+      </ng-template>
+      <andes-table style="max-width: 44rem;" [loading]="true" [loadingContent]="busy" loadingLabel="Fetching the latest invoices">
+        ${HEAD}
+        <tbody andesTableBody>${ROWS('rows')}</tbody>
+      </andes-table>`,
+  }),
+};
+
+/** Fixed header and columns. */
+export const LoadingFixed: Story = {
+  name: 'Loading with a fixed header and columns',
+  parameters: about(
+    'With a fixed header and pinned columns the loading state covers only the scrolling body, and the header and the pinned columns stay in view.',
+  ),
+  render: () => ({
+    props: { rows: makeOrders(20), money, statusColor },
+    template: `
+      <andes-table style="max-width: 36rem;" scrollY="14rem" scrollX="56rem" tableLayout="fixed" [loading]="true" loadingLabel="Loading invoices">
+        <thead andesTableHeader>
+          <tr andesTableRow>
+            <th andesTableHead fixed="start" width="120">Invoice</th>
+            <th andesTableHead width="220">Customer</th>
+            <th andesTableHead width="160">Status</th>
+            <th andesTableHead width="160">Date</th>
+            <th andesTableHead align="end" width="160">Total</th>
+          </tr>
+        </thead>
+        <tbody andesTableBody>
+          @for (row of rows; track row.id) {
+            <tr andesTableRow>
+              <td andesTableCell fixed="start">{{ row.id }}</td>
+              <td andesTableCell>{{ row.customer }}</td>
+              <td andesTableCell><andes-tag [color]="statusColor(row.status)">{{ row.status }}</andes-tag></td>
+              <td andesTableCell>{{ row.date }}</td>
+              <td andesTableCell align="end">{{ money(row.total) }}</td>
+            </tr>
+          }
+        </tbody>
+      </andes-table>`,
+  }),
+};
+
+/** Loading in the dark and in right to left. */
+export const LoadingThemes: Story = {
+  name: 'Loading in the dark theme and right to left',
+  parameters: about(
+    'The skeleton and the overlay read in the dark theme and mirror in a right to left page, with the spinner and the text centred over the body.',
+  ),
+  render: () => ({
+    props: { rows: makeOrders(4), money, statusColor },
     template: `
       <div style="${stack} max-width: 44rem;">
-        <span [style]="control"><andes-switch [checked]="skeleton()" (checkedChange)="skeleton.set($event)">Show the skeleton</andes-switch></span>
-        <andes-table [attr.aria-busy]="skeleton()">
-          ${HEAD}
-          <tbody andesTableBody>
-            @if (skeleton()) {
-              @for (placeholder of placeholders; track placeholder) {
-                <tr andesTableRow>
-                  <td andesTableCell><andes-skeleton-text active [width]="60" /></td>
-                  <td andesTableCell><andes-skeleton-text active [width]="120" /></td>
-                  <td andesTableCell><andes-skeleton-text active [width]="64" /></td>
-                  <td andesTableCell align="end"><andes-skeleton-text active [width]="56" /></td>
-                </tr>
-              }
-            } @else {
-              ${ROWS('rows')}
-            }
-          </tbody>
-        </andes-table>
+        <div data-andes-theme="dark" style="padding: 1rem; border-radius: var(--andes-radius-lg); background: var(--andes-color-background);">
+          <andes-table [loading]="{ type: 'skeleton', rows: 4 }">
+            ${HEAD}
+            <tbody andesTableBody>${ROWS('rows')}</tbody>
+          </andes-table>
+        </div>
+        <div dir="rtl">
+          <andes-table [loading]="true" loadingTip="Loading">
+            ${HEAD}
+            <tbody andesTableBody>${ROWS('rows')}</tbody>
+          </andes-table>
+        </div>
       </div>`,
+  }),
+};
+
+/** Loading in a dialog. */
+export const LoadingInDialog: Story = {
+  name: 'Loading inside a dialog',
+  parameters: about(
+    'A table in a dialog loads like any other: the skeleton fills the body of the table and the dialog keeps its size.',
+  ),
+  render: () => ({
+    props: { rows: makeOrders(3), money, statusColor },
+    template: `
+      <andes-dialog>
+        <andes-button andesDialogTrigger variant="outline">Open the invoices</andes-button>
+        <andes-dialog-content *andesDialogContent>
+          <div andesDialogHeader>
+            <h2 andesDialogTitle>Invoices</h2>
+            <p andesDialogDescription>The latest three, loading.</p>
+          </div>
+          <andes-table density="compact" [loading]="{ type: 'skeleton', rows: 3 }" loadingLabel="Loading invoices">
+            ${HEAD}
+            <tbody andesTableBody>${ROWS('rows')}</tbody>
+          </andes-table>
+          <div andesDialogFooter>
+            <andes-button variant="secondary" andesDialogClose>Close</andes-button>
+          </div>
+        </andes-dialog-content>
+      </andes-dialog>`,
   }),
 };
 
@@ -147,7 +299,7 @@ export const Refresh: Story = {
       template: `
         <div style="${stack} max-width: 44rem;">
           <div [style]="bar">
-            <andes-button variant="outline" size="sm" [loading]="loading()" (click)="refresh()">
+            <andes-button variant="outline" [loading]="loading()" (click)="refresh()">
               <ng-icon slot="icon-start" name="lucideRefreshCw" />
               Refresh
             </andes-button>

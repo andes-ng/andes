@@ -25,8 +25,8 @@
    heavier than lucide's default stroke. */
 .andes-table-control__chevron {
   display: flex;
-  width: 0.875rem;
-  height: 0.875rem;
+  width: 1em;
+  height: 1em;
   transition: transform 0.15s ease;
   --ng-icon__stroke-width: 2.5;
 }
@@ -80,4 +80,40 @@
   width: 0.75rem;
   height: 0.75rem;
   --ng-icon__stroke-width: 2.5;
+}
+
+/* Every icon button of the table (the library's ghost button, 24px square): its host is a flex
+   box the size of the button, with no line box around it, so the glyph centres in the button and
+   the button on the line of its neighbours. At rest it is transparent; only a soft tint shows on
+   hover. */
+.andes-table-control__expand ::ng-deep .andes-button {
+  color: var(--andes-color-muted-foreground);
+}
+
+.andes-table-control__expand ::ng-deep .andes-button:hover:not(:disabled) {
+  color: var(--andes-color-foreground);
+}
+
+.andes-table-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  vertical-align: middle;
+}
+
+.andes-table-icon-button ::ng-deep ng-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.andes-table-icon-button
+  ::ng-deep
+  .andes-button--ghost:hover:not(:disabled):not([data-disabled]) {
+  background-color: color-mix(
+    in srgb,
+    var(--andes-color-accent) 55%,
+    transparent
+  );
 }

@@ -722,8 +722,8 @@ export const CopyOnHover: Story = {
                 <tr andesTableRow>
                   <td andesTableCell>{{ row.name }}</td>
                   <td andesTableCell>
-                    <span class="copy-cell" style="display: flex; align-items: center; gap: 0.5rem; min-width: 0;">
-                      <span style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ row.email }}</span>
+                    <span class="copy-cell andes-table__cell-inline" style="display: flex;">
+                      <span class="andes-table__cell-inline-text">{{ row.email }}</span>
                       <andes-button class="copy-button" [class.copied]="copied() === row.id" variant="ghost" size="icon-sm"
                         [aria-label]="copied() === row.id ? 'Copied' : 'Copy ' + row.email" (click)="copy(row.id, row.email)">
                         @if (copied() === row.id) {

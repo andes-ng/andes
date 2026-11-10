@@ -154,7 +154,7 @@ export const control = `display: inline-flex; align-items: center; gap: 0.5rem; 
 
 /** A cell holding an icon next to a text, with clear air between them. */
 export const iconText =
-  'display: inline-flex; align-items: center; gap: 0.5rem;';
+  'display: inline-flex; align-items: center; gap: 0.5rem; vertical-align: middle;';
 
 /** A card surface. */
 export const card =

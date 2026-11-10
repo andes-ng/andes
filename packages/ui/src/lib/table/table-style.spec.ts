@@ -81,7 +81,7 @@ describe('table stylesheet contract', () => {
 
     it('rounds the loading overlay with the frame', () => {
       expect(rule('.andes-table__loading--framed')).toContain(
-        'border-radius: var(--andes-radius-lg, 0.5rem)',
+        'border-end-start-radius: var(--andes-radius-lg, 0.5rem)',
       );
     });
 

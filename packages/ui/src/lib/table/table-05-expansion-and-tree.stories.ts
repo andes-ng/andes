@@ -1,6 +1,14 @@
 import { computed, signal } from '@angular/core';
 import { provideIcons } from '@ng-icons/core';
-import { lucideLoader } from '@ng-icons/lucide';
+import {
+  lucideChevronsDown,
+  lucideChevronsRight,
+  lucideCircleMinus,
+  lucideCirclePlus,
+  lucideLoader,
+  lucideSquareMinus,
+  lucideSquarePlus,
+} from '@ng-icons/lucide';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
 
 import {
@@ -342,17 +350,69 @@ export const ExpandIconPosition: Story = {
   }),
 };
 
+const VARIANTS: readonly {
+  readonly key: string;
+  readonly name: string;
+  readonly closed: string;
+  readonly open: string;
+}[] = [
+  {
+    key: 'plus',
+    name: 'Plus and minus',
+    closed: 'lucidePlus',
+    open: 'lucideMinus',
+  },
+  {
+    key: 'square',
+    name: 'Square plus and minus',
+    closed: 'lucideSquarePlus',
+    open: 'lucideSquareMinus',
+  },
+  {
+    key: 'circle',
+    name: 'Circle plus and minus',
+    closed: 'lucideCirclePlus',
+    open: 'lucideCircleMinus',
+  },
+  {
+    key: 'chevrons',
+    name: 'Double chevrons',
+    closed: 'lucideChevronsRight',
+    open: 'lucideChevronsDown',
+  },
+  {
+    key: 'folder',
+    name: 'Folder and open folder',
+    closed: 'lucideFolder',
+    open: 'lucideFolderOpen',
+  },
+];
+
 /** Custom icon. */
 export const CustomExpandIcon: Story = {
   name: 'Custom expand icon',
   parameters: about(
-    'Content projected into the toggle replaces the chevron, here a plus and a minus chosen from the toggle state.',
+    'Content projected into the toggle replaces the chevron: plus and minus, a square or a circle of them, double chevrons or a folder, each swapped for the other when the row opens.',
   ),
+  decorators: [
+    moduleMetadata({
+      providers: [
+        provideIcons({
+          lucideCircleMinus,
+          lucideCirclePlus,
+          lucideChevronsDown,
+          lucideChevronsRight,
+          lucideSquareMinus,
+          lucideSquarePlus,
+        }),
+      ],
+    }),
+  ],
   render: () => ({
     props: {
-      rows: orders(4),
-      expanded: signal<readonly AndesTableRowKey[]>(['INV-001']),
-      money,
+      variants: VARIANTS,
+      expanded: signal<readonly AndesTableRowKey[]>(['plus']),
+      muted,
     },
     template: `
       <div style="${WRAP}">
@@ -360,26 +420,26 @@ export const CustomExpandIcon: Story = {
           <thead andesTableHeader>
             <tr andesTableRow>
               <th andesTableHead><span class="andes-table__sr-only">Details</span></th>
-              ${HEAD_ORDERS}
+              <th andesTableHead>Style</th>
             </tr>
           </thead>
           <tbody andesTableBody>
-            @for (order of rows; track order.id) {
-              <tr andesTableRow [rowKey]="order.id">
+            @for (variant of variants; track variant.key) {
+              <tr andesTableRow [rowKey]="variant.key">
                 <td andesTableCell>
-                  <andes-table-expand-toggle #toggle="andesTableExpandToggle" [label]="'Notes for ' + order.id">
+                  <andes-table-expand-toggle #toggle="andesTableExpandToggle" [label]="variant.name">
                     @if (toggle.expanded()) {
-                      <ng-icon name="lucideMinus" />
+                      <ng-icon [name]="variant.open" />
                     } @else {
-                      <ng-icon name="lucidePlus" />
+                      <ng-icon [name]="variant.closed" />
                     }
                   </andes-table-expand-toggle>
                 </td>
-                ${CELLS_ORDERS}
+                <td andesTableCell>{{ variant.name }}</td>
               </tr>
-              <tr *andesTableExpandedRow="order.id">
+              <tr *andesTableExpandedRow="variant.key">
                 <td andesTableCell></td>
-                <td andesTableCell colspan="4"><span style="${muted}">{{ order.note }}</span></td>
+                <td andesTableCell><span style="${muted}">The toggle shows {{ variant.closed }} while closed and {{ variant.open }} once open.</span></td>
               </tr>
             }
           </tbody>

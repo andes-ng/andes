@@ -6,11 +6,11 @@
 >
   <andes-button
     andesPopoverTrigger
-    class="andes-table-filter__trigger"
+    class="andes-table-filter__trigger andes-table-icon-button"
     [class.andes-table-filter__trigger--active]="active()"
     [class.andes-table-filter__trigger--open]="open()"
     variant="ghost"
-    size="icon-xs"
+    size="icon-sm"
     [ripple]="false"
     [aria-label]="label()"
     [andesTableAria]="{ 'aria-haspopup': 'dialog', 'aria-expanded': open() }"
@@ -81,10 +81,10 @@
             >
               @if (option.children?.length) {
               <andes-button
-                class="andes-table-filter__switcher"
+                class="andes-table-filter__switcher andes-table-icon-button"
                 [class.andes-table-filter__switcher--open]="isExpanded(option)"
                 variant="ghost"
-                size="icon-xs"
+                size="icon-sm"
                 [ripple]="false"
                 [aria-label]="option.text"
                 [andesTableAria]="{
@@ -199,6 +199,7 @@
         <andes-button
           variant="link"
           size="sm"
+          [style.visibility]="resetDisabled() ? 'hidden' : null"
           [disabled]="resetDisabled()"
           (click)="reset()"
           >{{ resetText() }}</andes-button

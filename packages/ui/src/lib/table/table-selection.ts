@@ -202,9 +202,9 @@ export class AndesTableSelection implements AndesTableSelectable {
         >
           <andes-button
             andesDropdownMenuTrigger
-            class="andes-table-control__menu-trigger"
+            class="andes-table-control__menu-trigger andes-table-icon-button"
             variant="ghost"
-            size="icon-xs"
+            size="icon-sm"
             [aria-label]="menuLabel()"
             [disabled]="disabled() || !table.hasSelectableRows()"
           >

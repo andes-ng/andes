@@ -56,9 +56,9 @@ import { AndesTableRow } from './table-row';
       ></span>
     } @else {
       <andes-button
-        class="andes-table-control__expand"
+        class="andes-table-control__expand andes-table-icon-button"
         variant="ghost"
-        size="icon-xs"
+        size="icon-sm"
         [ripple]="false"
         [andesTableAria]="aria()"
         [aria-label]="label()"
@@ -147,9 +147,9 @@ export class AndesTableExpandToggle {
     '[style]': "table.partStyle('expand')",
   },
   template: `<andes-button
-    class="andes-table-control__expand"
+    class="andes-table-control__expand andes-table-icon-button"
     variant="ghost"
-    size="icon-xs"
+    size="icon-sm"
     [ripple]="false"
     [aria-label]="allExpanded() ? collapseLabel() : expandLabel()"
     [disabled]="keys().length === 0"

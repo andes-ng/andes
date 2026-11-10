@@ -48,13 +48,15 @@
     [style.top.px]="headHeight()"
     aria-hidden="true"
   >
-    @if (loadingContent(); as content) {
-    <ng-container [ngTemplateOutlet]="content" />
-    } @else {
-    <ng-icon class="andes-table__spinner" name="lucideLoaderCircle" />
-    @if (loadingTip()) {
-    <span class="andes-table__loading-tip">{{ loadingTip() }}</span>
-    } }
+    <div class="andes-table__loading-card">
+      @if (loadingContent(); as content) {
+      <ng-container [ngTemplateOutlet]="content" />
+      } @else {
+      <ng-icon class="andes-table__spinner" name="lucideLoaderCircle" />
+      @if (loadingTip()) {
+      <span class="andes-table__loading-tip">{{ loadingTip() }}</span>
+      } }
+    </div>
   </div>
   }
   <!-- Always present so the change of text is announced as a live-region update. -->

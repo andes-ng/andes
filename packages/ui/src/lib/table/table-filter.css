@@ -29,8 +29,8 @@
    `ng-icon` and handed down to the svg, whose own `fill="none"` would otherwise win. */
 .andes-table-filter__icon {
   display: block;
-  width: 0.75rem;
-  height: 0.75rem;
+  width: 1rem;
+  height: 1rem;
   fill: currentcolor;
 }
 
@@ -131,8 +131,8 @@
 .andes-table-filter__switcher-icon {
   display: flex;
   color: var(--andes-color-muted-foreground);
-  width: 0.625rem;
-  height: 0.625rem;
+  width: 0.75rem;
+  height: 0.75rem;
   transform: rotate(-90deg);
   transition: transform var(--andes-motion-duration-mid, 0.2s)
     var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1));

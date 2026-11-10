@@ -49,8 +49,8 @@
 /* The icons of the pin and move buttons: lucide, a touch heavier than the default stroke. */
 .andes-table-column-settings__arrow {
   display: inline-flex;
-  width: 0.875rem;
-  height: 0.875rem;
+  width: 1rem;
+  height: 1rem;
   --ng-icon__stroke-width: 2.5;
 }
 

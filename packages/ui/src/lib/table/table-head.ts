@@ -521,6 +521,15 @@ export class AndesTableHead {
     this.table.setResizing(true);
     this.dragging.set(true);
 
+    // The handle keeps the pointer for the whole drag, so the move events and the `col-resize`
+    // cursor follow it past the edge of the table and out of the window.
+    const handle = event.currentTarget as HTMLElement | null;
+    try {
+      handle?.setPointerCapture?.(event.pointerId);
+    } catch {
+      // A pointer that is already gone cannot be captured; the document listeners still work.
+    }
+
     const move = (moveEvent: PointerEvent) =>
       this.resizeTo(startWidth + (moveEvent.clientX - startX) * sign);
     // eslint-disable-next-line prefer-const -- `end` and the unregister refer to each other
@@ -530,6 +539,12 @@ export class AndesTableHead {
       document.removeEventListener('pointermove', move);
       document.removeEventListener('pointerup', end);
       document.removeEventListener('pointercancel', end);
+      handle?.removeEventListener('lostpointercapture', end);
+      try {
+        handle?.releasePointerCapture?.(event.pointerId);
+      } catch {
+        // Already released.
+      }
       body.cursor = previous.cursor;
       body.userSelect = previous.userSelect;
       this.table.setResizing(false);
@@ -539,6 +554,7 @@ export class AndesTableHead {
     document.addEventListener('pointermove', move);
     document.addEventListener('pointerup', end);
     document.addEventListener('pointercancel', end);
+    handle?.addEventListener('lostpointercapture', end);
     unregister = this.destroyRef.onDestroy(end);
   }
 

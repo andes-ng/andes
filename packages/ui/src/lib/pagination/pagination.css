@@ -75,6 +75,13 @@
   margin-inline-start: auto;
 }
 
+/* A flex box per item: an inline-flex item in a plain list item sits on the text baseline,
+   which put the icon-only buttons a pixel above the numbered ones. */
+.andes-pagination__list > li {
+  display: flex;
+  align-items: center;
+}
+
 /* The items wrap onto a second line on a narrow screen instead of running off it. */
 .andes-pagination__list {
   display: flex;
@@ -94,12 +101,18 @@
 }
 
 .andes-pagination__total {
-  color: var(--andes-color-foreground);
+  color: var(--andes-color-muted-foreground);
 }
 
 .andes-pagination__status {
   display: inline-block;
   padding-inline: var(--andes-space-2, 0.5rem);
+}
+
+.andes-pagination__size-group {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--andes-space-2, 0.5rem);
 }
 
 .andes-pagination__rows-label {
@@ -158,6 +171,25 @@
   border-radius: var(--_radius);
   font-weight: normal;
   font-size: var(--andes-control-font-size-md, 0.875rem);
+  font-variant-numeric: tabular-nums;
+}
+
+/* No trail: the selected look follows the current page the moment it changes. The library
+   button fades its background, border and colour over 100ms, which kept the old current page
+   half highlighted while the new one faded in, so two items looked selected. Items do not
+   animate at all, except a plain item that is hovered, which fades its tint in over 80ms (and
+   loses it at once). The current page never animates, hovered or not. */
+.andes-pagination__item ::ng-deep .andes-button {
+  transition: none;
+}
+
+.andes-pagination__item:not(.andes-pagination__page--active)
+  ::ng-deep
+  .andes-button:hover:not(:disabled):not([data-disabled]) {
+  transition:
+    background-color 80ms ease,
+    color 80ms ease,
+    border-color 80ms ease;
 }
 
 .andes-pagination--small .andes-pagination__item ::ng-deep .andes-button {
@@ -179,6 +211,32 @@
 
 .andes-pagination__page--active ::ng-deep .andes-button {
   font-weight: var(--andes-font-weight-semibold, 600);
+}
+
+/* The library button tints a coloured outline 10% on hover and 18% pressed, which leaves the
+   accent text a hair under 4.5:1 on the light theme; the current page uses a lighter tint. */
+.andes-pagination__page--active
+  ::ng-deep
+  .andes-button.andes-button--outline.andes-button--colored:hover:not(
+    :disabled
+  ):not([data-disabled]) {
+  background-color: color-mix(
+    in srgb,
+    var(--andes-button-color) 5%,
+    transparent
+  );
+}
+
+.andes-pagination__page--active
+  ::ng-deep
+  .andes-button.andes-button--outline.andes-button--colored:active:not(
+    :disabled
+  ):not([data-disabled]) {
+  background-color: color-mix(
+    in srgb,
+    var(--andes-button-color) 8%,
+    transparent
+  );
 }
 
 /* Lucide chevrons in an `ng-icon` rather than text glyphs. They point along the reading
@@ -206,10 +264,6 @@
 }
 
 /* Lucide's ellipsis rather than the "…" character, which sits on the text baseline. */
-.andes-pagination__jumper-dots {
-  display: flex;
-}
-
 .andes-pagination__dots {
   display: flex;
   flex: none;
@@ -230,25 +284,44 @@
   padding-inline: 1rem;
 }
 
-/* Jumpers read as a plain ellipsis until hovered or focused, then reveal double chevrons. */
+/* Jumpers read as a plain ellipsis until hovered or focused; the ellipsis and the double
+   chevrons sit in one 16px box and cross-fade, so the item never changes size. */
 .andes-pagination__jumper ::ng-deep .andes-button {
   color: var(--andes-color-muted-foreground);
 }
 
-.andes-pagination__jumper .andes-pagination__jumper-icon {
-  display: none;
+.andes-pagination__jumper-glyph {
+  display: grid;
+  width: 1rem;
+  height: 1rem;
+}
+
+.andes-pagination--large .andes-pagination__jumper-glyph {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.andes-pagination__jumper-glyph > * {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+  transition: opacity 150ms ease;
+}
+
+.andes-pagination__jumper-glyph .andes-pagination__jumper-icon {
+  opacity: 0;
 }
 
 .andes-pagination__jumper:hover:not(.andes-pagination__item--disabled)
-  .andes-pagination__jumper-dots,
-.andes-pagination__jumper:has(:focus-visible) .andes-pagination__jumper-dots {
-  display: none;
+  .andes-pagination__dots,
+.andes-pagination__jumper:has(:focus-visible) .andes-pagination__dots {
+  opacity: 0;
 }
 
 .andes-pagination__jumper:hover:not(.andes-pagination__item--disabled)
   .andes-pagination__jumper-icon,
 .andes-pagination__jumper:has(:focus-visible) .andes-pagination__jumper-icon {
-  display: flex;
+  opacity: 1;
 }
 
 .andes-pagination__jumper:hover:not(.andes-pagination__item--disabled)
@@ -281,12 +354,19 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .andes-pagination__item ::ng-deep .andes-button {
+  .andes-pagination__item ::ng-deep .andes-button,
+  .andes-pagination__item:not(.andes-pagination__page--active)
+    ::ng-deep
+    .andes-button:hover:not(:disabled):not([data-disabled]) {
     transition: none;
   }
 
   .andes-pagination__spinner {
     animation: none;
+  }
+
+  .andes-pagination__jumper-glyph > * {
+    transition: none;
   }
 }
 
@@ -363,4 +443,13 @@
 
 .andes-pagination__go-icon:dir(rtl) {
   transform: scaleX(-1);
+}
+
+/* The pill shape reaches the fields and the select beside the items. */
+.andes-pagination[data-shape='pill'] ::ng-deep .andes-input-group {
+  --_andes-input-radius: 9999px;
+}
+
+.andes-pagination[data-shape='pill'] ::ng-deep .andes-select__trigger {
+  border-radius: 9999px;
 }

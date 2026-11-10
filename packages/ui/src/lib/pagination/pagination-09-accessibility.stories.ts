@@ -262,7 +262,7 @@ export const Dark: Story = {
 export const AllStates: Story = {
   name: 'Every state',
   parameters: about(
-    'The current, disabled and loading items beside plain ones, in each variant, for checking the states against each other.',
+    'The current and disabled items beside plain ones, in each variant, for checking the states against each other.',
   ),
   render: () =>
     scene(

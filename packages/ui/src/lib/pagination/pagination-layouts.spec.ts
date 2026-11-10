@@ -284,6 +284,75 @@ describe('AndesPagination layouts and options', () => {
     });
   });
 
+  describe('loading, the other controls', () => {
+    it('switches every control off except the current page, which carries the spinner', () => {
+      const { all, q } = setup((h) => {
+        h.current.set(5);
+        h.loading.set(true);
+        h.showFirstLast.set(true);
+      });
+      const disabled = all('.andes-pagination__item')
+        .filter((item) => inner(item)?.disabled)
+        .map((item) =>
+          item.classList.contains('andes-pagination__page--active'),
+        );
+
+      expect(disabled.length).toBeGreaterThan(3);
+      expect(disabled.every((isCurrent) => !isCurrent)).toBe(true);
+      expect(inner(q('.andes-pagination__page--active'))?.disabled).toBe(false);
+      expect(all('.andes-pagination__spinner')).toHaveLength(1);
+    });
+
+    it('keeps the last total while a source empties it for the fetch', () => {
+      const { q, all, update } = setup();
+      const pages = all('.andes-pagination__page').length;
+
+      update((h) => {
+        h.loading.set(true);
+        h.total.set(0);
+      });
+
+      expect(all('.andes-pagination__page')).toHaveLength(pages);
+      expect(q('.andes-pagination__announcer')?.textContent?.trim()).toBe(
+        'Page 1 of 10. 1-10 of 95',
+      );
+
+      update((h) => h.loading.set(false));
+      expect(all('.andes-pagination__page')).toHaveLength(0);
+    });
+
+    it('switches the page-size select off without a spinner of its own', () => {
+      const { q } = setup((h) => {
+        h.showSizeChanger.set(true);
+        h.loading.set(true);
+      });
+
+      expect(
+        q<HTMLButtonElement>(
+          '.andes-pagination__size-changer [role="combobox"]',
+        )?.disabled,
+      ).toBe(true);
+      expect(
+        q('.andes-pagination__size-changer .andes-select__spinner'),
+      ).toBeNull();
+    });
+
+    it('keeps focus inside when the focused control is switched off', async () => {
+      const { fixture, host, q } = setup((h) => h.current.set(4));
+      const next = inner(q('.andes-pagination__item--next')) as HTMLElement;
+      next.focus();
+
+      host.loading.set(true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(document.activeElement).toBe(
+        inner(q('.andes-pagination__page--active')),
+      );
+    });
+  });
+
   describe('links', () => {
     it('draws the pages as links, and a plain click still changes the page', () => {
       const { fixture, host, q, all } = setup((h) => {

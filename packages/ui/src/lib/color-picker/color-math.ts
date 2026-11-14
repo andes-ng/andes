@@ -113,9 +113,9 @@ export function hsbToRgb(
   const x = chroma * (1 - Math.abs((hue % 2) - 1));
   const m = value - chroma;
 
-  let red = 0;
-  let green = 0;
-  let blue = 0;
+  let red: number;
+  let green: number;
+  let blue: number;
   if (hue < 1) {
     [red, green, blue] = [chroma, x, 0];
   } else if (hue < 2) {

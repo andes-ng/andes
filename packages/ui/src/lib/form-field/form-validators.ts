@@ -73,7 +73,7 @@ export const AndesValidators = {
       if (isEmpty(value)) {
         return null;
       }
-      let scheme: string | null = null;
+      let scheme: string | null;
       try {
         scheme = new URL(String(value)).protocol.replace(/:$/, '');
       } catch {

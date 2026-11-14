@@ -1,0 +1,18 @@
+/* Every item takes the same width: `--andes-carousel-item-width` (from the `itemWidth` input
+   of the scroller, or set from CSS), or its own content width when none is given. */
+:host {
+  display: block;
+  flex: 0 0 var(--andes-carousel-item-width, auto);
+  min-width: 0;
+  box-sizing: border-box;
+  scroll-snap-align: none;
+}
+
+/* The scroller tells its items whether to snap and how it pages. */
+:host([data-snap]) {
+  scroll-snap-align: start;
+}
+
+:host([data-snap][data-paging='item']) {
+  scroll-snap-stop: always;
+}

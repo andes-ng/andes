@@ -27,7 +27,7 @@ export * from './lib/calendar';
 
 // @slot card
 
-// @slot carousel
+export * from './lib/carousel';
 
 export * from './lib/cascader';
 

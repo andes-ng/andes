@@ -8,6 +8,52 @@
   <andes-steps-more [start]="range.start" [end]="range.end" />
   }
 </ol>
+@if (compact(); as layout) {
+<div
+  class="andes-steps__summary"
+  [class]="summaryClasses()"
+  [style]="summaryStyles()"
+  [attr.data-layout]="layout"
+>
+  @if (layout === 'summary-controls' && clickable()) {
+  <andes-button
+    class="andes-steps__control"
+    variant="ghost"
+    size="icon-sm"
+    [ripple]="false"
+    [aria-label]="resolvedLabels().previous"
+    [disabled]="previousTarget() === null"
+    (click)="goTo(previousTarget())"
+  >
+    <ng-icon name="lucideChevronLeft" />
+  </andes-button>
+  } @if (layout !== 'track') {
+  <span class="andes-steps__summary-text" aria-hidden="true">
+    <span class="andes-steps__summary-title">{{ summary().title }}</span>
+    @if (summary().description) {
+    <span class="andes-steps__summary-description"
+      >{{ summary().description }}</span
+    >
+    }
+  </span>
+  <span class="andes-steps__summary-position" aria-hidden="true"
+    >{{ summary().position }}</span
+  >
+  } @if (layout === 'summary-controls' && clickable()) {
+  <andes-button
+    class="andes-steps__control"
+    variant="ghost"
+    size="icon-sm"
+    [ripple]="false"
+    [aria-label]="resolvedLabels().next"
+    [disabled]="nextTarget() === null"
+    (click)="goTo(nextTarget())"
+  >
+    <ng-icon name="lucideChevronRight" />
+  </andes-button>
+  }
+</div>
+}
 <span class="andes-steps__live" role="status" aria-live="polite"
   >{{ liveMessage() }}</span
 >

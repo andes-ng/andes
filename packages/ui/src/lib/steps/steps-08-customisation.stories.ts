@@ -435,3 +435,18 @@ export const MarkerSizes: Story = {
       </div>`,
   }),
 };
+
+export const EndContent: Story = {
+  name: 'Content at the end of the title row',
+  parameters: about(
+    'The end content input puts a duration, a count or a note at the far end of the title row, as text or from a template, and the end part of classNames styles it.',
+  ),
+  render: () => ({
+    template: `
+      <andes-steps aria-label="Setup" orientation="vertical" [current]="1" style="max-width: 24rem">
+        <andes-step title="Account" description="Create your login" endContent="2 min" />
+        <andes-step title="Workspace" description="Name it" endContent="5 min" />
+        <andes-step title="Launch" endContent="Ready" />
+      </andes-steps>`,
+  }),
+};

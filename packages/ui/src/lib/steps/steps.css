@@ -33,6 +33,11 @@
   gap: var(--andes-space-3, 0.75rem);
 }
 
+/* The bars of the `segments` type are separate: a small gap keeps them apart. */
+:host([data-type='segments'][data-orientation='horizontal']) .andes-steps {
+  column-gap: var(--andes-steps-segment-gap, 0.25rem);
+}
+
 /* A horizontal trail that does not fit scrolls. The padding and the negative margin give the
    progress ring, the halo and the focus ring room that the scroll container would clip. */
 :host([data-orientation='horizontal'][data-type='default']) .andes-steps,
@@ -69,4 +74,55 @@
 
 .andes-steps__panels:empty {
   display: none;
+}
+
+/* The row a collapsed `segments` trail writes under its bars: the current step, and the
+   previous and next buttons. */
+.andes-steps__summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-block-start: 0.75rem;
+}
+
+.andes-steps__summary-text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.andes-steps__summary[data-layout='summary-controls']
+  .andes-steps__summary-text {
+  align-items: center;
+  text-align: center;
+}
+
+.andes-steps__summary-title {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.andes-steps__summary-description,
+.andes-steps__summary-position {
+  color: var(--andes-color-muted-foreground, #64748b);
+  font-size: 0.8125rem;
+}
+
+.andes-steps__summary-description {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.andes-steps__summary-position {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The chevrons point along the reading direction. */
+:host(:dir(rtl)) .andes-steps__control ng-icon {
+  transform: scaleX(-1);
 }

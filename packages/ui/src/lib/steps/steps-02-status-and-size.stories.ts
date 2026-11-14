@@ -385,3 +385,119 @@ export const Legend: Story = {
       <andes-steps aria-label="Commande" [labels]="french" [current]="1">${FOUR}</andes-steps>`,
   }),
 };
+
+export const WarningStatus: Story = {
+  name: 'Warning status',
+  parameters: about(
+    'A warning step shows an amber triangle and an amber title, for a step that went through but has something to check, and it is announced with the word Warning.',
+  ),
+  render: () => ({
+    template: `
+      <andes-steps aria-label="Import" [current]="2">
+        <andes-step title="Upload" description="orders.csv" />
+        <andes-step title="Validate" status="warning" description="3 rows were skipped" />
+        <andes-step title="Import" description="In progress" />
+        <andes-step title="Publish" />
+      </andes-steps>`,
+  }),
+};
+
+export const WarningTypes: Story = {
+  name: 'Warning in every type',
+  parameters: about(
+    'The warning colour reaches the marker, the title, the segment of the panel, the underline of the navigation and the bar of the inline type.',
+  ),
+  render: () => ({
+    template: demos(
+      demo(
+        'default',
+        `<andes-steps aria-label="Default" [current]="2"><andes-step title="One" /><andes-step title="Two" status="warning" /><andes-step title="Three" /></andes-steps>`,
+      ),
+      demo(
+        'panel',
+        `<andes-steps aria-label="Panel" type="panel" [current]="1" status="warning" style="max-width: 36rem"><andes-step title="One" /><andes-step title="Two" /><andes-step title="Three" /></andes-steps>`,
+      ),
+      demo(
+        'navigation',
+        `<andes-steps aria-label="Navigation" type="navigation" [current]="1" status="warning" style="max-width: 36rem"><andes-step title="One" /><andes-step title="Two" /><andes-step title="Three" /></andes-steps>`,
+      ),
+      demo(
+        'inline',
+        `<andes-steps aria-label="Inline" type="inline" [current]="1" status="warning" style="max-width: 36rem"><andes-step title="One" /><andes-step title="Two" /><andes-step title="Three" /></andes-steps>`,
+      ),
+      demo(
+        'dot',
+        `<andes-steps aria-label="Dot" type="dot" [current]="1" status="warning"><andes-step title="One" /><andes-step title="Two" /><andes-step title="Three" /></andes-steps>`,
+      ),
+    ),
+  }),
+};
+
+export const LoadingStatus: Story = {
+  name: 'Loading status',
+  parameters: about(
+    'A loading step swaps its marker for a turning ring and is announced as busy, for a step whose request is still running.',
+  ),
+  render: () => ({
+    template: `
+      <andes-steps aria-label="Deployment" status="loading" [current]="2">
+        <andes-step title="Build" description="Compiled in 42 seconds" />
+        <andes-step title="Test" description="128 tests passed" />
+        <andes-step title="Deploy" description="Rolling out to 3 regions" />
+        <andes-step title="Verify" />
+      </andes-steps>`,
+  }),
+};
+
+export const LoadingVertical: Story = {
+  name: 'Loading on a stacked trail',
+  parameters: about(
+    'The spinner sits in the marker of a stacked trail too, in every marker variant, and slows down under reduced motion instead of stopping.',
+  ),
+  render: () => ({
+    template: demos(
+      demo(
+        'soft',
+        `<andes-steps aria-label="Soft" orientation="vertical" status="loading" [current]="1"><andes-step title="Upload" description="Done" /><andes-step title="Process" description="Working" /><andes-step title="Publish" /></andes-steps>`,
+      ),
+      demo(
+        'outline',
+        `<andes-steps aria-label="Outline" orientation="vertical" variant="outline" status="loading" [current]="1"><andes-step title="Upload" description="Done" /><andes-step title="Process" description="Working" /><andes-step title="Publish" /></andes-steps>`,
+      ),
+    ),
+  }),
+};
+
+export const DensityStacked: Story = {
+  name: 'Density of a stacked trail',
+  parameters: about(
+    'Compact, default and comfortable set the space between stacked steps.',
+  ),
+  render: () => ({
+    template: `
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 2rem">
+        <andes-steps aria-label="Compact" orientation="vertical" density="compact" [current]="1">${FOUR_DESCRIBED}</andes-steps>
+        <andes-steps aria-label="Default" orientation="vertical" [current]="1">${FOUR_DESCRIBED}</andes-steps>
+        <andes-steps aria-label="Comfortable" orientation="vertical" density="comfortable" [current]="1">${FOUR_DESCRIBED}</andes-steps>
+      </div>`,
+  }),
+};
+
+export const DensityNavigation: Story = {
+  name: 'Density of navigation cells',
+  parameters: about(
+    'The same three densities change the padding of the cells of a navigation trail.',
+  ),
+  render: () => ({
+    template: demos(
+      demo(
+        'compact',
+        `<andes-steps aria-label="Compact" type="navigation" density="compact" [current]="1" style="max-width: 40rem">${FOUR}</andes-steps>`,
+      ),
+      demo(
+        'comfortable',
+        `<andes-steps aria-label="Comfortable" type="navigation" density="comfortable" [current]="1" style="max-width: 40rem">${FOUR}</andes-steps>`,
+      ),
+    ),
+  }),
+};

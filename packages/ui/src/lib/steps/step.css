@@ -29,6 +29,12 @@
     --andes-color-danger-text,
     var(--andes-color-danger, #dc2626)
   );
+  --_warning: var(--andes-color-warning, #f59e0b);
+  --_on-warning: var(--andes-color-warning-foreground, #451a03);
+  --_warning-text: var(
+    --andes-color-warning-text,
+    var(--andes-color-warning, #b45309)
+  );
   --_muted: var(--andes-color-muted, #f1f5f9);
   --_muted-fg: var(--andes-color-muted-foreground, #64748b);
 
@@ -75,7 +81,8 @@
   --_bd: transparent;
 }
 
-:host([data-variant='soft'][data-status='process']) {
+:host([data-variant='soft'][data-status='process']),
+:host([data-variant='soft'][data-status='loading']) {
   --_bg: var(--_primary);
   --_fg: var(--_on-primary);
   --_bd: var(--_primary);
@@ -87,6 +94,13 @@
   --_bd: transparent;
 }
 
+/* warning follows the error rules in its own colour. */
+:host([data-variant='soft'][data-status='warning']) {
+  --_bg: color-mix(in srgb, var(--_warning) 16%, transparent);
+  --_fg: var(--_warning-text);
+  --_bd: transparent;
+}
+
 /* solid: every reached step is a filled disc. */
 :host([data-variant='solid'][data-status='finish']) {
   --_bg: var(--_primary);
@@ -94,7 +108,8 @@
   --_bd: var(--_primary);
 }
 
-:host([data-variant='solid'][data-status='process']) {
+:host([data-variant='solid'][data-status='process']),
+:host([data-variant='solid'][data-status='loading']) {
   --_bg: var(--_primary);
   --_fg: var(--_on-primary);
   --_bd: var(--_primary);
@@ -113,13 +128,20 @@
   --_bd: transparent;
 }
 
+:host([data-variant='solid'][data-status='warning']) {
+  --_bg: var(--_warning);
+  --_fg: var(--_on-warning);
+  --_bd: var(--_warning);
+}
+
 /* outline: rings only. */
 :host([data-variant='outline'][data-status='finish']) {
   --_fg: var(--_primary-text);
   --_bd: var(--_primary);
 }
 
-:host([data-variant='outline'][data-status='process']) {
+:host([data-variant='outline'][data-status='process']),
+:host([data-variant='outline'][data-status='loading']) {
   --_fg: var(--_primary-text);
   --_bd: var(--_primary);
   --_halo: color-mix(in srgb, var(--_primary) 22%, transparent);
@@ -130,18 +152,28 @@
   --_bd: var(--_danger);
 }
 
+:host([data-variant='outline'][data-status='warning']) {
+  --_fg: var(--_warning-text);
+  --_bd: var(--_warning);
+}
+
 /* plain: no disc, the glyph alone carries the status. */
 :host([data-variant='plain']) {
   --_bd: transparent;
 }
 
 :host([data-variant='plain'][data-status='finish']),
-:host([data-variant='plain'][data-status='process']) {
+:host([data-variant='plain'][data-status='process']),
+:host([data-variant='plain'][data-status='loading']) {
   --_fg: var(--_primary-text);
 }
 
 :host([data-variant='plain'][data-status='error']) {
   --_fg: var(--_danger-text);
+}
+
+:host([data-variant='plain'][data-status='warning']) {
+  --_fg: var(--_warning-text);
 }
 
 /* ------------------------------------------------------ Status: text and connector */
@@ -150,7 +182,8 @@
   --_title-color: var(--andes-color-foreground);
 }
 
-:host([data-status='process']) {
+:host([data-status='process']),
+:host([data-status='loading']) {
   --_title-color: var(--andes-color-foreground);
   --_title-weight: 600;
 }
@@ -158,6 +191,11 @@
 :host([data-status='error']) {
   --_title-color: var(--_danger-text);
   --_fill: var(--_danger);
+}
+
+:host([data-status='warning']) {
+  --_title-color: var(--_warning-text);
+  --_fill: var(--_warning);
 }
 
 /* ------------------------------------------------------ Trigger */
@@ -245,7 +283,8 @@ button.andes-step__trigger:disabled {
   min-inline-size: var(--_icon);
 }
 
-:host([data-variant='plain'][data-status='process']) .andes-step__number {
+:host([data-variant='plain'][data-status='process']) .andes-step__number,
+:host([data-variant='plain'][data-status='loading']) .andes-step__number {
   font-weight: 600;
 }
 
@@ -287,12 +326,17 @@ button.andes-step__trigger:disabled {
 }
 
 :host([data-type='dot'][data-status='finish']) .andes-step__marker,
-:host([data-type='dot'][data-status='process']) .andes-step__marker {
+:host([data-type='dot'][data-status='process']) .andes-step__marker,
+:host([data-type='dot'][data-status='loading']) .andes-step__marker {
   background-color: var(--_primary);
 }
 
 :host([data-type='dot'][data-status='error']) .andes-step__marker {
   background-color: var(--_danger);
+}
+
+:host([data-type='dot'][data-status='warning']) .andes-step__marker {
+  background-color: var(--_warning);
 }
 
 :host([data-type='dot'][data-current]) .andes-step__marker {
@@ -302,6 +346,11 @@ button.andes-step__trigger:disabled {
 :host([data-type='dot'][data-current][data-status='error'])
   .andes-step__marker {
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--_danger) 20%, transparent);
+}
+
+:host([data-type='dot'][data-current][data-status='warning'])
+  .andes-step__marker {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--_warning) 22%, transparent);
 }
 
 /* A dot drawn from a template keeps no disc of its own. */
@@ -319,6 +368,8 @@ button.andes-step__trigger:disabled {
 :host([data-type='dot'][data-status='finish'])
   .andes-step__marker[data-marker='dot-template'],
 :host([data-type='dot'][data-status='process'])
+  .andes-step__marker[data-marker='dot-template'],
+:host([data-type='dot'][data-status='loading'])
   .andes-step__marker[data-marker='dot-template'] {
   color: var(--_primary-text);
 }
@@ -343,6 +394,22 @@ button.andes-step__trigger:disabled {
   stroke: var(--_primary);
   stroke-linecap: round;
   transition: stroke-dasharray var(--andes-motion-duration-slow, 300ms) ease;
+}
+
+/* A step that is busy swaps its marker for a ring with one turning arc. */
+.andes-step__marker[data-marker='spinner'] {
+  border-width: 2px;
+  border-color: color-mix(in srgb, var(--_primary) 22%, transparent);
+  border-block-start-color: var(--_primary);
+  background-color: transparent;
+  box-shadow: none;
+  animation: andes-step-spin 0.8s linear infinite;
+}
+
+@keyframes andes-step-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ------------------------------------------------------ Text */
@@ -370,6 +437,15 @@ button.andes-step__trigger:disabled {
 
 .andes-step__subtitle,
 .andes-step__optional {
+  color: var(--andes-color-muted-foreground, #64748b);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  line-height: 1.25rem;
+}
+
+.andes-step__end {
+  flex: none;
+  margin-inline-start: auto;
   color: var(--andes-color-muted-foreground, #64748b);
   font-size: 0.8125rem;
   font-weight: 400;
@@ -704,6 +780,11 @@ button.andes-step__trigger:disabled {
   background-color: var(--_danger);
 }
 
+:host([data-type='navigation'][data-current][data-status='warning'])
+  .andes-step__trigger::after {
+  background-color: var(--_warning);
+}
+
 /* Chevron between neighbours. */
 :host(
   [data-type='navigation'][data-orientation='horizontal']:not([data-last])
@@ -775,13 +856,19 @@ button.andes-step__trigger:disabled {
   background-color: color-mix(in srgb, var(--_primary) 45%, var(--_track));
 }
 
-:host([data-type='inline'][data-status='process'])
+:host([data-type='inline'][data-status='process']) .andes-step__trigger::before,
+:host([data-type='inline'][data-status='loading'])
   .andes-step__trigger::before {
   background-color: var(--_primary);
 }
 
 :host([data-type='inline'][data-status='error']) .andes-step__trigger::before {
   background-color: var(--_danger);
+}
+
+:host([data-type='inline'][data-status='warning'])
+  .andes-step__trigger::before {
+  background-color: var(--_warning);
 }
 
 :host([data-type='inline']) .andes-step__description {
@@ -930,7 +1017,8 @@ button.andes-step__more-entry:focus-visible {
   background-color: var(--andes-color-primary, #2563eb);
 }
 
-.andes-step__more-item[data-status='process'] .andes-step__more-entry::before {
+.andes-step__more-item[data-status='process'] .andes-step__more-entry::before,
+.andes-step__more-item[data-status='loading'] .andes-step__more-entry::before {
   background-color: var(--andes-color-primary, #2563eb);
   box-shadow: 0 0 0 3px
     color-mix(in srgb, var(--andes-color-primary, #2563eb) 22%, transparent);
@@ -942,6 +1030,42 @@ button.andes-step__more-entry:focus-visible {
 
 .andes-step__more-item[data-status='wait'] .andes-step__more-title {
   color: var(--andes-color-muted-foreground, #64748b);
+}
+
+/* ------------------------------------------------------ Density */
+
+/* Density sets how much air sits between stacked steps and around the cells of a navigation
+   trail; the default is the spacing every other rule in this file starts from. */
+:host(
+  [data-type='default'][data-orientation='vertical'][data-density='compact']
+),
+:host([data-type='dot'][data-orientation='vertical'][data-density='compact']) {
+  padding-block-end: 1rem;
+}
+
+:host(
+  [data-type='default'][data-orientation='vertical'][data-density='comfortable']
+),
+:host(
+  [data-type='dot'][data-orientation='vertical'][data-density='comfortable']
+) {
+  padding-block-end: 3rem;
+}
+
+:host(
+  [data-type='default'][data-orientation='vertical'][data-last][data-density]
+),
+:host([data-type='dot'][data-orientation='vertical'][data-last][data-density]) {
+  padding-block-end: 0;
+}
+
+:host([data-type='navigation'][data-density='compact']) .andes-step__trigger {
+  padding-block: 0.5rem;
+}
+
+:host([data-type='navigation'][data-density='comfortable'])
+  .andes-step__trigger {
+  padding-block: 1rem;
 }
 
 /* ------------------------------------------------------ Motion and forced colours */
@@ -961,6 +1085,11 @@ button.andes-step__more-entry:focus-visible {
   :host([data-ready]) .andes-step__number {
     animation: none;
   }
+
+  /* The turning arc is a state, not decoration: it slows down instead of stopping. */
+  .andes-step__marker[data-marker='spinner'] {
+    animation-duration: 2.4s;
+  }
 }
 
 @media (forced-colors: active) {
@@ -974,7 +1103,8 @@ button.andes-step__more-entry:focus-visible {
     background-color: CanvasText;
   }
 
-  :host([data-status='process']) .andes-step__marker {
+  :host([data-status='process']) .andes-step__marker,
+  :host([data-status='loading']) .andes-step__marker {
     forced-color-adjust: none;
     border-color: Highlight;
     background-color: Highlight;

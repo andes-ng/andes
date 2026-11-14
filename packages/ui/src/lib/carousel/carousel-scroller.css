@@ -1,0 +1,193 @@
+/* The fading edges are two registered lengths so the fade can grow in and out as the
+   scroller leaves or reaches an end, instead of popping. */
+@property --andes-carousel-fade-start {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --andes-carousel-fade-end {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+/* Public custom properties (all optional, set on the host or an ancestor):
+   --andes-carousel-gap, --andes-carousel-item-width, --andes-carousel-fade-size. They are
+   read with fallbacks and never given a default on the host, so a rule outside the
+   component always wins. */
+
+:host {
+  position: relative;
+  display: block;
+  box-sizing: border-box;
+  font-family: var(--andes-font-family), sans-serif;
+  font-size: var(--andes-text-font-size, 0.875rem);
+  line-height: var(--andes-text-line-height, 1.375rem);
+  color: var(--andes-color-foreground, #0f172a);
+}
+
+/* The scroll container: items in a row, the browser does the scrolling. */
+.andes-carousel-scroller__viewport {
+  --_fade: var(--andes-carousel-fade-size, 2rem);
+
+  display: flex;
+  box-sizing: border-box;
+  gap: var(--andes-carousel-gap, 1rem);
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  outline: none;
+
+  /* The scrollbar is replaced by the buttons and the fading edges. */
+  scrollbar-width: none;
+}
+
+.andes-carousel-scroller__viewport::-webkit-scrollbar {
+  display: none;
+}
+
+:host([data-snap]) .andes-carousel-scroller__viewport {
+  scroll-snap-type: x mandatory;
+}
+
+/* Snapped items rest clear of the fade instead of underneath it. The first item still
+   reaches the start edge: its snap position is clamped to the start of the content. */
+:host([data-snap][data-fade]) .andes-carousel-scroller__viewport {
+  scroll-padding-inline-start: var(--_fade);
+}
+
+/* With paging the page moves a finger drag and a trackpad swipe, so the browser keeps only
+   the vertical pan. */
+:host([data-paging='item']) .andes-carousel-scroller__viewport,
+:host([data-paging='view']) .andes-carousel-scroller__viewport {
+  touch-action: pan-y pinch-zoom;
+}
+
+.andes-carousel-scroller__viewport:focus-visible {
+  outline: 2px solid var(--andes-color-focus-ring, #2563eb);
+  outline-offset: -2px;
+}
+
+/* --- Fading edges ---------------------------------------------------------------------- */
+
+:host([data-fade]) .andes-carousel-scroller__viewport {
+  --andes-carousel-fade-start: 0px;
+  --andes-carousel-fade-end: 0px;
+
+  /* The mask fades the content itself, so it works over any background. */
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 var(--andes-carousel-fade-start),
+    #000 calc(100% - var(--andes-carousel-fade-end)),
+    transparent 100%
+  );
+  transition:
+    --andes-carousel-fade-start var(--andes-motion-duration-mid, 150ms) ease,
+    --andes-carousel-fade-end var(--andes-motion-duration-mid, 150ms) ease;
+}
+
+:host([data-fade]:dir(rtl)) .andes-carousel-scroller__viewport {
+  mask-image: linear-gradient(
+    to left,
+    transparent 0,
+    #000 var(--andes-carousel-fade-start),
+    #000 calc(100% - var(--andes-carousel-fade-end)),
+    transparent 100%
+  );
+}
+
+:host([data-fade][data-can-start]) .andes-carousel-scroller__viewport {
+  --andes-carousel-fade-start: var(--_fade);
+}
+
+:host([data-fade][data-can-end]) .andes-carousel-scroller__viewport {
+  --andes-carousel-fade-end: var(--_fade);
+}
+
+/* --- Buttons: dark scrim pills, legible on any item in either theme -------------------- */
+
+.andes-carousel-scroller__arrow {
+  --_arrow: var(--andes-control-height-md, 2rem);
+  --_arrow-icon: 1.125rem;
+
+  position: absolute;
+  z-index: 2;
+  inset-block-start: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--_arrow);
+  height: var(--_arrow);
+  margin: calc(var(--_arrow) / -2) 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--andes-radius-full, 9999px);
+  background: var(--andes-color-overlay, rgb(15 23 42 / 45%));
+  color: var(--andes-color-primary-foreground, #fff);
+  font: inherit;
+  font-size: var(--_arrow-icon);
+  cursor: pointer;
+  transition: background-color var(--andes-motion-duration-fast, 120ms) ease;
+}
+
+:host([data-arrow-size='sm']) .andes-carousel-scroller__arrow {
+  --_arrow: var(--andes-control-height-sm, 1.5rem);
+  --_arrow-icon: 0.875rem;
+}
+
+:host([data-arrow-size='lg']) .andes-carousel-scroller__arrow {
+  --_arrow: var(--andes-control-height-lg, 2.5rem);
+  --_arrow-icon: 1.375rem;
+}
+
+.andes-carousel-scroller__arrow--previous {
+  inset-inline-start: var(--andes-space-2, 0.5rem);
+}
+
+.andes-carousel-scroller__arrow--next {
+  inset-inline-end: var(--andes-space-2, 0.5rem);
+}
+
+.andes-carousel-scroller__arrow:hover {
+  filter: brightness(1.3);
+}
+
+.andes-carousel-scroller__arrow:focus-visible {
+  outline: 2px solid var(--andes-color-focus-ring, #2563eb);
+  outline-offset: 2px;
+}
+
+/* The chevrons are lucide glyphs in an `ng-icon`, 1em square. */
+.andes-carousel-scroller__chevron {
+  display: flex;
+  width: 1em;
+  height: 1em;
+}
+
+.andes-carousel-scroller__chevron:dir(rtl) {
+  transform: scaleX(-1);
+}
+
+/* --- Motion and contrast preferences ---------------------------------------------------- */
+
+:host([data-reduced]) .andes-carousel-scroller__arrow,
+:host([data-reduced][data-fade]) .andes-carousel-scroller__viewport {
+  transition: none;
+}
+
+@media (forced-colors: active) {
+  .andes-carousel-scroller__arrow {
+    forced-color-adjust: none;
+    border: 1px solid ButtonText;
+    background: ButtonFace;
+    color: ButtonText;
+  }
+
+  .andes-carousel-scroller__arrow:focus-visible,
+  .andes-carousel-scroller__viewport:focus-visible {
+    outline-color: Highlight;
+  }
+}

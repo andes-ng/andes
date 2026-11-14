@@ -1,0 +1,29 @@
+/* Rendered inside the filter's popover, which sets the font; the library fields below
+   draw themselves. */
+:host {
+  display: grid;
+  gap: var(--andes-space-2);
+  box-sizing: border-box;
+  width: 15rem;
+  max-width: 100%;
+  padding: var(--andes-space-2);
+  font-size: 0.875rem;
+  line-height: 1.375rem;
+}
+
+:host(.andes-table-filter-panel--pair) {
+  grid-template-columns: 1fr 1fr;
+  width: 18rem;
+}
+
+.andes-table-filter-panel__label {
+  display: grid;
+  gap: var(--andes-space-1);
+  min-width: 0;
+}
+
+.andes-table-filter-panel__caption {
+  color: var(--andes-color-muted-foreground);
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+}

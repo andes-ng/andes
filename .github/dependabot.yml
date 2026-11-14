@@ -32,6 +32,16 @@ updates:
         update-types:
           - 'minor'
           - 'patch'
+        # The families above move together. Left here, a partial bump installs two copies of
+        # @angular/core and breaks every input signal type.
+        exclude-patterns:
+          - '@angular/*'
+          - 'angular-*'
+          - 'ng-packagr'
+          - '@nx/*'
+          - 'nx'
+          - '@storybook/*'
+          - 'storybook'
     ignore:
       # jsdom 28+ resolves computed lengths to pixels, which breaks the specs that assert authored
       # values (24 failures on develop alone). Lift this once the specs are migrated.

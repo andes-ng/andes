@@ -33,6 +33,10 @@ jobs:
           cache: true
 
       - run: pnpm install --frozen-lockfile
+      # A lockfile with two copies of one package (typically @angular/core after a partial bump)
+      # breaks every input signal type. Fail here with the cause instead of hundreds of type errors.
+      - name: Check the lockfile has no duplicated packages
+        run: pnpm dedupe --check
       - run: pnpm format:check
       - name: Lint and test
         env:

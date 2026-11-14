@@ -15,10 +15,14 @@ import * as avatarStories from './avatar.stories';
 // everything it shares a preview build with", so the same invariant is
 // asserted over every story file in the library. No Button source is touched -
 // this only reads its story definitions.
-import * as buttonStories from '../button/button.stories';
-import * as buttonFeaturesStories from '../button/button-features.stories';
-import * as buttonGroupStories from '../button/button-group.stories';
-import * as buttonLoadingStories from '../button/button-loading.stories';
+import * as buttonOverviewStories from '../button/button-01-overview.stories';
+import * as buttonSizeStories from '../button/button-02-sizes-and-shapes.stories';
+import * as buttonColorStories from '../button/button-03-colors.stories';
+import * as buttonIconStories from '../button/button-04-icons-and-links.stories';
+import * as buttonPressStories from '../button/button-05-press-and-motion.stories';
+import * as buttonLoadingStories from '../button/button-06-loading-and-actions.stories';
+import * as buttonGroupStories from '../button/button-07-groups.stories';
+import * as buttonAccessibilityStories from '../button/button-08-accessibility.stories';
 
 /**
  * Regression coverage for the meta-level decorator in avatar.stories.ts.
@@ -166,13 +170,32 @@ const storyFiles: Array<[string, StoryModule]> = [
     'avatar-overflow.stories.ts',
     avatarOverflowStories as unknown as StoryModule,
   ],
-  ['button.stories.ts', buttonStories as unknown as StoryModule],
   [
-    'button-features.stories.ts',
-    buttonFeaturesStories as unknown as StoryModule,
+    'button-01-overview.stories.ts',
+    buttonOverviewStories as unknown as StoryModule,
   ],
-  ['button-group.stories.ts', buttonGroupStories as unknown as StoryModule],
-  ['button-loading.stories.ts', buttonLoadingStories as unknown as StoryModule],
+  [
+    'button-02-sizes-and-shapes.stories.ts',
+    buttonSizeStories as unknown as StoryModule,
+  ],
+  ['button-03-colors.stories.ts', buttonColorStories as unknown as StoryModule],
+  [
+    'button-04-icons-and-links.stories.ts',
+    buttonIconStories as unknown as StoryModule,
+  ],
+  [
+    'button-05-press-and-motion.stories.ts',
+    buttonPressStories as unknown as StoryModule,
+  ],
+  [
+    'button-06-loading-and-actions.stories.ts',
+    buttonLoadingStories as unknown as StoryModule,
+  ],
+  ['button-07-groups.stories.ts', buttonGroupStories as unknown as StoryModule],
+  [
+    'button-08-accessibility.stories.ts',
+    buttonAccessibilityStories as unknown as StoryModule,
+  ],
 ];
 
 const allStories = storyFiles.flatMap(([file, module]) =>
@@ -190,9 +213,11 @@ describe('Storybook story module metadata', () => {
   });
 
   it("also covers a second, unrelated component's stories", () => {
-    expect(allStories.some((story) => story.file === 'button.stories.ts')).toBe(
-      true,
-    );
+    expect(
+      allStories.some(
+        (story) => story.file === 'button-01-overview.stories.ts',
+      ),
+    ).toBe(true);
   });
 
   it.each(

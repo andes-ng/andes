@@ -114,4 +114,89 @@ describe('AndesButtonPrimitive', () => {
       expect(event.defaultPrevented).toBe(false);
     });
   });
+  describe('on a button kept focusable', () => {
+    @Component({
+      imports: [AndesButtonPrimitive],
+      template: `<button
+        andesButtonPrimitive
+        [disabled]="disabled()"
+        [focusable]="true"
+        [tabStop]="tabStop()"
+        (click)="clicks = clicks + 1"
+      >
+        Save
+      </button>`,
+    })
+    class FocusableHost {
+      readonly disabled = signal(false);
+      readonly tabStop = signal<boolean | undefined>(undefined);
+      clicks = 0;
+    }
+
+    function createHost() {
+      const fixture = TestBed.createComponent(FocusableHost);
+      fixture.detectChanges();
+      const button = fixture.nativeElement.querySelector(
+        'button',
+      ) as HTMLButtonElement;
+      return { fixture, button };
+    }
+
+    it('swaps the native disabled attribute for aria-disabled and stays in the tab order', () => {
+      const { fixture, button } = createHost();
+      fixture.componentInstance.disabled.set(true);
+      fixture.detectChanges();
+
+      expect(button.disabled).toBe(false);
+      expect(button.getAttribute('aria-disabled')).toBe('true');
+      expect(button.getAttribute('data-disabled')).toBe('');
+      expect(button.hasAttribute('tabindex')).toBe(false);
+    });
+
+    it('swallows the click while disabled and lets it through otherwise', () => {
+      const { fixture, button } = createHost();
+      button.click();
+      expect(fixture.componentInstance.clicks).toBe(1);
+
+      fixture.componentInstance.disabled.set(true);
+      fixture.detectChanges();
+      const event = new MouseEvent('click', {
+        cancelable: true,
+        bubbles: true,
+      });
+      button.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(fixture.componentInstance.clicks).toBe(1);
+    });
+  });
+
+  describe('tabStop', () => {
+    @Component({
+      imports: [AndesButtonPrimitive],
+      template: `<button andesButtonPrimitive [tabStop]="tabStop()">
+        Save
+      </button>`,
+    })
+    class TabStopHost {
+      readonly tabStop = signal<boolean | undefined>(undefined);
+    }
+
+    it('takes the button out of the tab sequence only when false', () => {
+      const fixture = TestBed.createComponent(TabStopHost);
+      fixture.detectChanges();
+      const button = fixture.nativeElement.querySelector(
+        'button',
+      ) as HTMLButtonElement;
+      expect(button.hasAttribute('tabindex')).toBe(false);
+
+      fixture.componentInstance.tabStop.set(false);
+      fixture.detectChanges();
+      expect(button.getAttribute('tabindex')).toBe('-1');
+
+      fixture.componentInstance.tabStop.set(true);
+      fixture.detectChanges();
+      expect(button.hasAttribute('tabindex')).toBe(false);
+    });
+  });
 });

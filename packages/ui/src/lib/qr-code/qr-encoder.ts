@@ -839,7 +839,7 @@ export function encodeQrSegments(
   let errorLevel = options.errorLevel ?? 'M';
 
   let version = minVersion;
-  let usedBits = 0;
+  let usedBits: number;
   for (; ; version++) {
     usedBits = totalBits(segments, version);
     if (usedBits <= qrDataCodewords(version, errorLevel) * 8) {

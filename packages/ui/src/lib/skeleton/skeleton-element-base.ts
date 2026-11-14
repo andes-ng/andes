@@ -8,10 +8,14 @@ import {
 
 import {
   AndesSkeletonAnimation,
+  AndesSkeletonDirection,
+  AndesSkeletonRadius,
   AndesSkeletonSemanticValue,
   AndesSkeletonSize,
   AndesSkeletonStyle,
   animationClass,
+  indexAttribute,
+  radiusValue,
   resolveAnimation,
   resolveSemantic,
   toStyleMap,
@@ -24,12 +28,18 @@ export type AndesSkeletonElementSlot = 'root' | 'content';
 export interface AndesSkeletonElementProps {
   active: boolean;
   animation: AndesSkeletonAnimation;
+  direction: AndesSkeletonDirection;
+  reverse: boolean;
+  index: number;
+  radius?: AndesSkeletonRadius;
   size?: AndesSkeletonSize | number;
   shape?: string;
   block?: boolean;
   /** `andes-skeleton-text` only. */
   lines?: number;
   round?: boolean;
+  /** `andes-skeleton-text` only: milliseconds between two lines, 0 when not staggered. */
+  stagger?: number;
 }
 
 export type AndesSkeletonElementClassNames = AndesSkeletonSemanticValue<
@@ -58,6 +68,21 @@ export abstract class AndesSkeletonElementBase {
   readonly active = input(false, { transform: booleanAttribute });
   /** Picks the animation by name; `active` is the shorthand for `'shimmer'`. */
   readonly animation = input<AndesSkeletonAnimation | undefined>(undefined);
+  /**
+   * The axis the shimmer travels along: `horizontal` (the default) sweeps in reading direction,
+   * `vertical` sweeps from top to bottom. Only the shimmer has a direction.
+   */
+  readonly direction = input<AndesSkeletonDirection>('horizontal');
+  /** Runs the shimmer the other way: against the reading direction, or from bottom to top. */
+  readonly reverse = input(false, { transform: booleanAttribute });
+  /**
+   * Position in a group of placeholders. The animation starts `index` steps after the first one
+   * (a step is 100ms, or `--andes-skeleton-stagger`), so a column of placeholders ripples from
+   * the top down instead of moving in lockstep.
+   */
+  readonly index = input(0, { transform: indexAttribute });
+  /** Rounds the corners to a step of the radius scale, over the placeholder's own corner. */
+  readonly radius = input<AndesSkeletonRadius | undefined>(undefined);
   /** Extra classes for the `root` and `content` parts, as an object or a function of the inputs. */
   readonly classNames = input<AndesSkeletonElementClassNames | undefined>(
     undefined,
@@ -69,7 +94,7 @@ export abstract class AndesSkeletonElementBase {
   protected abstract readonly extraProps: Signal<
     Pick<
       AndesSkeletonElementProps,
-      'size' | 'shape' | 'block' | 'lines' | 'round'
+      'size' | 'shape' | 'block' | 'lines' | 'round' | 'stagger'
     >
   >;
 
@@ -79,12 +104,19 @@ export abstract class AndesSkeletonElementBase {
 
   /** The modifier class that runs the animation, or `null` for a still placeholder. */
   protected readonly animationClass = computed(() =>
-    animationClass(this.resolvedAnimation()),
+    animationClass(this.resolvedAnimation(), {
+      direction: this.direction(),
+      reverse: this.reverse(),
+    }),
   );
 
   private readonly semanticProps = computed((): AndesSkeletonElementProps => ({
     active: this.active(),
     animation: this.resolvedAnimation(),
+    direction: this.direction(),
+    reverse: this.reverse(),
+    index: this.index(),
+    radius: this.radius(),
     ...this.extraProps(),
   }));
 
@@ -105,7 +137,12 @@ export abstract class AndesSkeletonElementBase {
   protected readonly rootStyle = computed(() =>
     toStyleMap(this.resolvedStyles()?.root),
   );
+  /** The painted box's inline styles: `radius` and `index`, then the `styles` input on top. */
   protected readonly contentStyle = computed(() =>
-    toStyleMap(this.resolvedStyles()?.content),
+    toStyleMap({
+      'border-radius': radiusValue(this.radius()),
+      '--andes-skeleton-index': this.index() > 0 ? this.index() : undefined,
+      ...this.resolvedStyles()?.content,
+    }),
   );
 }

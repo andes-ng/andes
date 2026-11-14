@@ -63,9 +63,52 @@
   animation-direction: reverse;
 }
 
+/* Vertical: the band travels down the bar instead of across it - the gradient turns a quarter
+   and the 400% image stretches along the height. Reading direction does not matter for it, so the
+   RTL flip above is switched off again. */
+.andes-skeleton-fill--active.andes-skeleton-fill--vertical {
+  background-image: linear-gradient(
+    180deg,
+    var(--_fill) 25%,
+    var(--_highlight) 37%,
+    var(--_fill) 63%
+  );
+  background-size: 100% 400%;
+  animation-name: andes-skeleton-shimmer-vertical;
+  animation-direction: normal;
+}
+
+/* Reverse: against the reading direction (so left to right under RTL), or up the bar. The rules
+   below are ordered by what they beat: a plain reverse, then reverse in an RTL document (which
+   cancels the RTL flip), then reverse of a vertical sweep (which RTL never touches). */
+.andes-skeleton-fill--active.andes-skeleton-fill--reverse {
+  animation-direction: reverse;
+}
+
+.andes-skeleton-fill--active.andes-skeleton-fill--reverse:dir(rtl) {
+  animation-direction: normal;
+}
+
+.andes-skeleton-fill--active.andes-skeleton-fill--vertical.andes-skeleton-fill--reverse {
+  animation-direction: reverse;
+}
+
 /* Pulse: the bar fades in and out instead of sweeping. */
 .andes-skeleton-fill--pulse {
   animation: andes-skeleton-fade 2s ease-in-out infinite;
+}
+
+/* Stagger: a bar with an index starts that many steps after the first, so a group of bars ripples
+   from the top down. --andes-skeleton-index is set on each bar (an input, or the group does it
+   for you); --andes-skeleton-stagger (100ms) is the step and --andes-skeleton-delay (0ms) the
+   wait before the first bar, both settable for a whole subtree. Declared after the animation
+   shorthands so it is not reset by them. */
+.andes-skeleton-fill--active,
+.andes-skeleton-fill--pulse {
+  animation-delay: calc(
+    var(--andes-skeleton-delay, 0ms) + var(--andes-skeleton-stagger, 100ms) *
+      var(--andes-skeleton-index, 0)
+  );
 }
 
 /* Users who ask the OS for less motion get a static placeholder - at background-position 0 only
@@ -83,6 +126,15 @@
   }
   100% {
     background-position: 0 50%;
+  }
+}
+
+@keyframes andes-skeleton-shimmer-vertical {
+  0% {
+    background-position: 50% 100%;
+  }
+  100% {
+    background-position: 50% 0;
   }
 }
 

@@ -9,6 +9,7 @@ import * as elementStories from './skeleton-2-elements.stories';
 import * as loadingStories from './skeleton-3-loading-wrapper.stories';
 import * as textStories from './skeleton-4-text.stories';
 import * as overviewStories from './skeleton-1-overview.stories';
+import * as directionStories from './skeleton-8-direction-and-stagger.stories';
 
 /*
  * Mounts every story of the Skeleton, grouped by topic in the sidebar, through Storybook's own
@@ -114,6 +115,10 @@ const modules: [string, StoryModule][] = [
   [
     'Feedback/Skeleton/Accessibility and motion',
     accessibilityStories as unknown as StoryModule,
+  ],
+  [
+    'Feedback/Skeleton/Direction and stagger',
+    directionStories as unknown as StoryModule,
   ],
 ];
 

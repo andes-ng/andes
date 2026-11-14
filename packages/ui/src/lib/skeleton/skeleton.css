@@ -7,6 +7,12 @@
 .andes-skeleton {
   display: block;
   animation: andes-skeleton-pulse 2s ease-in-out infinite;
+  /* A bar with an `index` starts that many steps late, so a column of bars ripples downwards
+     (see skeleton-fill.css for the two custom properties). */
+  animation-delay: calc(
+    var(--andes-skeleton-delay, 0ms) + var(--andes-skeleton-stagger, 100ms) *
+      var(--andes-skeleton-index, 0)
+  );
 }
 
 .andes-skeleton--static {

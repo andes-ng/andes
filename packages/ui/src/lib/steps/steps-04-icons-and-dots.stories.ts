@@ -312,3 +312,32 @@ export const DotTemplateVertical: Story = {
       </ng-template>`,
   }),
 };
+
+export const NumbersEverywhere: Story = {
+  name: 'A number on every step',
+  parameters: about(
+    'With indicator set to number every marker keeps its number, finished and failed steps included, so the colour alone tells the status.',
+  ),
+  render: () => ({
+    template: `<andes-steps aria-label="Numbers" indicator="number" [current]="1">${FOUR_DESCRIBED}</andes-steps>`,
+  }),
+};
+
+export const NoMarkers: Story = {
+  name: 'No markers',
+  parameters: about(
+    'With indicator set to none the markers go and the titles, the connectors and the colours carry the progress, and a single step can opt back in with its own indicator.',
+  ),
+  render: () => ({
+    template: demos(
+      demo(
+        'every step',
+        `<andes-steps aria-label="No markers" indicator="none" [current]="1">${FOUR}</andes-steps>`,
+      ),
+      demo(
+        'one step opts in',
+        `<andes-steps aria-label="One marker" indicator="none" [current]="1"><andes-step title="Account" /><andes-step title="Billing" indicator="auto" /><andes-step title="Review" /><andes-step title="Done" /></andes-steps>`,
+      ),
+    ),
+  }),
+};

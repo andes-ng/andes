@@ -3,6 +3,9 @@ export { AndesStep } from './step';
 export { AndesStepPanel } from './step-panel';
 export type {
   AndesStepContent,
+  AndesStepsCollapsedVariant,
+  AndesStepsDensity,
+  AndesStepsIndicator,
   AndesStepIcon,
   AndesStepIconContext,
   AndesStepStatus,

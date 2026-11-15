@@ -1,5 +1,5 @@
 <div class="andes-step__head">
-  @if (parent.clickable()) {
+  @if (asButton()) {
   <button
     #trigger
     type="button"
@@ -18,7 +18,7 @@
   <div class="andes-step__trigger">
     <ng-container *ngTemplateOutlet="body" />
   </div>
-  } @if (!isLast()) {
+  } @if (showTail()) {
   <span
     class="andes-step__tail"
     [class]="classes().tail"
@@ -54,6 +54,8 @@
     <ng-icon class="andes-step__glyph" name="lucideCheck" />
     } @case ('cross') {
     <ng-icon class="andes-step__glyph" name="lucideX" />
+    } @case ('warning') {
+    <ng-icon class="andes-step__glyph" name="lucideTriangleAlert" />
     } @case ('number') {
     <span class="andes-step__number">{{ displayNumber() }}</span>
     } } @if (ringPercent() !== null) {
@@ -94,8 +96,8 @@
       </span>
       <span class="andes-step__status-text">
         <span class="andes-step__sr">, {{ statusLabel() }}</span>
-        @if (ringPercent() !== null) {
-        <span class="andes-step__sr">, {{ ringPercent() }}%</span>
+        @if (percentValue() !== null) {
+        <span class="andes-step__sr">, {{ percentValue() }}%</span>
         }
       </span>
     </span>
@@ -115,6 +117,18 @@
       [class]="classes().subtitle"
       [style]="styles().subtitle"
       >{{ subtitleString() }}</span
+    >
+    } @if (endTemplate(); as template) {
+    <span
+      class="andes-step__end"
+      [class]="classes().end"
+      [style]="styles().end"
+    >
+      <ng-container *ngTemplateOutlet="template" />
+    </span>
+    } @else if (endString()) {
+    <span class="andes-step__end" [class]="classes().end" [style]="styles().end"
+      >{{ endString() }}</span
     >
     }
   </span>

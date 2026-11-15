@@ -21,7 +21,7 @@ import { ANDES_STEPS, AndesStepStatus } from './steps-types';
   viewProviders: [provideIcons({ lucideCheck, lucideEllipsis, lucideX })],
   imports: [AndesPopover, AndesPopoverTrigger, NgIcon],
   templateUrl: './steps-more.html',
-  styleUrls: ['./step.css', './step-chevron.css'],
+  styleUrls: ['./step.css', './step-chevron.css', './step-segments.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     role: 'listitem',

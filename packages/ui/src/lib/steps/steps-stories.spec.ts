@@ -18,6 +18,7 @@ import * as progressStories from './steps-07-progress-and-overflow.stories';
 import * as customisationStories from './steps-08-customisation.stories';
 import * as accessibilityStories from './steps-09-accessibility.stories';
 import * as wizardStories from './steps-10-wizards-and-real-world.stories';
+import * as segmentStories from './steps-11-segments.stories';
 
 /*
  * Mounts every story of the Steps, grouped by topic in the sidebar, through Storybook's own
@@ -74,6 +75,7 @@ const modules = [
     asModule(wizardStories),
     'steps-10-wizards-and-real-world',
   ],
+  ['Navigation/Steps/Segments', asModule(segmentStories), 'steps-11-segments'],
 ] as const;
 
 const TRIGGERS = 'button.andes-step__trigger';

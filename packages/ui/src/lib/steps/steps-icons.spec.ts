@@ -22,6 +22,17 @@ import { AndesSteps } from './steps';
 })
 class Host {}
 
+@Component({
+  imports: [AndesSteps, AndesStep],
+  template: `
+    <andes-steps [current]="1" type="segments">
+      <andes-step title="Done" status="warning" />
+      <andes-step title="Next" />
+    </andes-steps>
+  `,
+})
+class WarningHost {}
+
 describe('steps icons', () => {
   it('draws the finish check and the error cross with lucide', () => {
     const fixture = TestBed.createComponent(Host);
@@ -38,5 +49,15 @@ describe('steps icons', () => {
     for (const icon of icons) {
       expect(icon.querySelector('svg')).not.toBeNull();
     }
+  });
+
+  it('draws the warning triangle with lucide', () => {
+    const fixture = TestBed.createComponent(WarningHost);
+    fixture.detectChanges();
+
+    const icon = fixture.nativeElement.querySelector('ng-icon') as Element;
+
+    expect(icon.getAttribute('name')).toBe('lucideTriangleAlert');
+    expect(icon.querySelector('svg')).not.toBeNull();
   });
 });

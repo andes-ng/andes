@@ -149,8 +149,10 @@ export const PARTS = [
   'title',
   'subtitle',
   'description',
+  'end',
   'tail',
   'rail',
+  'summary',
 ];
 
 /**

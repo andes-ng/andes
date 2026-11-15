@@ -83,7 +83,9 @@
 }
 
 :host([data-type='panel'][data-variant='soft'][data-status='process']),
-:host([data-type='panel'][data-variant='solid'][data-status='process']) {
+:host([data-type='panel'][data-variant='soft'][data-status='loading']),
+:host([data-type='panel'][data-variant='solid'][data-status='process']),
+:host([data-type='panel'][data-variant='solid'][data-status='loading']) {
   --_seg-fill: var(--_primary);
   --_seg-hover: var(--andes-color-primary-hover, #1d4ed8);
   --_title-color: var(--_on-primary);
@@ -136,7 +138,8 @@
   --_title-color: var(--_ink);
 }
 
-:host([data-type='panel'][data-variant='outline'][data-status='process']) {
+:host([data-type='panel'][data-variant='outline'][data-status='process']),
+:host([data-type='panel'][data-variant='outline'][data-status='loading']) {
   --_seg-edge: var(--_primary);
   --_seg-fill: color-mix(in srgb, var(--_primary) 8%, var(--_surface));
   --_seg-hover: color-mix(in srgb, var(--_primary) 15%, var(--_surface));
@@ -156,7 +159,8 @@
 }
 
 :host([data-type='panel'][data-variant='plain'][data-status='finish']),
-:host([data-type='panel'][data-variant='plain'][data-status='process']) {
+:host([data-type='panel'][data-variant='plain'][data-status='process']),
+:host([data-type='panel'][data-variant='plain'][data-status='loading']) {
   --_title-color: var(--_ink);
 }
 
@@ -166,6 +170,31 @@
 
 :host([data-type='panel'][data-variant='plain'][data-status='wait']) {
   --_title-color: var(--_muted-fg);
+}
+
+/* warning follows the error rules in its own colour. */
+:host([data-type='panel'][data-variant='soft'][data-status='warning']) {
+  --_seg-fill: color-mix(in srgb, var(--_warning) 12%, var(--_surface));
+  --_seg-hover: color-mix(in srgb, var(--_warning) 20%, var(--_surface));
+  --_title-color: var(--_warning-text);
+}
+
+:host([data-type='panel'][data-variant='solid'][data-status='warning']) {
+  --_seg-fill: var(--_warning);
+  --_seg-hover: var(--andes-color-warning-hover, #d97706);
+  --_title-color: var(--_on-warning);
+  --_desc: var(--_on-warning);
+}
+
+:host([data-type='panel'][data-variant='outline'][data-status='warning']) {
+  --_seg-edge: var(--_warning);
+  --_seg-fill: color-mix(in srgb, var(--_warning) 6%, var(--_surface));
+  --_seg-hover: color-mix(in srgb, var(--_warning) 13%, var(--_surface));
+  --_title-color: var(--_warning-text);
+}
+
+:host([data-type='panel'][data-variant='plain'][data-status='warning']) {
+  --_title-color: var(--_warning-text);
 }
 
 /* ------------------------------------------------------ The segment */
@@ -438,12 +467,16 @@
   }
 
   :host([data-type='panel'][data-status='process'])
+    .andes-step__trigger::before,
+  :host([data-type='panel'][data-status='loading'])
     .andes-step__trigger::before {
     background: Highlight;
   }
 
   :host([data-type='panel'][data-status='process']) .andes-step__title,
-  :host([data-type='panel'][data-status='process']) .andes-step__description {
+  :host([data-type='panel'][data-status='loading']) .andes-step__title,
+  :host([data-type='panel'][data-status='process']) .andes-step__description,
+  :host([data-type='panel'][data-status='loading']) .andes-step__description {
     color: HighlightText;
   }
 

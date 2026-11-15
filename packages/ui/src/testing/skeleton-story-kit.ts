@@ -20,6 +20,12 @@ import { AndesSkeletonInput } from '../lib/skeleton/skeleton-input';
 import { AndesSkeletonNode } from '../lib/skeleton/skeleton-node';
 import { AndesSkeletonText } from '../lib/skeleton/skeleton-text';
 import { AndesSwitch } from '../lib/switch/switch';
+import { AndesTable } from '../lib/table/table';
+import { AndesTableBody } from '../lib/table/table-body';
+import { AndesTableCell } from '../lib/table/table-cell';
+import { AndesTableHead } from '../lib/table/table-head';
+import { AndesTableHeader } from '../lib/table/table-header';
+import { AndesTableRow } from '../lib/table/table-row';
 import { AndesTag } from '../lib/tag/tag';
 
 /*
@@ -118,6 +124,12 @@ export const withSkeletonKit: Decorator = moduleMetadata({
     AndesSkeletonNode,
     AndesSkeletonText,
     AndesSwitch,
+    AndesTable,
+    AndesTableBody,
+    AndesTableCell,
+    AndesTableHead,
+    AndesTableHeader,
+    AndesTableRow,
     AndesTag,
     NgIcon,
   ],

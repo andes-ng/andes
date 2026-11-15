@@ -21,13 +21,19 @@ import {
 } from './skeleton-avatar';
 import {
   AndesSkeletonAnimation,
+  AndesSkeletonDirection,
+  AndesSkeletonRadius,
   AndesSkeletonSemanticValue,
   AndesSkeletonSize,
   AndesSkeletonStyle,
   animationClass,
+  indexAttribute,
+  radiusValue,
   resolveAnimation,
   resolveSemantic,
   rowWidths,
+  staggerAttribute,
+  staggerStep,
   toCssSize,
   toStyleMap,
 } from './skeleton-utils';
@@ -65,6 +71,11 @@ export interface AndesSkeletonProps {
   loading: boolean;
   active: boolean;
   animation: AndesSkeletonAnimation;
+  direction: AndesSkeletonDirection;
+  reverse: boolean;
+  /** Milliseconds between one bar's animation and the next, 0 when the bars move together. */
+  stagger: number;
+  radius: AndesSkeletonRadius | undefined;
   round: boolean;
   avatar: boolean | AndesSkeletonAvatarConfig;
   title: boolean | AndesSkeletonTitleConfig;
@@ -159,6 +170,25 @@ export class AndesSkeleton {
    * is the shorthand for `'shimmer'`. Ignored under `prefers-reduced-motion: reduce`.
    */
   readonly animation = input<AndesSkeletonAnimation | undefined>(undefined);
+  /**
+   * The axis the shimmer travels along: `horizontal` (the default) sweeps in reading direction,
+   * left to right and right to left under RTL; `vertical` sweeps from top to bottom in every
+   * direction of text. Only the shimmer has a direction.
+   */
+  readonly direction = input<AndesSkeletonDirection>('horizontal');
+  /** Runs the shimmer the other way: against the reading direction, or from bottom to top. */
+  readonly reverse = input(false, { transform: booleanAttribute });
+  /**
+   * Starts each bar's animation a little after the one above it, so the shimmer or pulse ripples
+   * down the placeholder instead of moving in lockstep. A number is the milliseconds between two
+   * bars, a bare attribute is 100; `--andes-skeleton-stagger` tunes the step for a whole subtree.
+   */
+  readonly stagger = input(0, { transform: staggerAttribute });
+  /**
+   * Rounds the corners of the title and paragraph bars (and of the single bar of block mode) to a
+   * step of the radius scale; it wins over `round`.
+   */
+  readonly radius = input<AndesSkeletonRadius | undefined>(undefined);
   readonly avatar = input<
     boolean | AndesSkeletonAvatarConfig,
     SectionInput<AndesSkeletonAvatarConfig>
@@ -201,6 +231,11 @@ export class AndesSkeleton {
   readonly width = input<string | number | undefined>(undefined);
   readonly height = input<string | number | undefined>(undefined);
   readonly animated = input(true, { transform: booleanAttribute });
+  /**
+   * Block mode only: the bar's place in a group of bars. Its pulse starts `index` steps (100ms,
+   * or `--andes-skeleton-stagger`) after the first one, so a column of bars ripples down.
+   */
+  readonly index = input(0, { transform: indexAttribute });
 
   protected readonly isBlock = computed(() => this.shape() !== undefined);
 
@@ -212,6 +247,12 @@ export class AndesSkeleton {
       !this.animated() && 'andes-skeleton--static',
     ),
   );
+
+  protected readonly blockIndex = computed(() =>
+    this.index() > 0 ? this.index() : null,
+  );
+
+  protected readonly radiusStyle = computed(() => radiusValue(this.radius()));
 
   protected readonly widthStyle = computed(() => toCssSize(this.width()));
   protected readonly heightStyle = computed(() => toCssSize(this.height()));
@@ -381,8 +422,24 @@ export class AndesSkeleton {
   });
 
   private readonly barAnimationClass = computed(() =>
-    animationClass(this.animationMode()),
+    animationClass(this.animationMode(), {
+      direction: this.direction(),
+      reverse: this.reverse(),
+    }),
   );
+
+  /** The step between two bars, as the CSS time of `--andes-skeleton-stagger`. */
+  protected readonly staggerStyle = computed(() => staggerStep(this.stagger()));
+
+  /** Where the paragraph rows start counting: after the title, when there is one. */
+  protected readonly rowOffset = computed(() =>
+    this.titleWidth() === null ? 0 : 1,
+  );
+
+  /** The step count of a paragraph row, or null while the bars move together. */
+  protected rowIndex(row: number): number | null {
+    return this.stagger() > 0 ? row + this.rowOffset() : null;
+  }
 
   protected readonly titleClass = computed(() =>
     clsx(
@@ -405,6 +462,10 @@ export class AndesSkeleton {
     loading: this.loading(),
     active: this.active(),
     animation: this.animationMode(),
+    direction: this.direction(),
+    reverse: this.reverse(),
+    stagger: this.stagger(),
+    radius: this.radius(),
     round: this.round(),
     avatar: this.avatar(),
     title: this.title(),

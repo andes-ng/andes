@@ -9,7 +9,7 @@ import {
 import clsx from 'clsx';
 
 import { AndesSkeletonElementBase } from './skeleton-element-base';
-import { rowWidths } from './skeleton-utils';
+import { rowWidths, staggerAttribute, staggerStep } from './skeleton-utils';
 
 /**
  * Lines of text: the paragraph of `andes-skeleton` on its own, for the places where a full
@@ -27,6 +27,8 @@ import { rowWidths } from './skeleton-utils';
       [class]="lineClass()"
       [style]="contentStyle()"
       [style.width]="width"
+      [style.--andes-skeleton-index]="lineIndex($index)"
+      [style.--andes-skeleton-stagger]="step()"
     ></span>
   }`,
   styleUrls: ['./skeleton-fill.css', './skeleton-text.css'],
@@ -50,10 +52,28 @@ export class AndesSkeletonText extends AndesSkeletonElementBase {
   );
   /** Fully rounded lines. */
   readonly round = input(false, { transform: booleanAttribute });
+  /**
+   * Starts each line's animation a little after the one above it, so the lines ripple from the
+   * top down. A number is the milliseconds between two lines, a bare attribute is 100.
+   */
+  readonly stagger = input(0, { transform: staggerAttribute });
+
+  protected readonly step = computed(() => staggerStep(this.stagger()));
+
+  /**
+   * The step count a line starts at: `index`, plus the line's place in the block when staggered.
+   * `undefined` (not null, which would wipe a value from `styles`) when it is 0.
+   */
+  protected lineIndex(line: number): number | undefined {
+    const index = this.index() + (this.stagger() > 0 ? line : 0);
+
+    return index > 0 ? index : undefined;
+  }
 
   protected readonly extraProps = computed(() => ({
     lines: this.lines(),
     round: this.round(),
+    stagger: this.stagger(),
   }));
 
   protected readonly rows = computed(() =>

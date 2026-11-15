@@ -5,6 +5,8 @@
   [class]="blockClasses()"
   [style.width]="widthStyle()"
   [style.height]="heightStyle()"
+  [style.border-radius]="radiusStyle()"
+  [style.--andes-skeleton-index]="blockIndex()"
 ></div>
 } @else { @if (statusText(); as status) {
 <span
@@ -41,7 +43,12 @@
 <!-- The placeholder bars, stamped out where the layout above asks for them. Every bar is
      aria-hidden: the status text above is the one thing assistive technology reads. -->
 <ng-template #placeholder>
-  <div data-slot="skeleton" [class]="classes()" [style]="parts().styles.root">
+  <div
+    data-slot="skeleton"
+    [class]="classes()"
+    [style]="parts().styles.root"
+    [style.--andes-skeleton-stagger]="staggerStyle()"
+  >
     <div class="andes-skeleton-composite__body" aria-hidden="true">
       @if (avatarConfig(); as avatar) {
       <div
@@ -53,6 +60,8 @@
           [size]="avatar.size"
           [shape]="avatar.shape"
           [animation]="avatar.animation"
+          [direction]="direction()"
+          [reverse]="reverse()"
           [classNames]="parts().avatarClassNames"
           [styles]="parts().avatarStyles"
         />
@@ -69,6 +78,7 @@
           [class]="titleClass()"
           [style]="parts().styles.title"
           [style.width]="titleWidth()"
+          [style.border-radius]="radiusStyle()"
         ></div>
         } @if (paragraphRows().length > 0) {
         <div
@@ -82,6 +92,8 @@
             data-slot="skeleton-paragraph-row"
             [class]="rowClass()"
             [style.width]="rowWidth"
+            [style.border-radius]="radiusStyle()"
+            [style.--andes-skeleton-index]="rowIndex($index)"
           ></div>
           }
         </div>

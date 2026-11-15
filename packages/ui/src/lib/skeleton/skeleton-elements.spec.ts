@@ -514,6 +514,9 @@ describe('element placeholders: animation, classNames and styles', () => {
     expect(seen.at(-1)).toEqual({
       active: true,
       animation: 'shimmer',
+      direction: 'horizontal',
+      reverse: false,
+      index: 0,
       size: 'lg',
       shape: 'round',
       block: true,
@@ -543,6 +546,9 @@ describe('element placeholders: animation, classNames and styles', () => {
     expect(seen.at(-1)).toEqual({
       active: false,
       animation: 'none',
+      direction: 'horizontal',
+      reverse: false,
+      index: 0,
       size: 56,
       shape: 'square',
     });

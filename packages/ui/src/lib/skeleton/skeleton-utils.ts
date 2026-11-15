@@ -1,3 +1,6 @@
+import { numberAttribute } from '@angular/core';
+import clsx from 'clsx';
+
 /** Numbers are pixels; strings are passed through verbatim (`'50%'`, `'3rem'`). */
 export function toCssSize(
   value: string | number | null | undefined,
@@ -56,13 +59,79 @@ export function resolveAnimation(
   return animation ?? (active ? 'shimmer' : 'none');
 }
 
-/** The modifier class of the shared fill stylesheet for an animation, or `null` for none. */
+/**
+ * The axis the shimmer band travels along: `horizontal` sweeps across the bar in reading
+ * direction (right to left under RTL), `vertical` sweeps from top to bottom whatever the
+ * direction of the text. Only the shimmer has a direction; the pulse has none.
+ */
+export type AndesSkeletonDirection = 'horizontal' | 'vertical';
+
+/** How far a placeholder's corners are rounded, as a step of the shared radius scale. */
+export type AndesSkeletonRadius = 'none' | 'sm' | 'md' | 'lg' | 'xl' | 'full';
+
+/** What a bare `stagger` attribute means: milliseconds between one bar's start and the next. */
+export const DEFAULT_STAGGER_MS = 100;
+
+/**
+ * A `stagger` input: `true` or a bare attribute is {@link DEFAULT_STAGGER_MS}, a number (or a
+ * numeric string) is that many milliseconds, and `false`, nothing or a negative number is off (0).
+ */
+export function staggerAttribute(
+  value: boolean | number | string | null | undefined,
+): number {
+  if (value === '' || value === true) {
+    return DEFAULT_STAGGER_MS;
+  }
+  const ms = numberAttribute(value, 0);
+
+  return ms > 0 ? ms : 0;
+}
+
+/** An `index` input: a whole number of steps, never negative. */
+export function indexAttribute(value: unknown): number {
+  const index = Math.floor(numberAttribute(value, 0));
+
+  return index > 0 ? index : 0;
+}
+
+/** Milliseconds as the CSS time of the `--andes-skeleton-stagger` custom property. */
+export function staggerStep(ms: number): string | null {
+  return ms > 0 ? `${ms}ms` : null;
+}
+
+/** The `radius` step as a CSS `border-radius`, or `undefined` to keep the placeholder's own. */
+export function radiusValue(
+  radius: AndesSkeletonRadius | null | undefined,
+): string | undefined {
+  if (!radius) {
+    return undefined;
+  }
+
+  return radius === 'none' ? '0' : `var(--andes-radius-${radius})`;
+}
+
+/** How the shimmer of a placeholder travels (see {@link AndesSkeletonDirection}). */
+export interface AndesSkeletonSweep {
+  direction?: AndesSkeletonDirection;
+  /** Runs the sweep the other way: right to left (left to right under RTL), or bottom to top. */
+  reverse?: boolean;
+}
+
+/**
+ * The modifier classes of the shared fill stylesheet for an animation, or `null` for none. The
+ * direction classes only apply to the shimmer.
+ */
 export function animationClass(
   animation: AndesSkeletonAnimation,
+  sweep: AndesSkeletonSweep = {},
 ): string | null {
   switch (animation) {
     case 'shimmer':
-      return 'andes-skeleton-fill--active';
+      return clsx(
+        'andes-skeleton-fill--active',
+        sweep.direction === 'vertical' && 'andes-skeleton-fill--vertical',
+        sweep.reverse && 'andes-skeleton-fill--reverse',
+      );
     case 'pulse':
       return 'andes-skeleton-fill--pulse';
     default:

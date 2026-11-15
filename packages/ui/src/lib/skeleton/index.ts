@@ -25,6 +25,8 @@ export { AndesSkeletonNode } from './skeleton-node';
 export { AndesSkeletonText } from './skeleton-text';
 export type {
   AndesSkeletonAnimation,
+  AndesSkeletonDirection,
+  AndesSkeletonRadius,
   AndesSkeletonSemanticInfo,
   AndesSkeletonSemanticValue,
   AndesSkeletonSize,

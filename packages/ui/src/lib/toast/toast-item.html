@@ -1,0 +1,160 @@
+<div
+  #row
+  class="andes-toast__row"
+  [class]="toast().classNames?.wrapper"
+  [style]="toast().styles?.wrapper ?? null"
+>
+  @if (toast().headless; as headless) {
+  <ng-container *ngTemplateOutlet="headless; context: iconContext()" />
+  } @else { @if (toast().icon; as customIcon) {
+  <span
+    class="andes-toast__icon"
+    aria-hidden="true"
+    [class]="toast().classNames?.icon"
+    [style]="toast().styles?.icon ?? null"
+  >
+    <ng-container *ngTemplateOutlet="customIcon; context: iconContext()" />
+  </span>
+  } @else if (toast().icon !== null && toast().severity !== 'neutral') {
+  <span
+    class="andes-toast__icon"
+    aria-hidden="true"
+    [class]="toast().classNames?.icon"
+    [style]="toast().styles?.icon ?? null"
+  >
+    @switch (toast().severity) { @case ('loading') {
+    <ng-icon class="andes-toast__spinner" name="lucideLoaderCircle" />
+    } @case ('success') {
+    <!-- A solid status shape with its glyph knocked out in the card colour: lucide's icon, its
+         disc filled and its mark stroked in the surface colour by the stylesheet. -->
+    <ng-icon class="andes-toast__status" name="lucideCircleCheck" />
+    } @case ('error') {
+    <ng-icon class="andes-toast__status" name="lucideCircleX" />
+    } @case ('warning') {
+    <ng-icon
+      class="andes-toast__status andes-toast__status--triangle"
+      name="lucideTriangleAlert"
+    />
+    } @case ('info') {
+    <ng-icon class="andes-toast__status" name="lucideInfo" />
+    } }
+  </span>
+  }
+
+  <div
+    class="andes-toast__content"
+    [class]="toast().classNames?.content"
+    [style]="toast().styles?.content ?? null"
+  >
+    @if (toast().titleTemplate; as titleTemplate) {
+    <div
+      class="andes-toast__title"
+      [class]="toast().classNames?.title"
+      [style]="toast().styles?.title ?? null"
+    >
+      <ng-container *ngTemplateOutlet="titleTemplate; context: iconContext()" />
+    </div>
+    } @else if (toast().title) {
+    <p
+      class="andes-toast__title"
+      [class]="toast().classNames?.title"
+      [style]="toast().styles?.title ?? null"
+    >
+      {{ toast().title }}
+    </p>
+    } @if (toast().messageTemplate; as messageTemplate) {
+    <div
+      class="andes-toast__message"
+      [class.andes-toast__message--description]="hasTitle()"
+      [class]="toast().classNames?.description"
+      [style]="toast().styles?.description ?? null"
+    >
+      <ng-container
+        *ngTemplateOutlet="messageTemplate; context: iconContext()"
+      />
+    </div>
+    } @else {
+    <p
+      class="andes-toast__message"
+      [class.andes-toast__message--description]="hasTitle()"
+      [class]="toast().classNames?.description"
+      [style]="toast().styles?.description ?? null"
+    >
+      {{ toast().message }}
+    </p>
+    } @if (toast().actionsTemplate; as actionsTemplate) {
+    <div
+      class="andes-toast__actions"
+      [class]="toast().classNames?.actions"
+      [style]="toast().styles?.actions ?? null"
+    >
+      <ng-container
+        *ngTemplateOutlet="actionsTemplate; context: iconContext()"
+      />
+    </div>
+    } @else if (toast().actions.length) {
+    <div
+      class="andes-toast__actions"
+      [class]="toast().classNames?.actions"
+      [style]="toast().styles?.actions ?? null"
+    >
+      @for (groupAction of toast().actions; track $index) {
+      <andes-button
+        size="sm"
+        [variant]="groupAction.variant ?? ($first ? 'primary' : 'outline')"
+        (click)="groupActionClicked.emit(groupAction)"
+      >
+        {{ groupAction.label }}
+      </andes-button>
+      }
+    </div>
+    }
+  </div>
+
+  @if (toast().cancel; as cancel) {
+  <button
+    type="button"
+    class="andes-toast__cancel"
+    (click)="cancelClicked.emit()"
+  >
+    {{ cancel.label }}
+  </button>
+  } @if (toast().action; as action) {
+  <button
+    type="button"
+    class="andes-toast__action"
+    (click)="actionClicked.emit()"
+  >
+    {{ action.label }}
+  </button>
+  } @if (toast().dismissible) {
+  <button
+    type="button"
+    class="andes-toast__close"
+    [class]="toast().classNames?.close"
+    [style]="toast().styles?.close ?? null"
+    [attr.aria-label]="closeLabel()"
+    (click)="dismissRequested.emit()"
+  >
+    @if (toast().closeIcon; as closeIcon) {
+    <span class="andes-toast__close-icon" aria-hidden="true">
+      <ng-container *ngTemplateOutlet="closeIcon; context: iconContext()" />
+    </span>
+    } @else {
+    <ng-icon class="andes-toast__close-x" name="lucideX" aria-hidden="true" />
+    }
+  </button>
+  } }
+</div>
+@if (progressDuration(); as progressMs) {
+<div class="andes-toast__progress-clip" aria-hidden="true">
+  @for (revision of progressRevision(); track revision) {
+  <div
+    class="andes-toast__progress"
+    [class]="toast().classNames?.progress"
+    [style.animation-duration.ms]="progressMs"
+    [style]="toast().styles?.progress ?? null"
+  ></div>
+  }
+</div>
+}

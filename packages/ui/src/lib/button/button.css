@@ -27,6 +27,58 @@
       var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1));
 }
 
+/* Press feedback: while pressed the button scales a little and settles back with a short ease,
+   so a click is felt as well as seen. `--andes-button-press-scale` is the scale (0.98 by
+   default; a value above 1 grows the button instead), `-duration` and `-ease` shape the move.
+   Only with motion allowed. Nothing for a disabled or loading button (it cannot be pressed), a
+   link-style button (text) or one that opted out with `[pressScale]="false"`. */
+@media (prefers-reduced-motion: no-preference) {
+  .andes-button {
+    transition:
+      background-color var(--andes-motion-duration-fast, 0.1s)
+        var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1)),
+      color var(--andes-motion-duration-fast, 0.1s)
+        var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1)),
+      border-color var(--andes-motion-duration-fast, 0.1s)
+        var(--andes-motion-ease-out, cubic-bezier(0.215, 0.61, 0.355, 1)),
+      transform
+        var(
+          --andes-button-press-duration,
+          var(--andes-motion-duration-fast, 0.12s)
+        )
+        var(--andes-button-press-ease, cubic-bezier(0.24, 1, 0.4, 1));
+  }
+
+  /* prettier-ignore */
+  .andes-button:active:not(:disabled):not([data-disabled]):not(.andes-button--loading):not(.andes-button--link):not(.andes-button--no-press) {
+    transform: scale(var(--andes-button-press-scale, 0.98));
+  }
+}
+
+/* Elevation: a resting shadow for a floating button. */
+
+.andes-button--elevation-low {
+  box-shadow: var(--andes-shadow-sm);
+}
+
+.andes-button--elevation-medium {
+  box-shadow: var(--andes-shadow-md);
+}
+
+.andes-button--elevation-high {
+  box-shadow: var(--andes-shadow-lg);
+}
+
+/* The announcement of the busy state for a screen reader: present in the page, never seen. */
+.andes-button__status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* Projected icons (icon-start/icon-end/default content) keep their own encapsulation
    context, so a plain descendant selector can't reach them - ::ng-deep is the sanctioned
    way to size content Angular doesn't otherwise let this component's styles touch. Sizes
@@ -48,7 +100,9 @@
   opacity: 0.6;
 }
 
-.andes-button--invalid {
+/* Two classes so the danger border beats the variants' own border colour (outline, dashed...),
+   which are declared further down with one class each. */
+.andes-button.andes-button--invalid {
   border-color: var(--andes-color-danger);
 }
 

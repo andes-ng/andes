@@ -1,0 +1,36 @@
+/**
+ * Whether an element has scrolled completely out of sight: off the viewport, or out of a
+ * scrolling container it sits in. An element that is not laid out (zero size, or
+ * `display: none`) has nothing to measure and counts as visible.
+ *
+ * Shared by the option panel and the `+ N` overflow popover, which both close once the
+ * element they hang from is gone from view instead of floating over unrelated content.
+ */
+export function andesSelectScrolledOutOfView(
+  element: HTMLElement,
+  view: Window,
+): boolean {
+  const rect = element.getBoundingClientRect();
+  if (rect.width === 0 && rect.height === 0) {
+    return false;
+  }
+  if (rect.bottom <= 0 || rect.top >= view.innerHeight) {
+    return true;
+  }
+  const body = element.ownerDocument.body;
+  for (
+    let parent = element.parentElement;
+    parent && parent !== body;
+    parent = parent.parentElement
+  ) {
+    const overflow = view.getComputedStyle(parent).overflowY;
+    if (overflow === 'visible' || overflow === '') {
+      continue;
+    }
+    const clip = parent.getBoundingClientRect();
+    if (rect.bottom <= clip.top || rect.top >= clip.bottom) {
+      return true;
+    }
+  }
+  return false;
+}

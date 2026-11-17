@@ -1,0 +1,22 @@
+export { AndesPagination } from './pagination';
+export type {
+  AndesPaginationAlign,
+  AndesPaginationChange,
+  AndesPaginationClassNames,
+  AndesPaginationItem,
+  AndesPaginationItemRenderContext,
+  AndesPaginationItemType,
+  AndesPaginationLayout,
+  AndesPaginationOriginalItemContext,
+  AndesPaginationPart,
+  AndesPaginationShape,
+  AndesPaginationShowTotalFn,
+  AndesPaginationSimpleConfig,
+  AndesPaginationSize,
+  AndesPaginationSizeChange,
+  AndesPaginationSizeChangerContext,
+  AndesPaginationState,
+  AndesPaginationStyles,
+  AndesPaginationTotalContext,
+  AndesPaginationVariant,
+} from './pagination';

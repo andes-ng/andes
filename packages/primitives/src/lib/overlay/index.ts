@@ -6,6 +6,7 @@ export {
   ANDES_OVERLAY_DEFAULT_CONFIG,
   ANDES_OVERLAY_EXIT_TIMEOUT_MS,
   ANDES_OVERLAY_PANE_CLASS,
+  ANDES_OVERLAY_PLACED_SIDE_ATTRIBUTE,
   ANDES_OVERLAY_PRESETS,
   ANDES_OVERLAY_SCRIM,
   ANDES_OVERLAY_Z_INDEX_FALLBACKS,
@@ -32,8 +33,11 @@ export {
   andesConnectedPosition,
   andesConnectedPositions,
   andesImpliedSize,
+  andesPlacedSide,
   createAndesPositionStrategy,
 } from './overlay-positioning';
+
+export { andesOverlayStackedZIndex } from './overlay-stacking';
 
 export { AndesOverlayInertRegistry } from './overlay-inert';
 export type { AndesOverlayInertHandle } from './overlay-inert';

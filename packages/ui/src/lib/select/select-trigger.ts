@@ -1,0 +1,257 @@
+import {
+  AndesOverlayContentPrimitive,
+  AndesOverlayTriggerPrimitive,
+} from '@andes-ng/primitives';
+import { NgTemplateOutlet } from '@angular/common';
+import {
+  afterNextRender,
+  afterRenderEffect,
+  ChangeDetectionStrategy,
+  DestroyRef,
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  inject,
+  untracked,
+  viewChild,
+} from '@angular/core';
+import clsx from 'clsx';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideChevronDown, lucideCircleX, lucideX } from '@ng-icons/lucide';
+
+import { AndesSelectOverflow } from './select-overflow';
+import {
+  AndesSelectState,
+  type AndesSelectTag,
+  type AndesSelectTagContext,
+} from './select-state';
+import { andesMeasureTagFit } from './tag-overflow';
+
+/** Room kept free for the search input when tags are fitted to one row, in px. */
+const RESPONSIVE_SEARCH_RESERVE = 20;
+
+/**
+ * The closed-state control: a trigger box holding the selection (a value, or removable
+ * tags in `multiple`/`tags` mode), the combobox, and the clear/loading/chevron icons.
+ * Project an `<andes-select-value />` into it.
+ *
+ * The box itself is only the positioning anchor and the click target. The focusable
+ * `role="combobox"` element inside it is a `<button>`, or an `<input>` when the select is
+ * searchable, and every ARIA attribute lands on that element rather than on this host or
+ * the box, neither of which is focusable. Tag remove buttons and the clear button are its
+ * siblings, never its children: interactive content nested inside a `<button>` is invalid
+ * HTML and unreachable for assistive technology.
+ */
+@Component({
+  selector: 'andes-select-trigger',
+  viewProviders: [provideIcons({ lucideX, lucideCircleX, lucideChevronDown })],
+  imports: [
+    NgIcon,
+    AndesOverlayContentPrimitive,
+    AndesOverlayTriggerPrimitive,
+    AndesSelectOverflow,
+    NgTemplateOutlet,
+  ],
+  templateUrl: './select-trigger.html',
+  styleUrls: ['./select-trigger.css', './select-overflow.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '(document:click)': 'onDocumentClick($event)',
+  },
+})
+export class AndesSelectTrigger {
+  protected readonly select = inject(AndesSelectState);
+  private readonly destroyRef = inject(DestroyRef);
+
+  private readonly boxRef = viewChild.required<ElementRef<HTMLElement>>('box');
+  private readonly comboboxRef = viewChild<ElementRef<HTMLElement>>('combobox');
+  private readonly selectionRef =
+    viewChild.required<ElementRef<HTMLElement>>('selection');
+  private readonly measureRef = viewChild<ElementRef<HTMLElement>>('measure');
+
+  /** Whether tags are fitted to a single row (`maxTagCount="responsive"`). */
+  protected readonly responsive = computed(
+    () => this.select.responsiveTags() && this.select.isMultiple(),
+  );
+
+  protected readonly classes = computed(() =>
+    clsx(
+      'andes-select__trigger',
+      `andes-select__trigger--${this.select.resolvedSize()}`,
+      this.select.invalid() && 'andes-select__trigger--invalid',
+    ),
+  );
+
+  /** The user's own `aria-describedby`, plus the selection summary when there is one. */
+  protected readonly describedBy = computed(
+    () =>
+      [
+        this.select.describedBy(),
+        this.select.selectionSummary() ? this.select.summaryId : undefined,
+      ]
+        .filter(Boolean)
+        .join(' ') || null,
+  );
+
+  /**
+   * In single search mode the selected value (or placeholder) shows through the input
+   * until the user starts typing; in multiple search mode only the placeholder does, and
+   * only while there are no tags.
+   */
+  protected readonly showSearchGhost = computed(
+    () =>
+      this.select.searchValue() === '' &&
+      (!this.select.isMultiple() || !this.select.hasValue()),
+  );
+
+  constructor() {
+    effect(() =>
+      this.select.registerCombobox(this.comboboxRef()?.nativeElement ?? null),
+    );
+
+    // Tags wrapping onto a new row grow the box; an open panel has to follow it rather
+    // than stay where the box's bottom edge used to be. The same observer re-fits
+    // responsive tags when the box is resized.
+    afterNextRender(() => {
+      if (typeof ResizeObserver === 'undefined') {
+        return;
+      }
+      const observer = new ResizeObserver(() => {
+        this.select.repositionPanel();
+        this.fitTags();
+      });
+      observer.observe(this.boxRef().nativeElement);
+      this.destroyRef.onDestroy(() => observer.disconnect());
+    });
+
+    // Re-fit once the measuring row has rendered a changed set of tags.
+    afterRenderEffect(() => {
+      this.select.tags();
+      this.select.searchEnabled();
+      if (!this.responsive()) {
+        untracked(() => this.select.setResponsiveTagCount(null));
+        return;
+      }
+      this.measureRef();
+      untracked(() => this.fitTags());
+    });
+  }
+
+  /**
+   * Counts how many tags fit on the selection row next to the `+ N ...` tag (and the
+   * search input), from the widths in the measuring row. At least one tag stays visible;
+   * it shrinks and ellipsises when even that one is too wide. A row that has not been
+   * laid out (zero width) leaves every tag visible.
+   */
+  private fitTags(): void {
+    const measure = this.measureRef()?.nativeElement;
+    if (!this.responsive() || !measure) {
+      return;
+    }
+    const count = andesMeasureTagFit(
+      measure,
+      this.selectionRef().nativeElement,
+      this.select.searchEnabled() ? RESPONSIVE_SEARCH_RESERVE : 0,
+    );
+    if (count !== null) {
+      this.select.setResponsiveTagCount(count);
+    }
+  }
+
+  protected tagText(tag: AndesSelectTag): string {
+    const max = this.select.maxTagTextLength();
+    return max !== undefined && tag.label.length > max
+      ? `${tag.label.slice(0, max)}...`
+      : tag.label;
+  }
+
+  /** Native tooltip of the `+ N ...` tag (with `maxTagPopover` off): the labels it stands for. */
+  protected omittedTitle(omitted: readonly AndesSelectTag[]): string {
+    return omitted.map((tag) => tag.label).join(', ');
+  }
+
+  /** Context of a `tagTemplate` tag; `remove` is the popover's own removal, when in it. */
+  protected tagContext(
+    tag: AndesSelectTag,
+    remove?: (tag: AndesSelectTag) => void,
+  ): AndesSelectTagContext {
+    return {
+      $implicit: tag,
+      onClose: () => (remove ? remove(tag) : this.removeTag(tag)),
+      inPopover: !!remove,
+    };
+  }
+
+  protected onBoxClick(event: MouseEvent): void {
+    if (this.select.isDisabled()) {
+      return;
+    }
+    const combobox = this.comboboxRef()?.nativeElement;
+    this.select.focus();
+    // Clicking into the search input of an open panel places the caret; it must not
+    // close the panel under the user's pointer.
+    if (
+      this.select.searchEnabled() &&
+      this.select.isOpen() &&
+      event.target === combobox
+    ) {
+      return;
+    }
+    this.select.togglePointer(event);
+  }
+
+  /**
+   * A click on a `<label>` naming the combobox only focuses it, as it does a native
+   * `<select>`. Left alone, the browser would re-dispatch that click onto the combobox,
+   * where {@link onBoxClick} opens the panel. Clicks inside the box, or on a link or
+   * control inside the label, are not the label's own and pass through untouched.
+   */
+  protected onDocumentClick(event: MouseEvent): void {
+    const combobox = this.comboboxRef()?.nativeElement;
+    const target = event.target instanceof Element ? event.target : null;
+    const label = target?.closest('label');
+    if (
+      !combobox ||
+      !target ||
+      !label ||
+      label.control !== combobox ||
+      event.defaultPrevented ||
+      this.boxRef().nativeElement.contains(target)
+    ) {
+      return;
+    }
+    const interactive = target.closest(
+      'a[href], button, input, select, textarea',
+    );
+    if (interactive && label.contains(interactive)) {
+      return;
+    }
+    event.preventDefault();
+    if (!this.select.isDisabled()) {
+      this.select.focus();
+    }
+  }
+
+  /** Keeps focus in the search input when the box around it is pressed. */
+  protected onBoxMousedown(event: MouseEvent): void {
+    if (
+      this.select.searchEnabled() &&
+      event.target !== this.comboboxRef()?.nativeElement
+    ) {
+      event.preventDefault();
+    }
+  }
+
+  protected removeTag(tag: AndesSelectTag, event?: Event): void {
+    event?.stopPropagation();
+    this.select.removeValue(tag.value);
+    this.select.focus();
+  }
+
+  protected onClear(event: Event): void {
+    event.stopPropagation();
+    this.select.clear();
+    this.select.focus();
+  }
+}

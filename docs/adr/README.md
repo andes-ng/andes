@@ -10,5 +10,6 @@
 | [0006](0006-independent-package-releases.md)                    | Independent package releases             | Superseded in part by 0009 |
 | [0007](0007-specialized-components-through-adapter-packages.md) | Specialized components through adapters  | Proposed                   |
 | [0009](0009-lockstep-versions-and-release-candidates.md)        | Lockstep versions and release candidates | Accepted                   |
+| [0010](0010-controls-read-their-form-field-through-di.md)       | Controls read their form field via DI    | Proposed                   |
 
 ADRs are immutable after acceptance. A later decision supersedes an earlier ADR instead of rewriting its history.

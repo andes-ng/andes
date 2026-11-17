@@ -7,6 +7,8 @@ import {
   input,
   TemplateRef,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideChevronDown } from '@ng-icons/lucide';
 
 import { AndesAccordionItemState } from './accordion-item-state';
 import {
@@ -31,7 +33,8 @@ import {
  */
 @Component({
   selector: 'andes-accordion-trigger',
-  imports: [NgTemplateOutlet],
+  viewProviders: [provideIcons({ lucideChevronDown })],
+  imports: [NgIcon, NgTemplateOutlet],
   templateUrl: './accordion-trigger.html',
   styleUrl: './accordion-trigger.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

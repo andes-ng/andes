@@ -1,0 +1,417 @@
+/*
+ * The popover surface, in the slim language the toast and the alert share: a 12px by
+ * 16px padding (measured to the outer edge of the border, so the 1px border is taken out
+ * of it), an 8px radius, a soft layered shadow that follows the arrow too, and a neutral border a little softer than
+ * a form control's. Titles are 14px/20px, the text under them 13px/20px in the muted ink.
+ *
+ * Every visual property reads an `--andes-popover-*` custom property first and falls back
+ * to the theme tokens, so the panel can be restyled from CSS without an inline-style
+ * input. `--andes-popover-padding` sets both axes; `-padding-block` and `-padding-inline`
+ * set one each.
+ */
+.andes-popover-content {
+  --_pad-block: var(
+    --andes-popover-padding-block,
+    var(--andes-popover-padding, 0.75rem)
+  );
+  --_pad-inline: var(
+    --andes-popover-padding-inline,
+    var(--andes-popover-padding, 1rem)
+  );
+  /* What is left of the padding once the 1px border has taken its share. */
+  --_inset-block: max(0px, calc(var(--_pad-block) - 1px));
+  --_inset-inline: max(0px, calc(var(--_pad-inline) - 1px));
+  --_border: var(
+    --andes-popover-border-color,
+    color-mix(
+      in srgb,
+      var(--andes-color-border) 65%,
+      var(--andes-color-popover)
+    )
+  );
+  /* A filter, not a shadow on the box: a drop shadow follows the silhouette of the surface
+     together with the arrow that hangs off it (a box shadow only follows the rectangle, and a
+     `clip-path` clips the shadow of the arrow itself). `--andes-popover-shadow` is such a
+     filter list (`none` for no shadow). The same three soft layers as before,
+     as drop shadows (a blur radius here is about half a box blur, and there is no
+     spread). Each layer is faint, so the shadow of one layer's shadow is invisible. */
+  --_shadow: drop-shadow(0 6px 8px rgb(0 0 0 / 8%))
+    drop-shadow(0 2px 3px rgb(0 0 0 / 7%))
+    drop-shadow(0 9px 14px rgb(0 0 0 / 5%));
+  position: relative;
+  display: block;
+  box-sizing: border-box;
+  width: var(--andes-popover-width, auto);
+  min-width: var(--andes-popover-min-width, 8rem);
+  max-width: var(--andes-popover-max-width, min(24rem, calc(100vw - 1.5rem)));
+  padding: var(--_inset-block) var(--_inset-inline);
+  border-radius: var(--andes-popover-radius, var(--andes-radius-lg));
+  border: 1px solid var(--_border);
+  background-color: var(--andes-popover-background, var(--andes-color-popover));
+  color: var(--andes-popover-foreground, var(--andes-color-popover-foreground));
+  filter: var(--andes-popover-shadow, var(--_shadow));
+  /* The panel renders in the overlay container, outside the consumer's tree, so
+     it sets its own type instead of inheriting the page's 16px body text. */
+  font-family: var(--andes-font-family), sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  overflow-wrap: anywhere;
+  outline: none;
+  /* Motion: see the block below. */
+  opacity: 1;
+  translate: 0 0;
+  scale: 1;
+  transform-origin: var(--andes-popover-origin, var(--_along, 50%)) 0;
+  transition:
+    opacity var(--_duration) var(--_ease),
+    translate var(--_duration) var(--_ease),
+    scale var(--_duration) var(--_ease);
+}
+
+/* On the dark surface the border keeps its full strength and the shadow deepens. */
+[data-andes-theme='dark'] .andes-popover-content {
+  --_border: var(--andes-popover-border-color, var(--andes-color-border));
+  --_shadow: drop-shadow(0 6px 8px rgb(0 0 0 / 32%))
+    drop-shadow(0 2px 3px rgb(0 0 0 / 28%))
+    drop-shadow(0 9px 14px rgb(0 0 0 / 20%));
+}
+
+/* Motion. The panel is a plain panel with a transition on opacity, translate and scale, so
+   the same declarations run the entry (from `@starting-style`), the exit (while the overlay
+   marks it `data-andes-closing` and waits for the transition to end) and a reversal: a panel
+   that is re-opened during its exit turns around from wherever it has got to, instead of
+   starting over. The entry is a soft fade with a 6px drift from the trigger side and a
+   0.97 scale over 200ms on a long ease-out; the exit is the same moves, quicker (140ms) on a
+   gentle ease-in. The scale grows from the arrow's tip (the trigger's side, at the trigger's
+   position over the panel: measured by `AndesPopoverBase` as `--andes-popover-origin`, and
+   falling back to the alignment, mirrored under `dir=rtl`). Settable, per panel or globally:
+   `--andes-popover-duration`, `--andes-popover-exit-duration`, `--andes-popover-ease`,
+   `--andes-popover-exit-ease`, `--andes-popover-distance`, `--andes-popover-scale`. With
+   reduced motion there is no drift or scale, only an 80ms fade in, and no exit at all. */
+.andes-popover-content {
+  --_duration: var(--andes-popover-duration, 200ms);
+  --_exit-duration: var(--andes-popover-exit-duration, 140ms);
+  --_ease: var(--andes-popover-ease, cubic-bezier(0.16, 1, 0.3, 1));
+  --_exit-ease: var(--andes-popover-exit-ease, cubic-bezier(0.4, 0, 1, 1));
+  --_distance: var(--andes-popover-distance, 6px);
+  --_scale: var(--andes-popover-scale, 0.97);
+  --_from: 0 calc(var(--_distance) * -1);
+}
+
+.andes-popover-content[data-side='top'] {
+  --_from: 0 var(--_distance);
+  transform-origin: var(--andes-popover-origin, var(--_along, 50%)) 100%;
+}
+
+.andes-popover-content[data-side='left'] {
+  --_from: var(--_distance) 0;
+  transform-origin: 100% var(--andes-popover-origin, var(--_along, 50%));
+}
+
+.andes-popover-content[data-side='right'] {
+  --_from: calc(var(--_distance) * -1) 0;
+  transform-origin: 0 var(--andes-popover-origin, var(--_along, 50%));
+}
+
+/* Before the trigger's position is measured: the edge the alignment names. */
+.andes-popover-content[data-align='start'] {
+  --_along: 24px;
+}
+
+.andes-popover-content[data-align='end'] {
+  --_along: calc(100% - 24px);
+}
+
+.andes-popover-content[data-align='start']:dir(rtl) {
+  --_along: calc(100% - 24px);
+}
+
+.andes-popover-content[data-align='end']:dir(rtl) {
+  --_along: 24px;
+}
+
+@starting-style {
+  .andes-popover-content {
+    opacity: 0;
+    translate: var(--_from);
+    scale: var(--_scale);
+  }
+}
+
+[data-andes-closing] .andes-popover-content {
+  opacity: 0;
+  translate: var(--_from);
+  scale: var(--_scale);
+  transition:
+    opacity var(--_exit-duration) var(--_exit-ease),
+    translate var(--_exit-duration) var(--_exit-ease),
+    scale var(--_exit-duration) var(--_exit-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .andes-popover-content {
+    --_distance: 0px;
+    --_scale: 1;
+    --_duration: 80ms;
+    --_exit-duration: 0ms;
+  }
+}
+
+/* `color`: a preset swaps in a token pair; any color paints the background and
+   picks black or white text from its OKLCH lightness (relative color syntax;
+   browsers without it keep the white fallback). The border and arrow take the
+   background so the panel reads as one solid shape. */
+.andes-popover-content[data-color] {
+  --andes-popover-border-color: var(--andes-popover-background);
+  --andes-popover-muted-foreground: color-mix(
+    in srgb,
+    currentColor 80%,
+    transparent
+  );
+}
+
+.andes-popover-content[data-color='primary'] {
+  --andes-popover-background: var(--andes-color-primary);
+  --andes-popover-foreground: var(--andes-color-primary-foreground);
+}
+
+.andes-popover-content[data-color='secondary'] {
+  --andes-popover-background: var(--andes-color-secondary);
+  --andes-popover-foreground: var(--andes-color-secondary-foreground);
+}
+
+/* Body text is 14px, so every preset has to clear 4.5:1. White on the base success
+   green measures 3.3:1 and on the base info blue 4.1:1, so those fills are deepened
+   locally (4.9:1, 5.4:1); dark amber on the warning fill measures 4.2:1, so its text
+   is deepened instead (5.9:1). Mixed from the tokens rather than taken from their
+   -hover/-active steps, which turn lighter in the dark theme. */
+.andes-popover-content[data-color='success'] {
+  --andes-popover-background: color-mix(
+    in srgb,
+    var(--andes-color-success) 80%,
+    #000
+  );
+  --andes-popover-foreground: var(--andes-color-success-foreground);
+}
+
+.andes-popover-content[data-color='warning'] {
+  --andes-popover-background: var(--andes-color-warning);
+  --andes-popover-foreground: color-mix(
+    in srgb,
+    var(--andes-color-warning-foreground) 70%,
+    #000
+  );
+}
+
+.andes-popover-content[data-color='danger'] {
+  --andes-popover-background: var(--andes-color-danger);
+  --andes-popover-foreground: var(--andes-color-danger-foreground);
+}
+
+.andes-popover-content[data-color='info'] {
+  --andes-popover-background: color-mix(
+    in srgb,
+    var(--andes-color-info) 85%,
+    #000
+  );
+  --andes-popover-foreground: var(--andes-color-info-foreground);
+}
+
+.andes-popover-content[data-color='custom'] {
+  color: #fff;
+  color: oklch(
+    from var(--andes-popover-background) clamp(0, (0.65 - l) * 1000, 1) 0 0
+  );
+}
+
+/* Structured parts: rendered from the `title` / `content` inputs, or composed by
+   the consumer with `[andesPopoverHeader]` / `[andesPopoverTitle]` /
+   `[andesPopoverDescription]`. The title class is shared by both paths so they
+   look the same; `margin: 0` and the inherited size undo the user-agent styles
+   of the heading and paragraph elements the parts are usually put on. */
+.andes-popover-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.andes-popover-header:not(:last-child) {
+  margin-bottom: var(--andes-space-2);
+}
+
+.andes-popover-title {
+  margin: 0;
+  /* A 14px/20px medium title, the same as the toast's and the alert's. */
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+}
+
+.andes-popover-description {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  color: var(
+    --andes-popover-muted-foreground,
+    var(--andes-color-muted-foreground)
+  );
+}
+
+.andes-popover-description:not(:last-child) {
+  margin-bottom: var(--andes-space-2);
+}
+
+.andes-popover-title:not(:last-child) {
+  margin-bottom: 0.125rem;
+}
+
+/* Everything below the title: the `content` body and any projected children. With
+   nothing in it (a title-only panel) it takes no room at all. */
+.andes-popover-scroll:empty {
+  display: none;
+}
+
+/* Under a title the body steps back to 13px in the muted foreground, so the title
+   leads. Presets supply their own muted ink (the panel's text at 80%). */
+.andes-popover-title + .andes-popover-scroll > .andes-popover-body {
+  font-size: 0.8125rem;
+  color: var(
+    --andes-popover-muted-foreground,
+    var(--andes-color-muted-foreground)
+  );
+}
+
+.andes-popover-body:not(:last-child) {
+  margin-bottom: var(--andes-space-2);
+}
+
+/* Inside the header its gap does the spacing. */
+.andes-popover-header > .andes-popover-title,
+.andes-popover-header > .andes-popover-description {
+  margin-bottom: 0;
+}
+
+/* `maxHeight`: the surface becomes a column capped at the given height and only
+   the region below the title scrolls. The surface keeps `overflow: visible`, so
+   the arrow that hangs off its edge is never clipped. The region is pulled out
+   over the surface padding (and padded back in), so its scrollbar sits on the
+   panel's edge instead of floating inside the gutter, and a focus ring on a control
+   near the edge is not cut off by the scroll clip. */
+.andes-popover-content[data-scrollable] {
+  display: flex;
+  flex-direction: column;
+  max-height: var(--andes-popover-max-height);
+}
+
+.andes-popover-content[data-scrollable] > .andes-popover-scroll {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin-inline: calc(var(--_inset-inline) * -1);
+  margin-block-end: calc(var(--_inset-block) * -1);
+  padding-inline: var(--_inset-inline);
+  padding-block-end: var(--_inset-block);
+  /* Clipped to the surface's inner curve (its radius less the 1px border). */
+  border-end-start-radius: calc(
+    var(--andes-popover-radius, var(--andes-radius-lg)) - 1px
+  );
+  border-end-end-radius: calc(
+    var(--andes-popover-radius, var(--andes-radius-lg)) - 1px
+  );
+}
+
+/* prettier-ignore */
+.andes-popover-content[data-scrollable] > .andes-popover-scroll--flush-top {
+  margin-block-start: calc(var(--_inset-block) * -1);
+  padding-block-start: var(--_inset-block);
+  border-start-start-radius: calc(
+    var(--andes-popover-radius, var(--andes-radius-lg)) - 1px
+  );
+  border-start-end-radius: calc(
+    var(--andes-popover-radius, var(--andes-radius-lg)) - 1px
+  );
+}
+
+/* The region is a tab stop while it scrolls, so keyboard users can reach and scroll
+   long text that has no control of its own. */
+.andes-popover-scroll:focus-visible {
+  outline: 2px solid var(--andes-color-focus-ring);
+  outline-offset: -2px;
+}
+
+/* While the content swaps (a hover preview pinned by a click) the surface clips its content
+   as it changes height; the margin keeps the arrow outside it from being cut. */
+.andes-popover-content[data-swapping] {
+  overflow: clip;
+  overflow-clip-margin: 1rem;
+}
+
+/* Host for template content moved in by `AndesPopoverOutlet`. */
+.andes-popover-slot {
+  display: contents;
+}
+
+/* Arrow: a wide, shallow chevron - 24px across including its shoulders, 8px tall, a slope of
+   about 40 degrees - with a softly rounded tip (2.5px radius) and concave shoulders (4.5px
+   radius) that blend into the panel edge, so the edge flows into the arrow with no corner and
+   no step. It is two stacked layers cut with `clip-path: path()`: the element itself is the
+   outline in the border colour, and its `::before` is the fill, the same shape inset by 1px
+   (tip radius 1.5px, shoulder radius 5.5px, same centres). Both layers run 1px past the base
+   line, into the panel's own 1px border, so the panel border continues into the outline and
+   the fill erases the border line across the base: one silhouette, no seam. The geometry is
+   drawn pointing up (apex at the top, base line 8px down) and rotated about the centre of that
+   base line for the other sides, in whole 90 degree turns, so every coordinate stays on whole
+   pixels. The offset along the edge (`--andes-popover-arrow-offset`, measured by
+   `AndesPopoverBase`, snapped to whole device pixels) is where the arrow's centre sits;
+   without it the arrow is centred. The base sits exactly on the surface's outer border edge:
+   the surface's own 1px border plus the arrow's 8px of height reach out towards the trigger,
+   and the panel is placed 6px further out than that, so the tip never touches the trigger. The
+   surface must not clip it: nothing on the surface sets `overflow` except while the content
+   swaps (`overflow-clip-margin` keeps the arrow then). Reads `--_border` and the panel
+   background, so presets and custom colours give a solid arrow. */
+.andes-popover-arrow {
+  position: absolute;
+  box-sizing: border-box;
+  width: 24px;
+  height: 9px;
+  background-color: var(--_border);
+  clip-path: path(
+    'M 0 9 L 0 8 A 4.5 4.5 0 0 0 2.911 6.932 L 10.383 0.594 A 2.5 2.5 0 0 1 13.617 0.594 L 21.089 6.932 A 4.5 4.5 0 0 0 24 8 L 24 9 Z'
+  );
+  transform-origin: 12px 8px;
+  pointer-events: none;
+}
+
+.andes-popover-arrow::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: var(--andes-popover-background, var(--andes-color-popover));
+  clip-path: path(
+    'M 0 9 A 5.5 5.5 0 0 0 3.558 7.694 L 11.03 1.356 A 1.5 1.5 0 0 1 12.97 1.356 L 20.442 7.694 A 5.5 5.5 0 0 0 24 9 Z'
+  );
+}
+
+.andes-popover-arrow[data-side='bottom'] {
+  top: -9px;
+  left: calc(var(--andes-popover-arrow-offset, 50%) - 12px);
+}
+
+.andes-popover-arrow[data-side='top'] {
+  bottom: -2px;
+  left: calc(var(--andes-popover-arrow-offset, 50%) - 12px);
+  transform: rotate(180deg);
+}
+
+.andes-popover-arrow[data-side='right'] {
+  left: -13px;
+  top: calc(var(--andes-popover-arrow-offset, 50%) - 8px);
+  transform: rotate(-90deg);
+}
+
+.andes-popover-arrow[data-side='left'] {
+  right: -13px;
+  top: calc(var(--andes-popover-arrow-offset, 50%) - 8px);
+  transform: rotate(90deg);
+}

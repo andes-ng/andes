@@ -18,6 +18,13 @@ const withTheme: Decorator = (story, context) => {
   } else {
     document.documentElement.removeAttribute('data-andes-theme');
   }
+  // A story that sets `parameters.dir: 'rtl'` runs under a right-to-left document, as an RTL
+  // app would: overlays (menus, panels) read the document direction, not a wrapper's `dir`.
+  if (context.parameters['dir'] === 'rtl') {
+    document.documentElement.setAttribute('dir', 'rtl');
+  } else {
+    document.documentElement.removeAttribute('dir');
+  }
   document.body.style.backgroundColor =
     theme === 'dark' ? '#0f172a' : '#ffffff';
   // Demo text in the theme's own foreground, or captions/logs stay black on the dark canvas;

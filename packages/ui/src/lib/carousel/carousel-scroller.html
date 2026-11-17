@@ -1,0 +1,51 @@
+@if (showPrev()) {
+<button
+  type="button"
+  class="andes-carousel-scroller__arrow andes-carousel-scroller__arrow--previous"
+  data-slot="carousel-scroller-previous"
+  [attr.aria-label]="resolvedLabels().previous"
+  (click)="onArrow(-1)"
+>
+  <ng-icon
+    class="andes-carousel-scroller__chevron"
+    name="lucideChevronLeft"
+    aria-hidden="true"
+  />
+</button>
+}
+
+<!-- A scroll container that overflows has to be reachable without a pointer, so it is a tab
+     stop only while there is something to scroll to; while everything fits it only takes
+     programmatic focus. -->
+<div
+  #viewport
+  class="andes-carousel-scroller__viewport"
+  data-slot="carousel-scroller-viewport"
+  role="group"
+  [attr.tabindex]="overflowing() ? 0 : -1"
+  [attr.aria-label]="resolvedLabels().slides"
+  (scroll)="onScroll()"
+  (keydown)="onKeydown($event)"
+  (pointerdown)="onPointerDown($event)"
+  (pointermove)="onPointerMove($event)"
+  (pointerup)="onPointerEnd($event)"
+  (pointercancel)="onPointerEnd($event)"
+>
+  <ng-content />
+</div>
+
+@if (showNext()) {
+<button
+  type="button"
+  class="andes-carousel-scroller__arrow andes-carousel-scroller__arrow--next"
+  data-slot="carousel-scroller-next"
+  [attr.aria-label]="resolvedLabels().next"
+  (click)="onArrow(1)"
+>
+  <ng-icon
+    class="andes-carousel-scroller__chevron"
+    name="lucideChevronRight"
+    aria-hidden="true"
+  />
+</button>
+}

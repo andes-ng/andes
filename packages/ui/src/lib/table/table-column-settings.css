@@ -1,0 +1,97 @@
+:host {
+  display: inline-block;
+  font-family: var(--andes-font-family), sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.375rem;
+}
+
+/* The panel is the library popover; its content is drawn in the overlay layer, so every
+   rule below reaches it through the classes of this component's own template. */
+.andes-table-column-settings__panel {
+  /* The popover's own surface padding is taken to zero: the list and the footer set theirs. */
+  --andes-popover-padding: 0;
+  --andes-popover-min-width: 13rem;
+
+  display: block;
+}
+
+.andes-table-column-settings__list {
+  max-height: 20rem;
+  margin: 0;
+  padding: var(--andes-space-1);
+  overflow-y: auto;
+  list-style: none;
+}
+
+.andes-table-column-settings__item {
+  display: flex;
+  align-items: center;
+  gap: var(--andes-space-1);
+  min-height: 1.75rem;
+  padding-inline: var(--andes-space-2) var(--andes-space-1);
+  border-radius: 0.375rem;
+  transition: background-color 150ms ease;
+}
+
+.andes-table-column-settings__item:hover {
+  background-color: var(--andes-color-accent);
+}
+
+.andes-table-column-settings__check {
+  flex: 1;
+  min-width: 0;
+}
+
+.andes-table-column-settings__pin--on .andes-table-column-settings__arrow {
+  color: var(--andes-color-primary-text);
+}
+
+/* The icons of the pin and move buttons: lucide, a touch heavier than the default stroke. */
+.andes-table-column-settings__arrow {
+  display: inline-flex;
+  width: 1rem;
+  height: 1rem;
+  --ng-icon__stroke-width: 2.5;
+}
+
+.andes-table-column-settings__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 var(--andes-space-1);
+  padding: var(--andes-space-2) var(--andes-space-1);
+  border-top: 1px solid var(--andes-color-border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .andes-table-column-settings__item {
+    transition: none;
+  }
+}
+
+/* Every icon button of the table (the library's ghost button, 24px square): its host is a flex
+   box the size of the button, with no line box around it, so the glyph centres in the button and
+   the button on the line of its neighbours. At rest it is transparent; only a soft tint shows on
+   hover. */
+.andes-table-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  vertical-align: middle;
+}
+
+.andes-table-icon-button ::ng-deep ng-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.andes-table-icon-button
+  ::ng-deep
+  .andes-button--ghost:hover:not(:disabled):not([data-disabled]) {
+  background-color: color-mix(
+    in srgb,
+    var(--andes-color-accent) 55%,
+    transparent
+  );
+}

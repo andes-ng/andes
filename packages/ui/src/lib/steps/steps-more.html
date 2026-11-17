@@ -1,0 +1,41 @@
+<div class="andes-step__head">
+  <andes-popover trigger="click" side="bottom" align="start" [content]="list">
+    <button
+      andesPopoverTrigger
+      type="button"
+      class="andes-step__trigger"
+      [attr.aria-label]="label()"
+    >
+      <span class="andes-step__marker" aria-hidden="true">
+        <ng-icon class="andes-step__glyph" name="lucideEllipsis" />
+      </span>
+    </button>
+  </andes-popover>
+  <span class="andes-step__tail" aria-hidden="true"
+    ><span class="andes-step__rail"></span
+  ></span>
+</div>
+
+<ng-template #list let-close="close">
+  <ol class="andes-step__more-list" [attr.aria-label]="label()">
+    @for (entry of entries(); track entry.index) {
+    <li class="andes-step__more-item" [attr.data-status]="entry.status">
+      @if (parent.clickable()) {
+      <button
+        type="button"
+        class="andes-step__more-entry"
+        (click)="pick(entry.index, close)"
+      >
+        <span class="andes-step__more-title">{{ entry.title }}</span>
+        <span class="andes-step__sr">, {{ statusLabel(entry.status) }}</span>
+      </button>
+      } @else {
+      <span class="andes-step__more-entry">
+        <span class="andes-step__more-title">{{ entry.title }}</span>
+        <span class="andes-step__sr">, {{ statusLabel(entry.status) }}</span>
+      </span>
+      }
+    </li>
+    }
+  </ol>
+</ng-template>

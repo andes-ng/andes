@@ -1,0 +1,20 @@
+<ng-content />
+@for (option of normalizedOptions(); track option.value; let index = $index) {
+<andes-checkbox
+  [value]="option.value"
+  [disabled]="option.disabled"
+  [variant]="option.variant"
+  [attr.title]="option.title ?? null"
+  [class]="option.className ?? ''"
+  [style]="option.style ?? null"
+>
+  @if (optionLabel(); as custom) {
+  <ng-container
+    [ngTemplateOutlet]="custom.template"
+    [ngTemplateOutletContext]="{ $implicit: option, index: index }"
+  />
+  } @else { {{ option.label }} } @if (option.description) {
+  <span slot="description">{{ option.description }}</span>
+  }
+</andes-checkbox>
+}

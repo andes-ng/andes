@@ -1,0 +1,1230 @@
+import {
+  andesOverlayPreset,
+  AndesOverlayPrimitive,
+  type AndesOverlayAlign,
+  type AndesOverlayAutoFocus,
+  type AndesOverlayCloseReason,
+  type AndesOverlayConfig,
+  type AndesOverlayRole,
+  type AndesOverlaySide,
+} from '@andes-ng/primitives';
+import { OverlayContainer } from '@angular/cdk/overlay';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import {
+  afterNextRender,
+  booleanAttribute,
+  computed,
+  DestroyRef,
+  Directive,
+  DOCUMENT,
+  effect,
+  inject,
+  Injector,
+  input,
+  linkedSignal,
+  model,
+  numberAttribute,
+  output,
+  signal,
+  untracked,
+  ViewContainerRef,
+  type EmbeddedViewRef,
+  type Signal,
+  type TemplateRef,
+} from '@angular/core';
+
+import {
+  AndesPopoverOverlayContainer,
+  resolveAndesPopoverContainer,
+} from './popover-container';
+import {
+  ANDES_POPOVER_DEFAULT_HOVER_DELAY,
+  ANDES_POPOVER_PLACEMENTS,
+  ANDES_POPOVER_PRESET_COLORS,
+  andesPopoverStyleObject,
+  type AndesPopoverChangeSource,
+  type AndesPopoverClassNamesInput,
+  type AndesPopoverContainer,
+  type AndesPopoverContentInput,
+  type AndesPopoverMode,
+  type AndesPopoverOpenChange,
+  type AndesPopoverPlacement,
+  type AndesPopoverPresetColor,
+  type AndesPopoverRenderable,
+  type AndesPopoverSemanticInfo,
+  type AndesPopoverSemanticPart,
+  type AndesPopoverStylesInput,
+  type AndesPopoverTemplateContext,
+  type AndesPopoverTriggerAction,
+} from './popover-types';
+
+/** How the panel was opened - decides whether it may move focus. */
+type AndesPopoverOpenSource = 'click' | 'hover' | 'focus' | 'programmatic';
+
+/** Resolves a `title`/`content`/`description` input: a function is called, the rest is kept. */
+export function andesPopoverRenderable(
+  value: AndesPopoverContentInput,
+  context: AndesPopoverTemplateContext,
+): AndesPopoverRenderable | null | undefined {
+  return typeof value === 'function' ? value(context) : value;
+}
+
+interface FocusPolicy {
+  readonly autoFocus: AndesOverlayAutoFocus;
+  readonly restoreFocus: boolean;
+}
+
+const OPPOSITE_SIDE: Readonly<Record<AndesOverlaySide, AndesOverlaySide>> = {
+  top: 'bottom',
+  bottom: 'top',
+  left: 'right',
+  right: 'left',
+};
+
+/** Half the width of the arrow's footprint, shoulders included (px). */
+const ARROW_HALF_WIDTH = 12;
+/** Room kept between the arrow's footprint and the rounded corner next to it (px). */
+const ARROW_CORNER_GAP = 4;
+/** The default corner radius (px), which the arrow's inset from an edge clears. */
+const DEFAULT_RADIUS = 8;
+/** Distance, in px, from a panel edge to the arrow's center for `start`/`end` alignment. */
+const ARROW_EDGE_INSET = DEFAULT_RADIUS + ARROW_HALF_WIDTH + ARROW_CORNER_GAP;
+/** The arrow never points closer than this (px) to the trigger's own edges. */
+const ARROW_ANCHOR_INSET = 8;
+/** Mirrors the overlay primitive's default `viewportMargin`. */
+const VIEWPORT_MARGIN = 8;
+
+/** The controls a pinned panel can hand focus to. */
+const PANEL_FOCUSABLE_SELECTOR =
+  'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
+
+/** How far the arrow reaches out of the panel edge (px). */
+const ARROW_HEIGHT = 8;
+/** Default clear space between the trigger and the arrow's tip (px). */
+const DEFAULT_ARROW_GAP = 6;
+/** Default distance between the trigger and a panel without an arrow (px). */
+const DEFAULT_PLAIN_GAP = 8;
+
+/** A number is px, a string any CSS length; empty is `null`. */
+function cssLength(value: number | string | null | undefined): string | null {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+  return typeof value === 'number' ? `${value}px` : value;
+}
+
+function changeSourceOf(
+  reason: AndesOverlayCloseReason,
+): AndesPopoverChangeSource {
+  return reason === 'escape-key' ||
+    reason === 'outside-click' ||
+    reason === 'close-button'
+    ? reason
+    : 'imperative';
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
+/**
+ * Everything `AndesPopover` and `AndesPopconfirm` have in common: placement, the
+ * trigger modes, hover timing, collision handling, the arrow, focus policy and the
+ * keep-alive cache for template content. Each subclass provides one overlay
+ * (`provideAndesOverlay()`), registers itself under this class as a DI token, and
+ * supplies the panel template.
+ *
+ * `AndesPopoverTrigger`, `AndesPopoverContent` and `AndesPopoverOutlet` inject this
+ * class rather than a concrete component, so both components share them.
+ */
+@Directive()
+export abstract class AndesPopoverBase {
+  protected readonly overlay = inject(AndesOverlayPrimitive);
+  private readonly viewContainerRef = inject(ViewContainerRef);
+  private readonly document = inject(DOCUMENT);
+  private readonly injector = inject(Injector);
+  private readonly scopedContainer = (() => {
+    const container = inject(OverlayContainer);
+    return container instanceof AndesPopoverOverlayContainer ? container : null;
+  })();
+
+  /** The `<ng-template>` rendered into the overlay. */
+  protected abstract readonly panelTemplate: Signal<
+    TemplateRef<unknown> | undefined
+  >;
+
+  /** ARIA role of the panel. `dialog` for Popover; Popconfirm overrides it. */
+  protected readonly panelRole: AndesOverlayRole = 'dialog';
+
+  /**
+   * Single-value shorthand for `side` + `align` (`'bottomLeft'` = `side="bottom"
+   * align="start"`). Takes precedence over `side`/`align` when set.
+   */
+  readonly placement = input<AndesPopoverPlacement | undefined>(undefined);
+  /** Side of the trigger the panel prefers to render on. Default `'bottom'`. */
+  readonly side = input<AndesOverlaySide>('bottom');
+  /** Alignment along that side. Default `'center'`. */
+  readonly align = input<AndesOverlayAlign>('center');
+  /**
+   * Distance in px from the trigger to the panel. By default it follows the arrow: with
+   * `showArrow` the panel sits the arrow's 8px of height plus 6px of air from the trigger
+   * (14px), so the tip never touches it; without an arrow the panel sits 8px away. The air
+   * can be set for every panel with the `--andes-popover-gap` custom property (the clear
+   * space between the trigger and the arrow tip, or the panel's edge without an arrow); a
+   * number here replaces both and is the whole distance to the panel.
+   */
+  readonly sideOffset = input<number | undefined>(undefined);
+  /** Extra px offset along the alignment axis. Default `0`. */
+  readonly alignOffset = input(0);
+  /** Renders a small pointer element on the panel, on the anchored side. Default `false`. */
+  readonly showArrow = input(false, { transform: booleanAttribute });
+  /**
+   * Shifts `start`/`end`-aligned panels so the arrow points at the trigger's
+   * center rather than near its edge.
+   * Only meaningful with `showArrow`. Default `false`.
+   */
+  readonly arrowPointAtCenter = input(false, { transform: booleanAttribute });
+  /**
+   * Flip to the opposite side when the preferred one does not fit in the
+   * viewport, and shift along the cross axis to stay on screen. Default `true`.
+   */
+  readonly autoAdjustOverflow = input(true, { transform: booleanAttribute });
+  /**
+   * What opens the panel: `'click'`, `'hover'`, `'focus'`, `'contextMenu'`, or an
+   * array combining several. Default `'click'`.
+   */
+  readonly trigger = input<
+    AndesPopoverTriggerAction | readonly AndesPopoverTriggerAction[]
+  >('click');
+  /** Hover-trigger delay in ms before opening. Default `100`. */
+  readonly openDelay = input(ANDES_POPOVER_DEFAULT_HOVER_DELAY, {
+    transform: numberAttribute,
+  });
+  /** Hover-trigger delay in ms before closing once the pointer leaves. Default `100`. */
+  readonly closeDelay = input(ANDES_POPOVER_DEFAULT_HOVER_DELAY, {
+    transform: numberAttribute,
+  });
+  /** Never opens while set; closes if already open. Default `false`. */
+  readonly disabled = input(false, { transform: booleanAttribute });
+  /**
+   * Destroy template content (`title`/`content`/`description` passed as a
+   * `TemplateRef`) on close instead of keeping its view alive for the next open.
+   * Default `false`. Projected `<andes-popover-content>` children are created by
+   * the consumer's template and always keep their state.
+   */
+  readonly destroyOnHidden = input(false, { transform: booleanAttribute });
+  /** Explicit stacking order, overriding the `--andes-z-index-popover` layer. */
+  readonly zIndex = input<number | undefined>(undefined);
+  /**
+   * Extra classes on the overlay pane - the hook for scoping the
+   * `--andes-popover-*` custom properties to one instance.
+   */
+  readonly panelClass = input<string | readonly string[] | null>(null);
+  /**
+   * Panel background: a semantic preset (`primary`, `success`, `danger`, ...)
+   * or any CSS color. Text follows automatically - the preset's `-foreground`
+   * token, or black/white by lightness for a custom color - and the border and
+   * arrow match the background. Default: the regular popover surface.
+   */
+  readonly color = input<
+    AndesPopoverPresetColor | (string & {}) | null | undefined
+  >(undefined);
+
+  /**
+   * Caps the panel's height and scrolls what lies below the title once the content
+   * outgrows it: a number is taken as px, a string as any CSS length
+   * (`'50vh'`, `'20rem'`). The title stays pinned and the arrow is never clipped,
+   * because only the inner body region scrolls - the surface itself keeps
+   * `overflow: visible`. Default: no cap, the panel grows with its content.
+   */
+  readonly maxHeight = input<number | string | null | undefined>(undefined);
+
+  /** {@link maxHeight} as a CSS length, or `null` when the panel is uncapped. */
+  readonly panelMaxHeight = computed(() => {
+    const value = this.maxHeight();
+    if (value === null || value === undefined || value === '') {
+      return null;
+    }
+    return typeof value === 'number' ? `${value}px` : value;
+  });
+
+  /** Panel width: a number is taken as px, a string as any CSS length. Default: fits the content. */
+  readonly width = input<number | string | null | undefined>(undefined);
+  /**
+   * Widest the panel may grow before its text wraps: a number is px, a string any CSS
+   * length. Default `24rem`, and never wider than the viewport.
+   */
+  readonly maxWidth = input<number | string | null | undefined>(undefined);
+  /**
+   * Where the panel is drawn: an element, an `ElementRef`, a CSS selector or a function
+   * returning one. The panel then lives inside it (so a theme scope, `dir` or shadow root
+   * on that element applies) but is still positioned against the viewport, so the element
+   * must not have a `transform` or `filter`. Default: the page-wide overlay layer.
+   */
+  readonly container = input<AndesPopoverContainer>(null);
+  /** Extra classes for the panel's parts (an object, or a function of the panel's props). */
+  readonly classNames = input<AndesPopoverClassNamesInput | null | undefined>(
+    null,
+  );
+  /** Inline styles for the panel's parts (an object, or a function of the panel's props). */
+  readonly styles = input<AndesPopoverStylesInput | null | undefined>(null);
+  /** Escape closes the panel. Default `true`. */
+  readonly closeOnEscape = input(true, { transform: booleanAttribute });
+  /** A press outside the panel and its trigger closes it. Default `true`. */
+  readonly closeOnOutsideClick = input(true, { transform: booleanAttribute });
+  /**
+   * Where focus goes when a click, context-menu or programmatic open draws the panel:
+   * the first tabbable element in it (`'first-tabbable'`, default), the panel itself
+   * (`'container'`) or nowhere (`'none'`). Hover and focus opens never move focus.
+   */
+  readonly autoFocus = input<AndesOverlayAutoFocus>('first-tabbable');
+  /** Returns focus to the trigger when a click-opened panel closes. Default `true`. */
+  readonly restoreFocus = input(true, { transform: booleanAttribute });
+
+  /** {@link width} as a CSS length. */
+  readonly panelWidth = computed(() => cssLength(this.width()));
+  /** {@link maxWidth} as a CSS length. */
+  readonly panelMaxWidth = computed(() => cssLength(this.maxWidth()));
+
+  /** `data-color` of the panel: the preset name, `'custom'`, or `null`. */
+  readonly colorAttribute = computed(() => {
+    const color = this.color();
+    if (!color) {
+      return null;
+    }
+    return (ANDES_POPOVER_PRESET_COLORS as readonly string[]).includes(color)
+      ? color
+      : 'custom';
+  });
+
+  /** The custom (non-preset) background, written to `--andes-popover-background`. */
+  readonly customColor = computed(() =>
+    this.colorAttribute() === 'custom' ? (this.color() ?? null) : null,
+  );
+
+  private readonly semanticInfo = computed<AndesPopoverSemanticInfo>(() => ({
+    props: {
+      placement: this.placement(),
+      side: this.preferredSide(),
+      align: this.resolvedAlign(),
+      showArrow: this.showArrow(),
+      color: this.color() ?? null,
+      open: this.open(),
+    },
+  }));
+
+  private readonly partClassNames = computed(() => {
+    const value = this.classNames();
+    const resolved =
+      typeof value === 'function' ? value(this.semanticInfo()) : value;
+    return resolved ?? {};
+  });
+
+  private readonly partStyles = computed(() => {
+    const value = this.styles();
+    const resolved =
+      typeof value === 'function' ? value(this.semanticInfo()) : value;
+    return resolved ?? {};
+  });
+
+  /** Extra classes for one part, from `classNames`. */
+  partClass(part: AndesPopoverSemanticPart): string | null {
+    const value = this.partClassNames()[part];
+    if (!value) {
+      return null;
+    }
+    return typeof value === 'string' ? value : value.join(' ');
+  }
+
+  /** Inline styles for one part, from `styles`. */
+  partStyle(part: AndesPopoverSemanticPart): Record<string, string> | null {
+    return andesPopoverStyleObject(this.partStyles()[part]);
+  }
+
+  /**
+   * Open state. Two-way bindable for controlled usage; uncontrolled otherwise.
+   * Its `openChange` output fires whenever the component itself changes the
+   * state (trigger, Escape, outside click, confirm/cancel) - not when the parent
+   * writes `[open]`.
+   */
+  readonly open = model(false);
+
+  /**
+   * Whether the panel starts open, for one that is not controlled with `open`. Read once,
+   * when the panel first renders.
+   */
+  readonly defaultOpen = input(false, { transform: booleanAttribute });
+
+  /**
+   * Fires with the new state and what caused it whenever the user (or `show()`,
+   * `close()`, `toggle()`) opens or closes the panel: the counterpart of `openChange`,
+   * which only carries the state. Not fired for a change made by writing `open`.
+   */
+  readonly openChangeDetail = output<AndesPopoverOpenChange>();
+
+  /** The side requested through `placement` or `side`. */
+  readonly preferredSide = computed(() => {
+    const placement = this.placement();
+    return placement ? ANDES_POPOVER_PLACEMENTS[placement].side : this.side();
+  });
+
+  /** The alignment requested through `placement` or `align`. */
+  readonly resolvedAlign = computed(() => {
+    const placement = this.placement();
+    return placement ? ANDES_POPOVER_PLACEMENTS[placement].align : this.align();
+  });
+
+  private readonly _resolvedSide = linkedSignal(() => this.preferredSide());
+  /** The side the panel actually renders on, after any collision flip. */
+  readonly resolvedSide = this._resolvedSide.asReadonly();
+
+  private readonly _originOffset = signal<number | null>(null);
+  /**
+   * Where the motion grows from, in px along the panel's cross axis: the trigger's
+   * position over the panel, measured once the panel is laid out. `null` until then,
+   * when the CSS falls back to the alignment.
+   */
+  readonly originOffset = this._originOffset.asReadonly();
+
+  private readonly _arrowOffset = signal<number | null>(null);
+  /**
+   * Arrow position in px along the panel's cross axis, measured so it keeps
+   * pointing at the trigger after a flip or shift. `null` = CSS default (center).
+   */
+  readonly arrowOffset = this._arrowOffset.asReadonly();
+
+  /** Header rendered by the shared panel shell above its projected content. */
+  readonly panelTitle: Signal<AndesPopoverRenderable | null | undefined> =
+    signal(null);
+  /** Body rendered by the shared panel shell, below the header. */
+  readonly panelBody: Signal<AndesPopoverRenderable | null | undefined> =
+    signal(null);
+  /** `aria-labelledby` of the panel. */
+  readonly panelLabelledBy: Signal<string | null> = signal(null);
+  /** `aria-describedby` of the panel. */
+  readonly panelDescribedBy: Signal<string | null> = signal(null);
+
+  /** Stable ids for the structured title / body parts. */
+  readonly titleId = `${this.overlay.contentId}-title`;
+  readonly bodyId = `${this.overlay.contentId}-body`;
+
+  private readonly _titlePartId = signal<string | null>(null);
+  private readonly _descriptionPartId = signal<string | null>(null);
+  /** Id of the registered `[andesPopoverTitle]` part, if any. */
+  readonly titlePartId = this._titlePartId.asReadonly();
+  /** Id of the registered `[andesPopoverDescription]` part, if any. */
+  readonly descriptionPartId = this._descriptionPartId.asReadonly();
+
+  private readonly centerShift = signal(0);
+  private readonly focusPolicy = signal<FocusPolicy>({
+    autoFocus: 'first-tabbable',
+    restoreFocus: true,
+  });
+  private readonly triggerActions = computed(() => {
+    const value = this.trigger();
+    return new Set<AndesPopoverTriggerAction>(
+      typeof value === 'string' ? [value] : value,
+    );
+  });
+
+  private pendingSource: AndesPopoverOpenSource = 'programmatic';
+  private openedBy: AndesPopoverOpenSource | null = null;
+  private triggerHost: HTMLElement | null = null;
+  private focusTarget: HTMLElement | null = null;
+  private anchorResolver: (() => HTMLElement) | null = null;
+  private swapHeight: number | null = null;
+  private pointerDownOnTrigger = false;
+  private openTimer: ReturnType<typeof setTimeout> | undefined;
+  private closeTimer: ReturnType<typeof setTimeout> | undefined;
+  private frame: number | null = null;
+  private anchorFrame: number | null = null;
+  private resizeObserver: ResizeObserver | null = null;
+  private defaultOpenApplied = false;
+  private readonly _mode = signal<AndesPopoverMode>('click');
+  /**
+   * `'hover'` while the open panel is a preview (opened by hover or focus), `'click'` once
+   * it is pinned by a click, or when a click, a context menu or code opened it.
+   */
+  readonly mode = this._mode.asReadonly();
+
+  /** What templates and content functions receive; `mode` is read live. */
+  protected readonly templateContext = ((
+    owner: AndesPopoverBase,
+  ): AndesPopoverTemplateContext => ({
+    $implicit: { close: () => owner.close() },
+    close: () => owner.close(),
+    get mode() {
+      return owner._mode();
+    },
+  }))(this);
+  private readonly cachedViews = new Map<
+    string,
+    { template: TemplateRef<unknown>; view: EmbeddedViewRef<unknown> }
+  >();
+
+  constructor() {
+    effect(() => {
+      this.overlay.configure(this.buildConfig());
+      this.applyZIndex();
+    });
+
+    effect(() => {
+      const template = this.panelTemplate();
+      if (!template) {
+        return;
+      }
+      // `defaultOpen`: read once, on the panel's first render. After that the panel is
+      // the user's (or `open`'s) to open and close.
+      if (!this.defaultOpenApplied) {
+        this.defaultOpenApplied = true;
+        untracked(() => {
+          if (this.defaultOpen() && !this.disabled() && !this.open()) {
+            this.pendingSource = 'programmatic';
+            this.open.set(true);
+          }
+        });
+      }
+      const shouldShow = this.open() && !this.disabled();
+      untracked(() => {
+        if (shouldShow) {
+          this.present(template);
+        } else {
+          this.overlay.close();
+        }
+      });
+    });
+
+    // The overlay can close itself (Escape, outside click, its own close
+    // affordance) without the model ever being told - keep it in sync so a
+    // controlled consumer's `visible` signal doesn't lie.
+    this.overlay.closed
+      .pipe(takeUntilDestroyed())
+      .subscribe((reason) => this.onOverlayClosed(reason));
+
+    this.overlay.outsidePointerEvents
+      .pipe(takeUntilDestroyed())
+      .subscribe((event) => this.keepFocusWhereTheUserPutIt(event));
+
+    inject(DestroyRef).onDestroy(() => {
+      this.clearTimers();
+      this.stopTracking();
+    });
+  }
+
+  /**
+   * Closes the panel (reported through `openChange`). What `[andesPopoverClose]`
+   * calls; handy from a `TemplateRef` handler or a parent holding the instance.
+   */
+  close(): void {
+    this.requestClose('imperative');
+  }
+
+  /** Opens the panel (reported through `openChange`). Does nothing while `disabled`. */
+  show(): void {
+    this.requestOpen('programmatic');
+  }
+
+  /** Opens if closed, closes if open. */
+  toggle(): void {
+    if (this.open()) {
+      this.requestClose('imperative');
+    } else {
+      this.requestOpen('click', 'imperative');
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Trigger / panel event entry points (called by the trigger and panel shell).
+  // ---------------------------------------------------------------------------
+
+  /** @internal Registers (or, with `null`, clears) the title part's id. */
+  registerTitleId(id: string | null): void {
+    this._titlePartId.set(id);
+  }
+
+  /** @internal Registers (or, with `null`, clears) the description part's id. */
+  registerDescriptionId(id: string | null): void {
+    this._descriptionPartId.set(id);
+  }
+
+  /** @internal */
+  registerTriggerHost(element: HTMLElement): void {
+    this.triggerHost = element;
+  }
+
+  /**
+   * @internal Registers the element the panel is positioned against. Done here rather than
+   * through whichever overlay the trigger directive injects: a trigger put on a component
+   * that has an overlay of its own (a select, say) would otherwise anchor *that* one.
+   */
+  registerAnchor(element: HTMLElement): void {
+    this.overlay.registerAnchor(element);
+  }
+
+  /** @internal Id of the panel, for the trigger's `aria-controls`. */
+  get panelId(): string {
+    return this.overlay.contentId;
+  }
+
+  /** @internal The role of the panel, for the trigger's `aria-haspopup`. */
+  get role(): AndesOverlayRole {
+    return this.panelRole;
+  }
+
+  /** @internal The panel height from before the last content swap, once (`null` if none). */
+  takeSwapHeight(): number | null {
+    const height = this.swapHeight;
+    this.swapHeight = null;
+    return height;
+  }
+
+  /** @internal Lets the trigger pick its visible box as the anchor each time the panel opens. */
+  registerAnchorResolver(resolver: () => HTMLElement): void {
+    this.anchorResolver = resolver;
+  }
+
+  /** @internal The focusable element inside a wrapper trigger, where focus returns on close. */
+  registerFocusTarget(element: HTMLElement | null): void {
+    this.focusTarget = element;
+  }
+
+  /** @internal */
+  handleTriggerPointerDown(): void {
+    this.pointerDownOnTrigger = true;
+  }
+
+  /** @internal */
+  handleTriggerClick(blocked: boolean): void {
+    this.pointerDownOnTrigger = false;
+    if (blocked || !this.triggerActions().has('click')) {
+      return;
+    }
+    if (!this.open()) {
+      this.requestOpen('click');
+    } else if (this.openedBy === 'hover' || this.openedBy === 'focus') {
+      // Clicking a hover/focus-opened panel pins it instead of closing it.
+      this.pin();
+    } else {
+      this.requestClose('click');
+    }
+  }
+
+  /** @internal */
+  handleTriggerContextMenu(event: Event, blocked: boolean): void {
+    if (blocked || !this.triggerActions().has('contextMenu')) {
+      return;
+    }
+    event.preventDefault();
+    if (!this.open()) {
+      this.requestOpen('click', 'contextMenu');
+    } else if (this.openedBy === 'hover' || this.openedBy === 'focus') {
+      this.pin();
+    }
+  }
+
+  /** @internal */
+  handleTriggerEnter(blocked: boolean): void {
+    if (blocked || !this.triggerActions().has('hover')) {
+      return;
+    }
+    this.cancelClose();
+    if (!this.open()) {
+      this.scheduleOpen();
+    }
+  }
+
+  /** @internal */
+  handleTriggerLeave(): void {
+    if (!this.triggerActions().has('hover')) {
+      return;
+    }
+    this.cancelOpen();
+    if (this.openedBy === 'hover') {
+      this.scheduleClose();
+    }
+  }
+
+  /** @internal */
+  handleTriggerFocusIn(blocked: boolean): void {
+    const viaPointer = this.pointerDownOnTrigger;
+    this.pointerDownOnTrigger = false;
+    if (blocked || !this.triggerActions().has('focus')) {
+      return;
+    }
+    // A mouse click focuses the trigger first; let the click decide instead of
+    // opening on focus and then immediately toggling closed.
+    if (viaPointer && this.triggerActions().has('click')) {
+      return;
+    }
+    this.cancelClose();
+    if (!this.open()) {
+      this.requestOpen('focus');
+    }
+  }
+
+  /** @internal */
+  handleFocusOut(event: FocusEvent): void {
+    if (
+      this.openedBy !== 'focus' ||
+      this.isWithinPopover(event.relatedTarget)
+    ) {
+      return;
+    }
+    this.requestClose('focus');
+  }
+
+  /** @internal */
+  handlePanelEnter(): void {
+    if (this.openedBy === 'hover') {
+      this.cancelClose();
+    }
+  }
+
+  /** @internal */
+  handlePanelLeave(): void {
+    if (this.openedBy === 'hover' && this.triggerActions().has('hover')) {
+      this.scheduleClose();
+    }
+  }
+
+  /**
+   * Renders `template` into `host`, re-using the view created on a previous open
+   * unless `destroyOnHidden` is set. The view lives in this component's own view
+   * container (so it is change-detected as part of the consumer's tree) and only
+   * its DOM nodes are moved into the panel - the same technique CDK's
+   * `DomPortalOutlet` uses.
+   *
+   * @internal
+   */
+  attachTemplate(
+    key: string,
+    template: TemplateRef<unknown>,
+    host: HTMLElement,
+  ): void {
+    let entry = this.cachedViews.get(key);
+    if (entry && (entry.template !== template || entry.view.destroyed)) {
+      entry.view.destroy();
+      entry = undefined;
+    }
+    if (!entry) {
+      // The injector lets content declared outside the popover (a
+      // `TemplateRef` passed to an input) still reach it - e.g. for
+      // `[andesPopoverClose]`.
+      entry = {
+        template,
+        view: this.viewContainerRef.createEmbeddedView(
+          template,
+          this.templateContext,
+          { injector: this.injector },
+        ),
+      };
+      this.cachedViews.set(key, entry);
+    }
+    for (const node of entry.view.rootNodes) {
+      host.appendChild(node);
+    }
+    entry.view.detectChanges();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Subclass hooks.
+  // ---------------------------------------------------------------------------
+
+  /** Called after the overlay closed, for whatever reason. */
+  protected handleClosed(reason: AndesOverlayCloseReason): void {
+    void reason;
+  }
+
+  /** Opens through the same path the trigger uses (honours `disabled`). */
+  protected requestOpen(
+    source: AndesPopoverOpenSource,
+    change?: AndesPopoverChangeSource,
+  ): void {
+    this.clearTimers();
+    if (this.disabled() || this.open()) {
+      return;
+    }
+    this.pendingSource = source;
+    this.commit(
+      true,
+      change ?? (source === 'programmatic' ? 'imperative' : source),
+    );
+  }
+
+  /** Closes and notifies `openChange` and `openChangeDetail`. */
+  protected requestClose(source: AndesPopoverChangeSource): void {
+    this.clearTimers();
+    if (this.open()) {
+      this.commit(false, source);
+    }
+  }
+
+  private commit(open: boolean, source: AndesPopoverChangeSource): void {
+    this.open.set(open);
+    this.openChangeDetail.emit({ open, source });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Internals.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * The distance from the trigger to the panel: `sideOffset` when given, else the
+   * `--andes-popover-gap` air (read from the trigger, so it can be set on it or on any
+   * ancestor) plus the arrow's height when there is an arrow.
+   */
+  private effectiveOffset(): number {
+    const explicit = this.sideOffset();
+    if (explicit !== undefined && explicit !== null) {
+      return explicit;
+    }
+    const arrow = this.showArrow();
+    const anchor = this.overlay.anchor();
+    const token = anchor
+      ? Number.parseFloat(
+          getComputedStyle(anchor).getPropertyValue('--andes-popover-gap'),
+        )
+      : Number.NaN;
+    const gap = Number.isFinite(token)
+      ? token
+      : arrow
+        ? DEFAULT_ARROW_GAP
+        : DEFAULT_PLAIN_GAP;
+    return gap + (arrow ? ARROW_HEIGHT : 0);
+  }
+
+  private buildConfig(): Partial<AndesOverlayConfig> {
+    const policy = this.focusPolicy();
+    return {
+      ...andesOverlayPreset('popover'),
+      role: this.panelRole,
+      panelClass: this.panelClass(),
+      closeOnEscape: this.closeOnEscape(),
+      closeOnOutsideClick: this.closeOnOutsideClick(),
+      autoFocus: policy.autoFocus,
+      restoreFocus: policy.restoreFocus,
+      positioning: {
+        kind: 'anchored',
+        side: this._resolvedSide(),
+        align: this.resolvedAlign(),
+        sideOffset: this.effectiveOffset(),
+        alignOffset: this.alignOffset() + this.centerShift(),
+        // Flipping is decided here (main axis only, see `chooseSide`) rather
+        // than by CDK, whose fallback list would jump to a perpendicular side
+        // before shifting along the cross axis.
+        flip: false,
+        shift: this.autoAdjustOverflow(),
+      },
+    };
+  }
+
+  private present(template: TemplateRef<unknown>): void {
+    if (this.overlay.isOpen()) {
+      return;
+    }
+    const source = this.pendingSource;
+    this.pendingSource = 'programmatic';
+    this.openedBy = source;
+    this._mode.set(
+      source === 'hover' || source === 'focus' ? 'hover' : 'click',
+    );
+
+    // Hover/focus-opened panels are passive: they must not pull focus away from
+    // where the user is, nor push it back to the trigger on close.
+    const passive = source === 'hover' || source === 'focus';
+    this.focusPolicy.set({
+      autoFocus: passive ? 'none' : this.autoFocus(),
+      restoreFocus: !passive && this.restoreFocus(),
+    });
+    // A panel re-opened during its exit is still there, laid out: it keeps its side and arrow.
+    if (!this.overlay.panelElement()) {
+      this._resolvedSide.set(this.preferredSide());
+      this.centerShift.set(this.measureCenterShift());
+      this._arrowOffset.set(null);
+      this._originOffset.set(null);
+    }
+
+    // Layout exists by now: anchor to what the trigger visibly is, whatever its host stretches to.
+    if (!this.overlay.panelElement()) {
+      const box = this.anchorResolver?.();
+      if (box && box !== this.overlay.anchor()) {
+        this.overlay.registerAnchor(box);
+      }
+    }
+    this.scopedContainer?.setTarget(
+      resolveAndesPopoverContainer(this.container(), this.document),
+    );
+    this.overlay.configure(this.buildConfig());
+    this.overlay.open(template, {
+      restoreFocusTo: this.focusTarget ?? undefined,
+    });
+    this.applyZIndex();
+    this.startTracking();
+    afterNextRender(
+      { read: () => this.reposition() },
+      {
+        injector: this.injector,
+      },
+    );
+  }
+
+  private onOverlayClosed(reason: AndesOverlayCloseReason): void {
+    // Only the close timer: a pointer that came back during the exit has a pending open.
+    this.cancelClose();
+    this.stopTracking();
+    this.openedBy = null;
+    if (this.open()) {
+      this.commit(false, changeSourceOf(reason));
+    }
+    if (this.destroyOnHidden()) {
+      for (const { view } of this.cachedViews.values()) {
+        view.destroy();
+      }
+      this.cachedViews.clear();
+    }
+    this.handleClosed(reason);
+  }
+
+  /**
+   * A click on the trigger while a hover or focus preview is open: the same panel becomes a
+   * pinned one. It stays mounted where it is (the content swaps, see `AndesPopoverContent`),
+   * stops closing when the pointer leaves, and takes focus the way a click-opened one does.
+   */
+  private pin(): void {
+    this.clearTimers();
+    this.openedBy = 'click';
+    // The height the panel has now, taken before the content changes under it.
+    this.swapHeight =
+      this.overlay.contentElement()?.getBoundingClientRect().height ?? null;
+    this._mode.set('click');
+    this.focusPolicy.update((policy) => ({
+      ...policy,
+      restoreFocus: this.restoreFocus(),
+    }));
+    if (this.autoFocus() === 'first-tabbable') {
+      // A hover preview opened without a focus trap: look for the first control by hand.
+      afterNextRender(
+        () =>
+          this.overlay
+            .contentElement()
+            ?.querySelector<HTMLElement>(PANEL_FOCUSABLE_SELECTOR)
+            ?.focus(),
+        { injector: this.injector },
+      );
+    }
+  }
+
+  /**
+   * An outside click that landed on something focusable (another input, say)
+   * already moved focus there; restoring it to the trigger would steal it back.
+   */
+  private keepFocusWhereTheUserPutIt(event: MouseEvent): void {
+    const target = event.target as Node | null;
+    if (target && this.isWithinPopover(target)) {
+      return;
+    }
+    const active = this.document.activeElement;
+    const pane = this.overlay.panelElement();
+    if (
+      active instanceof HTMLElement &&
+      active !== this.document.body &&
+      !pane?.contains(active)
+    ) {
+      this.focusPolicy.update((policy) => ({ ...policy, restoreFocus: false }));
+      this.overlay.configure({ restoreFocus: false });
+    }
+  }
+
+  private isWithinPopover(node: EventTarget | null): boolean {
+    if (!(node instanceof Node)) {
+      return false;
+    }
+    return !!(
+      this.overlay.panelElement()?.contains(node) ||
+      this.triggerHost?.contains(node) ||
+      this.overlay.anchor()?.contains(node)
+    );
+  }
+
+  private applyZIndex(): void {
+    const zIndex = this.zIndex();
+    const host = this.overlay.panelElement()?.parentElement;
+    if (host && zIndex !== undefined && zIndex !== null) {
+      host.style.setProperty('z-index', String(zIndex));
+    }
+  }
+
+  private scheduleOpen(): void {
+    clearTimeout(this.openTimer);
+    const delay = this.openDelay();
+    if (delay <= 0) {
+      this.requestOpen('hover');
+      return;
+    }
+    this.openTimer = setTimeout(() => {
+      this.openTimer = undefined;
+      this.requestOpen('hover');
+    }, delay);
+  }
+
+  private scheduleClose(): void {
+    clearTimeout(this.closeTimer);
+    const delay = this.closeDelay();
+    if (delay <= 0) {
+      this.requestClose('hover');
+      return;
+    }
+    this.closeTimer = setTimeout(() => {
+      this.closeTimer = undefined;
+      this.requestClose('hover');
+    }, delay);
+  }
+
+  private cancelOpen(): void {
+    clearTimeout(this.openTimer);
+    this.openTimer = undefined;
+  }
+
+  private cancelClose(): void {
+    clearTimeout(this.closeTimer);
+    this.closeTimer = undefined;
+  }
+
+  private clearTimers(): void {
+    this.cancelOpen();
+    this.cancelClose();
+  }
+
+  // --- Collision handling + arrow ---------------------------------------------
+
+  private startTracking(): void {
+    const view = this.document.defaultView;
+    if (!view) {
+      return;
+    }
+    view.addEventListener('scroll', this.scheduleReposition, {
+      capture: true,
+      passive: true,
+    });
+    view.addEventListener('resize', this.scheduleReposition, { passive: true });
+
+    const content = this.overlay.contentElement();
+    if (content && typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(this.scheduleReposition);
+      this.resizeObserver.observe(content);
+    }
+    this.watchAnchor(view);
+  }
+
+  /**
+   * A panel stays against its trigger when the trigger moves without a scroll or a resize - a
+   * larger root font size, a sibling that appears above it, a toolbar that wraps: nothing
+   * reports those, so while the panel is open the trigger's box is compared once a frame.
+   */
+  private watchAnchor(view: Window): void {
+    const key = () => {
+      const box = this.overlay.anchor()?.getBoundingClientRect();
+      return box ? `${box.left}|${box.top}|${box.width}|${box.height}` : '';
+    };
+    let last = key();
+    const step = () => {
+      this.anchorFrame = view.requestAnimationFrame(() => {
+        const next = key();
+        if (next !== last) {
+          last = next;
+          this.scheduleReposition();
+        }
+        step();
+      });
+    };
+    step();
+  }
+
+  private stopTracking(): void {
+    const view = this.document.defaultView;
+    view?.removeEventListener('scroll', this.scheduleReposition, {
+      capture: true,
+    });
+    view?.removeEventListener('resize', this.scheduleReposition);
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
+    if (this.frame !== null) {
+      view?.cancelAnimationFrame(this.frame);
+      this.frame = null;
+    }
+    if (this.anchorFrame !== null) {
+      view?.cancelAnimationFrame(this.anchorFrame);
+      this.anchorFrame = null;
+    }
+  }
+
+  private readonly scheduleReposition = (): void => {
+    const view = this.document.defaultView;
+    if (!view || this.frame !== null) {
+      return;
+    }
+    this.frame = view.requestAnimationFrame(() => {
+      this.frame = null;
+      this.overlay.updatePosition();
+      this.reposition();
+    });
+  };
+
+  /**
+   * Re-evaluates the side (flip) and the arrow position against the live
+   * geometry. A no-op without layout (e.g. jsdom), where the requested side is
+   * kept.
+   *
+   * The panel is measured through the CDK pane rather than the surface itself:
+   * the surface's entrance animation scales it, and `getBoundingClientRect()`
+   * includes transforms, which would skew the arrow by a few pixels.
+   */
+  private reposition(): void {
+    const anchor = this.overlay.anchor();
+    const pane = this.overlay.panelElement();
+    const panel = this.overlay.contentElement();
+    if (!anchor || !pane || !panel || !this.overlay.isOpen()) {
+      return;
+    }
+    let panelRect = pane.getBoundingClientRect();
+    if (!panelRect.width && !panelRect.height) {
+      return;
+    }
+    const anchorRect = anchor.getBoundingClientRect();
+
+    if (this.autoAdjustOverflow()) {
+      const side = this.chooseSide(anchorRect, panelRect);
+      if (side !== this._resolvedSide()) {
+        this._resolvedSide.set(side);
+        this.overlay.configure(this.buildConfig());
+        this.applyZIndex();
+        panelRect = pane.getBoundingClientRect();
+      }
+    }
+
+    const { arrow, origin } = this.computeArrowOffset(
+      anchorRect,
+      panelRect,
+      panel,
+    );
+    this._arrowOffset.set(this.showArrow() ? arrow : null);
+    this._originOffset.set(origin);
+  }
+
+  /**
+   * Main-axis flip: keep the preferred side if it fits, else take the opposite
+   * one if that fits, else whichever has more room. Cross-axis overflow is
+   * CDK's push (`shift`), not a reason to change sides.
+   */
+  private chooseSide(anchor: DOMRect, panel: DOMRect): AndesOverlaySide {
+    const root = this.document.documentElement;
+    const view = this.document.defaultView;
+    const width = root.clientWidth || view?.innerWidth || 0;
+    const height = root.clientHeight || view?.innerHeight || 0;
+    const preferred = this.preferredSide();
+    const opposite = OPPOSITE_SIDE[preferred];
+
+    const space: Record<AndesOverlaySide, number> = {
+      top: anchor.top,
+      bottom: height - anchor.bottom,
+      left: anchor.left,
+      right: width - anchor.right,
+    };
+    const needs = (side: AndesOverlaySide) =>
+      (side === 'top' || side === 'bottom' ? panel.height : panel.width) +
+      this.effectiveOffset() +
+      VIEWPORT_MARGIN;
+
+    if (space[preferred] >= needs(preferred)) {
+      return preferred;
+    }
+    if (space[opposite] >= needs(opposite)) {
+      return opposite;
+    }
+    return space[opposite] > space[preferred] ? opposite : preferred;
+  }
+
+  /**
+   * Where along the panel's edge the arrow points (`arrow`, from the inside of the border,
+   * snapped to whole device pixels so its edges stay crisp) and where the enter and exit
+   * motion grows from (`origin`, from the border box, unsnapped): both at the trigger,
+   * kept clear of the panel's rounded corners.
+   */
+  private computeArrowOffset(
+    anchor: DOMRect,
+    panel: DOMRect,
+    panelElement: HTMLElement,
+  ): { arrow: number; origin: number } {
+    const side = this._resolvedSide();
+    const horizontal = side === 'top' || side === 'bottom';
+    const panelStart = horizontal ? panel.left : panel.top;
+    const panelSize = horizontal ? panel.width : panel.height;
+    const anchorStart = horizontal ? anchor.left : anchor.top;
+    const anchorSize = horizontal ? anchor.width : anchor.height;
+    const anchorCenter = anchorStart + anchorSize / 2;
+    const align = this.resolvedAlign();
+    // The arrow's footprint must clear the corner radius, whatever the radius is set to.
+    const radius =
+      parseFloat(getComputedStyle(panelElement).borderTopLeftRadius) || 0;
+    const edgeInset = Math.max(
+      ARROW_EDGE_INSET,
+      radius + ARROW_HALF_WIDTH + ARROW_CORNER_GAP,
+    );
+
+    let target =
+      this.arrowPointAtCenter() || align === 'center'
+        ? anchorCenter
+        : align === 'start'
+          ? panelStart + edgeInset
+          : panelStart + panelSize - edgeInset;
+
+    // Always point at the trigger (matters once CDK has shifted the panel)...
+    const anchorInset = Math.min(ARROW_ANCHOR_INSET, anchorSize / 2);
+    target = clamp(
+      target,
+      anchorStart + anchorInset,
+      anchorStart + anchorSize - anchorInset,
+    );
+    // ...without leaving the panel's rounded corners.
+    target =
+      panelSize <= edgeInset * 2
+        ? panelStart + panelSize / 2
+        : clamp(
+            target,
+            panelStart + edgeInset,
+            panelStart + panelSize - edgeInset,
+          );
+
+    const border = horizontal
+      ? panelElement.clientLeft
+      : panelElement.clientTop;
+    const ratio = this.document.defaultView?.devicePixelRatio || 1;
+    const snapped = Math.round(target * ratio) / ratio;
+    return {
+      arrow: snapped - panelStart - border,
+      origin: clamp(target, panelStart, panelStart + panelSize) - panelStart,
+    };
+  }
+
+  /** Extra align offset that puts a `start`/`end` arrow over the trigger's center. */
+  private measureCenterShift(): number {
+    const align = this.resolvedAlign();
+    const anchor = this.overlay.anchor();
+    if (
+      !this.showArrow() ||
+      !this.arrowPointAtCenter() ||
+      align === 'center' ||
+      !anchor
+    ) {
+      return 0;
+    }
+    const side = this.preferredSide();
+    const rect = anchor.getBoundingClientRect();
+    const size = side === 'top' || side === 'bottom' ? rect.width : rect.height;
+    if (!size) {
+      return 0;
+    }
+    const shift = size / 2 - ARROW_EDGE_INSET;
+    return align === 'start' ? shift : -shift;
+  }
+}

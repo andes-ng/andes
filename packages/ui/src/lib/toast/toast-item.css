@@ -1,0 +1,486 @@
+/*
+ * The toast card: a neutral raised surface where the severity is carried by the icon alone,
+ * or - with richColors - by a tinted wash too. Layout inside the stack (position, depth,
+ * enter/exit/swipe motion) belongs to toast-region.css; this file only paints the card.
+ *
+ * Sized as follows: 12px/16px padding (9px/12px on a
+ * message), an 8px radius, a 20px icon (16px on a message) 12px from the text, a 14px title
+ * over a 13px description 2px apart, and a 20px close button pinned to the top-end corner.
+ * The 1px border sits inside those sizes, so the paddings give it back.
+ */
+:host {
+  /* Component-local (not design tokens): the severity colour, and the surface the icon's
+     knocked-out glyph and the close button blend into. */
+  --_toast-accent: var(--andes-color-muted-foreground);
+  --_toast-surface: var(--andes-color-card);
+  /* A softer edge than the form-control border, so the card reads by its shadow first. */
+  --_toast-border: color-mix(
+    in srgb,
+    var(--andes-color-border) 65%,
+    var(--andes-color-card)
+  );
+  --_toast-pad-block: calc(0.75rem - 1px);
+  --_toast-pad-inline: calc(1rem - 1px);
+  --_toast-shadow:
+    0 6px 16px 0 rgb(0 0 0 / 8%), 0 3px 6px -4px rgb(0 0 0 / 12%),
+    0 9px 28px 8px rgb(0 0 0 / 5%);
+  position: relative;
+  display: block;
+  box-sizing: border-box;
+  padding: var(--_toast-pad-block) var(--_toast-pad-inline);
+  border: 1px solid var(--_toast-border);
+  border-radius: var(--andes-toast-radius, 0.5rem);
+  background-color: var(--_toast-surface);
+  color: var(--andes-color-card-foreground);
+  box-shadow: var(--andes-toast-shadow, var(--_toast-shadow));
+  font-family: var(--andes-font-family), sans-serif;
+  /* Set on the surface so the text and projected icons don't inherit the page's body size. */
+  font-size: 0.875rem;
+  line-height: 1.375rem;
+  overflow-wrap: anywhere;
+  /* The region disables pointer-events on itself so empty space around a toast doesn't
+     block clicks - pointer-events is inherited, so each toast opts back in. */
+  pointer-events: auto;
+  outline: none;
+}
+
+:host-context([data-andes-theme='dark']) {
+  --_toast-border: var(--andes-color-border);
+  --_toast-shadow:
+    0 6px 16px 0 rgb(0 0 0 / 32%), 0 3px 6px -4px rgb(0 0 0 / 48%),
+    0 9px 28px 8px rgb(0 0 0 / 20%);
+}
+
+:host(:focus-visible) {
+  outline: 2px solid var(--andes-color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Per-severity accents, resolved through one private property per severity so the dark
+   theme can swap the shade without repeating the severity selectors. Warning's accent is its
+   -hover shade: the base amber only reaches ~2:1 on a white card, under the 3:1 a meaningful
+   graphic needs (same choice as the Alert). */
+:host {
+  --_toast-success: var(--andes-color-success);
+  --_toast-danger: var(--andes-color-danger);
+  --_toast-warning: var(--andes-color-warning-hover);
+  --_toast-info: var(--andes-color-info);
+}
+
+/* On the dark card the base green, red and blue drop under 3:1, and their -hover shades are
+   darker still, so the icon takes the -text shades, the tokens' own tints for dark surfaces.
+   The countdown line uses the same accents. */
+:host-context([data-andes-theme='dark']) {
+  --_toast-success: var(--andes-color-success-text);
+  --_toast-danger: var(--andes-color-danger-text);
+  --_toast-warning: var(--andes-color-warning-text);
+  --_toast-info: var(--andes-color-info-text);
+}
+
+:host([data-severity='success']) {
+  --_toast-accent: var(--_toast-success);
+  --_toast-progress: color-mix(in srgb, var(--_toast-success) 70%, transparent);
+}
+
+:host([data-severity='error']) {
+  --_toast-accent: var(--_toast-danger);
+  --_toast-progress: color-mix(in srgb, var(--_toast-danger) 70%, transparent);
+}
+
+:host([data-severity='warning']) {
+  --_toast-accent: var(--_toast-warning);
+  --_toast-progress: color-mix(in srgb, var(--_toast-warning) 70%, transparent);
+}
+
+:host([data-severity='info']) {
+  --_toast-accent: var(--_toast-info);
+  --_toast-progress: color-mix(in srgb, var(--_toast-info) 70%, transparent);
+}
+
+/* Rich colours: the Alert's tinted recipe - a 9% wash of the accent mixed into the card, a 35%
+   border. Text stays on the regular foreground, which clears 4.5:1 on every wash. */
+:host(
+  [data-rich-colors]:not([data-severity='neutral']):not(
+      [data-severity='loading']
+    )
+) {
+  --_toast-surface: color-mix(
+    in srgb,
+    var(--_toast-accent) 9%,
+    var(--andes-color-card)
+  );
+  --_toast-border: color-mix(
+    in srgb,
+    var(--_toast-accent) 35%,
+    var(--andes-color-card)
+  );
+}
+
+:host([data-clickable]) {
+  cursor: pointer;
+}
+
+:host([data-swipeable]) {
+  /* The drag gesture is handled in script; keep the browser from scrolling or zooming under
+     it on touch screens. */
+  touch-action: none;
+  user-select: none;
+}
+
+/* A card behind the front of a collapsed stack shows only its edge. Its content fades out,
+   and visibility (which flips at the end of the fade, and at the start of the fade back in)
+   takes it out of the tab order and accessibility tree until the stack expands. */
+:host > * {
+  transition:
+    opacity var(--andes-toast-duration, 200ms) var(--_toast-ease, ease),
+    visibility var(--andes-toast-duration, 200ms);
+}
+
+:host([data-stack-behind]) > * {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.andes-toast__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.andes-toast__icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--_toast-accent);
+}
+
+.andes-toast__icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* The built-in status icons are lucide's, in an `ng-icon` that fills the slot. */
+.andes-toast__status,
+.andes-toast__spinner {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+/* A solid shape with its glyph knocked out in the card colour: the circle of lucide's circle
+   icons is filled, the glyph paths are stroked in the surface colour. The triangle icon has
+   no circle: its first path is the shape, filled and stroked in the accent so the corners
+   stay round. */
+.andes-toast__status ::ng-deep circle {
+  fill: currentcolor;
+}
+
+.andes-toast__status ::ng-deep path {
+  fill: none;
+  stroke: var(--_toast-surface);
+}
+
+.andes-toast__status--triangle ::ng-deep path:first-child {
+  fill: currentcolor;
+  stroke: currentcolor;
+}
+
+.andes-toast__spinner {
+  animation: andes-toast-spin 1s linear infinite;
+}
+
+.andes-toast__content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/*
+ * Type scale: a 14px medium title over a 13px description in a softer ink. A message without
+ * a title is the description, so it keeps the 14px body size and the full ink.
+ */
+.andes-toast__title,
+.andes-toast__message {
+  margin: 0;
+  font-weight: 400;
+}
+
+.andes-toast__title {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+}
+
+.andes-toast__message {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.andes-toast__message--description {
+  font-size: 0.8125rem;
+  color: color-mix(
+    in srgb,
+    var(--andes-color-card-foreground) 70%,
+    var(--_toast-surface)
+  );
+}
+
+/* The close button hangs over the first line's end: that line keeps clear of it. A
+   description under a title starts below the button and so runs the full width. */
+:host([data-closable]:not([data-inline-buttons], [data-flavor='message']))
+  .andes-toast__title,
+:host([data-closable]:not([data-inline-buttons], [data-flavor='message']))
+  .andes-toast__message {
+  padding-inline-end: 1.25rem;
+}
+
+:host([data-closable]) .andes-toast__title + .andes-toast__message {
+  padding-inline-end: 0;
+}
+
+/* The compact buttons share the row with the text, so the row itself leaves room for the close
+   button instead. */
+:host([data-closable][data-inline-buttons]:not([data-flavor='message']))
+  .andes-toast__row {
+  padding-inline-end: 1.5rem;
+}
+
+/* Right-aligned, 10px under the text (the content's 2px gap plus this margin). */
+.andes-toast__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--andes-space-2);
+  margin-top: 0.5rem;
+}
+
+/* The compact inline buttons: an outlined "action" and a plain "cancel" before it, 28px high. */
+.andes-toast__action,
+.andes-toast__cancel {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  box-sizing: border-box;
+  height: 1.75rem;
+  padding: 0 0.625rem;
+  border: 1px solid transparent;
+  border-radius: var(--andes-radius-lg);
+  font-family: inherit;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  font-weight: var(--andes-font-weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    opacity 150ms ease;
+}
+
+.andes-toast__action {
+  border-color: color-mix(
+    in srgb,
+    var(--andes-color-card-foreground) 15%,
+    transparent
+  );
+  background-color: color-mix(
+    in srgb,
+    var(--andes-color-card-foreground) 4.5%,
+    transparent
+  );
+  color: var(--andes-color-card-foreground);
+}
+
+.andes-toast__action:hover {
+  background-color: color-mix(
+    in srgb,
+    var(--andes-color-card-foreground) 9%,
+    transparent
+  );
+}
+
+.andes-toast__cancel {
+  background-color: color-mix(
+    in srgb,
+    var(--andes-color-card-foreground) 8%,
+    transparent
+  );
+  color: var(--andes-color-card-foreground);
+}
+
+.andes-toast__cancel:hover {
+  background-color: color-mix(
+    in srgb,
+    var(--andes-color-card-foreground) 14%,
+    transparent
+  );
+}
+
+/* A ghost icon button pinned to the top-end corner, inside the padding: 20px square, 4px
+   corners, the cross in a softened ink until it is hovered. */
+.andes-toast__close {
+  position: absolute;
+  top: var(--_toast-pad-block);
+  inset-inline-end: var(--_toast-pad-inline);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0.25rem;
+  background-color: transparent;
+  color: color-mix(
+    in srgb,
+    var(--andes-color-card-foreground) 45%,
+    var(--_toast-surface)
+  );
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    background-color 200ms ease,
+    color 200ms ease;
+}
+
+.andes-toast__close:hover {
+  background-color: color-mix(
+    in srgb,
+    var(--andes-color-card-foreground) 6%,
+    transparent
+  );
+  color: var(--andes-color-card-foreground);
+}
+
+.andes-toast__close svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+/* The built-in cross is lucide's, in an `ng-icon` the size of the glyph box. */
+.andes-toast__close-x {
+  display: flex;
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.andes-toast__close-icon {
+  display: inline-flex;
+  font-size: 0.875rem;
+  line-height: 1;
+}
+
+.andes-toast__close:focus-visible,
+.andes-toast__action:focus-visible,
+.andes-toast__cancel:focus-visible {
+  outline: 2px solid var(--andes-color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Message flavor: a compact single-line card - icon + text, sized to its content, 9px/12px
+   padding and a 16px icon 8px from the text. */
+:host([data-flavor='message']) {
+  --_toast-pad-block: calc(0.5625rem - 1px);
+  --_toast-pad-inline: calc(0.75rem - 1px);
+  width: max-content;
+  max-width: 100%;
+}
+
+:host([data-flavor='message']) .andes-toast__row {
+  align-items: center;
+  gap: var(--andes-space-2);
+}
+
+:host([data-flavor='message']) .andes-toast__icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* A dismissible message keeps its close button in the row, after the text. */
+:host([data-flavor='message']) .andes-toast__close {
+  position: relative;
+  inset: auto;
+  flex: none;
+  margin-inline-start: var(--andes-space-1);
+}
+
+/* The countdown: a flat 2px line drawn on the card's bottom edge, full width and square-ended,
+   with no track behind it. It shrinks towards the inline start over the auto-dismiss duration
+   and pauses exactly when the queue's timer does: while the toast (or, in a deck, the whole
+   stack) is hovered, whenever focus is inside it, and while the page is hidden - the region
+   marks the first and last with data-paused. The clip covers the card's border box so the
+   line is cut by the card's own bottom corners; the line is scaled, never resized, so it
+   animates on the compositor. Its colour is the severity accent at 70%, or the card ink at
+   30% for the plain and loading kinds; --andes-toast-progress-bg overrides it. */
+.andes-toast__progress-clip {
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.andes-toast__progress {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  block-size: 2px;
+  background: var(
+    --andes-toast-progress-bg,
+    var(
+      --_toast-progress,
+      color-mix(in srgb, var(--andes-color-card-foreground) 30%, transparent)
+    )
+  );
+  transform-origin: 0 50%;
+  animation: andes-toast-progress linear forwards;
+  pointer-events: none;
+}
+
+/* The inline start is the right edge when the text runs right-to-left (the toast's own dir
+   attribute, or the page's). */
+:host(:dir(rtl)) .andes-toast__progress {
+  transform-origin: 100% 50%;
+}
+
+:host([data-paused]) .andes-toast__progress,
+:host([data-pause-on-hover]:hover) .andes-toast__progress,
+:host(:focus-within) .andes-toast__progress {
+  animation-play-state: paused;
+}
+
+@keyframes andes-toast-progress {
+  from {
+    transform: scaleX(1);
+  }
+
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes andes-toast-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host > * {
+    transition: none;
+  }
+
+  .andes-toast__spinner {
+    animation-duration: 2.4s;
+  }
+
+  /* A countdown is motion by nature: a static full-width line would claim time that is not
+     being counted, so the line is hidden. The toast still closes on its timer. */
+  .andes-toast__progress-clip {
+    display: none;
+  }
+}

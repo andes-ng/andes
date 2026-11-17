@@ -1,0 +1,276 @@
+/* Sizes are 24 / 32 / 40px tall; text is 14px (16px at lg). An icon-only toggle is square. */
+:host {
+  --_h: 2rem;
+  --_px: 0.6875rem;
+  --_fs: 0.875rem;
+  --_lh: 1.375rem;
+  /* How far the click ring reaches past the button (4 / 6 / 8px with the size) and its color:
+     the primary, the outline variant's own gray accent, or the status color. */
+  --_ring: 0.375rem;
+  --_ring-color: var(--andes-color-primary, #2563eb);
+  display: inline-flex;
+  font-family: var(--andes-font-family), sans-serif;
+}
+
+:host([data-variant='outline']) {
+  --_ring-color: var(--andes-color-accent-foreground, #111827);
+}
+
+:host([data-status='error']) {
+  --_ring-color: var(--andes-color-danger, #dc2626);
+}
+
+:host([data-status='warning']) {
+  --_ring-color: var(--andes-color-warning-hover, #d97706);
+}
+
+:host([data-size='sm']) {
+  --_ring: 0.25rem;
+  --_h: 1.5rem;
+  --_px: 0.4375rem;
+  --_lh: 1.25rem;
+}
+
+:host([data-size='lg']) {
+  --_ring: 0.5rem;
+  --_h: 2.5rem;
+  --_px: 0.9375rem;
+  --_fs: 1rem;
+  --_lh: 1.5rem;
+}
+
+.andes-toggle__button {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--andes-space-2, 0.5rem);
+  height: var(--_h);
+  min-width: var(--_h);
+  margin: 0;
+  padding: 0 var(--_px);
+  border: 1px solid transparent;
+  border-radius: var(--andes-toggle-radius, var(--andes-radius-md, 0.375rem));
+  background-color: transparent;
+  color: var(--andes-color-foreground, #0f172a);
+  font: inherit;
+  font-size: var(--_fs);
+  line-height: var(--_lh);
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  transition:
+    background-color 200ms cubic-bezier(0.78, 0.14, 0.15, 0.86),
+    border-color 200ms cubic-bezier(0.78, 0.14, 0.15, 0.86),
+    color 200ms cubic-bezier(0.78, 0.14, 0.15, 0.86),
+    transform var(--andes-motion-duration-fast, 120ms)
+      var(--andes-motion-ease-out, cubic-bezier(0.2, 0, 0, 1));
+}
+
+:host([data-variant='outline']) .andes-toggle__button {
+  border-color: var(--andes-color-input, #d1d5db);
+}
+
+/* A read-only toggle will not change, so it neither lights up on hover nor shows a pointer. A
+   disabled one gets no hover either. */
+:host(:not([data-readonly])) .andes-toggle__button:hover:not(:disabled) {
+  background-color: var(--andes-color-accent, #f3f4f6);
+}
+
+:host([data-readonly]) .andes-toggle__button {
+  cursor: default;
+}
+
+.andes-toggle__button[aria-pressed='true'] {
+  background-color: var(--andes-color-accent-hover, #e5e7eb);
+  color: var(--andes-color-accent-foreground, #111827);
+}
+
+:host(:not([data-readonly]))
+  .andes-toggle__button[aria-pressed='true']:hover:not(:disabled) {
+  /* Hovering a pressed toggle lightens it (never darkens it): the pressed fill mixed toward
+     white, the same formula as the checkbox, radio and switch. White (not a theme token) so it
+     lightens the same way in the dark theme. */
+  background-color: color-mix(
+    in srgb,
+    var(--andes-color-accent-hover, #e5e7eb) 82%,
+    white
+  );
+}
+
+.andes-toggle__button:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 2px solid var(--andes-color-focus-ring, #2563eb);
+  outline-offset: 2px;
+}
+
+/* Status: `error` and the softer warning tier (the same shade AndesInput uses) paint the border
+   and the focus ring, on both variants and over the hover and pressed states. */
+:host([data-status='error']) .andes-toggle__button:focus-visible {
+  outline-color: var(--andes-color-danger, #dc2626);
+}
+
+:host([data-status='warning']) .andes-toggle__button:focus-visible {
+  outline-color: var(--andes-color-warning-hover, #d97706);
+}
+
+:host([data-status='error']) .andes-toggle__button {
+  border-color: var(--andes-color-danger, #dc2626);
+}
+
+:host([data-status='warning']) .andes-toggle__button {
+  border-color: var(--andes-color-warning-hover, #d97706);
+}
+
+.andes-toggle__button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Decorative icons beside the label; an unused slot collapses. The label wrapper takes no box of
+   its own, so a bare projected icon or text lays out exactly as a direct child of the button. */
+.andes-toggle__icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+}
+
+.andes-toggle__icon:empty {
+  display: none;
+}
+
+.andes-toggle__label {
+  display: contents;
+}
+
+.andes-toggle__button ::ng-deep svg {
+  flex: none;
+  width: 1em;
+  height: 1em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .andes-toggle__button {
+    transition: none;
+  }
+}
+
+/* Motion that answers the user: the click ring and the press scale. Only with motion allowed,
+   and not in forced-colors mode, where the system palette already redraws the button and a
+   moving ring would be noise. Under reduced motion the state changes instantly and none of this
+   applies. A disabled or read-only toggle cannot change, so it gives no feedback at all.
+
+   Ring: `data-motion` is a one-shot hook the component sets only when `pressed` CHANGES after
+   the first render (so a toggle that starts out pressed never rings) and clears when this
+   animation ends: pressing and releasing both ring. It reaches `--_ring` (4 / 6 / 8px with the
+   size) in the first 0.1s, then lingers and fades over a second at a low opacity. Every keyframe
+   is linear; the points trace a fast-out growth and a slow fade. The `-alt` copy is the same
+   ring under another name, so a change that follows another within the second restarts it
+   instead of continuing the one still running. While it runs the button is raised above its
+   neighbours (a joined group's pressed toggles sit at z-index 1), so the ring is never hidden
+   behind a sibling.
+
+   Press: while the pointer (or the space key) is held down the button shrinks to 96%. */
+
+@keyframes andes-toggle-ripple {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--_ring-color) 20%, transparent);
+  }
+
+  6% {
+    box-shadow: 0 0 0 calc(var(--_ring) * 0.7)
+      color-mix(in srgb, var(--_ring-color) 16%, transparent);
+  }
+
+  16% {
+    box-shadow: 0 0 0 calc(var(--_ring) * 0.93)
+      color-mix(in srgb, var(--_ring-color) 11%, transparent);
+  }
+
+  41% {
+    box-shadow: 0 0 0 var(--_ring)
+      color-mix(in srgb, var(--_ring-color) 6%, transparent);
+  }
+
+  100% {
+    box-shadow: 0 0 0 var(--_ring)
+      color-mix(in srgb, var(--_ring-color) 0%, transparent);
+  }
+}
+
+@keyframes andes-toggle-ripple-alt {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--_ring-color) 20%, transparent);
+  }
+
+  6% {
+    box-shadow: 0 0 0 calc(var(--_ring) * 0.7)
+      color-mix(in srgb, var(--_ring-color) 16%, transparent);
+  }
+
+  16% {
+    box-shadow: 0 0 0 calc(var(--_ring) * 0.93)
+      color-mix(in srgb, var(--_ring-color) 11%, transparent);
+  }
+
+  41% {
+    box-shadow: 0 0 0 var(--_ring)
+      color-mix(in srgb, var(--_ring-color) 6%, transparent);
+  }
+
+  100% {
+    box-shadow: 0 0 0 var(--_ring)
+      color-mix(in srgb, var(--_ring-color) 0%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) and (forced-colors: none) {
+  /* prettier-ignore */
+  :host(:not([data-readonly])) .andes-toggle__button[data-motion='press']:not(:disabled) {
+    position: relative;
+    z-index: 2;
+    animation: andes-toggle-ripple 1s linear;
+  }
+
+  /* prettier-ignore */
+  :host(:not([data-readonly])) .andes-toggle__button[data-motion='press-alt']:not(:disabled) {
+    position: relative;
+    z-index: 2;
+    animation: andes-toggle-ripple-alt 1s linear;
+  }
+
+  /* prettier-ignore */
+  :host(:not([data-readonly])) .andes-toggle__button:active:not(:disabled) {
+    transform: scale(0.96);
+  }
+}
+
+/* Forced colors (Windows high contrast): author colors are replaced, which would leave a pressed
+   toggle looking like an unpressed one. Pressed maps onto the selection colors; a status keeps
+   its own border color so it is still told apart. */
+@media (forced-colors: active) {
+  .andes-toggle__button[aria-pressed='true'] {
+    forced-color-adjust: none;
+    border-color: Highlight;
+    background-color: Highlight;
+    color: HighlightText;
+  }
+
+  :host([data-status='error']) .andes-toggle__button {
+    forced-color-adjust: none;
+    border-color: var(--andes-color-danger, #dc2626);
+  }
+
+  :host([data-status='warning']) .andes-toggle__button {
+    forced-color-adjust: none;
+    border-color: var(--andes-color-warning-hover, #d97706);
+  }
+
+  .andes-toggle__button:disabled {
+    forced-color-adjust: none;
+    border-color: GrayText;
+    color: GrayText;
+  }
+}

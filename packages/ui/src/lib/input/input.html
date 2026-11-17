@@ -1,0 +1,125 @@
+<span [class]="groupClasses()">
+  <span class="andes-input__addon andes-input__addon--before">
+    @if (addonBefore()) {
+    <span class="andes-input__addon-text">{{ addonBefore() }}</span>
+    }
+    <ng-content select="[slot=addon-before]" />
+  </span>
+  <span [class]="wrapperClasses()">
+    <span class="andes-input__prefix">
+      <ng-content select="[slot=prefix]" />
+    </span>
+    <input
+      #nativeInput
+      data-slot="input"
+      class="andes-input__control"
+      [attr.type]="nativeType()"
+      [attr.id]="controlId()"
+      [attr.name]="name()"
+      [attr.placeholder]="placeholder()"
+      [attr.autocomplete]="autocomplete()"
+      [attr.inputmode]="inputMode() ?? null"
+      [attr.maxlength]="maxLength()"
+      [attr.aria-label]="ariaLabel()"
+      [attr.aria-labelledby]="labelledBy()"
+      [attr.aria-describedby]="describedBy()"
+      [attr.aria-invalid]="isInvalid() || null"
+      [attr.aria-busy]="loading() || null"
+      [disabled]="isDisabled()"
+      [required]="isRequired()"
+      [readOnly]="readOnly()"
+      [value]="value()"
+      (input)="onInput($event)"
+      (keydown)="onKeydown($event)"
+      (compositionend)="onCompositionEnd($event)"
+      (focus)="onFocus($event)"
+      (blur)="onBlur($event)"
+    />
+    @if (loading() && !searchButton()) {
+    <span
+      class="andes-input__spinner"
+      data-slot="input-spinner"
+      aria-hidden="true"
+    ></span>
+    } @if (showClear()) {
+    <button
+      type="button"
+      class="andes-input__clear"
+      data-slot="input-clear"
+      [attr.aria-label]="clearLabel()"
+      (mousedown)="keepFocus($event)"
+      (click)="onClearClick($event)"
+    >
+      @if (clearIcon(); as customClearIcon) {
+      <ng-container *ngTemplateOutlet="customClearIcon" />
+      } @else {
+      <ng-icon class="andes-input__clear-glyph" name="lucideCircleX" />
+      }
+    </button>
+    } @if (passwordToggle() !== null) {
+    <button
+      type="button"
+      class="andes-input__password-toggle"
+      aria-label="Show password"
+      [attr.aria-pressed]="passwordToggle()"
+      [attr.tabindex]="passwordToggleTabIndex()"
+      [disabled]="isDisabled()"
+      (mousedown)="keepFocus($event)"
+      (click)="togglePasswordVisibility()"
+    >
+      @if (passwordToggleIcon(); as customToggleIcon) {
+      <ng-container
+        *ngTemplateOutlet="
+          customToggleIcon;
+          context: { $implicit: !!passwordToggle() }
+        "
+      />
+      } @else if (passwordToggle()) {
+      <ng-icon data-icon="eye-off" name="lucideEyeOff" />
+      } @else {
+      <ng-icon data-icon="eye" name="lucideEye" />
+      }
+    </button>
+    }
+    <span class="andes-input__suffix">
+      <ng-content select="[slot=suffix]" />
+    </span>
+    @if (showCount()) {
+    <span
+      class="andes-input__count"
+      [class.andes-input__count--exceeded]="countExceeded()"
+      [id]="countId"
+      >{{ countText() }}</span
+    >
+    }
+  </span>
+  <span class="andes-input__addon andes-input__addon--after">
+    @if (addonAfter()) {
+    <span class="andes-input__addon-text">{{ addonAfter() }}</span>
+    }
+    <ng-content select="[slot=addon-after]" />
+  </span>
+  @if (searchButton(); as button) {
+  <andes-button
+    class="andes-input__search-button"
+    [variant]="button.primary ? 'primary' : 'outline'"
+    [size]="searchButtonSize()"
+    [loading]="button.loading"
+    [disabled]="isDisabled()"
+    [aria-label]="button.label || button.content ? undefined : 'Search'"
+    (click)="onSearchClick($event)"
+  >
+    <!-- Sibling blocks rather than nested ones: only a block with a single root element is
+         matched against the button's [slot=icon-start] selector. -->
+    @if (!button.label && !button.content && button.icon) {
+    <span slot="icon-start" class="andes-input__search-icon" aria-hidden="true"
+      ><ng-container *ngTemplateOutlet="button.icon"
+    /></span>
+    } @if (!button.label && !button.content && !button.icon) {
+    <ng-icon slot="icon-start" name="lucideSearch" />
+    } @if (button.content) {
+    <ng-container *ngTemplateOutlet="button.content" />
+    } @else { {{ button.label }} }
+  </andes-button>
+  }
+</span>

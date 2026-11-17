@@ -1,0 +1,13 @@
+@for (item of items(); track item.option.value) {
+<andes-tag
+  checkable
+  [class]="item.option.className ?? ''"
+  [icon]="item.option.icon"
+  [classNames]="itemClassNames()"
+  [styles]="item.styles"
+  [checked]="isSelected(item.option.value)"
+  [disabled]="disabled() || !!item.option.disabled"
+  (checkedChange)="toggle(item.option.value, $event)"
+  >{{ item.option.label }}</andes-tag
+>
+}

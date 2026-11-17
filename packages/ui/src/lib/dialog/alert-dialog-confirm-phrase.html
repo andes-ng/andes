@@ -1,0 +1,34 @@
+<!-- Not a <label for>: a label would activate the field on any click inside it, and a click
+     on the phrase chip would collapse the text selection. The field takes its name from this
+     element instead (aria-labelledby), and a click on the label's own words still focuses
+     the field. -->
+<div class="andes-alert-dialog__phrase-row">
+  <span class="andes-alert-dialog__phrase-label" [id]="labelId"
+    >{{ labelParts().before }}@if (labelParts().hasPhrase) {<code
+      class="andes-alert-dialog__phrase"
+      >{{ phrase() }}</code
+    >{{ labelParts().after }}}</span
+  >
+</div>
+<andes-input
+  [id]="inputId"
+  [(value)]="value"
+  [placeholder]="placeholder()"
+  [status]="status() === 'mismatch' ? 'error' : undefined"
+  [disabled]="state.pending()"
+  [aria-labelledby]="labelId"
+  [aria-describedby]="hintId"
+  autocomplete="off"
+  (pressEnter)="onEnter($event)"
+  (blurred)="onBlur()"
+  (paste)="onPaste($event)"
+  (drop)="onPaste($event)"
+/>
+<p
+  class="andes-alert-dialog__phrase-hint"
+  role="status"
+  [id]="hintId"
+  [attr.data-state]="status()"
+>
+  {{ hint() }}
+</p>

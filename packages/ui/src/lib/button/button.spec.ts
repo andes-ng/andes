@@ -4,6 +4,8 @@ import { resolve } from 'node:path';
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
+import { declaredValue } from '../../testing/computed-style';
+import { ANDES_BUTTON_CONTEXT } from './button-context';
 import { AndesButtonGroup } from './button-group';
 import {
   AndesButton,
@@ -294,6 +296,35 @@ describe('AndesButton', () => {
     expect(button.classList).toContain('andes-button--invalid');
     expect(host.hasAttribute('aria-label')).toBe(false);
     expect(host.hasAttribute('aria-invalid')).toBe(false);
+  });
+
+  it('puts aria-current on the real button or link, not the host, and omits it by default', () => {
+    @Component({
+      imports: [AndesButton],
+      template: `<andes-button class="plain">1</andes-button>
+        <andes-button class="current" aria-current="page">2</andes-button>
+        <andes-button class="link" href="/page/3" aria-current="page"
+          >3</andes-button
+        >`,
+    })
+    class CurrentHost {}
+
+    const fixture = TestBed.createComponent(CurrentHost);
+    fixture.detectChanges();
+    const root: HTMLElement = fixture.nativeElement;
+
+    expect(
+      root.querySelector('.plain button')?.hasAttribute('aria-current'),
+    ).toBe(false);
+    expect(
+      root.querySelector('.current button')?.getAttribute('aria-current'),
+    ).toBe('page');
+    expect(root.querySelector('.current')?.hasAttribute('aria-current')).toBe(
+      false,
+    );
+    expect(root.querySelector('.link a')?.getAttribute('aria-current')).toBe(
+      'page',
+    );
   });
 
   it('defaults to type="button", never the native submit default', () => {
@@ -665,5 +696,52 @@ describe('AndesButton', () => {
 
       expect(buttons[0].classList).toContain('andes-button--md');
     });
+  });
+});
+
+describe('AndesButton context', () => {
+  @Component({
+    imports: [AndesButton],
+    providers: [
+      { provide: ANDES_BUTTON_CONTEXT, useFactory: () => ({ disabled }) },
+    ],
+    template: `<andes-button>Save</andes-button
+      ><andes-button [disabled]="true">Own</andes-button>`,
+  })
+  class ContextHost {}
+
+  const disabled = signal(false);
+
+  it('is disabled by a control that provides the context, as well as by itself', () => {
+    const fixture = TestBed.createComponent(ContextHost);
+    fixture.detectChanges();
+    const buttons = Array.from(
+      fixture.nativeElement.querySelectorAll('button'),
+    ) as HTMLButtonElement[];
+    expect(buttons.map((b) => b.disabled)).toEqual([false, true]);
+
+    disabled.set(true);
+    fixture.detectChanges();
+    expect(buttons.map((b) => b.disabled)).toEqual([true, true]);
+
+    disabled.set(false);
+    fixture.detectChanges();
+    expect(buttons.map((b) => b.disabled)).toEqual([false, true]);
+  });
+});
+
+describe('AndesButton invalid border', () => {
+  const css = readFileSync(
+    resolve(process.cwd(), 'packages/ui/src/lib/button/button.css'),
+    'utf8',
+  );
+
+  it('outranks the variants, whose border colours are declared with one class', () => {
+    expect(
+      declaredValue(css, '.andes-button.andes-button--invalid', 'border-color'),
+    ).toBe('var(--andes-color-danger)');
+    expect(
+      declaredValue(css, '.andes-button--outline', 'border-color'),
+    ).toBeDefined();
   });
 });

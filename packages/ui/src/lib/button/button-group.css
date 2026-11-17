@@ -11,6 +11,7 @@
 /* Hovered or focused buttons rise above their neighbours so the overlapped border and the
    focus ring are drawn whole. */
 .andes-button-group .andes-button:hover,
+.andes-button-group .andes-button:active,
 .andes-button-group .andes-button:focus-visible {
   z-index: 1;
 }
@@ -59,4 +60,27 @@
 .andes-button-group--vertical > :not(:first-child) .andes-button--danger {
   border-inline-start-color: transparent;
   border-block-start-color: color-mix(in srgb, currentcolor 30%, transparent);
+}
+
+/* Elevation: the joined buttons share one surface, so the shadow lifts the group as a unit and
+   a member's own shadow is dropped. */
+
+.andes-button-group[data-elevation] {
+  border-radius: var(--andes-button-group-radius, var(--andes-radius-md));
+}
+
+.andes-button-group[data-elevation='low'] {
+  box-shadow: var(--andes-shadow-sm);
+}
+
+.andes-button-group[data-elevation='medium'] {
+  box-shadow: var(--andes-shadow-md);
+}
+
+.andes-button-group[data-elevation='high'] {
+  box-shadow: var(--andes-shadow-lg);
+}
+
+.andes-button-group .andes-button.andes-button {
+  box-shadow: none;
 }

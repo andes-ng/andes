@@ -1,0 +1,213 @@
+import {
+  AndesListNavigation,
+  type AndesListNavigationItemRef,
+} from '@andes-ng/primitives';
+import {
+  booleanAttribute,
+  type ComponentRef,
+  computed,
+  Directive,
+  effect,
+  ElementRef,
+  inject,
+  Injector,
+  input,
+  OnDestroy,
+  OnInit,
+  Renderer2,
+  type Signal,
+  untracked,
+} from '@angular/core';
+import { type NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideCheck } from '@ng-icons/lucide';
+
+import type { AndesCombobox } from './combobox';
+import { renderAndesIcon } from '../icons/render-icon';
+import { ANDES_COMBOBOX } from './combobox-token';
+
+let nextItemId = 0;
+
+/**
+ * One suggestion inside `andesComboboxContent`.
+ *
+ * Implements `AndesListNavigationItemRef` directly - registering and unregistering with
+ * the shared `AndesListNavigation` service exactly as `AndesListNavigationItem` does -
+ * rather than composing that directive, because `AndesListNavigation` intentionally "owns
+ * no selection state, sets no role/aria-selected... a component that activates manually
+ * handles Enter/Space itself" (see its doc comment). Selection is exactly the part this
+ * directive adds: `role="option"`, `aria-selected`, the trailing check on the chosen
+ * suggestion, and pointer-driven commit.
+ *
+ * Selecting on `mousedown` rather than `click`, with `preventDefault()`, is deliberate: it
+ * stops the browser from ever shifting focus to this element, so the `<input>` never blurs
+ * and the accessibility contract - focus never leaves the input while navigating or
+ * choosing a suggestion - holds for mouse users too, not only keyboard ones.
+ *
+ * `create` turns the row into the `allowCreate` action: choosing it emits the root's
+ * `(optionCreate)` with the typed text instead of selecting `value`.
+ *
+ * ```html
+ * <div andesComboboxItem [value]="fruit" [disabled]="fruit.outOfStock">{{ fruit.name }}</div>
+ * @if (combobox.createCandidate(); as text) {
+ *   <div andesComboboxItem create [value]="text">Create "{{ text }}"</div>
+ * }
+ * ```
+ */
+@Directive({
+  selector: '[andesComboboxItem]',
+  providers: [provideIcons({ lucideCheck })],
+  host: {
+    class: 'andes-combobox-item',
+    role: 'option',
+    '[attr.id]': 'itemId',
+    '[attr.aria-selected]': 'selected()',
+    '[attr.aria-disabled]': 'isDisabled() ? "true" : null',
+    '[attr.data-active]': 'active() ? "" : null',
+    '[attr.data-selected]': 'isSelected() ? "" : null',
+    '[attr.data-disabled]': 'isDisabled() ? "" : null',
+    '[attr.data-create]': 'create() ? "" : null',
+    '(mousedown)': 'onMouseDown($event)',
+    '(pointermove)': 'onPointerMove($event)',
+  },
+})
+export class AndesComboboxItem<T = string>
+  implements AndesListNavigationItemRef, OnInit, OnDestroy
+{
+  /** The value this suggestion represents, passed to `selectValue`/`valueChange`. */
+  readonly value = input.required<T>();
+
+  /** Excludes this suggestion from keyboard navigation and pointer selection. */
+  readonly disabled = input(false, { transform: booleanAttribute });
+
+  /** Makes this row the `allowCreate` action rather than a suggestion - see the class doc. */
+  readonly create = input(false, { transform: booleanAttribute });
+
+  private readonly combobox = inject(ANDES_COMBOBOX) as AndesCombobox<T>;
+
+  /**
+   * `AndesListNavigationItemRef`'s contract: {@link disabled}, or blocked because the
+   * root's `maxCount` is reached and this suggestion is not one of the chosen values.
+   */
+  readonly isDisabled: Signal<boolean> = computed(
+    () =>
+      this.disabled() ||
+      (!this.create() && this.combobox.isBlocked(this.value())),
+  );
+
+  private readonly navigation = inject(AndesListNavigation);
+  private readonly renderer = inject(Renderer2);
+
+  readonly element: HTMLElement =
+    inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+
+  readonly itemId: string =
+    this.element.id || `andes-combobox-item-${nextItemId++}`;
+
+  protected readonly active = computed(
+    () => this.navigation.activeItem() === this,
+  );
+
+  /** Whether this suggestion is the committed value, per the root's `compareWith`. */
+  readonly isSelected = computed(
+    () => !this.create() && this.combobox.isSelected(this.value()),
+  );
+
+  protected readonly selected = computed(() =>
+    this.isSelected() ? 'true' : 'false',
+  );
+
+  /** The slot the check lives in; always laid out, so labels line up across every row. */
+  private indicator: HTMLElement | null = null;
+  private check: ComponentRef<NgIcon> | null = null;
+  private readonly injector = inject(Injector);
+
+  constructor() {
+    // A directive has no template to hang `@if (isSelected())` off, so the check is added
+    // and removed here instead - see createAndesComboboxIcon for why these parts stay
+    // directives. The effect's first run is what creates the slot, since only by then is
+    // the label the consumer projected in place for it to sit after.
+    effect(() => {
+      const selected = this.isSelected();
+      const indicator = (this.indicator ??= this.createIndicator());
+
+      if (selected === (this.check !== null)) {
+        return;
+      }
+      if (selected) {
+        this.check = untracked(() =>
+          renderAndesIcon(
+            this.renderer,
+            this.injector,
+            'lucideCheck',
+            'andes-combobox-item__check',
+          ),
+        );
+        this.renderer.appendChild(indicator, this.check.location.nativeElement);
+      } else {
+        this.renderer.removeChild(
+          indicator,
+          this.check?.location.nativeElement,
+        );
+        this.check?.destroy();
+        this.check = null;
+      }
+    });
+  }
+
+  ngOnInit(): void {
+    this.navigation.register(this);
+  }
+
+  ngOnDestroy(): void {
+    this.navigation.unregister(this);
+    this.check?.destroy();
+  }
+
+  getLabel(): string {
+    return this.combobox.labelOf(this.value());
+  }
+
+  /** Never called: `AndesListNavigation` only invokes this in `'roving-tabindex'` mode. */
+  focus(): void {
+    this.element.focus();
+  }
+
+  setActiveStyles(): void {
+    this.element.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-empty-function -- required by the CDK's `Highlightable` interface
+  setInactiveStyles(): void {}
+
+  protected onMouseDown(event: MouseEvent): void {
+    // Keeps real focus on the <input> - see the class doc comment.
+    event.preventDefault();
+    if (event.button !== 0) {
+      return;
+    }
+    this.combobox.chooseItem(this);
+  }
+
+  /**
+   * Follows the pointer with the same "active item" the arrow keys move, so hovering a
+   * suggestion highlights it and Enter commits whatever the mouse is over. This list has
+   * no `:hover` styling to lean on: focus never leaves the `<input>`, so the highlight is
+   * *only* ever `aria-activedescendant`, and the root decides when a pointer event really
+   * is the user pointing (see `AndesCombobox.onItemPointerMove`).
+   *
+   * `pointermove`, not `mouseenter`: a row that appears or re-filters under a resting
+   * pointer gets a `mouseenter` without the user doing anything, which used to light up
+   * whatever happened to land under the cursor.
+   */
+  protected onPointerMove(event: PointerEvent): void {
+    this.combobox.onItemPointerMove(this, event);
+  }
+
+  private createIndicator(): HTMLElement {
+    const indicator: HTMLElement = this.renderer.createElement('span');
+    this.renderer.addClass(indicator, 'andes-combobox-item__indicator');
+    this.renderer.setAttribute(indicator, 'aria-hidden', 'true');
+    this.renderer.appendChild(this.element, indicator);
+    return indicator;
+  }
+}

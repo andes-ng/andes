@@ -222,7 +222,10 @@
   display: none;
 }
 
+/* The default arrow is lucide's chevron in an `ng-icon`, laid out as a flex box so its svg
+   never sits on a text baseline. */
 .andes-accordion-trigger__icon {
+  display: inline-flex;
   flex-shrink: 0;
   width: 1rem;
   height: 1rem;

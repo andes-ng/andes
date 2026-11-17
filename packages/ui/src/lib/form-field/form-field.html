@@ -1,0 +1,90 @@
+<!-- Every <ng-content> below appears exactly once and outside any @if: a slot inside a
+     conditional branch only ever receives its content once, so it must never be duplicated. -->
+<div
+  class="andes-form-field"
+  [class.andes-form-field--invalid]="showError()"
+  [class.andes-form-field--vertical]="resolvedLayout() === 'vertical'"
+  [class.andes-form-field--horizontal]="resolvedLayout() === 'horizontal'"
+  [class.andes-form-field--inline]="resolvedLayout() === 'inline'"
+  [class.andes-form-field--no-style]="noStyle()"
+  [class.andes-form-field--no-label]="!hasLabel()"
+  [class.andes-form-field--has-feedback]="hasFeedback()"
+  [class.andes-form-field--label-left]="resolvedLabelAlign() === 'left'"
+  [class.andes-form-field--label-wrap]="resolvedLabelWrap()"
+  [attr.data-status]="status()"
+  [attr.data-path]="controlPath()"
+  [class]="partClass('root')"
+  [style]="partStyle('root')"
+  [style.grid-template-columns]="gridColumns()"
+>
+  <div
+    class="andes-form-field__label"
+    [class]="partClass('label')"
+    [style]="partStyle('label')"
+  >
+    <ng-content select="andes-form-label" />
+    @if (label() && !projectedLabel()) {
+    <andes-form-label>{{ label() }}</andes-form-label>
+    }
+  </div>
+
+  <div
+    class="andes-form-field__control"
+    [class]="partClass('control')"
+    [style]="partStyle('control')"
+  >
+    <ng-content />
+    @if (feedbackIcon(); as icon) {
+    <span
+      class="andes-form-field__feedback"
+      [attr.data-status]="icon"
+      aria-hidden="true"
+    >
+      @if (feedbackTemplate(); as template) {
+      <ng-container
+        [ngTemplateOutlet]="template"
+        [ngTemplateOutletContext]="{ $implicit: icon, status: icon }"
+      />
+      } @else { @switch (icon) { @case ('success') {
+      <ng-icon name="lucideCircleCheck" />
+      } @case ('warning') {
+      <ng-icon name="lucideCircleAlert" />
+      } @case ('error') {
+      <ng-icon name="lucideCircleX" />
+      } @case ('validating') {
+      <ng-icon name="lucideLoaderCircle" />
+      } } }
+    </span>
+    }
+  </div>
+
+  <div
+    class="andes-form-field__messages"
+    [class.andes-form-field__messages--empty]="!hasMessages()"
+  >
+    <ng-content select="andes-form-description, andes-form-error" />
+    @if (helpMessages().length > 0) {
+    <div
+      class="andes-form-field__help"
+      [class]="partClass(messagesPart())"
+      [style]="partStyle(messagesPart())"
+      [id]="helpId()"
+      [attr.role]="helpRole()"
+      animate.leave="andes-form-field__message--leave"
+    >
+      @for (message of helpMessages(); track message) {
+      <div class="andes-form-field__help-item">{{ message }}</div>
+      }
+    </div>
+    } @if (extra()) {
+    <div
+      class="andes-form-field__extra"
+      [class]="partClass('extra')"
+      [style]="partStyle('extra')"
+      [id]="extraId()"
+    >
+      {{ extra() }}
+    </div>
+    }
+  </div>
+</div>

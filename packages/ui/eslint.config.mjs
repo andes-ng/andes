@@ -20,7 +20,11 @@ export default [
             '@angular/forms',
             'rxjs',
           ],
-          ignoredFiles: ['{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}'],
+          ignoredFiles: [
+            '{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}',
+            // Helpers for the stories and specs: not part of the library build (tsconfig.lib.json).
+            '{projectRoot}/src/testing/**',
+          ],
         },
       ],
     },
@@ -38,6 +42,17 @@ export default [
       '@angular-eslint/component-selector': [
         'error',
         { type: 'element', prefix: 'andes', style: 'kebab-case' },
+      ],
+    },
+  },
+  {
+    // Table cells must stay native <th>/<td> elements to keep the table's
+    // semantics, so the header cell and the data cell are components on an attribute selector.
+    files: ['src/lib/table/table-head.ts', 'src/lib/table/table-cell.ts'],
+    rules: {
+      '@angular-eslint/component-selector': [
+        'error',
+        { type: 'attribute', prefix: 'andes', style: 'camelCase' },
       ],
     },
   },

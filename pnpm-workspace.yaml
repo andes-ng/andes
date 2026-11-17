@@ -18,7 +18,14 @@ minimumReleaseAge: 10080
 minimumReleaseAgeExclude:
   - 'nx'
   - '@nx/*'
+  # Security fix published 6 days ago; the rest of the tree keeps the seven-day wait.
+  - 'body-parser'
+  # Same for follow-redirects: its fix is under a week old.
+  - 'follow-redirects'
 trustPolicy: no-downgrade
+# Releases older than a year were published before provenance was common, so a newer release can look like a trust
+# downgrade next to them (chokidar 4.0.3, semver 6.3.1). Recent releases, where a takeover would matter, stay checked.
+trustPolicyIgnoreAfter: 525600
 
 overrides:
   'smol-toml@<1.8.1': '>=1.8.1'
@@ -41,13 +48,16 @@ overrides:
   'js-yaml@>=5.0.0 <5.4.1': '>=5.4.1'
   'fast-uri@>=3.0.0 <3.1.8': '>=3.1.8'
   'serialize-javascript@>=7.1.1 <7.1.2': '>=7.1.2'
+  'follow-redirects@>=1.16.0 <1.16.2': '>=1.16.2'
+  'vite@>=8.0.0 <8.1.6': '>=8.1.6'
+  'body-parser@<1.20.9': '1.20.9'
+  'body-parser@>=2.0.0 <2.4.0': '2.4.0'
+  'zod@<4.6.6': '>=4.6.6'
+  'undici@>=7.0.0 <7.30.1': '>=7.30.1'
+  'vite@>=8.3.0 <8.3.3': '>=8.3.3'
 
 # - braces: no patched release exists (GHSA-vfj7-8cjw-p6xm affects every published version); it is reachable only
 #   through the local-registry tooling of the build, never from the published packages. Remove once a fix ships.
-# - @angular/router: fixed in 22.2.0, but Angular 22.2 breaks the unit-test builder of this workspace's Nx
-#   (TestBed is never initialised). Only the playground app uses the router; no published package depends on it.
-#   Remove when the workspace moves to Angular 22.2.
 auditConfig:
   ignoreGhsas:
     - GHSA-vfj7-8cjw-p6xm
-    - GHSA-ff3f-86qr-9cv3

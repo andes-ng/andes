@@ -9,69 +9,69 @@ export * from './lib/accordion';
 
 // @slot affix
 
-// @slot alert
+export * from './lib/alert';
 
 // @slot anchor
 
 // @slot aspect-ratio
 
-// @slot avatar
+export * from './lib/avatar';
 
-// @slot badge
+export * from './lib/badge';
 
-// @slot breadcrumb
+export * from './lib/breadcrumb';
 
 export * from './lib/button';
 
-// @slot calendar
+export * from './lib/calendar';
 
 // @slot card
 
-// @slot carousel
+export * from './lib/carousel';
 
-// @slot cascader
+export * from './lib/cascader';
 
-// @slot checkbox
+export * from './lib/checkbox';
 
 // @slot collapsible
 
-// @slot color-picker
+export * from './lib/color-picker';
 
-// @slot combobox
+export * from './lib/combobox';
 
 // @slot command
 
 // @slot context-menu
 
-// @slot date-picker
+export * from './lib/date-picker';
 
 // @slot descriptions
 
-// @slot dialog
+export * from './lib/dialog';
 
 // @slot divider
 
 // @slot drawer
 
-// @slot dropdown-menu
+export * from './lib/dropdown-menu';
 
-// @slot empty
+export * from './lib/empty';
 
 // @slot flex
 
 // @slot float-button
 
-// @slot form-field
+export * from './lib/form-field';
 
 // @slot grid
 
 // @slot hover-card
 
-// @slot image
+export * from './lib/image';
 
-// @slot input
+export * from './lib/input';
 
-// @slot input-number
+export * from './lib/input-number';
 
 // @slot kbd
 
@@ -81,7 +81,7 @@ export * from './lib/button';
 
 // @slot masonry
 
-// @slot mentions
+export * from './lib/mentions';
 
 // @slot menu
 
@@ -89,35 +89,35 @@ export * from './lib/button';
 
 // @slot navigation-menu
 
-// @slot pagination
+export * from './lib/pagination';
 
-// @slot palette
+export * from './lib/palette';
 
-// @slot popconfirm
+export * from './lib/popconfirm';
 
-// @slot popover
+export * from './lib/popover';
 
 // @slot progress
 
-// @slot qr-code
+export * from './lib/qr-code';
 
-// @slot radio-group
+export * from './lib/radio-group';
 
-// @slot rate
+export * from './lib/rate';
 
 // @slot result
 
 // @slot scroll-area
 
-// @slot segmented
+export * from './lib/segmented';
 
-// @slot select
+export * from './lib/select';
 
 // @slot sheet
 
-// @slot skeleton
+export * from './lib/skeleton';
 
-// @slot slider
+export * from './lib/slider';
 
 // @slot space
 
@@ -127,36 +127,36 @@ export * from './lib/button';
 
 // @slot statistic
 
-// @slot steps
+export * from './lib/steps';
 
-// @slot switch
+export * from './lib/switch';
 
-// @slot table
+export * from './lib/table';
 
-// @slot tabs
+export * from './lib/tabs';
 
-// @slot tag
+export * from './lib/tag';
 
-// @slot textarea
+export * from './lib/textarea';
 
 // @slot timeline
 
 // @slot toast
 
-// @slot toggle
+export * from './lib/toggle';
 
-// @slot tooltip
+export * from './lib/tooltip';
 
 // @slot tour
 
 // @slot transfer
 
-// @slot tree
+export * from './lib/tree';
 
-// @slot tree-select
+export * from './lib/tree-select';
 
 // @slot typography
 
-// @slot upload
+export * from './lib/upload';
 
 // @slot watermark

@@ -33,10 +33,12 @@ jobs:
           cache: true
 
       - run: pnpm install --frozen-lockfile
-      # A lockfile with two copies of one package (typically @angular/core after a partial bump)
-      # breaks every input signal type. Fail here with the cause instead of hundreds of type errors.
-      - name: Check the lockfile has no duplicated packages
-        run: pnpm dedupe --check
+      # A lockfile with two copies of @angular/core (typically after a partial bump) breaks every input
+      # signal type. Fail here with the cause instead of hundreds of type errors. Only the packages that must
+      # be single are checked: a duplicated transitive package is harmless and Dependabot leaves them behind,
+      # so a full `pnpm dedupe --check` only produced red PRs that the build and the tests had already cleared.
+      - name: Check the lockfile has one copy of the framework packages
+        run: node .github/scripts/check-single-version.mjs
       - run: pnpm format:check
       - name: Lint and test
         env:

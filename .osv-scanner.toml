@@ -1,0 +1,10 @@
+# Advisories with no installable fix, each reachable only through the build tooling and not from the published packages.
+# Remove an entry once a patched release ships.
+
+[[IgnoredVulns]]
+id = "GHSA-fc5q-39xc-vjpf"
+reason = "picomatch 4.0.8 is not published yet (latest is 4.0.7); only matches build-configuration globs inside the Angular tooling"
+
+[[IgnoredVulns]]
+id = "GHSA-vfj7-8cjw-p6xm"
+reason = "braces has no patched release; only reachable through the build's local-registry tooling"

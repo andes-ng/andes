@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 
 import * as overviewStories from './table-01-overview.stories';
 import * as columnsStories from './table-02-columns.stories';
@@ -183,7 +183,10 @@ describe('Table stories: the sidebar', () => {
   );
 
   it('names no other product in a table file, a story or a version plan', () => {
-    const plans = readdirSync('.nx/version-plans')
+    // A release branch consumes every plan, which removes the folder.
+    const plans = (
+      existsSync('.nx/version-plans') ? readdirSync('.nx/version-plans') : []
+    )
       .filter((file) => file.endsWith('.md'))
       .map(
         (file) =>

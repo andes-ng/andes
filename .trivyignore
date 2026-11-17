@@ -5,3 +5,6 @@ CVE-2026-93687
 
 # webpack-dev-middleware: the fixed 7.4.6 is rejected by the workspace trust policy (trust downgrade, see pnpm-workspace.yaml); dev server only.
 CVE-2026-76844
+
+# picomatch: the fixed 4.0.8 is not published yet (latest is 4.0.7); it only matches build-configuration globs inside the Angular tooling.
+CVE-2026-112366

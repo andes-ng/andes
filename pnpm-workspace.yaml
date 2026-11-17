@@ -55,9 +55,15 @@ overrides:
   'zod@<4.6.6': '>=4.6.6'
   'undici@>=7.0.0 <7.30.1': '>=7.30.1'
   'vite@>=8.3.0 <8.3.3': '>=8.3.3'
+  '@vitest/mocker@<4.1.12': '>=4.1.12'
+  'fast-uri@>=4.0.0 <4.2.3': '>=4.2.3'
+  'minimatch@>=10.0.0 <11.0.1': '>=11.0.1'
 
 # - braces: no patched release exists (GHSA-vfj7-8cjw-p6xm affects every published version); it is reachable only
 #   through the local-registry tooling of the build, never from the published packages. Remove once a fix ships.
+# - picomatch: the advisory names 4.0.8 as the fix, but npm's latest release is 4.0.7, so nothing can be installed yet. It
+#   matches globs from the build configuration inside @angular-devkit/core, never input from a user of the packages.
 auditConfig:
   ignoreGhsas:
     - GHSA-vfj7-8cjw-p6xm
+    - GHSA-fc5q-39xc-vjpf

@@ -639,11 +639,13 @@ ng-icon {
   height: 0.875em;
 }
 
-/* Lucide's circle-x as a filled disc: the ring's 4-unit stroke takes the disc to the edge of
-   the box and the "x" is knocked out in the background colour. */
+/* Lucide's circle-x as a filled disc: a radius of 12 takes the disc to the edge of the
+   box, painted once (no stroke over the fill, which would double a translucent colour into a
+   darker ring), and the "x" is knocked out in the background colour. */
 .andes-cascader__clear-glyph ::ng-deep circle {
   fill: currentColor;
-  stroke-width: 4;
+  stroke: none;
+  r: 12;
 }
 
 .andes-cascader__clear-glyph ::ng-deep path {

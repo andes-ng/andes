@@ -11,6 +11,11 @@ import {
   type Preview,
 } from '@storybook/angular';
 
+// Angular 22.2.6 reads `ngServerMode` without a `typeof` guard, and Angular's own builders define
+// it. Storybook bundles with its own webpack, which does not, so a built Storybook failed to
+// start every story with "ngServerMode is not defined". A browser is never the server.
+Object.assign(globalThis, { ngServerMode: false });
+
 const withTheme: Decorator = (story, context) => {
   const theme = context.globals['theme'] === 'dark' ? 'dark' : undefined;
   if (theme) {

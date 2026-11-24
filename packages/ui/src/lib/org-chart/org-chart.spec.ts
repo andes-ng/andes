@@ -679,6 +679,7 @@ describe('AndesOrgChart', () => {
         'Zoom out',
         'Fit to view',
         'Reset view',
+        'Export chart',
       ]);
     });
 

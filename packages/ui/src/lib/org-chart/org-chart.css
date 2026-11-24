@@ -40,7 +40,6 @@
      --andes-org-chart-toggle-background         toggle background
      --andes-org-chart-toggle-foreground         toggle icon and count
      --andes-org-chart-toggle-border-color       toggle hairline
-     --andes-org-chart-checkbox-color            checkbox fill when checked or mixed
      --andes-org-chart-controls-background       zoom controls panel
      --andes-org-chart-duration                  animation length (also the `animationDuration`
                                                  input, which this overrides)
@@ -419,30 +418,14 @@
 /* ------------------------------------------------------------------ checkbox */
 
 .andes-org-chart__checkbox {
-  display: grid;
+  display: inline-flex;
   flex: none;
-  place-items: center;
-  box-sizing: border-box;
-  inline-size: 1.25rem;
-  block-size: 1.25rem;
-  border: 1px solid var(--andes-color-input);
-  border-radius: var(--andes-radius-sm);
-  background: var(--andes-org-chart-node-background, var(--andes-color-card));
-  color: var(--andes-color-primary-foreground);
   cursor: pointer;
 }
 
-.andes-org-chart__checkbox ng-icon {
-  display: flex;
-  font-size: 0.875rem;
-}
-
-.andes-org-chart__node[data-checked] .andes-org-chart__checkbox {
-  border-color: var(
-    --andes-org-chart-checkbox-color,
-    var(--andes-color-primary)
-  );
-  background: var(--andes-org-chart-checkbox-color, var(--andes-color-primary));
+/* The card toggles the selection: the library checkbox only draws the state. */
+.andes-org-chart__checkbox andes-checkbox {
+  pointer-events: none;
 }
 
 /* ------------------------------------------------------------------ expand / collapse toggle */
@@ -669,15 +652,5 @@
     border-color: ButtonText;
     background: ButtonFace;
     color: ButtonText;
-  }
-
-  .andes-org-chart__checkbox {
-    border-color: ButtonText;
-  }
-
-  .andes-org-chart__node[data-checked] .andes-org-chart__checkbox {
-    border-color: Highlight;
-    background: Highlight;
-    color: HighlightText;
   }
 }

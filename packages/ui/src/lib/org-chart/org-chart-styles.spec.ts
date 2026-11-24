@@ -250,16 +250,10 @@ describe('AndesOrgChart styles', () => {
     );
   });
 
-  it('draws the checkbox, filled when checked or mixed', () => {
-    expect(declared('.andes-org-chart__checkbox', 'inline-size')).toBe(
-      '1.25rem',
-    );
+  it('lets the card toggle the selection: the library checkbox only draws the state', () => {
     expect(
-      declared(
-        '.andes-org-chart__node[data-checked] .andes-org-chart__checkbox',
-        'background',
-      ),
-    ).toBe('var(--andes-org-chart-checkbox-color, var(--andes-color-primary))');
+      declared('.andes-org-chart__checkbox andes-checkbox', 'pointer-events'),
+    ).toBe('none');
   });
 
   it('draws the connectors unfilled with a hookable stroke', () => {

@@ -157,11 +157,12 @@
             aria-hidden="true"
             (click)="onCheckboxClick(node, $event)"
           >
-            @if (node.checkState === 'true') {
-            <ng-icon name="lucideCheck" />
-            } @else if (node.checkState === 'mixed') {
-            <ng-icon name="lucideMinus" />
-            }
+            <andes-checkbox
+              inert
+              [checked]="node.checkState === 'true'"
+              [indeterminate]="node.checkState === 'mixed'"
+              [disabled]="!!node.record.disabled"
+            />
           </span>
           } @if (resolvedNodeTemplate(); as nodeTemplate) {
           <ng-container
@@ -271,7 +272,7 @@
   @if (zoomable()) {
   <andes-button
     variant="ghost"
-    size="icon-sm"
+    size="icon"
     [aria-label]="text().zoomIn"
     [disabled]="!canZoomIn()"
     (click)="zoomIn()"
@@ -283,7 +284,7 @@
   >
   <andes-button
     variant="ghost"
-    size="icon-sm"
+    size="icon"
     [aria-label]="text().zoomOut"
     [disabled]="!canZoomOut()"
     (click)="zoomOut()"
@@ -294,7 +295,7 @@
   }
   <andes-button
     variant="ghost"
-    size="icon-sm"
+    size="icon"
     [aria-label]="text().fit"
     (click)="fitView()"
   >
@@ -302,11 +303,28 @@
   </andes-button>
   <andes-button
     variant="ghost"
-    size="icon-sm"
+    size="icon"
     [aria-label]="text().reset"
     (click)="resetView()"
   >
     <ng-icon name="lucideLocateFixed" aria-hidden="true" />
   </andes-button>
+  @if (exportable()) {
+  <span class="andes-org-chart__divider" aria-hidden="true"></span>
+  <andes-dropdown-menu
+    placement="leftBottom"
+    [items]="exportItems"
+    (itemClick)="onExport($event)"
+  >
+    <andes-button
+      andesDropdownMenuTrigger
+      variant="ghost"
+      size="icon"
+      [aria-label]="text().export"
+    >
+      <ng-icon name="lucideDownload" aria-hidden="true" />
+    </andes-button>
+  </andes-dropdown-menu>
+  }
 </div>
 }

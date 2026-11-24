@@ -148,8 +148,8 @@ export const Controlled: Story = {
       template: `
         <div style="display: grid; gap: 0.75rem;">
           <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-            <andes-button size="sm" variant="outline" (click)="expandEveryone()">Expand all</andes-button>
-            <andes-button size="sm" variant="outline" (click)="collapseEveryone()">Collapse all</andes-button>
+            <andes-button variant="outline" (click)="expandEveryone()">Expand all</andes-button>
+            <andes-button variant="outline" (click)="collapseEveryone()">Collapse all</andes-button>
             <span style="${READOUT}">{{ open().length }} of {{ managers.length }} teams open</span>
           </div>
           <andes-org-chart
@@ -198,8 +198,8 @@ export const Search: Story = {
               clearable
               [(value)]="query"
             />
-            <andes-button variant="outline" size="sm" (click)="step(chart, -1)">Previous</andes-button>
-            <andes-button variant="outline" size="sm" (click)="step(chart, 1)">Next</andes-button>
+            <andes-button variant="outline" (click)="step(chart, -1)">Previous</andes-button>
+            <andes-button variant="outline" (click)="step(chart, 1)">Next</andes-button>
             <span aria-live="polite" style="${READOUT}">{{ chart.matchedKeys().length }} matches</span>
           </div>
           <andes-org-chart
@@ -480,10 +480,10 @@ export const DynamicData: Story = {
       template: `
         <div style="display: grid; gap: 0.75rem;">
           <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-            <andes-button size="sm" [disabled]="!picked().length" (click)="add()">Add report</andes-button>
-            <andes-button size="sm" variant="outline" [disabled]="!picked().length" (click)="rename()">Mark acting</andes-button>
-            <andes-button size="sm" variant="outline" danger [disabled]="!picked().length" (click)="remove()">Remove</andes-button>
-            <andes-button size="sm" variant="ghost" (click)="reset()">Reset</andes-button>
+            <andes-button [disabled]="!picked().length" (click)="add()">Add report</andes-button>
+            <andes-button variant="outline" [disabled]="!picked().length" (click)="rename()">Mark acting</andes-button>
+            <andes-button variant="outline" danger [disabled]="!picked().length" (click)="remove()">Remove</andes-button>
+            <andes-button variant="ghost" (click)="reset()">Reset</andes-button>
             <span style="${READOUT}">{{ selectedName() ?? 'Select a person' }}</span>
           </div>
           <andes-org-chart
@@ -509,12 +509,12 @@ export const ImperativeApi: Story = {
     template: `
       <div style="display: grid; gap: 0.75rem;">
         <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-          <andes-button size="sm" variant="outline" (click)="chart.fitView()">Fit</andes-button>
-          <andes-button size="sm" variant="outline" (click)="chart.zoomTo(1.5)">Zoom to 150%</andes-button>
-          <andes-button size="sm" variant="outline" (click)="chart.resetView()">Reset</andes-button>
-          <andes-button size="sm" variant="outline" (click)="chart.expandAllNodes()">Expand all</andes-button>
-          <andes-button size="sm" variant="outline" (click)="chart.collapseAll()">Collapse all</andes-button>
-          <andes-button size="sm" (click)="chart.scrollToNode('ml', { select: true })">Find Amara Nwosu</andes-button>
+          <andes-button variant="outline" (click)="chart.fitView()">Fit</andes-button>
+          <andes-button variant="outline" (click)="chart.zoomTo(1.5)">Zoom to 150%</andes-button>
+          <andes-button variant="outline" (click)="chart.resetView()">Reset</andes-button>
+          <andes-button variant="outline" (click)="chart.expandAllNodes()">Expand all</andes-button>
+          <andes-button variant="outline" (click)="chart.collapseAll()">Collapse all</andes-button>
+          <andes-button (click)="chart.scrollToNode('ml', { select: true })">Find Amara Nwosu</andes-button>
         </div>
         <andes-org-chart
           #chart="andesOrgChart"
@@ -541,11 +541,11 @@ export const Export: Story = {
     template: `
       <div style="display: grid; gap: 0.75rem;">
         <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-          <andes-button size="sm" variant="outline" (click)="chart.expandAllNodes()">Expand all</andes-button>
-          <andes-button size="sm" (click)="chart.download('svg', { filename: 'company' })">Download SVG</andes-button>
-          <andes-button size="sm" (click)="chart.download('png', { filename: 'company', scale: 2 })">Download PNG</andes-button>
-          <andes-button size="sm" (click)="chart.download('jpeg', { filename: 'company', quality: 0.92 })">Download JPG</andes-button>
-          <andes-button size="sm" variant="outline" (click)="chart.download('webp', { filename: 'company' })">Download WebP</andes-button>
+          <andes-button variant="outline" (click)="chart.expandAllNodes()">Expand all</andes-button>
+          <andes-button (click)="chart.download('svg', { filename: 'company' })">Download SVG</andes-button>
+          <andes-button (click)="chart.download('png', { filename: 'company', scale: 2 })">Download PNG</andes-button>
+          <andes-button (click)="chart.download('jpeg', { filename: 'company', quality: 0.92 })">Download JPG</andes-button>
+          <andes-button variant="outline" (click)="chart.download('webp', { filename: 'company' })">Download WebP</andes-button>
         </div>
         <andes-org-chart
           #chart="andesOrgChart"

@@ -185,7 +185,9 @@ export const Connectors: Story = {
     },
     template: `
       <div style="display: grid; gap: 1rem;">
-        <andes-segmented aria-label="Connector style" [options]="connectors" [(value)]="lineStyle" />
+        <div style="display: flex;">
+          <andes-segmented aria-label="Connector style" [options]="connectors" [(value)]="lineStyle" />
+        </div>
         <andes-org-chart
           aria-label="Company organization"
           style="--andes-org-chart-height: 30rem"
@@ -215,7 +217,9 @@ export const LeafLayouts: Story = {
     },
     template: `
       <div style="display: grid; gap: 1rem;">
-        <andes-segmented aria-label="Leaf layout" [options]="leafModes" [(value)]="leafMode" />
+        <div style="display: flex;">
+          <andes-segmented aria-label="Leaf layout" [options]="leafModes" [(value)]="leafMode" />
+        </div>
         <andes-org-chart
           aria-label="Company organization"
           style="--andes-org-chart-height: 36rem"

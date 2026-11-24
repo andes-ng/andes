@@ -69,7 +69,7 @@ async function render(configure: (host: Host) => void) {
 }
 
 describe('AndesOrgChart lucide icons', () => {
-  it('draws the toggle chevron and the five zoom controls', async () => {
+  it('draws the toggle chevron and the six controls', async () => {
     const fixture = await render(() => undefined);
     const el = fixture.nativeElement as HTMLElement;
     const controls = el.querySelector('[data-slot="org-chart-controls"]');
@@ -81,22 +81,31 @@ describe('AndesOrgChart lucide icons', () => {
       'lucideMinus',
       'lucideMaximize',
       'lucideLocateFixed',
+      'lucideDownload',
     ]);
   });
 
-  it('draws the checkbox tick and the mixed dash', async () => {
+  it('draws the selection with the library checkbox, ticked, mixed or empty', async () => {
     const fixture = await render((host) => (host.mode = 'checkbox'));
     const el = fixture.nativeElement as HTMLElement;
-    const box = (key: string) =>
-      el.querySelector(`[data-key="${key}"] [data-slot="org-chart-checkbox"]`);
+    const state = (key: string) => {
+      const input = el.querySelector<HTMLInputElement>(
+        `[data-key="${key}"] [data-slot="org-chart-checkbox"] andes-checkbox input`,
+      );
+      return input ? [input.checked, input.indeterminate] : null;
+    };
 
-    (box('dev') as HTMLElement).click();
+    (
+      el.querySelector(
+        '[data-key="dev"] [data-slot="org-chart-checkbox"]',
+      ) as HTMLElement
+    ).click();
     fixture.detectChanges();
 
-    expect(drawn(box('dev') as Element)).toEqual(['lucideCheck']);
-    expect(drawn(box('cto') as Element)).toEqual(['lucideCheck']);
-    expect(drawn(box('ceo') as Element)).toEqual(['lucideMinus']);
-    expect(drawn(box('cfo') as Element)).toEqual([]);
+    expect(state('dev')).toEqual([true, false]);
+    expect(state('cto')).toEqual([true, false]);
+    expect(state('ceo')).toEqual([false, true]);
+    expect(state('cfo')).toEqual([false, false]);
     expect(blank(el)).toEqual([]);
   });
 

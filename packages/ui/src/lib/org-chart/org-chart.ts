@@ -31,8 +31,8 @@ import {
 } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
-  lucideCheck,
   lucideChevronDown,
+  lucideDownload,
   lucideLoaderCircle,
   lucideLocateFixed,
   lucideMaximize,
@@ -41,6 +41,13 @@ import {
 } from '@ng-icons/lucide';
 
 import { AndesButton } from '../button/button';
+import { AndesCheckbox } from '../checkbox/checkbox';
+import { AndesDropdownMenu } from '../dropdown-menu/dropdown-menu';
+import { AndesDropdownMenuTrigger } from '../dropdown-menu/dropdown-menu-trigger';
+import type {
+  AndesDropdownMenuClickEvent,
+  AndesDropdownMenuItemOption,
+} from '../dropdown-menu/dropdown-menu-types';
 import {
   type AndesOrgChartExportFormat,
   type AndesOrgChartExportOptions,
@@ -228,6 +235,7 @@ export interface AndesOrgChartLabels {
   readonly zoomOut: string;
   readonly fit: string;
   readonly reset: string;
+  readonly export: string;
   readonly controls: string;
   readonly empty: string;
   readonly loading: string;
@@ -238,10 +246,19 @@ const DEFAULT_LABELS: AndesOrgChartLabels = {
   zoomOut: 'Zoom out',
   fit: 'Fit to view',
   reset: 'Reset view',
+  export: 'Export chart',
   controls: 'Chart view',
   empty: 'No data',
   loading: 'Loading reports',
 };
+
+/** The formats of the export menu, in the order they are listed. */
+const EXPORT_ITEMS: readonly AndesDropdownMenuItemOption[] = [
+  { key: 'png', label: 'PNG image' },
+  { key: 'jpeg', label: 'JPG image' },
+  { key: 'webp', label: 'WebP image' },
+  { key: 'svg', label: 'SVG vector' },
+];
 
 const DEFAULT_NODE_SIZE: AndesOrgChartSize = { width: 240, height: 72 };
 
@@ -371,8 +388,8 @@ interface LinkView<T> {
   exportAs: 'andesOrgChart',
   viewProviders: [
     provideIcons({
-      lucideCheck,
       lucideChevronDown,
+      lucideDownload,
       lucideLoaderCircle,
       lucideLocateFixed,
       lucideMaximize,
@@ -380,7 +397,15 @@ interface LinkView<T> {
       lucidePlus,
     }),
   ],
-  imports: [NgIcon, NgTemplateOutlet, AndesButton, AndesOrgChartNodeItem],
+  imports: [
+    NgIcon,
+    NgTemplateOutlet,
+    AndesButton,
+    AndesCheckbox,
+    AndesDropdownMenu,
+    AndesDropdownMenuTrigger,
+    AndesOrgChartNodeItem,
+  ],
   templateUrl: './org-chart.html',
   styleUrl: './org-chart.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -510,6 +535,11 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
   readonly wheel = input<AndesOrgChartWheel>('zoom');
   /** Show the floating zoom controls. */
   readonly controls = input(true, { transform: booleanAttribute });
+  /** Add an export menu (PNG, JPG, WebP, SVG) to the floating controls. */
+  readonly exportable = input(true, { transform: booleanAttribute });
+  /** The name, without extension, of the files the export menu saves. */
+  readonly exportFilename = input('org-chart');
+  protected readonly exportItems = EXPORT_ITEMS;
   /** Animate moves, expansion and zoom (always off under reduced motion). */
   readonly animated = input(true, { transform: booleanAttribute });
   /** Length of the animations, in milliseconds. */
@@ -1913,6 +1943,12 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
     if (!view.record.disabled) {
       this.toggleSelection(view.key);
     }
+  }
+
+  protected onExport(click: AndesDropdownMenuClickEvent): void {
+    void this.download(click.key as AndesOrgChartExportFormat, {
+      filename: this.exportFilename(),
+    });
   }
 
   protected onToggleClick(view: NodeView<T>, event: MouseEvent): void {

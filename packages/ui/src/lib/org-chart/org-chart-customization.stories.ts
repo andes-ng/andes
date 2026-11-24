@@ -81,7 +81,7 @@ export const Content: Story = {
   render: () => ({
     props: {
       data: SAMPLE_ARCHITECTURE,
-      cardSize: { width: 240, height: 56 },
+      cardSize: { width: 248, height: 80 },
     },
     template: `
       <andes-org-chart
@@ -136,8 +136,8 @@ export const Templates: Story = {
           <span style="padding-inline: 0.25rem;">{{ team }}</span>
         </ng-template>
         <ng-template andesOrgChartToolbar let-chart>
-          <andes-button size="sm" variant="outline" (click)="chart.expandAllNodes(); chart.fitView()">Expand all</andes-button>
-          <andes-button size="sm" variant="outline" (click)="chart.collapseAll(); chart.resetView()">Collapse all</andes-button>
+          <andes-button variant="outline" (click)="chart.expandAllNodes(); chart.fitView()">Expand all</andes-button>
+          <andes-button variant="outline" (click)="chart.collapseAll(); chart.resetView()">Collapse all</andes-button>
         </ng-template>
       </andes-org-chart>
     `,
@@ -332,7 +332,7 @@ export const Empty: Story = {
           <ng-template andesOrgChartEmpty>
             <div style="display: grid; gap: 0.5rem; justify-items: center;">
               <span>No one has been added yet.</span>
-              <andes-button size="sm" variant="outline">Import people</andes-button>
+              <andes-button variant="outline">Import people</andes-button>
             </div>
           </ng-template>
         </andes-org-chart>

@@ -140,7 +140,7 @@ class TestProbe {
     </ng-template>
   `,
 })
-class ParityHost {
+class ExtendedHost {
   readonly dialog = viewChild.required(AndesDialog);
   readonly open = signal(false);
   readonly footer = signal<AndesDialogFooterOption>('default');
@@ -177,8 +177,8 @@ describe('AndesDialog - extended behavior', () => {
     probeConstructions = 0;
   });
 
-  function createHost(setup?: (host: ParityHost) => void) {
-    const fixture = TestBed.createComponent(ParityHost);
+  function createHost(setup?: (host: ExtendedHost) => void) {
+    const fixture = TestBed.createComponent(ExtendedHost);
     setup?.(fixture.componentInstance);
     fixture.detectChanges();
     const host = fixture.componentInstance;
@@ -704,7 +704,7 @@ describe('AndesDialog - extended behavior', () => {
     </andes-alert-dialog>
   `,
 })
-class AlertParityHost {
+class AlertExtendedHost {
   readonly open = signal(true);
   readonly deleting = signal(false);
   readonly loading = signal(false);
@@ -715,7 +715,7 @@ describe('AndesAlertDialog - extended behavior', () => {
   withElementGeometry();
 
   async function createHost() {
-    const fixture = TestBed.createComponent(AlertParityHost);
+    const fixture = TestBed.createComponent(AlertExtendedHost);
     fixture.detectChanges();
     await fixture.whenStable();
     const surface = () =>

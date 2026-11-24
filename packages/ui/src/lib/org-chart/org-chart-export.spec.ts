@@ -5,6 +5,7 @@ import {
   exportExtension,
   fittingScale,
   saveBlob,
+  snapshotSvg,
 } from './org-chart-export';
 
 const SVG =
@@ -134,5 +135,53 @@ describe('org chart export', () => {
     vi.runAllTimers();
     expect(revoke).toHaveBeenCalledWith('blob:chart');
     vi.useRealTimers();
+  });
+
+  describe('snapshotSvg', () => {
+    function chartDom() {
+      const style = document.createElement('style');
+      style.textContent = '.card { color: var(--chart-ink); }';
+      document.head.append(style);
+      const host = document.createElement('div');
+      host.className = 'andes-org-chart';
+      host.setAttribute('data-orientation', 'vertical');
+      host.style.setProperty('--chart-ink', '#123456');
+      const canvas = document.createElement('div');
+      canvas.style.transform = 'translate(40px, 10px) scale(0.5)';
+      canvas.innerHTML = '<div class="card">Ana Torres <img alt=""></div>';
+      host.append(canvas);
+      document.body.append(host);
+      return { host, canvas, style };
+    }
+
+    it('carries the rendered cards, the page styles and the theme properties', async () => {
+      const { host, canvas, style } = chartDom();
+      const svg = await snapshotSvg(host, canvas, 640, 360, '#fafafa');
+      host.remove();
+      style.remove();
+
+      expect(svg.startsWith('<svg xmlns="http://www.w3.org/2000/svg"')).toBe(
+        true,
+      );
+      expect(svg).toContain('<foreignObject');
+      expect(svg).toContain('Ana Torres');
+      // The rules the cards are drawn by, and the value of the custom property they read.
+      expect(svg).toContain('.card');
+      expect(svg).toContain('--chart-ink:#123456');
+      expect(svg).toContain('background:#fafafa');
+      expect(svg).toContain('data-orientation="vertical"');
+    });
+
+    it('takes the whole canvas at its own size, not the panned and zoomed view', async () => {
+      const { host, canvas, style } = chartDom();
+      const svg = await snapshotSvg(host, canvas, 640, 360);
+      host.remove();
+      style.remove();
+
+      expect(svg).toContain('viewBox="0 0 640 360"');
+      expect(svg).toContain('transform: none');
+      expect(svg).not.toContain('scale(0.5)');
+      expect(svg).toContain('width: 640px');
+    });
   });
 });

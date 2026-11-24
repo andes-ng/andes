@@ -63,7 +63,7 @@ export * from './lib/empty';
 
 export * from './lib/form-field';
 
-// @slot grid
+export * from './lib/grid';
 
 // @slot hover-card
 

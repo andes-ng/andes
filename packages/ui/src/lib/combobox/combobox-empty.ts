@@ -61,7 +61,7 @@ export class AndesComboboxEmpty implements OnInit {
     );
     this.destroyRef.onDestroy(() => icon.destroy());
     // Ahead of the consumer's message, which by `ngOnInit` is already in place, so the
-    // icon sits above the text the way every empty state in the references does.
+    // icon sits above the text the way every empty state in the library does.
     this.renderer.insertBefore(
       this.element,
       icon.location.nativeElement,

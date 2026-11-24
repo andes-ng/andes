@@ -23,12 +23,10 @@ import type {
 import { AndesTooltipTrigger } from './tooltip-trigger';
 
 /**
- * One story per example on Ant Design's Tooltip page (https://ant.design/components/tooltip),
- * in the page's order and under its names, rebuilt from andes-ng parts so the two can be
- * compared side by side. The measures are Ant's too: a 14px / 22px text in a box padded 6px by
+ * One story per common tooltip example, built from andes-ng parts. The measures: a 14px / 22px text in a box padded 6px by
  * 8px with a 6px radius, at least 32px tall, at most 250px wide, on an 85% black surface, with a
- * 16 x 8 arrow and 12px between the box and the trigger. Ant opens a tooltip 0.1s after the
- * pointer enters (`mouseEnterDelay`), so these stories set `openDelay` to 100.
+ * 16 x 8 arrow and 12px between the box and the trigger. These stories open a tooltip 0.1s after the
+ * pointer enters, so they set `openDelay` to 100.
  */
 const meta: Meta = {
   title: 'Data Display/Tooltip/Examples',
@@ -271,7 +269,7 @@ class AutoShiftExample {
     viewChild.required<ElementRef<HTMLElement>>('scroller');
 
   constructor() {
-    // Ant Design scrolls the window so the trigger starts in the middle of the screen.
+    // Scroll the window so the trigger starts in the middle of the screen.
     afterNextRender(() => {
       const scroller = this.scroller().nativeElement;
       scroller.scrollTop = scroller.clientHeight;
@@ -369,7 +367,7 @@ export const RealignAfterLayoutChanges: Story = {
 /* --------------------------------------------------------- Colorful Tooltip */
 
 /**
- * `color` takes the preset names (the hue names of Ant Design's palette, besides the
+ * `color` takes the preset names (the hue names of the palette, besides the
  * `primary` ... `info` semantic ones) or any CSS color; the text turns black or white to suit it
  * and the arrow always matches.
  */

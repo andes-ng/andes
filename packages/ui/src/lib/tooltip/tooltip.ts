@@ -102,7 +102,7 @@ export const ANDES_TOOLTIP_PRESET_COLORS = [
 ] as const;
 
 /**
- * Named hues, with the names and the fills of Ant Design's preset colours, for a
+ * Named hues, with fixed fills, for a
  * tooltip that labels rather than themes. A hue is the same in both themes.
  */
 export const ANDES_TOOLTIP_HUE_COLORS = [
@@ -130,7 +130,7 @@ export type AndesTooltipPresetColor =
 
 /**
  * The tooltip's surface: `default` is a near-black one with white text (a lifted grey on
- * a dark page), as in Ant Design; `light` follows the theme's popover surface instead
+ * a dark page); `light` follows the theme's popover surface instead
  * (light on a light page, dark on a dark one); `inverse` is always a dark slate surface
  * with light text.
  */
@@ -525,7 +525,7 @@ export class AndesTooltip {
           this.sideOffset() + (arrow ? ANDES_TOOLTIP_ARROW_HEIGHT : 0),
         alignOffset: this.alignOffset() + pointAtCenterShift,
         flip: adjust,
-        // Like Ant Design: move along the trigger to stay on screen, never to its other sides.
+        // Move along the trigger to stay on screen, never to its other sides.
         crossSideFallback: false,
         shift: adjust,
       };

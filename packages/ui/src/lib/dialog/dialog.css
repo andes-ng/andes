@@ -46,8 +46,8 @@
   overflow: hidden;
   border: var(--andes-dialog-border-width) solid var(--andes-color-border);
   border-radius: var(--andes-radius-lg);
-  /* `popover`, not `card`/`background` - both reference libraries reserve the popover
-     surface tokens for floating layers. */
+  /* `popover`, not `card`/`background` - the popover surface tokens are reserved
+     for floating layers. */
   background-color: var(--andes-color-popover);
   color: var(--andes-color-popover-foreground);
   font-family: var(--andes-font-family), sans-serif;
@@ -60,7 +60,7 @@
      Deriving it from the foreground turned this into a white halo in the dark theme,
      where that token is #f8fafc. The shadow has three layers.
      Dark-theme separation comes from the surface being
-     lighter than the scrim plus the 1px border, which is how both references do it. */
+     lighter than the scrim plus the 1px border. */
   box-shadow:
     0 6px 16px 0 rgb(0 0 0 / 8%),
     0 3px 6px -4px rgb(0 0 0 / 12%),
@@ -93,7 +93,7 @@
     );
 }
 
-/* Sizes. Neither reference library exposes an enum, but a scale keeps consumers off
+/* Sizes. A fixed scale keeps consumers off
    magic widths; every step still collapses to the viewport on a narrow screen. `md` is
    520px, the width of a standard modal. */
 .andes-dialog--sm {
@@ -276,7 +276,7 @@
      heading stood out as the one oversized title in the system. */
   font-size: 1rem;
   /* 600, not --andes-font-weight-medium: at 500 the title carried no more weight than a
-     field label beside it. Both reference libraries set a dialog title in semibold, and
+     field label beside it. A dialog title reads best in semibold, and
      the token scale has no semibold step yet. */
   font-weight: 600;
   /* Fixed at 24px rather than a ratio, so the close control can be centred on the
@@ -526,8 +526,8 @@ ng-icon.andes-dialog__method-glyph {
 
 /* On a narrow screen the actions stack and fill the width. `column-reverse` keeps the
    DOM order - Cancel first, so the focus trap opens on the safe choice - while showing
-   the affirmative action first, which is the order both reference libraries stack a
-   dialog footer in. */
+   the affirmative action first, which is the usual order of a stacked
+   dialog footer. */
 @media (width <= 30rem) {
   .andes-dialog__footer {
     flex-direction: column-reverse;

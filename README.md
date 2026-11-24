@@ -50,13 +50,13 @@ Import tokens once in the consumer application's global CSS:
 
 Standalone components will be imported only from the Andes public entry point, `@andes-ng/ui`. That entry point exports nothing yet.
 
-Consumers do not import `@spartan-ng/brain` or its selectors. Brain is an internal behavioral dependency. Andes does not require Tailwind configuration or Tailwind-generated CSS, although Brain currently causes Tailwind-related packages to exist in the installation graph. See [ADR 0004](docs/adr/0004-spartan-brain-behind-andes-adapters.md).
+Consumers do not import third-party behavior primitives or their selectors; any such package is an internal implementation dependency. Andes does not require Tailwind configuration or Tailwind-generated CSS. See [ADR 0004](docs/adr/0004-third-party-primitives-behind-andes-adapters.md).
 
 ## Architecture decisions
 
 Accepted decisions live in [`docs/adr`](docs/adr/README.md). Changes to package contracts, styling, dependency boundaries or release policy require a new ADR that supersedes the previous one.
 
-For a contributor-oriented explanation of the package boundaries, design tokens, Spartan Brain and dependency terminology, see [the component architecture glossary](docs/component-architecture-glossary.md).
+For a contributor-oriented explanation of the package boundaries, design tokens, behavior primitives and dependency terminology, see [the component architecture glossary](docs/component-architecture-glossary.md).
 
 ## Contributing
 

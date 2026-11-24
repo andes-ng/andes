@@ -92,7 +92,7 @@ describe('date-format', () => {
       );
     });
 
-    it('pivots two-digit years like dayjs', () => {
+    it('pivots two-digit years at 69 (69-99 are the 1900s)', () => {
       expect(parseWithPattern('01/01/24', 'DD/MM/YY', en)?.getFullYear()).toBe(
         2024,
       );

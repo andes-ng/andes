@@ -103,7 +103,7 @@ export const list =
 /** Body copy inside a panel. */
 export const paragraph = 'margin: 0;';
 
-/** The twelve placements, in the order of the reference grid. */
+/** The twelve placements, in the order of the placement grid. */
 export const PLACEMENTS = Object.keys(
   ANDES_POPOVER_PLACEMENTS,
 ) as (keyof typeof ANDES_POPOVER_PLACEMENTS)[];

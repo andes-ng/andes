@@ -16,7 +16,7 @@ function isEmpty(value: unknown): boolean {
 }
 
 /**
- * Validators the reference form offers as rules and `Validators` does not: a value that is
+ * Validators that a form commonly needs as rules and `Validators` does not: a value that is
  * only spaces, an exact length, a URL, a value from a fixed set and a value equal to another
  * control's. Each one passes on an empty value, like `Validators.minLength` does, so it
  * combines with `Validators.required`. The built-in messages cover each error key.

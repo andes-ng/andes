@@ -35,6 +35,17 @@
     },
     "test": {
       "executor": "@nx/angular:unit-test",
+      "inputs": [
+        "default",
+        "^production",
+        "{workspaceRoot}/.github/**/*",
+        "{workspaceRoot}/.nx/version-plans/**/*",
+        "{workspaceRoot}/apps/**/*",
+        "{workspaceRoot}/docs/**/*",
+        "{workspaceRoot}/packages/*/CHANGELOG.md",
+        "{workspaceRoot}/packages/*/README.md",
+        "{workspaceRoot}/*.md"
+      ],
       "options": {
         "watch": false,
         "isolate": true

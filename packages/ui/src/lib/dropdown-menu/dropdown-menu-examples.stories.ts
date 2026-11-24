@@ -16,9 +16,8 @@ import { AndesDropdownMenu } from './dropdown-menu';
 import { AndesDropdownMenuTrigger } from './dropdown-menu-trigger';
 
 /**
- * One story per example of Ant Design's Dropdown page (https://ant.design/components/dropdown),
- * named like Ant's and in Ant's order, each rebuilt from the library's own parts. Ant opens on
- * hover by default, so these stories do too (`trigger="hover"`); the library default is `click`.
+ * One story per common dropdown example, each built from the library's own parts. These
+ * stories open on hover (`trigger="hover"`); the library default is `click`.
  */
 const meta: Meta<AndesDropdownMenu> = {
   title: 'Navigation/Dropdown Menu/Examples',
@@ -52,14 +51,14 @@ const MODULE = {
 const NOTE =
   'font: 0.875rem var(--andes-font-family), sans-serif; color: var(--andes-color-muted-foreground); margin: 0 0 1rem;';
 
-/** Ant's text trigger: the label, then a chevron, as a link button. */
+/** A text trigger: the label, then a chevron, as a link button. */
 const textTrigger = (label: string) => `
   <andes-button andesDropdownMenuTrigger variant="link">
     ${label}
     <ng-icon slot="icon-end" name="lucideChevronDown" />
   </andes-button>`;
 
-/** The three plain items of Ant's placement, arrow and context menu examples. */
+/** The three plain items of the placement, arrow and context menu examples. */
 const THREE_ITEMS = `[
   { key: '1', label: '1st menu item' },
   { key: '2', label: '2nd menu item' },

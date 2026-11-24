@@ -9,8 +9,7 @@ Andes NG thanks the people, tools, and open-source projects that make it possibl
 | [Angular](https://angular.dev)                         | Application framework, Angular Package Format for published libraries |
 | [Nx](https://nx.dev)                                   | Monorepo tooling — task caching, generators, independent releases     |
 | [ng-packagr](https://github.com/ng-packagr/ng-packagr) | Builds `@andes-ng/*` packages to the Angular Package Format           |
-| [Spartan Brain](https://www.spartan.ng)                | Headless, accessible Angular behavior primitives (see ADR 0004)       |
-| [Angular CDK](https://material.angular.dev/cdk)        | Low-level building blocks Spartan Brain itself relies on              |
+| [Angular CDK](https://material.angular.dev/cdk)        | Low-level building blocks: overlay, focus management, accessibility   |
 | [Storybook](https://storybook.js.org)                  | Component development and visual documentation                        |
 | [Vitest](https://vitest.dev)                           | Unit test runner                                                      |
 | [ESLint](https://eslint.org) (`@nx/eslint-plugin`)     | Linting and module-boundary enforcement                               |

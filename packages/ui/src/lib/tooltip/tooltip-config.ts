@@ -37,8 +37,7 @@ export const ANDES_TOOLTIP_CONFIG =
 /**
  * Shares defaults, and a "grouping" clock, between the tooltips below the place it is
  * provided - the application (`bootstrapApplication`'s `providers`) or one component's
- * `providers`. This is the counterpart of shadcn's `TooltipProvider` (`delayDuration`,
- * `skipDelayDuration`) and of Ant Design's `ConfigProvider` `tooltip.unique`.
+ * `providers`. This is the app-wide place to set the open delay, the skip delay and `unique`.
  *
  * ```ts
  * bootstrapApplication(App, {

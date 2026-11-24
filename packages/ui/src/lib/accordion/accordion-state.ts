@@ -132,7 +132,7 @@ export class AndesAccordionState {
    *
    * `single` mode: opening an item replaces whatever was open (there is never more than one
    * value open); activating the already-open item closes it, so the set can also become
-   * empty - matching the array-of-open-values model both reference libraries settled on, where
+   * empty - the array-of-open-values model, where
    * "collapsible single mode" is just the default behavior rather than a separate flag.
    * `multiple` mode: toggles the one item without touching any others. */
   toggle(value: string): void {

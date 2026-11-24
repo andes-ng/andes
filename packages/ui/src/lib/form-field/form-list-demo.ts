@@ -11,7 +11,7 @@
  *   `demo-actions--labelled` shifts it down by the height of a field label (22px line + 8px
  *   gap), so it still centres on the input when the row shows a label above it - and a row
  *   without one (the second row of a list that labels only the first) needs no shift.
- * - `demo-remove`: the minus-circle remove icon, 24px like Ant's: grey at rest, darker on hover,
+ * - `demo-remove`: the minus-circle remove icon, 24px: grey at rest, darker on hover,
  *   with no button background of its own.
  * - `demo-quiet`: the grip and the up/down arrows, grey at rest and darker on hover.
  *

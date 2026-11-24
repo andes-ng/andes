@@ -556,7 +556,7 @@ export const SelectionActions: Story = {
 class StylingDemo {}
 
 /**
- * Semantic styling hooks, the equivalent of Ant's `classNames`: `panelClass` adds a class to
+ * Semantic styling hooks: `panelClass` adds a class to
  * the overlay pane that holds the panel (so `.my-panel .andes-dropdown-menu__content` and
  * custom properties such as `--andes-dropdown-menu-max-height` reach it), and an `items`
  * entry's `class` adds one to its own row. The panel and rows keep their `andes-dropdown-menu__*`

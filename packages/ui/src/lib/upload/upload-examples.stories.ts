@@ -153,7 +153,7 @@ const meta: Meta<AndesUpload> = {
     docs: {
       description: {
         component:
-          'One story for each example of the Ant Design Upload that the Basics page does not already show (clicking, default files, drag and drop, directories, manual upload, max count and the picture list are there). Every story uploads to a simulated server.',
+          'One story for each further upload example that the Basics page does not already show (clicking, default files, drag and drop, directories, manual upload, max count and the picture list are there). Every story uploads to a simulated server.',
       },
     },
   },
@@ -255,7 +255,7 @@ export const PicturesWall: Story = {
 class PngOnlyDemo {
   protected readonly request = simulatedUpload;
   protected readonly messages = signal<string[]>([]);
-  /** Vetoing in `beforeUpload` keeps the file out of the list (Ant's `Upload.LIST_IGNORE`). */
+  /** Vetoing in `beforeUpload` keeps the file out of the list. */
   protected readonly onlyPng = (file: File) => file.type === 'image/png';
 
   protected onRejected(rejections: AndesUploadRejection[]): void {
@@ -273,7 +273,7 @@ export const PngOnly: Story = {
     docs: {
       description: {
         story:
-          '`accept` only filters the picker, so the check that counts lives in `beforeUpload`: returning `false` keeps the file out of the list altogether (what Ant spells `Upload.LIST_IGNORE`), and `rejected` reports it with the reason `before-upload` so the page can say why.',
+          '`accept` only filters the picker, so the check that counts lives in `beforeUpload`: returning `false` keeps the file out of the list altogether, and `rejected` reports it with the reason `before-upload` so the page can say why.',
       },
     },
   },

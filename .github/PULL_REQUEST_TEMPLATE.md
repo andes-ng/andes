@@ -27,7 +27,7 @@
 - [ ] `pnpm format:check`, `pnpm lint`, `pnpm test`, `pnpm build`, and `pnpm build:storybook` pass locally
 - [ ] Public API changes (selectors, inputs, outputs, tokens, test helpers) include a version plan (`pnpm nx release plan`)
 - [ ] New/changed components: unit tests, keyboard behavior tests where applicable, and a Storybook example
-- [ ] Components only import Spartan Brain from inside `packages/ui` (see ADR 0004) — no `Brn*` names re-exported
+- [ ] Third-party behavior primitives are imported only from inside `packages/ui` (see ADR 0004) — none of their names are re-exported
 - [ ] No secrets, credentials, or key material are committed
 
 ---

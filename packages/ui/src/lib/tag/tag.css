@@ -40,7 +40,7 @@
 }
 
 /* A disabled tag drops its color for the same quiet grey surface in every color and variant,
-   as Ant Design does, so `!important` is deliberate: it has to beat every color x variant rule
+   so `!important` is deliberate: it has to beat every color x variant rule
    (and the dark-theme custom-color one) without a selector longer than they are. */
 .andes-tag--disabled {
   cursor: not-allowed;
@@ -113,7 +113,7 @@ a.andes-tag:focus-visible {
 
 /* Checkable tags ignore `color`/`variant` and only ever show this unchecked/checked pair, so the
    checked state always reads the same regardless of the tag's color. Unchecked is bare text
-   (no fill, no border), like Ant Design's: it only gets a surface once hovered or checked. */
+   (no fill, no border): it only gets a surface once hovered or checked. */
 .andes-tag--checkable {
   background-color: transparent;
   border-color: transparent;
@@ -151,7 +151,7 @@ a.andes-tag:focus-visible {
 .andes-tag__icon {
   display: inline-flex;
   align-items: center;
-  /* 7px from the icon to the label (Ant Design's `paddingXXS` less the border). */
+  /* 7px from the icon to the label (an 8px gap less the 1px border). */
   margin-inline-end: 0.4375rem;
 }
 
@@ -256,7 +256,7 @@ a.andes-tag:focus-visible {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* 3px after the label, 7px after an icon - the two distances Ant Design's close icon sits at. */
+  /* 3px after the label, 7px after an icon - the two distances the close icon sits at. */
   margin-inline-start: 0.1875rem;
   padding: 0;
   border: none;
@@ -307,8 +307,7 @@ a.andes-tag:focus-visible {
  *
  * `variant` (outlined/filled/solid) and `color` (default/primary/secondary/success/warning/
  * danger/info) are independent axes (the `variant` + `color` inputs) - not a
- * single combined enum. Each color below defines three treatments, the same three Ant Design
- * draws:
+ * single combined enum. Each color below defines three treatments:
  *   - outlined (default): a soft wash of the color with a border of it at 40%, and colored
  *     text.
  *   - filled: the same wash with no border, and colored text.
@@ -609,8 +608,8 @@ a.andes-tag:focus-visible {
   );
 }
 
-/* A raw CSS color (a hex code, rgb(...)) keeps a full-strength outline, as Ant Design draws
-   one; a palette hue stays on the softer preset-like outline above. */
+/* A raw CSS color (a hex code, rgb(...)) keeps a full-strength outline;
+   a palette hue stays on the softer preset-like outline above. */
 .andes-tag--color-raw.andes-tag--outlined {
   border-color: var(--andes-tag-color);
 }

@@ -17,7 +17,7 @@
  * - `.andes-tooltip__container`: the visible box - padding, background, radius, text.
  * - `.andes-tooltip__arrow`: the pointer on the edge that faces the trigger.
  *
- * Sizes follow Ant Design's tooltip: a 14px / 22px text in a box padded 6px 8px with a 6px
+ * Sizes: a 14px / 22px text in a box padded 6px 8px with a 6px
  * radius, at least 32px tall and 28px wide, at most 250px wide, on a near-black surface
  * (85% black on a light page, #424242 on a dark one) with white text.
  *
@@ -202,7 +202,7 @@
 }
 
 /*
- * The hue presets are Ant Design's colour names, with its step-6 fills: the same
+ * The hue presets are named colours with fixed fills: the same
  * colour in both themes, as a hue is a label rather than a surface. Their text is
  * picked like a custom colour's, below.
  */
@@ -261,8 +261,7 @@
 /*
  * An arbitrary `color`, and the hue presets: black or white text, whichever reads
  * better, picked from the background's OKLCH lightness with relative color syntax - white
- * up to 0.70, which keeps #f50 and #108ee9 on white and #2db7f5 and #87d068 on black as
- * Ant Design does. Browsers without it keep the white fallback.
+ * up to 0.70, which keeps #f50 and #108ee9 on white and #2db7f5 and #87d068 on black. Browsers without it keep the white fallback.
  */
 .andes-tooltip--custom-color > .andes-tooltip__container,
 .andes-tooltip--hue > .andes-tooltip__container {

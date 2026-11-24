@@ -409,7 +409,7 @@ describe('AndesEmpty', () => {
     const rule = (selector: string, property: string) =>
       declaredValue(raw, selector, property);
 
-    it('sizes the picture box like Ant Design: 100px, 40px simple, 35px small', () => {
+    it('sizes the picture box: 100px, 40px simple, 35px small', () => {
       const image = '.andes-empty__image';
       expect(rule(image, 'block-size')).toBe(
         'var(--andes-empty-image-size, 6.25rem)',
@@ -422,12 +422,12 @@ describe('AndesEmpty', () => {
       );
     });
 
-    it('keeps the gaps of Ant Design: 8px under the picture, 16px above the footer', () => {
+    it('keeps its gaps: 8px under the picture, 16px above the footer', () => {
       expect(rule('.andes-empty__image', 'margin-block-end')).toBe('0.5rem');
       expect(rule('.andes-empty__actions', 'margin-block-start')).toBe('1rem');
     });
 
-    it('takes its margins from Ant Design: 8px sideways, 32px around the simple picture, 8px small', () => {
+    it('has its margins: 8px sideways, 32px around the simple picture, 8px small', () => {
       expect(rule(':host', 'margin')).toBe(
         'var(--andes-empty-margin, 0 0.5rem)',
       );

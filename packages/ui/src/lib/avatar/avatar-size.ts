@@ -16,7 +16,7 @@ import {
 export type AndesAvatarSizePreset = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
 /**
- * Viewport breakpoints for a responsive `size`, with the common (Bootstrap)
+ * Viewport breakpoints for a responsive `size`, with the common
  * min-widths: `xs` < 576px <= `sm` < 768px <= `md` < 992px <=
  * `lg` < 1200px <= `xl` < 1600px <= `xxl`. There's no breakpoint token in
  * `@andes-ng/tokens` yet, so they live here.

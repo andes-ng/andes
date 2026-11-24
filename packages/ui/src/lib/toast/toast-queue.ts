@@ -472,8 +472,7 @@ export abstract class AndesToastQueue<TConfig> implements AndesToastController {
    * its doc comment): an aria-live region whose content and presence appear in the DOM in the
    * same update is not reliably announced by every browser/screen-reader pairing (the
    * decoupled-announcer requirement called out in this component's research doc), whereas
-   * `LiveAnnouncer` mutates a persistent, already-live hidden node - the same mechanism
-   * Angular Material relies on. Having both fire would double-announce every toast, so this
+   * `LiveAnnouncer` mutates a persistent, already-live hidden node. Having both fire would double-announce every toast, so this
    * must stay the single source of truth. `role: 'alert'` (the default for errors) maps to
    * `'assertive'` (interrupting), `'status'` to `'polite'`. A key-based update re-announces
    * the new text, so `loading` -> `success` is heard.

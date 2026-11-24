@@ -49,9 +49,9 @@ const ICONS = provideIcons({
   lucideVideo,
 });
 
-/** A row of tags: 8px apart, like Ant Design's `Flex gap="small"`. */
+/** A row of tags: 8px apart. */
 const ROW = 'display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;';
-/** A section title, like the dividers between Ant's example groups. */
+/** A section title between example groups. */
 const TITLE =
   'margin: 1.25rem 0 0.75rem; font: 500 0.875rem/1.25rem var(--andes-font-family), sans-serif; color: var(--andes-color-muted-foreground);';
 const TITLE_FIRST = `${TITLE} margin-top: 0;`;
@@ -94,7 +94,7 @@ const meta: Meta<AndesTag> = {
     docs: {
       description: {
         component:
-          'One story for each example of the Ant Design Tag, in the same order and with the same names.',
+          'One story for each common use of the tag: plain, link, closable, colored, icons, checkable, borderless, disabled and dynamic.',
       },
     },
   },
@@ -123,7 +123,7 @@ export const Basic: Story = {
       <div style="${ROW}">
         <andes-tag>Tag 1</andes-tag>
         <andes-tag>
-          <a href="https://github.com/ant-design/ant-design/issues/1862" target="_blank" rel="noopener noreferrer" aria-label="Ant Design issue">Link</a>
+          <a href="https://example.com/" target="_blank" rel="noopener noreferrer" aria-label="Example link">Link</a>
         </andes-tag>
         <andes-tag closeIcon hideOnClose (closed)="preventDefault($event)">Prevent Default</andes-tag>
         <andes-tag [closeIcon]="circle" hideOnClose (closed)="log($event)">Tag 2</andes-tag>
@@ -316,17 +316,17 @@ export const Icon: Story = {
       <ng-template #work><ng-icon name="lucideBriefcase" /></ng-template>
       <p style="${TITLE_FIRST}">Tag with icon</p>
       <div style="${ROW}">
-        <andes-tag [icon]="chat" color="#55acee">Twitter</andes-tag>
-        <andes-tag [icon]="video" color="#cd201f">Youtube</andes-tag>
-        <andes-tag [icon]="users" color="#3b5999">Facebook</andes-tag>
-        <andes-tag [icon]="work" color="#55acee">LinkedIn</andes-tag>
+        <andes-tag [icon]="chat" color="#55acee">Chat</andes-tag>
+        <andes-tag [icon]="video" color="#cd201f">Video</andes-tag>
+        <andes-tag [icon]="users" color="#3b5999">Team</andes-tag>
+        <andes-tag [icon]="work" color="#55acee">Work</andes-tag>
       </div>
       <p style="${TITLE}">CheckableTag with icon</p>
       <div style="${ROW}">
-        <andes-tag checkable [icon]="chat" [checked]="checked()[0]" (checkedChange)="toggle(checked, 0)">Twitter</andes-tag>
-        <andes-tag checkable [icon]="video" [checked]="checked()[1]" (checkedChange)="toggle(checked, 1)">Youtube</andes-tag>
-        <andes-tag checkable [icon]="users" [checked]="checked()[2]" (checkedChange)="toggle(checked, 2)">Facebook</andes-tag>
-        <andes-tag checkable [icon]="work" [checked]="checked()[3]" (checkedChange)="toggle(checked, 3)">LinkedIn</andes-tag>
+        <andes-tag checkable [icon]="chat" [checked]="checked()[0]" (checkedChange)="toggle(checked, 0)">Chat</andes-tag>
+        <andes-tag checkable [icon]="video" [checked]="checked()[1]" (checkedChange)="toggle(checked, 1)">Video</andes-tag>
+        <andes-tag checkable [icon]="users" [checked]="checked()[2]" (checkedChange)="toggle(checked, 2)">Team</andes-tag>
+        <andes-tag checkable [icon]="work" [checked]="checked()[3]" (checkedChange)="toggle(checked, 3)">Work</andes-tag>
       </div>
       <p style="${TITLE}">Tag with third-party icon</p>
       <div style="${ROW}">
@@ -478,8 +478,8 @@ export const Disabled: Story = {
       <div style="display: flex; flex-direction: column; gap: 1rem;">
         <div style="${ROW}">
           <andes-tag disabled>Basic Tag</andes-tag>
-          <andes-tag disabled><a href="https://ant.design">Link Tag</a></andes-tag>
-          <andes-tag disabled href="https://ant.design">Href Tag</andes-tag>
+          <andes-tag disabled><a href="https://example.com/">Link Tag</a></andes-tag>
+          <andes-tag disabled href="https://example.com/">Href Tag</andes-tag>
           <andes-tag disabled color="success" [icon]="ok">Icon Tag</andes-tag>
         </div>
         <div style="${ROW}">

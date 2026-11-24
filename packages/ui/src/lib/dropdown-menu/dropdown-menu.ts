@@ -80,7 +80,7 @@ const PLACEMENTS: Readonly<
 
 /** Gap between trigger and panel - the `menu` preset's own value. */
 const SIDE_OFFSET = 4;
-/** Gap with an arrow: room for the 5.5px the arrow's tip sticks out, plus a 6px gap (Ant Design's). */
+/** Gap with an arrow: room for the 5.5px the arrow's tip sticks out, plus a 6px gap. */
 const ARROW_SIDE_OFFSET = 11.5;
 /** Closest the arrow's center may get to a panel corner, so it never overlaps the radius. */
 const ARROW_INSET = 20;
@@ -846,8 +846,7 @@ export class AndesDropdownMenu
   }
 
   /**
-   * The panel is never narrower than the trigger it opens from (Ant Design's
-   * `minOverlayWidthMatchTrigger`); a menu opened at a point has no trigger to match. A
+   * The panel is never narrower than the trigger it opens from; a menu opened at a point has no trigger to match. A
    * `size.minWidth` that a wrapping component set itself is left alone.
    */
   private sizeForTrigger(atPoint: boolean) {

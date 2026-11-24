@@ -1986,7 +1986,7 @@ export abstract class AndesUploadBase implements ControlValueAccessor {
       (viewable || this.isOpenable(file.url) || this.isBlobOpenable(file));
 
     const disabled = this.isDisabled();
-    // A failed file keeps its icon and turns red, like Ant's; the message is the tooltip.
+    // A failed file keeps its icon and turns red; the message is the tooltip.
     const icon =
       status === 'uploading'
         ? 'lucideLoaderCircle'

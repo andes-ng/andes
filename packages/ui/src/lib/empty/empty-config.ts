@@ -36,8 +36,8 @@ export const ANDES_EMPTY_TEXTS_ES: AndesEmptyTexts = {
 };
 
 /**
- * Defaults every empty state below the place they are provided shares - the counterpart of
- * Ant Design's `ConfigProvider` (`empty` and `renderEmpty`). Every field is optional, and an
+ * Defaults every empty state below the place they are provided shares - the app-wide place to set
+ * the image, the texts and the part styling. Every field is optional, and an
  * `<andes-empty>`'s own input always wins over it. The "no data" areas of other components
  * (the `andes-select` panel) render an `<andes-empty>`, so they follow it too.
  */
@@ -93,7 +93,7 @@ export function provideAndesEmpty(config: AndesEmptyConfig): Provider[] {
 }
 
 /**
- * `ConfigProvider` for a part of a template: every empty state inside the element - and the
+ * The provider for a part of a template: every empty state inside the element - and the
  * "no data" areas of the components inside it - reads `andesEmptyProvider`. A nested
  * provider replaces the outer one field by field.
  *

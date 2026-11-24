@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-The repository needs Angular 22 applications, Angular Package Format libraries, visual development, tests and coordinated releases. Spartan uses Nx and pnpm; shadcn/ui uses Turborepo and pnpm. Those choices reflect their ecosystems and do not establish a requirement for Andes. Angular generators, project graph analysis and module-boundary enforcement are first-class concerns here.
+The repository needs Angular 22 applications, Angular Package Format libraries, visual development, tests and coordinated releases. Other projects pick other monorepo tools, and those choices reflect their own ecosystems rather than a requirement for Andes. Angular generators, project graph analysis and module-boundary enforcement are first-class concerns here.
 
 ## Decision
 

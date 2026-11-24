@@ -23,8 +23,8 @@ const DESTROY_FALLBACK_MS = 400;
 /**
  * The collapsible panel for one accordion item. Exposed as a `region` landmark, labelled by its
  * own trigger (`aria-labelledby`) and cross-linked back from the trigger via `aria-controls` -
- * neither reference implementation's fetched docs confirmed this wiring exists automatically,
- * so it's implemented explicitly here rather than assumed (see accordion-collapse.md, section 4).
+ * this wiring is not applied automatically, so it is implemented explicitly
+ * here rather than assumed (see accordion-collapse.md, section 4).
  *
  * Stays mounted in the DOM at all times and is purely visually collapsed via CSS (see
  * accordion-content.css) rather than toggling `hidden`/`display: none` - `inert` is applied

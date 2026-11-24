@@ -891,7 +891,7 @@ describe('AndesTag metrics and tints', () => {
     );
   });
 
-  it('draws filled as a wash with no border, and outlined as the same wash with a 40% border (the two Ant draws)', () => {
+  it('draws filled as a wash with no border, and outlined as the same wash with a 40% border (the two treatments)', () => {
     // jsdom doesn't parse color-mix() colors, so this reads the declared rules.
     const css = readFileSync(
       join(process.cwd(), 'packages/ui/src/lib/tag/tag.css'),
@@ -1064,7 +1064,7 @@ describe('AndesTag custom-color tints', () => {
     );
   });
 
-  it('keeps a raw CSS color outlined at full strength, as Ant does, and a palette hue soft', () => {
+  it('keeps a raw CSS color outlined at full strength, and a palette hue soft', () => {
     expect(css()).toContain(
       '.andes-tag--color-raw.andes-tag--outlined { border-color: var(--andes-tag-color); }',
     );
@@ -1500,7 +1500,7 @@ describe('AndesTag disabled and checkable surfaces', () => {
   });
 });
 
-describe('AndesTag palette hues Ant also names', () => {
+describe('AndesTag extended palette hues', () => {
   it.each(['volcano', 'gold', 'geekblue'])(
     'colors a %s tag from the themed palette hue',
     (hue) => {

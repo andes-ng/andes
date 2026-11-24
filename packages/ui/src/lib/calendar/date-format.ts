@@ -1,9 +1,9 @@
 /**
  * Token-based date formatting and parsing for `AndesDatePicker`'s typed input.
  *
- * Built on `Intl` and plain regular expressions — no `dayjs`/`date-fns`, matching
- * `date-utils.ts`. The token vocabulary is the familiar dayjs one, so existing
- * format strings port over unchanged:
+ * Built on `Intl` and plain regular expressions — no date library, matching
+ * `date-utils.ts`. The token vocabulary is the widely used `YYYY`/`MM`/`DD` one, so
+ * common format strings work unchanged:
  *
  * | Token          | Meaning                                  | Example        |
  * | -------------- | ---------------------------------------- | -------------- |
@@ -357,7 +357,7 @@ export function parseWithPattern(
         year = value;
         break;
       case 'YY':
-        // dayjs's customParseFormat pivot: 69-99 are the 1900s.
+        // Two-digit year pivot: 69-99 are the 1900s.
         year = value > 68 ? 1900 + value : 2000 + value;
         break;
       case 'BBBB':

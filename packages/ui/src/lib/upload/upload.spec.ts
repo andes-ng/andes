@@ -2175,7 +2175,7 @@ describe('AndesUpload', () => {
 
         const item = root.querySelector('.andes-upload__item') as HTMLElement;
         expect(item.getAttribute('title')).toBe(long);
-        // The picture is replaced by the file icon, like Ant's failed card.
+        // The picture is replaced by the file icon.
         expect(root.querySelector('.andes-upload__img')).toBeNull();
         expect(
           lucideName(root.querySelector('.andes-upload__thumb ng-icon'), {
@@ -3201,7 +3201,7 @@ describe('AndesUpload', () => {
       );
     });
 
-    describe('sizes of the reference', () => {
+    describe('default sizes', () => {
       const declared = (selector: string, property: string) =>
         declaredValue(css, selector, property);
       const space2 = 'var(--andes-space-2, 0.5rem)';
@@ -3263,7 +3263,7 @@ describe('AndesUpload', () => {
       });
 
       it('keeps the file icon 14px and 8px from the name, and the size 8px after it', () => {
-        // Ant: a 14px icon box, then the name's own 8px of padding; the size (our caption)
+        // A 14px icon box, then the name's own 8px of padding; the size (our caption)
         // follows the name by one more 8px gap and is muted.
         expect(declared('.andes-upload__thumb', 'font-size')).toBe('0.875rem');
         expect(toPx('0.875rem')).toBe(14);

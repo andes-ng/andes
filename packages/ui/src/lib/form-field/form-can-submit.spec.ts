@@ -54,8 +54,9 @@ function type(input: HTMLInputElement, value: string): void {
     <button class="save" type="submit" form="x" [disabled]="!f.canSubmit()">
       Save
     </button>
-    <output class="valid">{{ f.valid() }}</output
-    ><output class="pending">{{ f.pending() }}</output>`,
+    <output class="valid">{{ f.valid() }}</output><output class="pending">{{
+      f.pending()
+    }}</output>`,
 })
 class CanSubmitHost {
   readonly form = viewChild.required<AndesForm>('f');

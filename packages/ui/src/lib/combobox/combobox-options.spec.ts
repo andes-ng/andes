@@ -84,8 +84,7 @@ const GROUPED_OPTIONS: readonly AndesComboboxOptionEntry<string>[] = [
       (clear)="clears = clears + 1"
     />
     <ng-template #optionTpl let-option let-query="query">
-      <b class="custom">{{ option.label }}</b
-      ><i class="query">{{ query }}</i>
+      <b class="custom">{{ option.label }}</b><i class="query">{{ query }}</i>
     </ng-template>
     <ng-template #notFoundTpl><em class="custom-empty">Nada</em></ng-template>
   `,

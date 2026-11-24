@@ -1,0 +1,21 @@
+<div
+  #map
+  class="andes-org-chart-minimap__map"
+  [style.width.px]="boxWidth()"
+  [style.height.px]="boxHeight()"
+>
+  <canvas
+    #canvas
+    class="andes-org-chart-minimap__canvas"
+    [style.width.px]="boxWidth()"
+    [style.height.px]="boxHeight()"
+  ></canvas>
+  <div
+    class="andes-org-chart-minimap__frame"
+    data-slot="org-chart-minimap-frame"
+    [style.left.px]="frame().left"
+    [style.top.px]="frame().top"
+    [style.width.px]="frame().width"
+    [style.height.px]="frame().height"
+  ></div>
+</div>

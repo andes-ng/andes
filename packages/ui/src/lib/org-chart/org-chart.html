@@ -128,6 +128,7 @@
         [attr.data-accent]="node.context.color ? '' : null"
         [attr.data-matched]="node.context.matched ? '' : null"
         [attr.data-highlighted]="node.context.highlighted ? '' : null"
+        [attr.data-current]="currentMatch() === node.key ? '' : null"
         [attr.data-dimmed]="searching() && !node.context.highlighted ? '' : null"
         [attr.data-disabled]="node.record.disabled ? '' : null"
         [attr.data-readonly]="node.record.readonly ? '' : null"
@@ -256,76 +257,188 @@
   }
 </div>
 
+<!--
+  Top start corner: the consumer's own toolbar, then the trail of an isolated team. The built-in
+  bar floats in the corner chosen by `controlsPosition` (the bottom end by default).
+-->
 @if (resolvedToolbarTemplate(); as toolbar) {
-<div class="andes-org-chart__toolbar" data-slot="org-chart-toolbar">
-  <ng-container
-    [ngTemplateOutlet]="toolbar"
-    [ngTemplateOutletContext]="{ $implicit: this }"
-  />
+<div class="andes-org-chart__top" data-slot="org-chart-top">
+  <div class="andes-org-chart__toolbar" data-slot="org-chart-toolbar">
+    <ng-container
+      [ngTemplateOutlet]="toolbar"
+      [ngTemplateOutletContext]="{ $implicit: this }"
+    />
+  </div>
+  @if (focusRecord() && focusTrail()) {
+  <ng-container [ngTemplateOutlet]="trailTemplate" />
+  }
 </div>
-} @if (controls() && !isEmpty()) {
+} @else if (focusRecord() && focusTrail()) {
+<div class="andes-org-chart__top" data-slot="org-chart-top">
+  <ng-container [ngTemplateOutlet]="trailTemplate" />
+</div>
+}
+
+<ng-template #trailTemplate>
+  <andes-breadcrumb
+    class="andes-org-chart__trail"
+    data-slot="org-chart-trail"
+    [aria-label]="text().focusTrail"
+    [items]="trail()"
+    [maxItems]="5"
+  />
+</ng-template>
+
+@if (showBar()) {
 <div
   class="andes-org-chart__controls"
   data-slot="org-chart-controls"
   role="group"
   [attr.aria-label]="text().controls"
+  [attr.data-position]="controlsPosition()"
+  [attr.data-orientation]="controlsOrientation()"
 >
-  @if (zoomable()) {
-  <andes-button
-    variant="ghost"
-    size="icon"
-    [aria-label]="text().zoomIn"
-    [disabled]="!canZoomIn()"
-    (click)="zoomIn()"
-  >
-    <ng-icon name="lucidePlus" aria-hidden="true" />
-  </andes-button>
+  @for (part of barParts(); track $index) { @switch (part.kind) { @case
+  ('divider') {
+  <span class="andes-org-chart__divider" aria-hidden="true"></span>
+  } @case ('percent') {
   <span class="andes-org-chart__zoom" data-slot="org-chart-zoom"
     >{{ zoomPercent() }}</span
   >
-  <andes-button
-    variant="ghost"
-    size="icon"
-    [aria-label]="text().zoomOut"
-    [disabled]="!canZoomOut()"
-    (click)="zoomOut()"
-  >
-    <ng-icon name="lucideMinus" aria-hidden="true" />
-  </andes-button>
-  <span class="andes-org-chart__divider" aria-hidden="true"></span>
-  }
-  <andes-button
-    variant="ghost"
-    size="icon"
-    [aria-label]="text().fit"
-    (click)="fitView()"
-  >
-    <ng-icon name="lucideMaximize" aria-hidden="true" />
-  </andes-button>
-  <andes-button
-    variant="ghost"
-    size="icon"
-    [aria-label]="text().reset"
-    (click)="resetView()"
-  >
-    <ng-icon name="lucideLocateFixed" aria-hidden="true" />
-  </andes-button>
-  @if (exportable()) {
-  <span class="andes-org-chart__divider" aria-hidden="true"></span>
+  } @case ('export') {
   <andes-dropdown-menu
-    placement="leftBottom"
-    [items]="exportItems"
+    [placement]="menuPlacement()"
+    [items]="exportItems()"
     (itemClick)="onExport($event)"
   >
     <andes-button
       andesDropdownMenuTrigger
+      data-tool="export"
       variant="ghost"
       size="icon"
-      [aria-label]="text().export"
+      [aria-label]="part.label"
     >
-      <ng-icon name="lucideDownload" aria-hidden="true" />
+      <ng-icon
+        [name]="part.icon"
+        [attr.data-icon]="part.icon"
+        aria-hidden="true"
+      />
     </andes-button>
   </andes-dropdown-menu>
-  }
+  } @case ('levels') {
+  <andes-dropdown-menu
+    selectable
+    [placement]="menuPlacement()"
+    [items]="levelItems()"
+    [selectedKeys]="shownLevelKeys()"
+    [disabled]="levelItems().length < 2"
+    (itemClick)="onLevel($event)"
+  >
+    <andes-button
+      andesDropdownMenuTrigger
+      data-tool="expandLevel"
+      variant="ghost"
+      size="icon"
+      [aria-label]="part.label"
+      [disabled]="levelItems().length < 2"
+    >
+      <ng-icon
+        [name]="part.icon"
+        [attr.data-icon]="part.icon"
+        aria-hidden="true"
+      />
+    </andes-button>
+  </andes-dropdown-menu>
+  } @default {
+  <andes-tooltip [side]="tipSide()" [disabled]="!controlTooltips()">
+    <andes-button
+      andesTooltipTrigger
+      [variant]="part.active ? 'secondary' : 'ghost'"
+      size="icon"
+      [attr.data-tool]="part.key"
+      [attr.data-active]="part.active ? '' : null"
+      [aria-label]="part.label"
+      [disabled]="part.disabled"
+      (click)="part.run?.()"
+    >
+      <ng-icon
+        [name]="part.icon"
+        [attr.data-icon]="part.icon"
+        aria-hidden="true"
+      />
+    </andes-button>
+    <ng-template andesTooltipContent>
+      {{ part.label }} @if (part.hint) {
+      <kbd class="andes-org-chart__kbd">{{ part.hint }}</kbd>
+      }
+    </ng-template>
+  </andes-tooltip>
+  } } }
 </div>
+@if (searchOpen() && barItems().includes('search')) {
+<div
+  class="andes-org-chart__search"
+  data-slot="org-chart-search"
+  role="search"
+  [attr.data-position]="controlsPosition()"
+  [attr.data-orientation]="controlsOrientation()"
+>
+  <andes-input
+    class="andes-org-chart__search-input"
+    clearable
+    [aria-label]="text().search"
+    [placeholder]="text().searchPlaceholder"
+    [value]="search()"
+    [clearLabel]="text().searchClose"
+    (valueChange)="onSearchInput($event)"
+    (keydown)="onSearchKeydown($event)"
+  />
+  <span
+    class="andes-org-chart__matches"
+    data-slot="org-chart-matches"
+    aria-live="polite"
+    >{{ matchSummary() }}</span
+  >
+  <andes-button
+    variant="ghost"
+    size="icon"
+    data-tool="previousMatch"
+    [aria-label]="text().previousMatch"
+    [disabled]="!matchedKeys().length"
+    (click)="previousMatch()"
+  >
+    <ng-icon name="lucideChevronUp" aria-hidden="true" />
+  </andes-button>
+  <andes-button
+    variant="ghost"
+    size="icon"
+    data-tool="nextMatch"
+    [aria-label]="text().nextMatch"
+    [disabled]="!matchedKeys().length"
+    (click)="nextMatch()"
+  >
+    <ng-icon name="lucideChevronDown" aria-hidden="true" />
+  </andes-button>
+  <andes-button
+    variant="ghost"
+    size="icon"
+    data-tool="closeSearch"
+    [aria-label]="text().searchClose"
+    (click)="closeSearch()"
+  >
+    <ng-icon name="lucideX" aria-hidden="true" />
+  </andes-button>
+</div>
+} } @if (minimap() && !isEmpty()) {
+<andes-org-chart-minimap
+  class="andes-org-chart__minimap"
+  [attr.data-corner]="minimapCorner()"
+  [chart]="this"
+/>
+} @if (nodeActions()) {
+<andes-dropdown-menu
+  #actionsMenu
+  [items]="actionItems()"
+  (itemClick)="onNodeAction($event)"
+/>
 }

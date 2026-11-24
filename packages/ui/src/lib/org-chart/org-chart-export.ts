@@ -1,6 +1,12 @@
 /** The file formats a chart can be exported to. */
 export type AndesOrgChartExportFormat = 'svg' | 'png' | 'jpeg' | 'webp';
 
+/**
+ * What an export takes: `chart` is the whole chart, however far it reaches past the viewport;
+ * `view` is exactly what the viewport shows right now, at the current pan and zoom.
+ */
+export type AndesOrgChartExportScope = 'chart' | 'view';
+
 export interface AndesOrgChartExportOptions {
   /**
    * Pixel ratio of a raster image: 2 draws the chart twice as large as its canvas, which stays
@@ -17,6 +23,8 @@ export interface AndesOrgChartExportOptions {
   quality?: number;
   /** The file name without extension, for `download()`. */
   filename?: string;
+  /** `chart` (default): the whole chart. `view`: only what the viewport shows right now. */
+  scope?: AndesOrgChartExportScope;
 }
 
 const MIME: Readonly<Record<AndesOrgChartExportFormat, string>> = {
@@ -127,6 +135,37 @@ const SNAPSHOT_HOST_STYLE =
   'display:block;position:relative;overflow:visible;border:0;margin:0;transform:none;';
 
 /**
+ * A copy of the canvas to take the snapshot from, laid out at its own size without the pan and
+ * zoom. Taking it is the only step that must happen while the page is in the state to capture;
+ * everything after it (images, fonts, styles) works from the copy.
+ */
+export function cloneCanvas(
+  canvas: HTMLElement,
+  width: number,
+  height: number,
+): HTMLElement {
+  const clone = canvas.cloneNode(true) as HTMLElement;
+  clone.style.transform = 'none';
+  clone.style.width = `${width}px`;
+  clone.style.height = `${height}px`;
+  clone.style.transition = 'none';
+  return clone;
+}
+
+/** A copy of the viewport as it is: clipped to its box, with the canvas at the current pan and zoom. */
+export function cloneViewport(viewport: HTMLElement): HTMLElement {
+  const clone = viewport.cloneNode(true) as HTMLElement;
+  const canvas = clone.querySelector<HTMLElement>(
+    '[data-slot="org-chart-canvas"]',
+  );
+  if (canvas) {
+    canvas.style.transition = 'none';
+    canvas.removeAttribute('data-smooth');
+  }
+  return clone;
+}
+
+/**
  * The chart as it looks on screen, as a standalone SVG document that holds the rendered cards
  * (an HTML `foreignObject`), so every card, template, avatar, checkbox and color comes out the
  * way it is drawn, whatever the consumer put in it. The whole canvas is taken at its own size,
@@ -143,12 +182,44 @@ export async function snapshotSvg(
   height: number,
   background?: string,
 ): Promise<string> {
-  const clone = canvas.cloneNode(true) as HTMLElement;
-  clone.style.transform = 'none';
-  clone.style.width = `${width}px`;
-  clone.style.height = `${height}px`;
-  clone.style.transition = 'none';
+  return snapshotClone(
+    host,
+    cloneCanvas(canvas, width, height),
+    width,
+    height,
+    background,
+  );
+}
 
+/**
+ * Only what the viewport shows, at its own size: the same exact-look document, but of the
+ * viewport (clipping the canvas at its current pan and zoom) instead of the whole canvas. The
+ * page only holds the cards near the viewport of a large chart, which is all this needs.
+ */
+export async function snapshotView(
+  host: HTMLElement,
+  viewport: HTMLElement,
+  width: number,
+  height: number,
+  background?: string,
+): Promise<string> {
+  return snapshotClone(
+    host,
+    cloneViewport(viewport),
+    width,
+    height,
+    background,
+  );
+}
+
+/** The snapshot document of an already cloned part of the chart, `width` x `height` pixels. */
+export async function snapshotClone(
+  host: HTMLElement,
+  clone: HTMLElement,
+  width: number,
+  height: number,
+  background?: string,
+): Promise<string> {
   await inlineImages(clone);
 
   const css = await collectCss(host);

@@ -312,15 +312,52 @@ describe('AndesOrgChart styles', () => {
     ).toBe('2px solid var(--andes-color-focus-ring)');
   });
 
-  it('stacks the zoom controls in a column in the inline-end corner', () => {
+  it('stacks the zoom controls in a column in the bottom inline-end corner', () => {
     const { part } = setup();
     const controls = getComputedStyle(part('[data-slot="org-chart-controls"]'));
     expect(controls.position).toBe('absolute');
     expect(controls.display).toBe('flex');
     expect(controls.flexDirection).toBe('column');
-    expect(declared('.andes-org-chart__controls', 'inset-inline-end')).toBe(
-      'var(--andes-space-3)',
+    expect(
+      declared(
+        ".andes-org-chart__controls[data-position='bottom-end']",
+        'inset-inline-end',
+      ),
+    ).toBe('var(--_andes-org-chart-gap)');
+    expect(
+      declared(
+        ".andes-org-chart__controls[data-position='bottom-end']",
+        'inset-block-end',
+      ),
+    ).toBe('var(--_andes-org-chart-gap)');
+  });
+
+  it('puts the bar in each of the four corners with logical offsets, in a row when horizontal', () => {
+    const corner = (position: string, side: string) =>
+      declared(`.andes-org-chart__controls[data-position='${position}']`, side);
+    expect(corner('top-start', 'inset-block-start')).toBeDefined();
+    expect(corner('top-start', 'inset-inline-start')).toBeDefined();
+    expect(corner('top-end', 'inset-inline-end')).toBeDefined();
+    expect(corner('bottom-start', 'inset-inline-start')).toBeDefined();
+    expect(
+      declared(
+        ".andes-org-chart__controls[data-orientation='horizontal']",
+        'flex-direction',
+      ),
+    ).toBe('row');
+    // Nothing physical: the corners mirror under right-to-left.
+    expect(CSS).not.toMatch(/\.andes-org-chart__controls[^{]*\{[^}]*\bleft:/);
+  });
+
+  it('prints only the picture of the chart and keeps it full screen without a frame', () => {
+    const printed = CSS.slice(
+      CSS.indexOf('@media print'),
+      CSS.indexOf('@media print') + 400,
     );
+    expect(printed).toContain('.andes-org-chart__controls');
+    expect(printed).toContain('display: none');
+    expect(declared(':host(:fullscreen)', 'border-radius')).toBe('0');
+    expect(declared(':host(:fullscreen)', 'block-size')).toBe('100%');
   });
 
   it('animates moves only when motion is on and the chart is ready', () => {

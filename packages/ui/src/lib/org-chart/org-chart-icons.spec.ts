@@ -33,7 +33,10 @@ const ORG: Person = {
 function drawn(root: ParentNode): string[] {
   return Array.from(root.querySelectorAll('ng-icon'))
     .filter((icon) => icon.querySelector('svg') !== null)
-    .map((icon) => icon.getAttribute('name') ?? '?');
+    .map(
+      (icon) =>
+        icon.getAttribute('name') ?? icon.getAttribute('data-icon') ?? '?',
+    );
 }
 
 function blank(root: ParentNode): string[] {

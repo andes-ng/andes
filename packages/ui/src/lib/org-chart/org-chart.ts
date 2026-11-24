@@ -5,7 +5,8 @@ import {
   AndesTreeNavigation,
   AndesTreeNavigationNode,
 } from '@andes-ng/primitives';
-import { NgTemplateOutlet } from '@angular/common';
+import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
+import { OverlayContainer } from '@angular/cdk/overlay';
 import {
   afterNextRender,
   AnimationCallbackEvent,
@@ -19,6 +20,7 @@ import {
   ElementRef,
   forwardRef,
   inject,
+  Injector,
   input,
   linkedSignal,
   model,
@@ -31,31 +33,72 @@ import {
 } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
+  lucideCamera,
   lucideChevronDown,
+  lucideChevronUp,
   lucideDownload,
+  lucideFoldVertical,
+  lucideLayers,
   lucideLoaderCircle,
   lucideLocateFixed,
+  lucideMap,
   lucideMaximize,
+  lucideMaximize2,
+  lucideMinimize2,
   lucideMinus,
   lucidePlus,
+  lucidePrinter,
+  lucideSearch,
+  lucideUnfoldVertical,
+  lucideX,
 } from '@ng-icons/lucide';
 
+import { AndesBreadcrumb } from '../breadcrumb/breadcrumb';
+import type { AndesBreadcrumbItemType } from '../breadcrumb/breadcrumb-items';
 import { AndesButton } from '../button/button';
 import { AndesCheckbox } from '../checkbox/checkbox';
 import { AndesDropdownMenu } from '../dropdown-menu/dropdown-menu';
 import { AndesDropdownMenuTrigger } from '../dropdown-menu/dropdown-menu-trigger';
 import type {
   AndesDropdownMenuClickEvent,
+  AndesDropdownMenuItemDef,
   AndesDropdownMenuItemOption,
+  AndesDropdownMenuPlacement,
 } from '../dropdown-menu/dropdown-menu-types';
+import { AndesInput } from '../input/input';
+import { AndesPopoverOverlayContainer } from '../popover/popover-container';
+import { AndesTooltip } from '../tooltip/tooltip';
+import { AndesTooltipContent } from '../tooltip/tooltip-content';
+import { AndesTooltipTrigger } from '../tooltip/tooltip-trigger';
 import {
   type AndesOrgChartExportFormat,
   type AndesOrgChartExportOptions,
+  type AndesOrgChartExportScope,
+  cloneCanvas,
   exportBlob,
   exportExtension,
   saveBlob,
-  snapshotSvg,
+  snapshotClone,
+  snapshotView,
 } from './org-chart-export';
+import {
+  type AndesOrgChartLabels,
+  DEFAULT_ORG_CHART_LABELS,
+} from './org-chart-labels';
+import {
+  AndesOrgChartMinimap,
+  type AndesOrgChartOverview,
+  type AndesOrgChartSeenArea,
+} from './org-chart-minimap';
+import { printOrgChartImage } from './org-chart-print';
+import {
+  ANDES_ORG_CHART_DEFAULT_CONTROLS,
+  type AndesOrgChartControl,
+  type AndesOrgChartControlsOrientation,
+  type AndesOrgChartControlsPosition,
+  fillOrgChartText,
+  resolveOrgChartControls,
+} from './org-chart-toolbar';
 import {
   andesOrgChartLinkPath,
   AndesOrgChartConnectorStyle,
@@ -230,36 +273,45 @@ export interface AndesOrgChartScrollOptions extends AndesOrgChartViewOptions {
   readonly focus?: boolean;
 }
 
-/** Every text the chart shows or announces itself, for translation. */
-export interface AndesOrgChartLabels {
-  readonly zoomIn: string;
-  readonly zoomOut: string;
-  readonly fit: string;
-  readonly reset: string;
-  readonly export: string;
-  readonly controls: string;
-  readonly empty: string;
-  readonly loading: string;
+export type { AndesOrgChartLabels } from './org-chart-labels';
+
+/**
+ * The entries of the menu a card opens (right click, the context menu key or Shift+F10), as
+ * `andes-dropdown-menu` items: plain entries, groups, dividers and submenus. A function builds
+ * them per person, so an entry can be left out or disabled for some cards.
+ */
+export type AndesOrgChartNodeActions<T> =
+  | readonly AndesDropdownMenuItemDef[]
+  | ((
+      node: AndesOrgChartNodeContext<T>,
+    ) => readonly AndesDropdownMenuItemDef[]);
+
+/** Payload of `nodeAction`: an entry of a card's menu was chosen. */
+export interface AndesOrgChartNodeActionEvent<T> {
+  /** The `key` of the chosen entry. */
+  readonly action: string;
+  /** The card the menu was opened on. */
+  readonly node: AndesOrgChartNodeContext<T>;
+  /** The click or key press that chose the entry. */
+  readonly event: Event;
 }
 
-const DEFAULT_LABELS: AndesOrgChartLabels = {
-  zoomIn: 'Zoom in',
-  zoomOut: 'Zoom out',
-  fit: 'Fit to view',
-  reset: 'Reset view',
-  export: 'Export chart',
-  controls: 'Chart view',
-  empty: 'No data',
-  loading: 'Loading reports',
-};
+/** Payload of `exported`: a file was saved through `download()` or the bar. */
+export interface AndesOrgChartExportEvent {
+  readonly format: AndesOrgChartExportFormat;
+  readonly scope: AndesOrgChartExportScope;
+  /** The file name, with its extension. */
+  readonly filename: string;
+  readonly blob: Blob;
+}
 
-/** The formats of the export menu, in the order they are listed. */
-const EXPORT_ITEMS: readonly AndesDropdownMenuItemOption[] = [
-  { key: 'png', label: 'PNG image' },
-  { key: 'jpeg', label: 'JPG image' },
-  { key: 'webp', label: 'WebP image' },
-  { key: 'svg', label: 'SVG vector' },
-];
+/** Payload of `exportError`: an export or a print from the bar failed. */
+export interface AndesOrgChartExportErrorEvent {
+  readonly error: unknown;
+}
+
+/** The most levels the `expandLevel` menu lists. */
+const MAX_LEVEL_OPTIONS = 12;
 
 const DEFAULT_NODE_SIZE: AndesOrgChartSize = { width: 240, height: 72 };
 
@@ -379,6 +431,21 @@ interface NodeView<T> {
   readonly enterClass: string;
 }
 
+/** One thing the bar draws: a button, a menu, a rule or the zoom label. */
+interface BarPart {
+  readonly kind: 'button' | 'divider' | 'percent' | 'export' | 'levels';
+  /** The name of the tool, on the element as `data-tool`. */
+  readonly key: string;
+  readonly icon: string;
+  readonly label: string;
+  /** The keyboard shortcut shown in the tooltip. */
+  readonly hint?: string;
+  readonly disabled?: boolean;
+  /** A toggle that is on. */
+  readonly active?: boolean;
+  readonly run?: () => void;
+}
+
 /** A connector as the template renders it. */
 interface LinkView<T> {
   readonly id: string;
@@ -438,6 +505,16 @@ interface Placement<T> {
  *   collapse or go to the manager (mirrored right to left), Home/End, `*` expands the
  *   siblings, typing jumps by name, Alt+Down/Alt+Up expand/collapse, Enter/Space select,
  *   `+`/`-` zoom and `0` fits the chart. A card that receives focus is panned into view.
+ * - **Toolbar**: a floating bar of tools that `controlItems` picks and orders (zoom, fit, reset, full
+ *   screen, capture of the view, export menu, print, expand all, collapse all, open to a level,
+ *   search with previous / next, overview map), placed in any corner (`controlsPosition`, logical, so
+ *   it mirrors right to left) as a column or a row (`controlsOrientation`). Every text is in `labels`.
+ *   Your own controls go in the `andesOrgChartToolbar` template, in the top start corner next to it.
+ * - **Saving**: `exportImage` / `download` take `scope: 'view'` (what is on screen) or `'chart'` (the
+ *   whole chart, exact even when windowed up to `exportExactLimit` cards); `print()` prints the whole
+ *   chart on one page; `enterFullscreen()` / `toggleFullscreen()` use the Fullscreen API.
+ * - **Teams**: `focusNode(key)` isolates one person's team with a trail back, `nodeActions` gives a
+ *   card a menu, and `expandToLevel(n)` opens the chart down to a level.
  * - **Large charts**: with more than `virtualizeAbove` visible cards only the cards and connectors
  *   near the viewport are in the page, so panning, zooming, searching and expanding cost what is
  *   on screen rather than the size of the organization. Moving focus to a card that is not
@@ -450,23 +527,40 @@ interface Placement<T> {
   exportAs: 'andesOrgChart',
   viewProviders: [
     provideIcons({
+      lucideCamera,
       lucideChevronDown,
+      lucideChevronUp,
       lucideDownload,
+      lucideFoldVertical,
+      lucideLayers,
       lucideLoaderCircle,
       lucideLocateFixed,
+      lucideMap,
       lucideMaximize,
+      lucideMaximize2,
+      lucideMinimize2,
       lucideMinus,
       lucidePlus,
+      lucidePrinter,
+      lucideSearch,
+      lucideUnfoldVertical,
+      lucideX,
     }),
   ],
   imports: [
     NgIcon,
     NgTemplateOutlet,
+    AndesBreadcrumb,
     AndesButton,
     AndesCheckbox,
     AndesDropdownMenu,
     AndesDropdownMenuTrigger,
+    AndesInput,
+    AndesOrgChartMinimap,
     AndesOrgChartNodeItem,
+    AndesTooltip,
+    AndesTooltipContent,
+    AndesTooltipTrigger,
   ],
   templateUrl: './org-chart.html',
   styleUrl: './org-chart.css',
@@ -477,6 +571,9 @@ interface Placement<T> {
       provide: ORG_CHART_NODE_HOST,
       useExisting: forwardRef(() => AndesOrgChart),
     },
+    // The menus and tooltips of the bar are drawn inside the chart while it is full screen (only
+    // the full screen element and what is in it can be seen then), and in the page otherwise.
+    { provide: OverlayContainer, useClass: AndesPopoverOverlayContainer },
   ],
   host: {
     class: 'andes-org-chart',
@@ -490,6 +587,10 @@ interface Placement<T> {
     '[attr.data-panning]': "panning() ? '' : null",
     '[attr.data-searching]': "searching() ? '' : null",
     '[attr.data-connector]': 'connector()',
+    '[attr.data-fullscreen]': "fullscreen() ? '' : null",
+    '[attr.data-focused]': "focusRecord() ? '' : null",
+    '[attr.data-controls]': 'controlsPosition()',
+    '[attr.data-controls-orientation]': 'controlsOrientation()',
     // The tree inside carries the label: a roleless host is never announced.
     '[attr.aria-label]': 'null',
     '[attr.aria-labelledby]': 'null',
@@ -498,6 +599,8 @@ interface Placement<T> {
 })
 export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly document = inject(DOCUMENT);
+  private readonly overlayContainer = inject(OverlayContainer);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly navigation = inject(AndesTreeNavigation);
   private readonly reducedMotion = andesPrefersReducedMotion();
@@ -573,8 +676,12 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
   readonly selectionMode = input<AndesOrgChartSelectionMode>('single');
   /** Keys of the selected nodes; two-way bindable. */
   readonly selected = model<readonly AndesOrgChartKey[]>([]);
-  /** Highlights matching cards, dims the rest and lights the path up to the root. */
-  readonly search = input('');
+  /**
+   * Highlights matching cards, dims the rest and lights the path up to the root. Two-way
+   * bindable: the search field of the bar writes to it, and a value bound to it replaces what
+   * was typed.
+   */
+  readonly search = model('');
   /** Custom match; defaults to name or title containing the query (case and accent blind). */
   readonly searchFn = input<((node: T, query: string) => boolean) | null>(null);
   /** Expand the managers of every match so the matches are visible. */
@@ -596,13 +703,62 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
   readonly zoomable = input(true, { transform: booleanAttribute });
   /** What the plain mouse wheel does: `zoom` (default) or `pan`. */
   readonly wheel = input<AndesOrgChartWheel>('zoom');
-  /** Show the floating zoom controls. */
+  /**
+   * Show the floating bar. Off hides every tool; `controlItems`, `zoomable` and `exportable`
+   * choose what is on it.
+   */
   readonly controls = input(true, { transform: booleanAttribute });
+  /**
+   * The tools of the floating bar and their order (see {@link AndesOrgChartControl}): `zoom`,
+   * `fit`, `reset`, `fullscreen`, `capture`, `export`, `print`, `expandAll`, `collapseAll`,
+   * `expandLevel`, `search`, `minimap` and `divider`. The default is the zoom, fit, reset and
+   * export bar. `zoomable="false"` and `exportable="false"` still take `zoom` and `export` off
+   * it.
+   */
+  readonly controlItems = input<readonly AndesOrgChartControl[]>(
+    ANDES_ORG_CHART_DEFAULT_CONTROLS,
+  );
+  /** The corner the bar floats in; `start` and `end` follow the text direction. */
+  readonly controlsPosition =
+    input<AndesOrgChartControlsPosition>('bottom-end');
+  /** `vertical` (default) stacks the tools in a column, `horizontal` lays them out in a row. */
+  readonly controlsOrientation =
+    input<AndesOrgChartControlsOrientation>('vertical');
   /** Add an export menu (PNG, JPG, WebP, SVG) to the floating controls. */
   readonly exportable = input(true, { transform: booleanAttribute });
-  /** The name, without extension, of the files the export menu saves. */
+  /** The name, without extension, of the files the bar saves. */
   readonly exportFilename = input('org-chart');
-  protected readonly exportItems = EXPORT_ITEMS;
+  /** The format the `capture` tool saves: `png` (default), `jpeg`, `webp` or `svg`. */
+  readonly captureFormat = input<AndesOrgChartExportFormat>('png');
+  /**
+   * Up to this many visible cards, exporting or printing the whole chart is exact even when the
+   * chart is windowed: the cards that are not near the viewport are put in the page for the
+   * moment it takes to copy them. A larger chart is exported as the drawn summary of
+   * {@link AndesOrgChart.exportSvg}, which keeps every card but not the exact look.
+   */
+  readonly exportExactLimit = input(2000, { transform: numberAttribute });
+  /** Whether the chart is framed again when it enters and leaves full screen. */
+  readonly fullscreenFit = input(true, { transform: booleanAttribute });
+  /** Shows the overview of the whole chart; two-way bindable, and the `minimap` tool toggles it. */
+  readonly minimap = model(false);
+  /** Show a tooltip, with the keyboard shortcut where there is one, on the tools of the bar. */
+  readonly controlTooltips = input(true, { transform: booleanAttribute });
+  /**
+   * The entries of the menu a card opens on right click, the context menu key or Shift+F10 (see
+   * {@link AndesOrgChartNodeActions}); choosing one emits `nodeAction`. Without entries the
+   * browser's own menu is left alone.
+   */
+  readonly nodeActions = input<AndesOrgChartNodeActions<T> | null>(null);
+  /**
+   * The team the chart is isolated on: only that person and their reports are drawn, with a
+   * trail back to the whole chart. `null` shows everyone. Two-way bindable; see
+   * {@link AndesOrgChart.focusNode}.
+   */
+  readonly focusedKey = model<AndesOrgChartKey | null>(null);
+  /** Show the trail above the chart while a team is isolated. */
+  readonly focusTrail = input(true, { transform: booleanAttribute });
+  /** Double clicking a card isolates its team. */
+  readonly focusOnDblClick = input(false, { transform: booleanAttribute });
   /** Animate moves, expansion and zoom (always off under reduced motion). */
   readonly animated = input(true, { transform: booleanAttribute });
   /** Length of the animations, in milliseconds. */
@@ -634,7 +790,11 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
   readonly toggleIconTemplate = input<TemplateRef<
     AndesOrgChartToggleIconContext<T>
   > | null>(null);
-  /** Extra controls in the top start corner (or use `<ng-template andesOrgChartToolbar>`). */
+  /**
+   * Extra controls of your own in the top start corner (or use `<ng-template andesOrgChartToolbar>`),
+   * next to the built-in bar: when the bar is in that corner too, they sit beside (a vertical
+   * bar) or under it (a horizontal one).
+   */
   readonly toolbarTemplate = input<TemplateRef<unknown> | null>(null);
   /** Shown without data (or use `<ng-template andesOrgChartEmpty>`). */
   readonly emptyTemplate = input<TemplateRef<unknown> | null>(null);
@@ -671,6 +831,14 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
   readonly loadError = output<AndesOrgChartLoadErrorEvent<T>>();
   /** Emitted after every pan or zoom. */
   readonly viewportChange = output<AndesOrgChartViewport>();
+  /** A card's menu (see `nodeActions`) had an entry chosen. */
+  readonly nodeAction = output<AndesOrgChartNodeActionEvent<T>>();
+  /** Emitted when the chart enters or leaves full screen. */
+  readonly fullscreenChange = output<boolean>();
+  /** Emitted after the bar or `download()` saved a file. */
+  readonly exported = output<AndesOrgChartExportEvent>();
+  /** Emitted when saving or printing from the bar failed. */
+  readonly exportError = output<AndesOrgChartExportErrorEvent>();
 
   // ------------------------------------------------------------------ content templates
 
@@ -721,7 +889,7 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
   );
 
   protected readonly text = computed<AndesOrgChartLabels>(() => ({
-    ...DEFAULT_LABELS,
+    ...DEFAULT_ORG_CHART_LABELS,
     ...this.labels(),
   }));
 
@@ -756,6 +924,25 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
   private readonly canvasRef = viewChild<ElementRef<HTMLElement>>('canvas');
   /** The area of the canvas that is rendered; `null` renders everything. */
   private readonly renderArea = signal<RenderArea | null>(null);
+  private readonly injector = inject(Injector);
+  private readonly fullscreenState = signal(false);
+  /** Whether the chart is full screen right now. */
+  readonly fullscreen = this.fullscreenState.asReadonly();
+  /** The browser can show the chart full screen; the `fullscreen` tool is left out when not. */
+  protected readonly fullscreenAvailable = signal(this.readFullscreenSupport());
+  private refitPending = false;
+  private readonly searchState = signal(false);
+  /** Whether the search field of the bar is open. */
+  readonly searchOpen = this.searchState.asReadonly();
+  private readonly matchState = signal(-1);
+  /** Position, among `matchedKeys`, of the match the search stepped to; `-1` before the first. */
+  readonly matchIndex = this.matchState.asReadonly();
+  private readonly searchInput = viewChild(AndesInput);
+  private readonly actionsMenu = viewChild<AndesDropdownMenu>('actionsMenu');
+  private readonly actionNode = signal<OrgChartRecord<T> | null>(null);
+  protected readonly actionItems = signal<readonly AndesDropdownMenuItemDef[]>(
+    [],
+  );
   protected readonly panning = signal(false);
   protected readonly ready = signal(false);
 
@@ -780,6 +967,18 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
       this.loadedChildren(),
     ),
   );
+
+  /** The person whose team the chart is isolated on, `null` for the whole chart. */
+  protected readonly focusRecord = computed<OrgChartRecord<T> | null>(() => {
+    const key = this.focusedKey();
+    return key === null ? null : (this.tree().byKey.get(key) ?? null);
+  });
+
+  /** The people drawn at the top: the isolated person, or the roots of the data. */
+  private readonly activeRoots = computed<readonly OrgChartRecord<T>[]>(() => {
+    const focus = this.focusRecord();
+    return focus ? [focus] : this.tree().roots;
+  });
 
   /**
    * The cascade of `checkbox` mode: checking a manager checks the whole team, and a manager is
@@ -892,10 +1091,10 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
     return path;
   });
 
-  /** Every known record, depth first in data order. */
-  private readonly inOrder = computed(() => {
+  /** Every known record under `roots`, depth first in data order. */
+  private depthFirst(roots: readonly OrgChartRecord<T>[]): OrgChartRecord<T>[] {
     const out: OrgChartRecord<T>[] = [];
-    const stack = [...this.tree().roots].reverse();
+    const stack = [...roots].reverse();
     while (stack.length) {
       const record = stack.pop() as OrgChartRecord<T>;
       out.push(record);
@@ -904,14 +1103,26 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
       }
     }
     return out;
-  });
+  }
+
+  /** Every known record, whether or not the chart is isolated on a team. */
+  private readonly allInOrder = computed(() =>
+    this.depthFirst(this.tree().roots),
+  );
+
+  /** The records of the chart as it is drawn: all of them, or the isolated team. */
+  private readonly inOrder = computed(() =>
+    this.focusRecord()
+      ? this.depthFirst(this.activeRoots())
+      : this.allInOrder(),
+  );
 
   /** Each record's index among its siblings, for `aria-posinset`. */
   private readonly siblingIndex = computed(() => {
     const index = new Map<AndesOrgChartKey, number>();
     const list = (records: readonly OrgChartRecord<T>[]) =>
       records.forEach((record, position) => index.set(record.key, position));
-    list(this.tree().roots);
+    list(this.activeRoots());
     for (const record of this.inOrder()) {
       list(record.children);
     }
@@ -961,7 +1172,7 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
       }
       return node;
     };
-    const roots = this.tree().roots.map(toNode);
+    const roots = this.activeRoots().map(toNode);
     return { roots, records };
   });
 
@@ -995,7 +1206,7 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
       $implicit: record.data,
       data: record.data,
       key,
-      level: record.depth + 1,
+      level: record.depth - (this.focusRecord()?.depth ?? 0) + 1,
       name: record.name,
       title: record.title,
       avatar: record.avatar,
@@ -1085,8 +1296,12 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
 
   /** Whether the chart is large enough to render only what is near the viewport. */
   protected readonly windowing = computed(
-    () => this.visible().records.length > this.virtualizeAbove(),
+    () =>
+      !this.lifted() && this.visible().records.length > this.virtualizeAbove(),
   );
+
+  /** `true` for the moment every card is put in the page so the whole chart can be copied. */
+  private readonly lifted = signal(false);
 
   /**
    * The cards to render: the ones in the render area, and the card that holds the tab stop (it
@@ -1220,7 +1435,9 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
     const collapsible = this.collapsible();
     const checkable = this.checkable();
     const half = this.checkedTree.halfChecked();
-    const roots = this.tree().roots;
+    const roots = this.activeRoots();
+    const focus = this.focusRecord();
+    const baseDepth = focus?.depth ?? 0;
     const position = this.siblingIndex();
     const entering = this.enteringKeys();
     const enterClass = entering ? 'andes-org-chart--entering' : '';
@@ -1232,25 +1449,26 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
         ? (layout.boxes.get(record.parent.key) ?? box)
         : box;
       const context = this.contextFor(record);
-      const siblings = record.parent?.children ?? roots;
+      const isRoot = !record.parent || record === focus;
+      const siblings = isRoot ? roots : (record.parent?.children ?? roots);
       const exit = placement.exits.get(record.key);
       views.push({
         key: record.key,
         record,
-        parentKey: record.parent?.key ?? null,
+        parentKey: isRoot ? null : (record.parent?.key ?? null),
         x: box.x + CANVAS_PADDING,
         y: box.y + CANVAS_PADDING,
         width: box.width,
         height: box.height,
         fromX: parent.x + CANVAS_PADDING + (parent.width - box.width) / 2,
         fromY: parent.y + CANVAS_PADDING + (parent.height - box.height) / 2,
-        kind: !record.parent ? 'root' : context.expandable ? 'branch' : 'leaf',
+        kind: isRoot ? 'root' : context.expandable ? 'branch' : 'leaf',
         context,
         classes:
           typeof nodeClass === 'function'
             ? (nodeClass(record.data, context) ?? null)
             : nodeClass,
-        level: record.depth + 1,
+        level: record.depth - baseDepth + 1,
         posInSet: (position.get(record.key) ?? 0) + 1,
         setSize: siblings.length,
         toggleable: collapsible && context.expandable,
@@ -1473,7 +1691,8 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
     navigation.setNodes(() =>
       this.inOrder().map<AndesTreeNavigationNode>((record) => ({
         key: record.key,
-        parentKey: record.parent?.key ?? null,
+        parentKey:
+          record === this.focusRecord() ? null : (record.parent?.key ?? null),
         expandable: this.collapsible() && this.isExpandable(record),
         label: record.name || record.title,
       })),
@@ -1557,7 +1776,7 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
     // New nodes: expanded per `defaultExpandDepth` / `expandAll`; a node that just got its first
     // reports opens so the addition is visible.
     effect(() => {
-      const records = this.inOrder();
+      const records = this.allInOrder();
       untracked(() => this.applyDefaults(records));
     });
 
@@ -1657,6 +1876,26 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
       this.revealNode(key),
     );
     this.destroyRef.onDestroy(() => reveal.unsubscribe());
+
+    // Full screen: follow the browser (Escape leaves it too) and frame the chart again.
+    const onFullscreenChange = () => this.syncFullscreen();
+    this.document.addEventListener('fullscreenchange', onFullscreenChange);
+    this.destroyRef.onDestroy(() => {
+      this.document.removeEventListener('fullscreenchange', onFullscreenChange);
+      if (this.fullscreenState()) {
+        void this.document.exitFullscreen?.().catch(() => undefined);
+      }
+    });
+    effect(() => {
+      this.viewportSize.size();
+      untracked(() => this.refitIfPending());
+    });
+
+    // A new query starts the stepping over: no match is current until the next one is asked for.
+    effect(() => {
+      this.matchedKeys();
+      untracked(() => this.matchState.set(-1));
+    });
 
     afterNextRender(() => {
       this.domDirection.set(this.readDirection());
@@ -2053,7 +2292,7 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
 
   /** Back to 100%, with the first root where the chart starts. */
   resetView(options: AndesOrgChartViewOptions = {}): void {
-    const root = this.tree().roots[0];
+    const root = this.activeRoots()[0];
     const box = root ? this.layout().boxes.get(root.key) : undefined;
     const { width, height } = this.viewportBox();
     if (!box) {
@@ -2255,32 +2494,31 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
 
   /**
    * The chart as a file of the given format: SVG, or a PNG, JPEG or WebP image. It is the chart
-   * as it looks on screen (cards, templates, avatars, colors and theme), the whole canvas and
-   * not just the part in view. An image is `scale` times the size of the canvas (2 by default).
-   * A chart large enough to be windowed (see `virtualizeAbove`) is drawn from its layout instead,
-   * as {@link exportSvg} does, so that every card is in the file.
+   * as it looks on screen (cards, templates, avatars, colors and theme).
+   *
+   * - `scope: 'chart'` (default) is the whole canvas, not just the part in view. An image is
+   *   `scale` times the size of the canvas (2 by default). A chart large enough to be windowed
+   *   (see `virtualizeAbove`) is still exact up to `exportExactLimit` visible cards, because the
+   *   cards that are not near the viewport are put in the page for the moment it takes to copy
+   *   them; a larger one is drawn from its layout instead, as {@link exportSvg} does, so that
+   *   every card is in the file.
+   * - `scope: 'view'` is exactly what the viewport shows right now, at the current pan and zoom,
+   *   at the size of the viewport (the page already holds the cards in view, so a windowed chart
+   *   needs nothing else).
    */
   async exportImage(
     format: AndesOrgChartExportFormat = 'png',
     options: AndesOrgChartExportOptions = {},
   ): Promise<Blob> {
-    const host = this.host.nativeElement;
-    const canvas = host.querySelector<HTMLElement>(
-      '[data-slot="org-chart-canvas"]',
-    );
-    const width = this.canvasWidth();
-    const height = this.canvasHeight();
     const background =
       options.background ??
       (format === 'jpeg'
         ? this.readColor('--andes-color-card', '#ffffff')
         : undefined);
-    // The document the user sees; the drawn summary is the fallback of a chart not on screen and
-    // of a windowed chart, whose page holds only the cards near the viewport.
-    const svg =
-      canvas && !this.windowing()
-        ? await snapshotSvg(host, canvas, width, height, options.background)
-        : this.exportSvg(background);
+    const { svg, width, height } =
+      (options.scope ?? 'chart') === 'view'
+        ? await this.viewDocument(options.background, background)
+        : await this.chartDocument(options.background, background);
     return exportBlob(svg, width, height, format, { ...options, background });
   }
 
@@ -2290,10 +2528,125 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
     options: AndesOrgChartExportOptions = {},
   ): Promise<void> {
     const blob = await this.exportImage(format, options);
-    saveBlob(
+    const filename = `${options.filename ?? 'org-chart'}.${exportExtension(format)}`;
+    saveBlob(blob, filename);
+    this.exported.emit({
+      format,
+      scope: options.scope ?? 'chart',
+      filename,
       blob,
-      `${options.filename ?? 'org-chart'}.${exportExtension(format)}`,
+    });
+  }
+
+  /**
+   * Prints the whole chart on one page, as large as the page allows: the page is replaced by the
+   * chart (the bar and everything else around it stay out of the print) for as long as the print
+   * dialog is open. A chart past `exportExactLimit` visible cards prints the drawn summary.
+   */
+  async print(): Promise<void> {
+    const width = this.canvasWidth();
+    const height = this.canvasHeight();
+    const { svg } = await this.chartDocument('#ffffff', '#ffffff');
+    await printOrgChartImage(
+      this.document,
+      new Blob([svg], { type: 'image/svg+xml' }),
+      width,
+      height,
     );
+  }
+
+  /** The whole chart as an SVG document, exact up to the limit and drawn above it. */
+  private async chartDocument(
+    snapshotBackground: string | undefined,
+    summaryBackground: string | undefined,
+  ): Promise<{ svg: string; width: number; height: number }> {
+    const host = this.host.nativeElement;
+    const canvasOf = () =>
+      host.querySelector<HTMLElement>('[data-slot="org-chart-canvas"]');
+    const canvas = canvasOf();
+    const width = this.canvasWidth();
+    const height = this.canvasHeight();
+    const summary = () => ({
+      svg: this.exportSvg(summaryBackground),
+      width,
+      height,
+    });
+    if (!canvas) {
+      return summary();
+    }
+    let clone: HTMLElement;
+    if (!this.windowing()) {
+      clone = cloneCanvas(canvas, width, height);
+    } else if (this.visible().records.length <= this.exportExactLimit()) {
+      // Put every card in the page, copy it, and go back to the cards near the viewport.
+      clone = await this.withEveryCardRendered(() =>
+        cloneCanvas(canvasOf() ?? canvas, width, height),
+      );
+    } else {
+      return summary();
+    }
+    return {
+      svg: await snapshotClone(host, clone, width, height, snapshotBackground),
+      width,
+      height,
+    };
+  }
+
+  /** What the viewport shows right now as an SVG document, at the size of the viewport. */
+  private async viewDocument(
+    snapshotBackground: string | undefined,
+    summaryBackground: string | undefined,
+  ): Promise<{ svg: string; width: number; height: number }> {
+    const host = this.host.nativeElement;
+    const viewport = host.querySelector<HTMLElement>(
+      '[data-slot="org-chart-viewport"]',
+    );
+    const measured = this.viewportSize.size();
+    const rect = viewport?.getBoundingClientRect();
+    const width = Math.round(measured.width || rect?.width || 0);
+    const height = Math.round(measured.height || rect?.height || 0);
+    if (!viewport || !width || !height) {
+      return {
+        svg: this.exportSvg(summaryBackground),
+        width: this.canvasWidth(),
+        height: this.canvasHeight(),
+      };
+    }
+    return {
+      svg: await snapshotView(
+        host,
+        viewport,
+        width,
+        height,
+        snapshotBackground,
+      ),
+      width,
+      height,
+    };
+  }
+
+  /**
+   * Puts every card in the page, runs `read` once they are there, and goes back to rendering only
+   * the cards near the viewport. `read` must be synchronous: the page is back to normal as soon
+   * as it returns.
+   */
+  private async withEveryCardRendered<R>(read: () => R): Promise<R> {
+    this.lifted.set(true);
+    try {
+      await new Promise<void>((resolve) => {
+        const timer = setTimeout(resolve, 1500);
+        afterNextRender(
+          () => {
+            clearTimeout(timer);
+            resolve();
+          },
+          { injector: this.injector },
+        );
+      });
+      return read();
+    } finally {
+      this.lifted.set(false);
+    }
   }
 
   private readColor(name: string, fallback: string): string {
@@ -2302,6 +2655,577 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
         ? getComputedStyle(this.host.nativeElement)
         : null;
     return style?.getPropertyValue(name).trim() || fallback;
+  }
+
+  // ------------------------------------------------------------------ full screen
+
+  private readFullscreenSupport(): boolean {
+    const element = this.host.nativeElement;
+    return (
+      this.document.fullscreenEnabled === true &&
+      typeof element.requestFullscreen === 'function'
+    );
+  }
+
+  /** Shows the chart across the screen. Does nothing where the browser has no Fullscreen API. */
+  async enterFullscreen(): Promise<void> {
+    const element = this.host.nativeElement;
+    if (
+      !this.readFullscreenSupport() ||
+      this.document.fullscreenElement === element
+    ) {
+      return;
+    }
+    try {
+      await element.requestFullscreen();
+    } catch {
+      // The browser refused (no user gesture, a policy): the chart stays where it is.
+    }
+  }
+
+  /** Leaves full screen. */
+  async exitFullscreen(): Promise<void> {
+    if (this.document.fullscreenElement !== this.host.nativeElement) {
+      return;
+    }
+    try {
+      await this.document.exitFullscreen();
+    } catch {
+      // Already leaving.
+    }
+  }
+
+  /** Enters full screen, or leaves it when the chart is already there. */
+  toggleFullscreen(): Promise<void> {
+    return this.fullscreenState()
+      ? this.exitFullscreen()
+      : this.enterFullscreen();
+  }
+
+  private syncFullscreen(): void {
+    this.fullscreenAvailable.set(this.readFullscreenSupport());
+    const active = this.document.fullscreenElement === this.host.nativeElement;
+    if (active === this.fullscreenState()) {
+      return;
+    }
+    this.fullscreenState.set(active);
+    // Menus and tooltips must be inside the full screen element to be seen.
+    if (this.overlayContainer instanceof AndesPopoverOverlayContainer) {
+      this.overlayContainer.setTarget(active ? this.host.nativeElement : null);
+    }
+    this.fullscreenChange.emit(active);
+    if (this.fullscreenFit()) {
+      // The viewport changes size now; the frame waits for the new size (or a short while).
+      this.refitPending = true;
+      setTimeout(() => this.refitIfPending(), 350);
+    }
+  }
+
+  private refitIfPending(): void {
+    if (this.refitPending) {
+      this.refitPending = false;
+      if (this.fitted) {
+        this.fitView({ animate: false });
+      }
+    }
+  }
+
+  // ------------------------------------------------------------------ the bar
+
+  /** The tools the bar draws, from `controlItems` and the shortcuts that take some off. */
+  protected readonly barItems = computed(() =>
+    resolveOrgChartControls(this.controlItems(), {
+      zoom: this.zoomable(),
+      export: this.exportable(),
+      fullscreen: this.fullscreenAvailable(),
+    }),
+  );
+
+  /** What the bar draws, one entry per button, menu, rule or label. */
+  protected readonly barParts = computed<readonly BarPart[]>(() => {
+    const text = this.text();
+    const parts: BarPart[] = [];
+    const button = (
+      key: string,
+      icon: string,
+      label: string,
+      run: () => void,
+      extra: Partial<BarPart> = {},
+    ) => parts.push({ kind: 'button', key, icon, label, run, ...extra });
+    for (const item of this.barItems()) {
+      switch (item) {
+        case 'divider':
+          parts.push({ kind: 'divider', key: 'divider', icon: '', label: '' });
+          break;
+        case 'zoom':
+          button('zoomIn', 'lucidePlus', text.zoomIn, () => this.zoomIn(), {
+            hint: '+',
+            disabled: !this.canZoomIn(),
+          });
+          parts.push({ kind: 'percent', key: 'zoom', icon: '', label: '' });
+          button('zoomOut', 'lucideMinus', text.zoomOut, () => this.zoomOut(), {
+            hint: '-',
+            disabled: !this.canZoomOut(),
+          });
+          break;
+        case 'fit':
+          button('fit', 'lucideMaximize', text.fit, () => this.fitView(), {
+            hint: '0',
+          });
+          break;
+        case 'reset':
+          button('reset', 'lucideLocateFixed', text.reset, () =>
+            this.resetView(),
+          );
+          break;
+        case 'fullscreen':
+          button(
+            'fullscreen',
+            this.fullscreenState() ? 'lucideMinimize2' : 'lucideMaximize2',
+            this.fullscreenState() ? text.exitFullscreen : text.fullscreen,
+            () => void this.toggleFullscreen(),
+            this.fullscreenState() ? { hint: 'Esc' } : {},
+          );
+          break;
+        case 'minimap':
+          button(
+            'minimap',
+            'lucideMap',
+            this.minimap() ? text.hideMinimap : text.minimap,
+            () => this.toggleMinimap(),
+            { active: this.minimap() },
+          );
+          break;
+        case 'search':
+          button(
+            'search',
+            'lucideSearch',
+            text.search,
+            () => this.toggleSearch(),
+            {
+              hint: '/',
+              active: this.searchState(),
+            },
+          );
+          break;
+        case 'expandAll':
+          button('expandAll', 'lucideUnfoldVertical', text.expandAll, () =>
+            this.onExpandAll(),
+          );
+          break;
+        case 'collapseAll':
+          button('collapseAll', 'lucideFoldVertical', text.collapseAll, () =>
+            this.onCollapseAll(),
+          );
+          break;
+        case 'expandLevel':
+          parts.push({
+            kind: 'levels',
+            key: 'expandLevel',
+            icon: 'lucideLayers',
+            label: text.expandLevel,
+          });
+          break;
+        case 'capture':
+          button('capture', 'lucideCamera', text.capture, () =>
+            this.onCapture(),
+          );
+          break;
+        case 'export':
+          parts.push({
+            kind: 'export',
+            key: 'export',
+            icon: 'lucideDownload',
+            label: text.export,
+          });
+          break;
+        case 'print':
+          button('print', 'lucidePrinter', text.print, () => this.onPrint());
+          break;
+      }
+    }
+    return parts;
+  });
+
+  protected readonly showBar = computed(
+    () => this.controls() && !this.isEmpty() && this.barItems().length > 0,
+  );
+
+  /** Whether the bar is on the physical right of the chart. */
+  private barOnRight(): boolean {
+    const end = this.controlsPosition().endsWith('end');
+    return end !== (this.resolvedDirection() === 'rtl');
+  }
+
+  private barOnTop(): boolean {
+    return this.controlsPosition().startsWith('top');
+  }
+
+  /** Which way the menus of the bar open: towards the inside of the chart. */
+  protected readonly menuPlacement = computed<AndesDropdownMenuPlacement>(
+    () => {
+      const right = this.barOnRight();
+      const top = this.barOnTop();
+      if (this.controlsOrientation() === 'horizontal') {
+        return `${top ? 'bottom' : 'top'}${right ? 'Right' : 'Left'}`;
+      }
+      return `${right ? 'left' : 'right'}${top ? 'Top' : 'Bottom'}`;
+    },
+  );
+
+  /** Which side of a tool its tooltip opens on. */
+  protected readonly tipSide = computed<'top' | 'bottom' | 'left' | 'right'>(
+    () => {
+      if (this.controlsOrientation() === 'horizontal') {
+        return this.barOnTop() ? 'bottom' : 'top';
+      }
+      return this.barOnRight() ? 'left' : 'right';
+    },
+  );
+
+  /** The corner the overview sits in: at the bottom, on the side the bar is not. */
+  protected readonly minimapCorner = computed(() => {
+    const atBottom = !this.barOnTop();
+    const end = this.controlsPosition().endsWith('end');
+    const sameSide = !atBottom;
+    return `bottom-${end === sameSide ? 'end' : 'start'}`;
+  });
+
+  protected readonly exportItems = computed<
+    readonly AndesDropdownMenuItemOption[]
+  >(() => {
+    const text = this.text();
+    return [
+      { key: 'png', label: text.exportPng },
+      { key: 'jpeg', label: text.exportJpeg },
+      { key: 'webp', label: text.exportWebp },
+      { key: 'svg', label: text.exportSvg },
+    ];
+  });
+
+  /** The deepest level of the chart as far as it is known, counting from the top person. */
+  private readonly depthCount = computed(() => {
+    const base = this.focusRecord()?.depth ?? 0;
+    let deepest = 0;
+    for (const record of this.inOrder()) {
+      deepest = Math.max(deepest, record.depth - base);
+    }
+    return deepest + 1;
+  });
+
+  /** The levels the `expandLevel` menu lists: one per level of the chart, at most twelve. */
+  protected readonly levelItems = computed<
+    readonly AndesDropdownMenuItemOption[]
+  >(() =>
+    Array.from(
+      { length: Math.min(this.depthCount(), MAX_LEVEL_OPTIONS) },
+      (_, index) => ({
+        key: String(index + 1),
+        label: fillOrgChartText(this.text().levelOption, { level: index + 1 }),
+      }),
+    ),
+  );
+
+  /** How many levels are open right now, counting from the top person. */
+  readonly shownLevels = computed(() => {
+    const base = this.focusRecord()?.depth ?? 0;
+    let deepest = 0;
+    for (const record of this.visible().records) {
+      deepest = Math.max(deepest, record.depth - base);
+    }
+    return deepest + 1;
+  });
+
+  protected readonly shownLevelKeys = computed(() => [
+    String(this.shownLevels()),
+  ]);
+
+  /**
+   * Opens the chart down to `level` and closes the teams below it: `1` shows only the top people,
+   * `2` also their reports, and so on. Teams that are not loaded yet stay as they are.
+   */
+  expandToLevel(level: number): void {
+    const wanted = Math.max(Math.floor(level), 1);
+    const base = this.focusRecord()?.depth ?? 0;
+    const next = new Set(this.expandedState());
+    for (const record of this.inOrder()) {
+      if (!record.children.length) {
+        continue;
+      }
+      if (record.depth - base < wanted - 1) {
+        next.add(record.key);
+      } else {
+        next.delete(record.key);
+      }
+    }
+    this.navigation.setExpanded(next);
+  }
+
+  protected onLevel(click: AndesDropdownMenuClickEvent): void {
+    this.expandToLevel(Number(click.key));
+    this.fitView();
+  }
+
+  protected onExpandAll(): void {
+    this.expandAllNodes();
+    this.fitView();
+  }
+
+  protected onCollapseAll(): void {
+    this.collapseAll();
+    this.fitView();
+  }
+
+  protected onExport(click: AndesDropdownMenuClickEvent): void {
+    this.runTool(() =>
+      this.download(click.key as AndesOrgChartExportFormat, {
+        filename: this.exportFilename(),
+      }),
+    );
+  }
+
+  protected onCapture(): void {
+    this.runTool(() =>
+      this.download(this.captureFormat(), {
+        filename: this.exportFilename(),
+        scope: 'view',
+      }),
+    );
+  }
+
+  protected onPrint(): void {
+    this.runTool(() => this.print());
+  }
+
+  /** Runs a save or a print started from the bar; a failure goes to `exportError`. */
+  private runTool(action: () => Promise<void>): void {
+    action().catch((error: unknown) => this.exportError.emit({ error }));
+  }
+
+  protected toggleMinimap(): void {
+    this.minimap.update((open) => !open);
+  }
+
+  // ------------------------------------------------------------------ overview
+
+  /** @internal The whole chart as rectangles, for the overview. */
+  readonly overview = computed<AndesOrgChartOverview>(() => {
+    const placement = this.placement();
+    return {
+      width: this.canvasWidth(),
+      height: this.canvasHeight(),
+      left: placement.cardLeft,
+      top: placement.cardTop,
+      right: placement.cardRight,
+      bottom: placement.cardBottom,
+    };
+  });
+
+  /** @internal The part of the canvas in view, for the overview. */
+  readonly seenAreaNow = computed<AndesOrgChartSeenArea>(() => this.seenArea());
+
+  /** @internal Pans so that the canvas point is at the center of the viewport. */
+  centerOnCanvas(x: number, y: number): void {
+    const { width, height } = this.viewportBox();
+    const { scale } = this.view();
+    this.emitView(
+      { x: width / 2 - x * scale, y: height / 2 - y * scale, scale },
+      false,
+    );
+  }
+
+  // ------------------------------------------------------------------ search
+
+  /** The card the search stepped to, `null` before the first step or without a query. */
+  readonly currentMatch = computed<AndesOrgChartKey | null>(
+    () => this.matchedKeys()[this.matchState()] ?? null,
+  );
+
+  /** Opens the search field of the bar and moves focus to it. */
+  openSearch(): void {
+    this.searchState.set(true);
+    afterNextRender(() => this.searchInput()?.focus(), {
+      injector: this.injector,
+    });
+  }
+
+  /** Closes the search field of the bar and clears what was typed. */
+  closeSearch(): void {
+    const wasOpen = this.searchState();
+    this.searchState.set(false);
+    this.search.set('');
+    this.matchState.set(-1);
+    if (wasOpen) {
+      this.host.nativeElement
+        .querySelector<HTMLElement>('[data-tool="search"] button')
+        ?.focus();
+    }
+  }
+
+  protected toggleSearch(): void {
+    if (this.searchState()) {
+      this.closeSearch();
+    } else {
+      this.openSearch();
+    }
+  }
+
+  protected onSearchInput(value: string): void {
+    this.search.set(value);
+    this.matchState.set(-1);
+  }
+
+  /** Steps to the next match (wrapping round), pans it to the center and highlights it. */
+  nextMatch(): void {
+    this.stepMatch(1);
+  }
+
+  /** Steps to the previous match. */
+  previousMatch(): void {
+    this.stepMatch(-1);
+  }
+
+  private stepMatch(delta: 1 | -1): void {
+    const keys = this.matchedKeys();
+    if (!keys.length) {
+      return;
+    }
+    const current = this.matchState();
+    const next =
+      current < 0
+        ? delta > 0
+          ? 0
+          : keys.length - 1
+        : (current + delta + keys.length) % keys.length;
+    this.matchState.set(next);
+    this.scrollToNode(keys[next]);
+  }
+
+  protected onSearchKeydown(event: KeyboardEvent): void {
+    if (event.isComposing) {
+      return;
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      if (event.shiftKey) {
+        this.previousMatch();
+      } else {
+        this.nextMatch();
+      }
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      this.closeSearch();
+    }
+  }
+
+  /** The text next to the search field: how many cards match, or which one is current. */
+  protected readonly matchSummary = computed(() => {
+    if (!this.searching()) {
+      return '';
+    }
+    const total = this.matchedKeys().length;
+    if (!total) {
+      return this.text().noMatches;
+    }
+    const current = this.matchState() + 1;
+    return fillOrgChartText(
+      current > 0 ? this.text().matchCount : this.text().matchTotal,
+      { current, total },
+    );
+  });
+
+  // ------------------------------------------------------------------ focus on a team
+
+  /**
+   * Isolates the chart on one person's team: only they and their reports are drawn, framed in
+   * view, with a trail back to the whole chart (see `focusTrail`). Their team is opened.
+   */
+  focusNode(key: AndesOrgChartKey): void {
+    const record = this.recordOf(key);
+    if (!record) {
+      return;
+    }
+    if (
+      this.collapsible() &&
+      this.isExpandable(record) &&
+      !this.expandedState().has(key)
+    ) {
+      this.navigation.expand(key);
+    }
+    this.focusedKey.set(key);
+    this.fitView();
+  }
+
+  /** Shows the whole chart again after {@link AndesOrgChart.focusNode}. */
+  clearFocus(): void {
+    if (this.focusedKey() === null) {
+      return;
+    }
+    this.focusedKey.set(null);
+    this.fitView();
+  }
+
+  /** The trail above the chart while a team is isolated: whole chart, managers, the person. */
+  protected readonly trail = computed<readonly AndesBreadcrumbItemType[]>(
+    () => {
+      const focus = this.focusRecord();
+      if (!focus) {
+        return [];
+      }
+      const label = (record: OrgChartRecord<T>) => record.name || record.title;
+      const managers: OrgChartRecord<T>[] = [];
+      for (let record = focus.parent; record; record = record.parent) {
+        managers.unshift(record);
+      }
+      return [
+        { title: this.text().focusAll, onClick: () => this.clearFocus() },
+        ...managers.map((record) => ({
+          title: label(record),
+          onClick: () => this.focusNode(record.key),
+        })),
+        { title: label(focus) },
+      ];
+    },
+  );
+
+  // ------------------------------------------------------------------ node menu
+
+  /** Opens the menu of a card at the pointer, when there are entries for it. */
+  private openNodeActions(view: NodeView<T>, event: MouseEvent): void {
+    const actions = this.nodeActions();
+    if (!actions || view.record.disabled) {
+      return;
+    }
+    const items =
+      typeof actions === 'function' ? actions(view.context) : actions;
+    if (!items.length) {
+      return;
+    }
+    event.preventDefault();
+    this.actionNode.set(view.record);
+    this.actionItems.set(items);
+    // A key press opens it with no pointer position: it opens on the card instead.
+    const card = (
+      event.currentTarget as HTMLElement | null
+    )?.getBoundingClientRect();
+    const keyboard = event.clientX === 0 && event.clientY === 0 && card;
+    const x = keyboard ? card.left + card.width / 2 : event.clientX;
+    const y = keyboard ? card.top + card.height / 2 : event.clientY;
+    afterNextRender(() => this.actionsMenu()?.showAt(x, y), {
+      injector: this.injector,
+    });
+  }
+
+  protected onNodeAction(click: AndesDropdownMenuClickEvent): void {
+    const record = this.actionNode();
+    if (record) {
+      this.nodeAction.emit({
+        action: click.key,
+        node: this.contextFor(record),
+        event: click.event,
+      });
+    }
   }
 
   // ------------------------------------------------------------------ node events
@@ -2340,11 +3264,15 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
   protected onNodeDblClick(view: NodeView<T>, event: MouseEvent): void {
     if (!view.record.disabled) {
       this.nodeDblClick.emit({ node: view.context, event });
+      if (this.focusOnDblClick() && view.context.expandable) {
+        this.focusNode(view.key);
+      }
     }
   }
 
   protected onNodeContextMenu(view: NodeView<T>, event: MouseEvent): void {
     this.nodeContextMenu.emit({ node: view.context, event });
+    this.openNodeActions(view, event);
   }
 
   protected onNodeHover(
@@ -2364,12 +3292,6 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
     if (!view.record.disabled) {
       this.toggleSelection(view.key);
     }
-  }
-
-  protected onExport(click: AndesDropdownMenuClickEvent): void {
-    void this.download(click.key as AndesOrgChartExportFormat, {
-      filename: this.exportFilename(),
-    });
   }
 
   protected onToggleClick(view: NodeView<T>, event: MouseEvent): void {
@@ -2495,6 +3417,16 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
       if (event.key === '0') {
         event.preventDefault();
         this.fitView();
+        return;
+      }
+      if (event.key === '/' && this.barItems().includes('search')) {
+        event.preventDefault();
+        this.openSearch();
+        return;
+      }
+      if (event.key === 'Escape' && this.focusRecord()) {
+        event.preventDefault();
+        this.clearFocus();
         return;
       }
     }

@@ -5,9 +5,12 @@ export type {
   AndesOrgChartDirection,
   AndesOrgChartExpandEvent,
   AndesOrgChartHoverEvent,
-  AndesOrgChartLabels,
+  AndesOrgChartExportErrorEvent,
+  AndesOrgChartExportEvent,
   AndesOrgChartLoadChildren,
   AndesOrgChartLoadErrorEvent,
+  AndesOrgChartNodeActionEvent,
+  AndesOrgChartNodeActions,
   AndesOrgChartNodeClass,
   AndesOrgChartNodeEvent,
   AndesOrgChartNodeSize,
@@ -25,7 +28,18 @@ export type {
 export type {
   AndesOrgChartExportFormat,
   AndesOrgChartExportOptions,
+  AndesOrgChartExportScope,
 } from './org-chart-export';
+export type { AndesOrgChartLabels } from './org-chart-labels';
+export {
+  ANDES_ORG_CHART_ALL_CONTROLS,
+  ANDES_ORG_CHART_DEFAULT_CONTROLS,
+} from './org-chart-toolbar';
+export type {
+  AndesOrgChartControl,
+  AndesOrgChartControlsOrientation,
+  AndesOrgChartControlsPosition,
+} from './org-chart-toolbar';
 export {
   AndesOrgChartConnectorTemplate,
   AndesOrgChartEmptyTemplate,

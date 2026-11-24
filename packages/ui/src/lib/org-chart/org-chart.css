@@ -40,12 +40,18 @@
      --andes-org-chart-toggle-background         toggle background
      --andes-org-chart-toggle-foreground         toggle icon and count
      --andes-org-chart-toggle-border-color       toggle hairline
-     --andes-org-chart-controls-background       zoom controls panel
+     --andes-org-chart-controls-background       floating bar, search field and trail panels
+     --andes-org-chart-minimap-background        overview panel (the bar's color)
+     --andes-org-chart-minimap-frame-color       frame on the part of the overview in view
      --andes-org-chart-duration                  animation length (also the `animationDuration`
                                                  input, which this overrides)
    Every part carries a data-slot attribute (org-chart-viewport, -canvas, -links, -link,
    -secondary-link, -tree, -node, -card, -checkbox, -avatar, -name, -title, -toggle, -controls,
-   -zoom, -toolbar, -empty). Cards carry data-key (the node key), data-kind (root | branch |
+   -zoom, -toolbar, -top, -trail, -search, -matches, -minimap, -empty). The bar carries
+   data-position (top-start | top-end | bottom-start | bottom-end) and data-orientation
+   (vertical | horizontal), and each tool data-tool (zoomIn, zoomOut, fit, reset, fullscreen,
+   capture, export, print, expandAll, collapseAll, expandLevel, search, minimap); the chart carries
+   data-fullscreen and data-focused, and the card the search stepped to data-current. Cards carry data-key (the node key), data-kind (root | branch |
    leaf), data-selected, data-checked (checked | mixed), data-expanded, data-matched,
    data-highlighted, data-dimmed, data-disabled, data-readonly, data-assistant, data-accent and
    data-loading; tree connectors carry data-from, data-to and data-kind (tree | assistant |
@@ -545,11 +551,20 @@
 
 /* ------------------------------------------------------------------ controls */
 
+/* The bar floats in one of the four corners (`controlsPosition`, logical, so it mirrors under
+   right-to-left) as a column or a row (`controlsOrientation`). The consumer's own toolbar and
+   the trail of an isolated team share the top start corner: when the bar is there too they step
+   aside by the thickness of the bar (two small buttons, a hairline and the padding). */
+:host {
+  --_andes-org-chart-gap: var(--andes-space-3);
+  --_andes-org-chart-bar: calc(
+    var(--andes-control-height-md, 2rem) + 2 * var(--andes-space-1) + 2px
+  );
+}
+
 .andes-org-chart__controls {
   position: absolute;
   z-index: 2;
-  inset-block-end: var(--andes-space-3);
-  inset-inline-end: var(--andes-space-3);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -564,8 +579,38 @@
   color: var(--andes-color-popover-foreground);
 }
 
+.andes-org-chart__controls[data-orientation='horizontal'] {
+  flex-direction: row;
+}
+
+.andes-org-chart__controls[data-position='bottom-end'] {
+  inset-block-end: var(--_andes-org-chart-gap);
+  inset-inline-end: var(--_andes-org-chart-gap);
+}
+
+.andes-org-chart__controls[data-position='bottom-start'] {
+  inset-block-end: var(--_andes-org-chart-gap);
+  inset-inline-start: var(--_andes-org-chart-gap);
+}
+
+.andes-org-chart__controls[data-position='top-end'] {
+  inset-block-start: var(--_andes-org-chart-gap);
+  inset-inline-end: var(--_andes-org-chart-gap);
+}
+
+.andes-org-chart__controls[data-position='top-start'] {
+  inset-block-start: var(--_andes-org-chart-gap);
+  inset-inline-start: var(--_andes-org-chart-gap);
+}
+
 .andes-org-chart__controls ng-icon {
   display: flex;
+}
+
+/* An open toggle (search, overview) is the secondary button; this keeps it from reading as
+   hovered only. */
+.andes-org-chart__controls [data-active] {
+  color: var(--andes-color-foreground);
 }
 
 .andes-org-chart__zoom {
@@ -585,16 +630,214 @@
   background: var(--_andes-org-chart-hairline);
 }
 
-.andes-org-chart__toolbar {
+.andes-org-chart__controls[data-orientation='horizontal']
+  .andes-org-chart__divider {
+  inline-size: 1px;
+  block-size: 60%;
+  margin-block: 0;
+  margin-inline: 2px;
+  align-self: center;
+  min-block-size: 1.25rem;
+}
+
+.andes-org-chart__kbd {
+  display: inline-block;
+  margin-inline-start: 0.5rem;
+  padding-inline: 0.25rem;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: 0.6875rem;
+  line-height: 1.1rem;
+  opacity: 0.75;
+}
+
+/* The search field opens beside a column bar and above or under a row bar, towards the inside
+   of the chart, level with the corner the bar is in. */
+.andes-org-chart__search {
   position: absolute;
   z-index: 2;
-  inset-block-start: var(--andes-space-3);
-  inset-inline-start: var(--andes-space-3);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: var(--andes-space-1);
+  border: 1px solid var(--_andes-org-chart-hairline);
+  border-radius: var(--andes-radius-lg);
+  background: var(
+    --andes-org-chart-controls-background,
+    var(--andes-color-popover)
+  );
+  color: var(--andes-color-popover-foreground);
+  max-inline-size: calc(100% - 2 * var(--_andes-org-chart-gap));
+}
+
+.andes-org-chart__search-input {
+  inline-size: 14rem;
+  min-inline-size: 0;
+}
+
+.andes-org-chart__matches {
+  min-inline-size: 4.5rem;
+  padding-inline: var(--andes-space-2);
+  color: var(--andes-color-muted-foreground);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.andes-org-chart__search[data-orientation='vertical'] {
+  --_andes-org-chart-offset: calc(
+    var(--_andes-org-chart-gap) + var(--_andes-org-chart-bar) + 0.5rem
+  );
+}
+
+.andes-org-chart__search[data-orientation='horizontal'] {
+  --_andes-org-chart-offset: calc(
+    var(--_andes-org-chart-gap) + var(--_andes-org-chart-bar) + 0.5rem
+  );
+}
+
+/* Column bar: the field is level with the corner and clear of the bar sideways. */
+.andes-org-chart__search[data-orientation='vertical'][data-position$='-end'] {
+  inset-inline-end: var(--_andes-org-chart-offset);
+}
+
+.andes-org-chart__search[data-orientation='vertical'][data-position$='-start'] {
+  inset-inline-start: var(--_andes-org-chart-offset);
+}
+
+.andes-org-chart__search[data-orientation='vertical'][data-position^='bottom'] {
+  inset-block-end: var(--_andes-org-chart-gap);
+}
+
+.andes-org-chart__search[data-orientation='vertical'][data-position^='top'] {
+  inset-block-start: var(--_andes-org-chart-gap);
+}
+
+/* Row bar: the field is on the same edge as the bar and clear of it up or down. */
+.andes-org-chart__search[data-orientation='horizontal'][data-position$='-end'] {
+  inset-inline-end: var(--_andes-org-chart-gap);
+}
+
+.andes-org-chart__search[data-orientation='horizontal'][data-position$='-start'] {
+  inset-inline-start: var(--_andes-org-chart-gap);
+}
+
+.andes-org-chart__search[data-orientation='horizontal'][data-position^='bottom'] {
+  inset-block-end: var(--_andes-org-chart-offset);
+}
+
+.andes-org-chart__search[data-orientation='horizontal'][data-position^='top'] {
+  inset-block-start: var(--_andes-org-chart-offset);
+}
+
+/* The top start corner: the consumer's toolbar and, under it, the trail of an isolated team. */
+.andes-org-chart__top {
+  position: absolute;
+  z-index: 2;
+  inset-block-start: var(--_andes-org-chart-gap);
+  inset-inline-start: var(--_andes-org-chart-gap);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--andes-space-2);
+  max-inline-size: calc(100% - 2 * var(--_andes-org-chart-gap));
+  pointer-events: none;
+}
+
+.andes-org-chart__top > * {
+  pointer-events: auto;
+}
+
+:host([data-controls='top-start'][data-controls-orientation='vertical'])
+  .andes-org-chart__top {
+  inset-inline-start: calc(
+    var(--_andes-org-chart-gap) + var(--_andes-org-chart-bar) + 0.5rem
+  );
+  max-inline-size: calc(
+    100% - 2 * var(--_andes-org-chart-gap) - var(--_andes-org-chart-bar) -
+      0.5rem
+  );
+}
+
+:host([data-controls='top-start'][data-controls-orientation='horizontal'])
+  .andes-org-chart__top {
+  inset-block-start: calc(
+    var(--_andes-org-chart-gap) + var(--_andes-org-chart-bar) + 0.5rem
+  );
+}
+
+.andes-org-chart__toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--andes-space-2);
-  max-inline-size: calc(100% - 2 * var(--andes-space-3));
+}
+
+.andes-org-chart__trail {
+  padding: var(--andes-space-1) var(--andes-space-3);
+  border: 1px solid var(--_andes-org-chart-hairline);
+  border-radius: var(--andes-radius-lg);
+  background: var(
+    --andes-org-chart-controls-background,
+    var(--andes-color-popover)
+  );
+}
+
+/* The overview sits at the bottom, on the side the bar is not. */
+.andes-org-chart__minimap {
+  position: absolute;
+  z-index: 2;
+  inset-block-end: var(--_andes-org-chart-gap);
+}
+
+.andes-org-chart__minimap[data-corner='bottom-start'] {
+  inset-inline-start: var(--_andes-org-chart-gap);
+}
+
+.andes-org-chart__minimap[data-corner='bottom-end'] {
+  inset-inline-end: var(--_andes-org-chart-gap);
+}
+
+/* ------------------------------------------------------------------ search, focus, full screen */
+
+/* The match the search stepped to stands out from the other matches. */
+.andes-org-chart__node[data-current] .andes-org-chart__card {
+  border-color: var(--andes-org-chart-match-color, var(--andes-color-warning));
+  box-shadow:
+    inset 0 0 0 2px
+      var(--andes-org-chart-match-color, var(--andes-color-warning)),
+    0 0 0 3px
+      color-mix(
+        in srgb,
+        var(--andes-org-chart-match-color, var(--andes-color-warning)) 30%,
+        transparent
+      );
+}
+
+/* Full screen: the chart takes the whole screen, with no frame. */
+:host(:fullscreen) {
+  block-size: 100%;
+  inline-size: 100%;
+  max-block-size: none;
+  border: 0;
+  border-radius: 0;
+}
+
+/* On paper the chart is only its picture: no bar, toolbar, trail or overview. */
+@media print {
+  .andes-org-chart__controls,
+  .andes-org-chart__search,
+  .andes-org-chart__top,
+  .andes-org-chart__minimap {
+    display: none !important;
+  }
+
+  :host {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
 }
 
 /* ------------------------------------------------------------------ preferences */

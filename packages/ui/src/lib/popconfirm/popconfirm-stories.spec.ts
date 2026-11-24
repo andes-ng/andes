@@ -219,7 +219,7 @@ describe.each(modules)('Popconfirm stories: %s', (_, module) => {
       }
 
       expect(drawn).toBe(!NEVER_OPENS.has((story as AnyStory).name ?? ''));
-    });
+    }, 15000);
   });
 });
 

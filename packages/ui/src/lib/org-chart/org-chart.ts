@@ -54,6 +54,7 @@ import {
   exportBlob,
   exportExtension,
   saveBlob,
+  snapshotSvg,
 } from './org-chart-export';
 import {
   andesOrgChartLinkPath,
@@ -1841,26 +1842,30 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
   }
 
   /**
-   * The chart as a file of the given format: SVG, or a PNG, JPEG or WebP image drawn from it.
-   * The image is `scale` times the size of the canvas (2 by default) and has the whole chart,
-   * whatever part of it is in view.
+   * The chart as a file of the given format: SVG, or a PNG, JPEG or WebP image. It is the chart
+   * as it looks on screen (cards, templates, avatars, colors and theme), the whole canvas and
+   * not just the part in view. An image is `scale` times the size of the canvas (2 by default).
    */
-  exportImage(
+  async exportImage(
     format: AndesOrgChartExportFormat = 'png',
     options: AndesOrgChartExportOptions = {},
   ): Promise<Blob> {
+    const host = this.host.nativeElement;
+    const canvas = host.querySelector<HTMLElement>(
+      '[data-slot="org-chart-canvas"]',
+    );
+    const width = this.canvasWidth();
+    const height = this.canvasHeight();
     const background =
       options.background ??
       (format === 'jpeg'
         ? this.readColor('--andes-color-card', '#ffffff')
         : undefined);
-    return exportBlob(
-      this.exportSvg(format === 'svg' ? background : undefined),
-      this.canvasWidth(),
-      this.canvasHeight(),
-      format,
-      { ...options, background },
-    );
+    // The document the user sees; the drawn summary is only the fallback of a chart not on screen.
+    const svg = canvas
+      ? await snapshotSvg(host, canvas, width, height, options.background)
+      : this.exportSvg(background);
+    return exportBlob(svg, width, height, format, { ...options, background });
   }
 
   /** Saves the chart as `<filename>.<format>` (`org-chart` by default) through the browser. */

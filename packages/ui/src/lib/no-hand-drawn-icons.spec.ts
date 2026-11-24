@@ -24,6 +24,8 @@ const ILLUSTRATIONS: readonly string[] = [
   'org-chart/org-chart.html',
   // The org chart's `exportSvg()`: the serialised chart a consumer downloads, built as text.
   'org-chart/org-chart.ts',
+  // The org chart's export: the SVG document that carries the rendered chart as an image.
+  'org-chart/org-chart-export.ts',
   // The connector template's contract: the doc comments show the `<svg:path>` a consumer draws.
   'org-chart/org-chart-templates.ts',
 ];

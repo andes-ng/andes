@@ -492,7 +492,7 @@ describe('AndesDropdownMenu - extended features', () => {
       expect(arrow).toBeTruthy();
       expect(arrow?.getAttribute('aria-hidden')).toBe('true');
       expect(arrow?.getAttribute('data-side')).toBeTruthy();
-      // the arrow's 5.5px tip plus a 6px gap, as in Ant Design
+      // the arrow's 5.5px tip plus a 6px gap
       expect(positioning()).toMatchObject({ sideOffset: 11.5 });
     });
 

@@ -1,9 +1,9 @@
-/* The empty state follows Ant Design's sizes: the picture is 100px tall (40px for the simple
+/* The empty state has fixed sizes: the picture is 100px tall (40px for the simple
    illustration, 35px when small) with 8px between it and the message, 16px before the footer,
    and 8px of side margin (32px above and below for the simple illustration, 8px when small).
 
    The built-in illustrations take every colour from the theme tokens (a mix of the foreground
-   and the background, one mix per theme so each tone matches its Ant Design counterpart), so
+   and the background, one mix per theme), so
    they follow light and dark mode without a second set of assets. `light-dark()` follows the
    `color-scheme` the tokens set on the themed element.
 

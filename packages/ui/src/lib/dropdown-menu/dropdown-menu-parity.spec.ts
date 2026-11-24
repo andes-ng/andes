@@ -346,7 +346,7 @@ class TriggerHost {}
 /**
  * The trigger is a button of the regular control scale: label, then the icon a gap away,
  * all sized by its content. Nothing in the chain may give it a width of its own, grow it, or
- * spread its children apart - the "Hover me v" trigger of Ant's Dropdown is exactly that.
+ * spread its children apart - a "Hover me v" trigger is exactly that.
  * jsdom has no layout, so this pins the declarations that decide it.
  */
 describe('a button as a dropdown menu trigger', () => {

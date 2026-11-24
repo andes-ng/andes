@@ -12,7 +12,7 @@ Product applications may use Tailwind CSS 4, but a reusable Angular library cann
 
 Publish semantic CSS Custom Properties from `@andes-ng/tokens/theme.css`. Angular components ship encapsulated CSS that consumes those properties. Consumers import the token stylesheet once.
 
-Tailwind CSS 4 may be used by documentation or product applications, but Tailwind directives, utility generation and `@source` configuration are not part of the Andes runtime styling contract. Andes will not implement a PrimeNG-style dynamic theme engine initially. Token changes are public API changes governed by semantic versioning.
+Tailwind CSS 4 may be used by documentation or product applications, but Tailwind directives, utility generation and `@source` configuration are not part of the Andes runtime styling contract. Andes will not implement a runtime dynamic theme engine initially. Token changes are public API changes governed by semantic versioning.
 
 ## Current state
 

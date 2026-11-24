@@ -95,7 +95,7 @@ export const Heading: Story = {
     docs: {
       description: {
         story:
-          "`heading` adds a title line above the message, as text or a template. Like shadcn's `EmptyTitle` + `EmptyDescription` pair.",
+          '`heading` adds a title line above the message, as text or a template. It pairs with `description`, which sits under it.',
       },
     },
   },

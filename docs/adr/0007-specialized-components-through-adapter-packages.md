@@ -15,7 +15,7 @@ Select specialized engines through proof-of-concept evaluations and place each b
 Initial candidates for evaluation are:
 
 - D3 hierarchy or ELK for organizational layout, with Andes owning node rendering, keyboard navigation and zoom controls.
-- Bryntum Scheduler, Syncfusion Scheduler/Gantt or a composition of Angular CDK virtual scrolling with a dedicated timeline engine for rosters; licensing is an explicit selection criterion.
+- A commercial scheduler/Gantt component or a composition of Angular CDK virtual scrolling with a dedicated timeline engine for rosters; licensing is an explicit selection criterion.
 - Native HTML `<video>` first, with Video.js only when consistent controls, streaming plugins or analytics justify it.
 
 Do not add these engines to the root `@andes-ng/ui` entry point until a consumer use case and bundle budget exist. The final package/entry-point boundary requires a follow-up ADR after the spikes.

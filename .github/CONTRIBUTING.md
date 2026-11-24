@@ -38,9 +38,10 @@ Each component lives on its own `feature/<name>-component` branch and ships as i
 
 - Public names use the `Andes` class prefix and `andes` selector prefix.
 - Export public APIs only from the package root `src/index.ts`.
-- Do not re-export Spartan Brain, Angular CDK internals or implementation-only types.
+- Do not re-export third-party behavior primitives, Angular CDK internals or implementation-only types.
 - Use semantic CSS Custom Properties from `@andes-ng/tokens`; do not hard-code product-specific values.
 - Preserve native HTML semantics before adding ARIA.
+- Do not name another UI library, design system or product as a reference or a comparison, in code, comments, stories, specs, docs, changelogs, version plans, file names or commit messages. Describe the behavior on its own terms. `packages/ui/src/reference-names.spec.ts` fails with the file and line when a name appears.
 - Include unit tests, keyboard behavior tests where applicable and Storybook examples.
 - Changes to public tokens, inputs, outputs, selectors or test helpers require release notes and semantic versioning.
 

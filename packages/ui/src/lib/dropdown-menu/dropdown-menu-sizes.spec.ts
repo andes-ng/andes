@@ -10,12 +10,11 @@ import { AndesDropdownMenuTrigger } from './dropdown-menu-trigger';
 import type { AndesDropdownMenuItemDef } from './dropdown-menu-types';
 
 /*
- * The sizes of a dropdown, pinned to the ones Ant Design draws (measured on
- * https://ant.design/components/dropdown): a 4px padded panel with an 8px radius and no
+ * The sizes of a dropdown, pinned to the design: a 4px padded panel with an 8px radius and no
  * border, 32px rows with a 4px radius, a 1px divider with 4px above and below, a 12px
  * chevron 8px from the row's end, a 16 x 8 arrow, and a 4px gap to the trigger. jsdom has no
  * layout, so the sizes are asserted where they are declared; the story
- * `Navigation/Dropdown Menu/Examples` shows them side by side with Ant's.
+ * `Navigation/Dropdown Menu/Examples` shows them.
  */
 
 const MENU_CSS = readFileSync(
@@ -26,7 +25,7 @@ const MENU_CSS = readFileSync(
 const value = (selector: string, property: string) =>
   declaredValue(MENU_CSS, selector, property);
 
-describe('dropdown-menu.css sizes (as drawn by Ant Design)', () => {
+describe('dropdown-menu.css sizes', () => {
   it('pads the panel by 4px, rounds it by 8px and draws no border', () => {
     expect(value('.andes-dropdown-menu__content', 'padding')).toBe(
       'var(--andes-space-1)',

@@ -186,7 +186,7 @@ describe('AndesTooltip', () => {
     expect(panel()?.textContent?.trim()).toBe('Helpful hint');
   });
 
-  describe('sizes (Ant Design, measured on its live Tooltip page)', () => {
+  describe('sizes', () => {
     function openContainer() {
       vi.useFakeTimers();
       const { fixture, trigger, panel } = createHost();
@@ -242,7 +242,7 @@ describe('AndesTooltip', () => {
       expect(toPx('15.625rem')).toBe(250);
     });
 
-    it('lifts the tooltip with three soft drop shadows, as Ant Design does', () => {
+    it('lifts the tooltip with three soft drop shadows', () => {
       const css = readFileSync(TOOLTIP_CSS, 'utf8');
 
       expect(declaredValue(css, '.andes-tooltip', 'filter')).toBe(
@@ -957,7 +957,7 @@ describe('AndesTooltip (extended options)', () => {
         align: 'end',
         flip: true,
         shift: true,
-        // It flips to the opposite side and moves along the trigger, as Ant Design's does,
+        // It flips to the opposite side and moves along the trigger,
         // and never to a perpendicular side.
         crossSideFallback: false,
       });
@@ -1792,8 +1792,8 @@ describe('AndesTooltip look', () => {
       );
     });
 
-    it("rounds its tip with Ant Design's path, rotated for each side", () => {
-      // The upward arrow (`bottom` side) is Ant Design's own path.
+    it('rounds its tip with one path, rotated for each side', () => {
+      // The upward arrow (`bottom` side) is the base path.
       expect(declaredValue(css, arrow('bottom'), 'clip-path')).toBe(
         "path( 'M 0 8 A 4 4 0 0 0 2.828 6.828 L 6.586 3.071 A 2 2 0 0 1 9.414 3.071 L 13.172 6.828 A 4 4 0 0 0 16 8 Z' )",
       );
@@ -1806,7 +1806,7 @@ describe('AndesTooltip look', () => {
 
     it('leaves the arrow 6px of the 12px gap to the trigger, and aims at the center or the edge', () => {
       expect(ANDES_TOOLTIP_ARROW_HEIGHT + 6).toBe(12);
-      // Ant Design: 12px from the edge to the arrow's box, plus half of it.
+      // 12px from the edge to the arrow's box, plus half of it.
       expect(ANDES_TOOLTIP_ARROW_INSET).toBe(12 + 8);
       expect(ANDES_TOOLTIP_ARROW_INSET_VERTICAL).toBe(8 + 8);
     });
@@ -1836,8 +1836,8 @@ describe('AndesTooltip look', () => {
       );
     });
 
-    it("fills each hue preset with Ant Design's step-6 colour", () => {
-      const ant: Record<string, string> = {
+    it('fills each hue preset with its fixed colour', () => {
+      const fills: Record<string, string> = {
         pink: '#eb2f96',
         red: '#f5222d',
         yellow: '#fadb14',
@@ -1853,9 +1853,9 @@ describe('AndesTooltip look', () => {
         lime: '#a0d911',
       };
       expect([...ANDES_TOOLTIP_HUE_COLORS].sort()).toEqual(
-        Object.keys(ant).sort(),
+        Object.keys(fills).sort(),
       );
-      for (const [hue, fill] of Object.entries(ant)) {
+      for (const [hue, fill] of Object.entries(fills)) {
         expect(
           declaredValue(
             css,
@@ -1866,7 +1866,7 @@ describe('AndesTooltip look', () => {
       }
     });
 
-    it('picks black or white text for a custom color and a hue like Ant Design does', () => {
+    it('picks black or white text for a custom color and a hue', () => {
       expect(
         declaredValue(
           css,

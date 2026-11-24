@@ -6,13 +6,13 @@ This guide explains Andes NG's vocabulary and responsibility boundaries. It's a 
 
 ## Responsibilities per package
 
-| Package                | Responsibility                                                                                                                                | Must not contain                                        |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| `@andes-ng/tokens`     | Framework-agnostic design values: color, typography, spacing scale, radii, shadows and focus. Published as `--andes-*` CSS custom properties. | Angular components, internal selectors or behavior.     |
-| `@andes-ng/primitives` | Andes-owned, unstyled, accessible behavior directives — see [ADR 0008](adr/0008-own-behavior-primitives-incrementally.md).                    | Any styling, or a component's public API.               |
-| `@andes-ng/ui`         | Public Angular components, their API, composition with behavior primitives, and encapsulated CSS that consumes tokens.                        | Duplicated brand values, or a primitive's public API.   |
-| `@andes-ng/testing`    | Stable test helpers built on Andes's public API and semantics.                                                                                | Spartan's or `@andes-ng/primitives`'s internal details. |
-| `apps/playground`      | Non-publishable app for checking a real consumer's experience.                                                                                | Code meant to ship as a package.                        |
+| Package                | Responsibility                                                                                                                                | Must not contain                                      |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `@andes-ng/tokens`     | Framework-agnostic design values: color, typography, spacing scale, radii, shadows and focus. Published as `--andes-*` CSS custom properties. | Angular components, internal selectors or behavior.   |
+| `@andes-ng/primitives` | Andes-owned, unstyled, accessible behavior directives — see [ADR 0008](adr/0008-own-behavior-primitives-incrementally.md).                    | Any styling, or a component's public API.             |
+| `@andes-ng/ui`         | Public Angular components, their API, composition with behavior primitives, and encapsulated CSS that consumes tokens.                        | Duplicated brand values, or a primitive's public API. |
+| `@andes-ng/testing`    | Stable test helpers built on Andes's public API and semantics.                                                                                | `@andes-ng/primitives`'s internal details.            |
+| `apps/playground`      | Non-publishable app for checking a real consumer's experience.                                                                                | Code meant to ship as a package.                      |
 
 These boundaries are enforced today: `@nx/enforce-module-boundaries` checks them on every `lint` via the `type:tokens`, `type:ui`, `type:testing` and `type:app` tags.
 
@@ -31,9 +31,9 @@ The token catalogue is still empty for exactly that reason: names are public API
 ## `clsx`, and why there's no Tailwind CSS or `tw-animate-css`
 
 - **`clsx`** is a small utility for conditionally building CSS class strings. `AndesButton` uses it directly to compose its variant/size/state classes.
-- **Tailwind CSS** and **`tw-animate-css`** are not Andes dependencies. They were only ever present because `@spartan-ng/brain` declared them as peer requirements; now that `AndesButton` uses Andes's own `AndesButtonPrimitive` instead (see [ADR 0008](adr/0008-own-behavior-primitives-incrementally.md)), neither package is installed. Andes still doesn't have a Tailwind styling contract of its own: components publish encapsulated CSS built on `@andes-ng/tokens`, so a consuming application never needs to scan Andes's code or configure Tailwind.
+- **Tailwind CSS** and **`tw-animate-css`** are not Andes dependencies. They were only ever present because a former third-party behavior dependency declared them as peer requirements; now that `AndesButton` uses Andes's own `AndesButtonPrimitive` instead (see [ADR 0008](adr/0008-own-behavior-primitives-incrementally.md)), neither package is installed. Andes still doesn't have a Tailwind styling contract of its own: components publish encapsulated CSS built on `@andes-ng/tokens`, so a consuming application never needs to scan Andes's code or configure Tailwind.
 
-If a future component does depend on Spartan Brain, Tailwind and `tw-animate-css` reappear in the install graph as its peers — that's a real, visible cost of that specific choice, not something to hide behind `ignoredDependencies`.
+If a future component does depend on a third-party behavior package that declares them, Tailwind and `tw-animate-css` reappear in the install graph as peers — that's a real, visible cost of that specific choice, not something to hide behind `ignoredDependencies`.
 
 ## Dependencies and peers
 

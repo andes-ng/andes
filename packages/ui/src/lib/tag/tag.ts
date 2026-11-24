@@ -305,7 +305,7 @@ export class AndesTag {
         this.variant() !== 'solid' &&
         'andes-tag--custom-tinted',
       !this.bordered() && 'andes-tag--borderless',
-      // A `processing` tag spins its icon, as Ant's `<SyncOutlined spin />` example does.
+      // A `processing` tag spins its icon.
       !skipColorAndVariant &&
         this.color() === 'processing' &&
         'andes-tag--processing',

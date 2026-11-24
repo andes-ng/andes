@@ -245,7 +245,7 @@ export const Triggers: Story = {
 };
 
 /**
- * `color`: semantic presets or any CSS color; text color and arrow follow (the Ant Design hue
+ * `color`: semantic presets or any CSS color; text color and arrow follow (the hue
  * names are in the Examples). The last rows are the other `variant`s: `light` follows the theme's
  * popover surface, and `inverse` is a dark slate surface with light text in either theme (switch
  * the toolbar theme to compare); on a dark page its fill lifts a few steps so the hint still reads

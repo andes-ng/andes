@@ -315,8 +315,8 @@ export abstract class AndesDialogRoot {
 /**
  * The surface element of a dialog compound, as seen by the parts rendered inside
  * it. Title and description register their ids here so the surface can point
- * `aria-labelledby`/`aria-describedby` at them — the relationship both reference
- * libraries treat as mandatory rather than optional for a dialog.
+ * `aria-labelledby`/`aria-describedby` at them — the relationship that is
+ * mandatory rather than optional for a dialog.
  */
 export abstract class AndesDialogSurface {
   /** Registers (or, with `null`, clears) the element labelling the surface. */

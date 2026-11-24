@@ -833,7 +833,7 @@ ng-icon {
   }
 }
 
-/* A search and an empty panel are as wide as the field, like Ant's. */
+/* A search and an empty panel are as wide as the field. */
 .andes-cascader__panel[data-search],
 .andes-cascader__panel[data-empty] {
   min-width: var(--andes-cascader-anchor-width, 0);
@@ -1105,7 +1105,7 @@ ng-icon {
   text-align: center;
 }
 
-/* The empty state sits in the list's 4px inset, as Ant Design's does. */
+/* The empty state sits in the list's 4px inset. */
 .andes-cascader__status--empty {
   margin: 0.25rem;
 }

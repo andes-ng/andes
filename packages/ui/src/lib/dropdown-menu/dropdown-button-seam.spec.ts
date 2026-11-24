@@ -6,8 +6,7 @@ import { declaredValue } from '../../testing/computed-style';
 import { AndesDropdownButton } from './dropdown-button';
 
 /*
- * The line between the halves of a split button, as Ant Design's `Dropdown.Button` draws it
- * (measured live): both halves share one fill, and a 1px lighter tint of the button color
+ * The line between the halves of a split button: both halves share one fill, and a 1px lighter tint of the button color
  * sits on the caret's first pixel column. jsdom has no layout, so the seam is asserted where
  * it is declared.
  */

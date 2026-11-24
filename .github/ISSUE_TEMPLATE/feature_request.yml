@@ -35,7 +35,7 @@ body:
     id: proposal
     attributes:
       label: Proposed solution
-      description: For a new component, describe its public API (selector, inputs, outputs) and which Spartan Brain primitive (if any) it wraps.
+      description: For a new component, describe its public API (selector, inputs, outputs) and which behavior primitive (if any) it wraps.
     validations:
       required: true
   - type: textarea

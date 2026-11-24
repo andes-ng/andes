@@ -10,8 +10,8 @@
 
 /*
  * The surface shadow and the row tints are the dropdown's own, so a row's hover, a
- * divider and the shadow read like Ant Design's in both themes: Ant tints hover and the
- * divider with a few percent of the text color (4% / 6% light, 8% / 12% dark) and lifts
+ * divider and the shadow read well in both themes: hover and the
+ * divider are tinted with a few percent of the text color (4% / 6% light, 8% / 12% dark) and lifts
  * the panel with three soft layers. Declared on the two surfaces (not on `:root`) so the
  * custom properties can be overridden per menu.
  */
@@ -61,8 +61,7 @@
   box-sizing: border-box;
   /*
    * As wide as the content, but never narrower than the trigger (the root sets the
-   * overlay pane's `min-width` to the trigger's width - Ant Design's
-   * `minOverlayWidthMatchTrigger`). `--andes-dropdown-menu-min-width` adds a floor of
+   * overlay pane's `min-width` to the trigger's width). `--andes-dropdown-menu-min-width` adds a floor of
    * its own, e.g. `8rem` for a menu opened from a narrow icon button.
    */
   min-width: var(--andes-dropdown-menu-min-width, 0);
@@ -77,8 +76,7 @@
   padding: var(--andes-space-1);
   /*
    * Concentric with the rows: 4px of padding around `radius-sm` (4px) rows makes the
-   * outer radius 8px. The surface is lifted by its shadow alone, with no border, the way
-   * Ant Design draws a dropdown: a border would add 2px to every size below.
+   * outer radius 8px. The surface is lifted by its shadow alone, with no border: a border would add 2px to every size below.
    */
   border-radius: var(--andes-radius-lg);
   background-color: var(--andes-color-popover);
@@ -204,13 +202,13 @@
   padding-inline-start: var(--andes-space-2);
 }
 
-/* Hover and keyboard focus only tint the row; the text keeps its color, as in Ant Design. */
+/* Hover and keyboard focus only tint the row; the text keeps its color. */
 .andes-dropdown-menu__item:hover:not([data-disabled]),
 .andes-dropdown-menu__item[data-active]:not([data-disabled]) {
   background-color: var(--andes-dropdown-menu-hover);
 }
 
-/* Ant Design dims a disabled row to 25% of the text color. */
+/* A disabled row is dimmed to a fraction of the text color. */
 .andes-dropdown-menu__item[data-disabled] {
   cursor: not-allowed;
   opacity: 0.3;
@@ -323,7 +321,7 @@
 
 /*
  * A group title is a row of the same 32px rhythm (5px of block padding around the 14/22
- * line) in the muted foreground, as Ant Design draws it; the group's own rows are set 8px
+ * line) in the muted foreground; the group's own rows are set 8px
  * in from either side of it (see `.andes-dropdown-menu__group` below).
  */
 .andes-dropdown-menu__label {
@@ -363,8 +361,8 @@
 
 /*
  * Selection (`selectable` menus). The row keeps a light primary tint while not hovered, so
- * the current choice is findable at a glance, the way Ant Design tints it: blue text on a
- * light blue row. A mix of the primary fill rather than a fixed hex so it follows the theme
+ * the current choice is findable at a glance: primary text on a
+ * light primary row. A mix of the primary fill rather than a fixed hex so it follows the theme
  * (a translucent tint reads on the dark popover surface too); 8% keeps the primary text above
  * 4.5:1 on it (4.6:1 light). The theme-aware primary text
  * color and the heavier weight must survive hover and keyboard focus too - otherwise a
@@ -380,7 +378,7 @@
   );
 }
 
-/* Ant Design's dark tint is a stronger one (about 30% of the primary), or it would vanish. */
+/* The dark tint is a stronger one (about 24% of the primary), or it would vanish. */
 [data-andes-theme='dark'] .andes-dropdown-menu__item[data-selected] {
   background-color: color-mix(
     in srgb,
@@ -444,7 +442,7 @@
 /*
  * Same reason as the ng-icon rule above, and the muted shortcut/extra hints hit it too:
  * on the red hover fill they would be unreadable. On the plain hover tint they keep their
- * muted color, as in Ant Design.
+ * muted color.
  */
 .andes-dropdown-menu__item[data-variant='destructive']
   :is(
@@ -466,7 +464,7 @@
 
 /*
  * The chevron is 12px, in the row's own text color, and sits 8px from the row's end (the
- * 4px of the row's padding it overhangs): Ant Design's `RightOutlined`.
+ * 4px of the row's padding it overhangs).
  */
 .andes-dropdown-menu__expand-icon {
   display: inline-flex;
@@ -491,7 +489,7 @@
 
 /*
  * The arrow is the panel's sibling inside the overlay pane (the panel itself scrolls, so
- * it would clip anything outside its own box), drawn as Ant Design's: a 16px-wide, 9px-tall
+ * it would clip anything outside its own box), drawn as a 16px-wide, 9px-tall
  * box clipped to a triangle with a rounded tip, painted in the panel's own surface. Its
  * base sits 1px inside the panel's edge so the two read as one shape, leaving a 5.5px tip
  * outside. It is authored pointing up (the `bottom` side: the panel is below the anchor)

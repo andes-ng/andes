@@ -112,7 +112,7 @@
 }
 
 /* `{ progress: { percent } }`: the bar and the percent are one pair around the middle of the box,
-   as in the reference: the bar 12px above the middle line, the percent starting 3px under it,
+   the bar 12px above the middle line, the percent starting 3px under it,
    so the pair's own centre sits a few pixels below the box's centre. */
 .andes-image__progress {
   position: absolute;

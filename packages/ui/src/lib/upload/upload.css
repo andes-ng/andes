@@ -138,7 +138,7 @@
   gap: 0;
 }
 
-/* The icon is 48px with 16px under it, the title 16px with 4px under it, as the reference. */
+/* The icon is 48px with 16px under it, the title 16px with 4px under it. */
 .andes-upload__drag-icon {
   display: inline-flex;
   margin-block-end: var(--andes-space-4, 1rem);
@@ -195,7 +195,7 @@
 }
 
 /* A text row is one 22px line: the icon (14px), the name with 8px either side, the actions. The
-   actions are 24px boxes that overhang the line by 1px, as the reference draws them; they paint
+   actions are 24px boxes that overhang the line by 1px; they paint
    no square of their own on hover (it would stick out of the 22px row), only their icon darkens. */
 .andes-upload__row {
   display: flex;
@@ -209,8 +209,8 @@
   background-color: var(--andes-color-accent, #f3f4f6);
 }
 
-/* The file icon of a text row is 14px (the row's text size, whatever the control's size), as the
-   reference draws it: with the 8px of the name's padding that leaves it the same air. */
+/* The file icon of a text row is 14px (the row's text size, whatever the control's size):
+   with the 8px of the name's padding that leaves it the same air. */
 .andes-upload__thumb {
   display: inline-flex;
   flex: none;
@@ -444,7 +444,7 @@
   border-style: dashed;
 }
 
-/* A tile being sent is the add tile's pale fill with the dashed border, as the reference. */
+/* A tile being sent is the add tile's pale fill with the dashed border. */
 .andes-upload--card
   .andes-upload__item[data-status='uploading']
   .andes-upload__row--boxed {
@@ -633,8 +633,8 @@
   max-inline-size: 100%;
 }
 
-/* A failed card is the file's icon and its name in the danger colour inside the danger border,
-   like Ant: the message is the card's tooltip (and stays for screen readers), not text on the
+/* A failed card is the file's icon and its name in the danger colour inside the danger border:
+   the message is the card's tooltip (and stays for screen readers), not text on the
    card, and the actions are the same hover overlay as any other card. The size and the extra
    text have no room on a tile either. */
 .andes-upload--card .andes-upload__error,

@@ -1001,7 +1001,7 @@ describe('AndesImageGroup', () => {
   });
 });
 
-describe('AndesImagePreview, reference parity', () => {
+describe('AndesImagePreview, geometry and behavior', () => {
   withElementGeometry();
 
   describe('zoom ratio', () => {

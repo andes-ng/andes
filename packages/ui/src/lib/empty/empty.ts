@@ -68,7 +68,7 @@ type ImageKind = AndesEmptyIllustration | 'custom' | 'none';
  * - `provideAndesEmpty()` / `[andesEmptyProvider]` set the image, message, texts and part
  *   styling of every empty state below them; an input still wins over it.
  *
- * Sizes follow Ant Design's: the picture is 100px tall (40px for the `simple` illustration, 35px
+ * Sizes: the picture is 100px tall (40px for the `simple` illustration, 35px
  * when `small`), with an 8px gap above the message and a 16px one above the footer.
  *
  * Styling hooks: `--andes-empty-image-size` (the picture's height), `--andes-empty-margin`,

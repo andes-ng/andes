@@ -25,8 +25,8 @@ import { AndesTooltipGroup } from './tooltip-group';
  * ```
  *
  * With `unique`, one tooltip is shown at a time and it glides from trigger to trigger
- * (Ant Design's "Smooth Transition"). Without it the provider only changes the timing
- * defaults, the way shadcn's `TooltipProvider` does, and the tooltips inside it share an
+ * (a smooth transition). Without it the provider only changes the timing
+ * defaults, and the tooltips inside it share an
  * "instant reopen" window apart from the rest of the page. A tooltip's own `openDelay`,
  * `closeDelay` or `instantReopenWindow` still wins.
  */

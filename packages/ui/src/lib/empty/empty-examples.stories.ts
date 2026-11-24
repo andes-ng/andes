@@ -22,10 +22,9 @@ import { AndesEmptyProvider } from './empty-config';
 import type { AndesEmptyStyleInfo } from './empty-types';
 
 /**
- * Every example of Ant Design's Empty page, in Ant's order and under Ant's names, built with
- * Andes components. Ant's "ConfigProvider" example shows Select, TreeSelect, Cascader, Transfer
- * and Table; `Component integrations` opens the real Select, TreeSelect and Cascader with no
- * data, and shows the listbox and table-body patterns Transfer and Table use.
+ * The empty state in its common uses, built with Andes components. `Component integrations`
+ * opens the real Select, TreeSelect and Cascader with no data, and shows the listbox and
+ * table-body patterns.
  */
 const meta: Meta<AndesEmpty> = {
   title: 'Data Display/Empty/Examples',
@@ -54,7 +53,7 @@ const surface = EMPTY_SURFACE;
 const panel = EMPTY_BOX;
 const heading = EMPTY_CAPTION;
 
-/** Ant's `empty.svg`, redrawn as a data URI so the story needs no network. */
+/** A custom picture, drawn as a data URI so the story needs no network. */
 const CUSTOM_IMAGE =
   'data:image/svg+xml;utf8,' +
   encodeURIComponent(
@@ -125,8 +124,8 @@ export const CustomizeDescription: Story = {
  * "no data" areas of the components in it - this Select, TreeSelect and Cascader, which you open
  * to see. Toggle it to compare.
  */
-export const ConfigProvider: Story = {
-  name: 'ConfigProvider',
+export const Provider: Story = {
+  name: 'Provider',
   render: () => ({
     props: { customize: true, noOptions: [] },
     template: `

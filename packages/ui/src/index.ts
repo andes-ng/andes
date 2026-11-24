@@ -125,7 +125,7 @@ export * from './lib/slider';
 
 // @slot spinner
 
-// @slot splitter
+export * from './lib/splitter';
 
 // @slot statistic
 

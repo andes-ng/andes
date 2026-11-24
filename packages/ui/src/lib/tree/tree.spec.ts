@@ -112,8 +112,9 @@ function sample(): AndesTreeNode[] {
           let-level="level"
           let-expanded="expanded"
         >
-          <b class="custom">{{ node.title }}</b
-          ><i class="meta">L{{ level }}{{ expanded ? '-open' : '' }}</i>
+          <b class="custom">{{ node.title }}</b><i class="meta"
+            >L{{ level }}{{ expanded ? '-open' : '' }}</i
+          >
         </ng-template>
       }
     </andes-tree>

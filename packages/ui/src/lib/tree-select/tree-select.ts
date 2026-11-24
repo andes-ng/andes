@@ -700,9 +700,16 @@ export class AndesTreeSelect
           flip: true,
           // Beside the field the panel would no longer read as its list: stay above or below.
           crossSideFallback: false,
+          // Where neither side has room for the whole list, the panel shrinks to the larger
+          // one and its viewport scrolls, rather than being pushed up over the field.
+          flexibleDimensions: true,
           shift: true,
           matchAnchorWidth: this.matchesTriggerWidth(),
         },
+        // CDK only shrinks a pane with a minimum height set; zero lets the side with the
+        // most room win, without growing a short tree's pane past its content. A string,
+        // because CDK reads a numeric 0 as "no minimum".
+        size: { minHeight: '0px' },
       });
     });
 

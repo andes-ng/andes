@@ -467,6 +467,20 @@ describe('AndesTreeSelect', () => {
       });
     });
 
+    it('lets the pane shrink to the room on its side instead of covering the field', () => {
+      const fixture = setup();
+      (fixture.componentInstance.select() as AndesTreeSelect).open();
+      fixture.detectChanges();
+      const overlay = fixture.debugElement.children[0].injector.get(
+        AndesOverlayPrimitive,
+      );
+      expect(overlay.config().positioning).toMatchObject({
+        flexibleDimensions: true,
+      });
+      // CDK only shrinks a pane that has a minimum height; zero lets the larger side win.
+      expect(overlay.config().size).toMatchObject({ minHeight: '0px' });
+    });
+
     it.each([
       ['bottomLeft', 'bottom', 'start'],
       ['bottomRight', 'bottom', 'end'],

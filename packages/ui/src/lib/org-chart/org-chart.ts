@@ -444,6 +444,8 @@ interface BarPart {
   /** A toggle that is on. */
   readonly active?: boolean;
   readonly run?: () => void;
+  /** For a format menu: what the file holds, the whole chart or what is on screen. */
+  readonly scope?: 'chart' | 'view';
 }
 
 /** A connector as the template renders it. */
@@ -728,8 +730,11 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
   readonly exportable = input(true, { transform: booleanAttribute });
   /** The name, without extension, of the files the bar saves. */
   readonly exportFilename = input('org-chart');
-  /** The format the `capture` tool saves: `png` (default), `jpeg`, `webp` or `svg`. */
-  readonly captureFormat = input<AndesOrgChartExportFormat>('png');
+  /**
+   * What the `capture` tool saves. `'ask'` (default) opens a menu of formats (PNG, JPG, WebP, SVG);
+   * a format (`png`, `jpeg`, `webp` or `svg`) makes it one click that saves that format.
+   */
+  readonly captureFormat = input<AndesOrgChartExportFormat | 'ask'>('ask');
   /**
    * Up to this many visible cards, exporting or printing the whole chart is exact even when the
    * chart is windowed: the cards that are not near the viewport are put in the page for the
@@ -2827,9 +2832,19 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
           });
           break;
         case 'capture':
-          button('capture', 'lucideCamera', text.capture, () =>
-            this.onCapture(),
-          );
+          if (this.captureFormat() === 'ask') {
+            parts.push({
+              kind: 'export',
+              key: 'capture',
+              icon: 'lucideCamera',
+              label: text.capture,
+              scope: 'view',
+            });
+          } else {
+            button('capture', 'lucideCamera', text.capture, () =>
+              this.onCapture(),
+            );
+          }
           break;
         case 'export':
           parts.push({
@@ -2979,17 +2994,22 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
     this.fitView();
   }
 
-  protected onExport(click: AndesDropdownMenuClickEvent): void {
+  protected onExport(
+    click: AndesDropdownMenuClickEvent,
+    scope: 'chart' | 'view' = 'chart',
+  ): void {
     this.runTool(() =>
       this.download(click.key as AndesOrgChartExportFormat, {
         filename: this.exportFilename(),
+        scope,
       }),
     );
   }
 
   protected onCapture(): void {
+    const format = this.captureFormat();
     this.runTool(() =>
-      this.download(this.captureFormat(), {
+      this.download(format === 'ask' ? 'png' : format, {
         filename: this.exportFilename(),
         scope: 'view',
       }),

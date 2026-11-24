@@ -654,15 +654,25 @@
   min-block-size: 1.25rem;
 }
 
+.andes-org-chart__tip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .andes-org-chart__kbd {
-  display: inline-block;
-  margin-inline-start: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-inline-size: 1.25rem;
+  block-size: 1.25rem;
   padding-inline: 0.25rem;
   border: 1px solid currentColor;
   border-radius: 3px;
   font-family: inherit;
   font-size: 0.6875rem;
-  line-height: 1.1rem;
+  line-height: 1;
   opacity: 0.75;
 }
 

@@ -117,7 +117,7 @@ class HostComponent {
   readonly orientation = signal<AndesOrgChartControlsOrientation>('vertical');
   readonly zoomable = signal(true);
   readonly exportable = signal(true);
-  readonly captureFormat = signal<'png' | 'svg'>('svg');
+  readonly captureFormat = signal<'png' | 'svg' | 'ask'>('svg');
   readonly exactLimit = signal(2000);
   readonly labels = signal<Partial<AndesOrgChartLabels>>({});
   readonly actions = signal<AndesOrgChartNodeActions<Person> | null>(null);
@@ -919,6 +919,31 @@ describe('AndesOrgChart toolbar', () => {
         scope: 'chart',
         filename: 'whole.svg',
       });
+    });
+
+    it('offers the formats from the capture tool and saves the view in the one picked', async () => {
+      const s = setup((h) => {
+        h.items.set(['capture']);
+        h.captureFormat.set('ask');
+      });
+      await sized(s);
+      s.tool('capture').click();
+      await s.settle();
+      const saved = stubSave();
+      const items = [
+        ...document.querySelectorAll<HTMLElement>('[role^="menuitem"]'),
+      ];
+      expect(items.map((item) => item.textContent?.trim())).toEqual([
+        'PNG image',
+        'JPG image',
+        'WebP image',
+        'SVG vector',
+      ]);
+      items[3].click();
+      await s.settle();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(saved).toEqual(['org-chart.svg']);
+      expect(s.host.exports[0]).toMatchObject({ format: 'svg', scope: 'view' });
     });
 
     it('reports a failed save from the bar instead of throwing', async () => {

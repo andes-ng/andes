@@ -6,7 +6,8 @@
  * - `reset`: back to 100%, on the first root.
  * - `fullscreen`: shows the chart across the screen (hidden where the browser has no
  *   Fullscreen API).
- * - `capture`: saves what is on screen right now, as one click.
+ * - `capture`: saves what is on screen right now: a menu of formats, or one click when
+ *   `captureFormat` names one.
  * - `export`: a menu to save the whole chart as PNG, JPG, WebP or SVG.
  * - `print`: prints the whole chart on one page.
  * - `expandAll` / `collapseAll`: open or close every team.

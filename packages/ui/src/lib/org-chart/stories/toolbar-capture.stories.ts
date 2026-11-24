@@ -24,9 +24,9 @@ export default meta;
 type Story = StoryObj<AndesOrgChart>;
 
 /**
- * The `capture` tool: one click saves what is on screen right now as a PNG, at the current pan
- * and zoom, without the bar. The export menu next to it saves the whole chart. Pan or zoom first,
- * then capture.
+ * The `capture` tool: a menu of formats (PNG, JPG, WebP, SVG) that saves what is on screen right
+ * now, at the current pan and zoom, without the bar. The export menu next to it saves the whole
+ * chart. Pan or zoom first, then capture.
  */
 export const Tool: Story = {
   render: () => ({
@@ -46,7 +46,7 @@ export const Tool: Story = {
   }),
 };
 
-/** `captureFormat` sets what the tool saves: here a JPG. */
+/** `captureFormat` skips the menu: the tool is one click that saves that format, here a JPG. */
 export const AnotherFormat: Story = {
   render: () => ({
     props: { data: SAMPLE_ORG, items: ['zoom', 'fit', 'divider', 'capture'] },

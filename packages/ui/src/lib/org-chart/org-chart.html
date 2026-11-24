@@ -312,11 +312,11 @@
         [placement]="menuPlacement()"
         [sideOffset]="menuGap"
         [items]="exportItems()"
-        (itemClick)="onExport($event)"
+        (itemClick)="onExport($event, part.scope)"
       >
         <andes-button
           andesDropdownMenuTrigger
-          data-tool="export"
+          [attr.data-tool]="part.key"
           variant="ghost"
           size="icon"
           [aria-label]="part.label"
@@ -380,9 +380,11 @@
       />
     </andes-button>
     <ng-template andesTooltipContent>
-      {{ part.label }} @if (part.hint) {
-      <kbd class="andes-org-chart__kbd">{{ part.hint }}</kbd>
-      }
+      <span class="andes-org-chart__tip"
+        >{{ part.label }} @if (part.hint) {
+        <kbd class="andes-org-chart__kbd">{{ part.hint }}</kbd>
+        }</span
+      >
     </ng-template>
   </andes-tooltip>
   } } }

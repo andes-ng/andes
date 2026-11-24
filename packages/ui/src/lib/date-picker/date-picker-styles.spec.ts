@@ -94,9 +94,9 @@ describe('AndesDatePicker styles', () => {
     });
 
     it('draws a muted disc with the "x" knocked out, with a focus ring', () => {
-      // Lucide's circle-x, filled: the ring's 4-unit stroke takes the disc to the box's edge.
+      // Lucide's circle-x, filled once: a radius of 12 takes the disc to the box's edge.
       expect(css).toContain(
-        '.andes-date-picker__clear-glyph ::ng-deep circle { fill: currentColor; stroke-width: 4; }',
+        '.andes-date-picker__clear-glyph ::ng-deep circle { fill: currentColor; stroke: none; r: 12; }',
       );
       expect(css).toContain(
         '.andes-date-picker__clear-glyph ::ng-deep path { stroke: var(--andes-color-background); }',

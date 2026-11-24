@@ -729,11 +729,13 @@ ng-icon {
   height: 1em;
 }
 
-/* Lucide's circle-x as a filled disc: the ring's 4-unit stroke takes the disc to the edge of
-   the box and the "x" is knocked out in the background colour. */
+/* Lucide's circle-x as a filled disc: a radius of 12 takes the disc to the edge of the
+   box, painted once (no stroke over the fill, which would double a translucent colour into a
+   darker ring), and the "x" is knocked out in the background colour. */
 .andes-date-picker__clear-glyph ::ng-deep circle {
   fill: currentColor;
-  stroke-width: 4;
+  stroke: none;
+  r: 12;
 }
 
 .andes-date-picker__clear-glyph ::ng-deep path {
@@ -1265,11 +1267,10 @@ ng-icon {
     forced-color-adjust: none;
   }
 
-  /* The disc and its knocked-out "x" are fills and strokes, which would otherwise both turn
-     into the text color and blot out the "x". */
+  /* The disc is a fill and its knocked-out "x" a stroke, which would otherwise both turn into
+     the text color and blot out the "x". */
   .andes-date-picker__clear-glyph ::ng-deep circle {
     fill: ButtonText;
-    stroke: ButtonText;
   }
 
   .andes-date-picker__clear-glyph ::ng-deep path {

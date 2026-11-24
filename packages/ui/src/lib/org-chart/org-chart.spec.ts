@@ -1363,6 +1363,42 @@ describe('AndesOrgChart', () => {
       expect(svg.match(/<rect /g)?.length).toBeGreaterThanOrEqual(7);
       expect(svg).toContain('<path d="M');
     });
+
+    it('fills behind the exported SVG only when a background is given', () => {
+      const s = setup();
+      expect(s.host.chart().exportSvg()).not.toContain('fill="#fafafa"');
+      expect(s.host.chart().exportSvg('#fafafa')).toMatch(
+        /^<svg[^>]*><rect width="\d+" height="\d+" fill="#fafafa"\/>/,
+      );
+    });
+
+    it('exports an SVG file and downloads it under the given name', async () => {
+      const s = setup();
+      const blob = await s.host.chart().exportImage('svg');
+      expect(blob.type).toBe('image/svg+xml');
+      expect(await blob.text()).toContain('Ana Torres');
+
+      const links: { download: string }[] = [];
+      vi.stubGlobal('URL', {
+        createObjectURL: () => 'blob:chart',
+        revokeObjectURL: () => undefined,
+      });
+      vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(
+        function (this: HTMLAnchorElement) {
+          links.push({ download: this.download });
+        },
+      );
+      await s.host.chart().download('svg', { filename: 'company' });
+      await s.host
+        .chart()
+        .download('jpeg', { filename: 'never' })
+        .catch(() => {
+          // jsdom draws no canvas: only the name of a file that is saved matters here.
+        });
+      expect(links).toEqual([{ download: 'company.svg' }]);
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+    });
   });
 
   describe('checkbox selection', () => {

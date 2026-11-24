@@ -36,7 +36,7 @@
      --andes-org-chart-connector-highlight-color connector on a search path
      --andes-org-chart-secondary-color           dotted-line (secondary) links
      --andes-org-chart-secondary-dasharray       dash pattern of secondary links
-     --andes-org-chart-toggle-size               expand / collapse toggle diameter (20px)
+     --andes-org-chart-toggle-size               expand / collapse toggle diameter (24px)
      --andes-org-chart-toggle-background         toggle background
      --andes-org-chart-toggle-foreground         toggle icon and count
      --andes-org-chart-toggle-border-color       toggle hairline
@@ -423,8 +423,8 @@
   flex: none;
   place-items: center;
   box-sizing: border-box;
-  inline-size: 1rem;
-  block-size: 1rem;
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
   border: 1px solid var(--andes-color-input);
   border-radius: var(--andes-radius-sm);
   background: var(--andes-org-chart-node-background, var(--andes-color-card));
@@ -434,10 +434,7 @@
 
 .andes-org-chart__checkbox ng-icon {
   display: flex;
-  inline-size: 0.75rem;
-  block-size: 0.75rem;
-  /* The old tick was drawn 1.5px thick in a 12px box: lucide's 24-unit grid needs 3. */
-  --ng-icon__stroke-width: 3;
+  font-size: 0.875rem;
 }
 
 .andes-org-chart__node[data-checked] .andes-org-chart__checkbox {
@@ -460,8 +457,8 @@
   justify-content: center;
   gap: 2px;
   box-sizing: border-box;
-  min-inline-size: var(--andes-org-chart-toggle-size, 1.25rem);
-  block-size: var(--andes-org-chart-toggle-size, 1.25rem);
+  min-inline-size: var(--andes-org-chart-toggle-size, 1.5rem);
+  block-size: var(--andes-org-chart-toggle-size, 1.5rem);
   margin: 0;
   padding: 0;
   border: 1px solid
@@ -530,19 +527,16 @@
   place-items: center;
 }
 
-/* Every glyph is a lucide icon in an `ng-icon`; as a flex box its svg never sits on a text
-   baseline, so it fills the 12px box exactly. */
+/* Every glyph is a lucide icon in an `ng-icon` at its default size (1em) and stroke; as a flex
+   box its svg never sits on a text baseline. */
 .andes-org-chart__chevron,
 .andes-org-chart__spinner {
   display: flex;
   flex: none;
-  inline-size: 0.75rem;
-  block-size: 0.75rem;
+  font-size: 1rem;
 }
 
 .andes-org-chart__chevron {
-  /* Drawn 1.25px thick in the 12px box before: 2.5 on lucide's 24-unit grid. */
-  --ng-icon__stroke-width: 2.5;
   rotate: var(--_andes-org-chart-chevron);
   transition: rotate var(--_andes-org-chart-motion) var(--_andes-org-chart-ease);
 }
@@ -589,14 +583,6 @@
 
 .andes-org-chart__controls ng-icon {
   display: flex;
-  inline-size: 1rem;
-  block-size: 1rem;
-}
-
-/* The button sizes any projected svg to 1em of its own font size; the glyph keeps 1rem. */
-.andes-org-chart__controls ng-icon ::ng-deep svg {
-  inline-size: 100%;
-  block-size: 100%;
 }
 
 .andes-org-chart__zoom {

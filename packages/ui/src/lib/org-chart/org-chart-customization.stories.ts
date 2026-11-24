@@ -1,22 +1,3 @@
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import {
-  lucideActivity,
-  lucideArchive,
-  lucideBox,
-  lucideCloud,
-  lucideCpu,
-  lucideDatabase,
-  lucideGlobe,
-  lucideHardDrive,
-  lucideLayers,
-  lucideMinus,
-  lucideNetwork,
-  lucidePlus,
-  lucideRoute,
-  lucideServer,
-  lucideTable,
-  lucideZap,
-} from '@ng-icons/lucide';
 import {
   type Decorator,
   moduleMetadata,
@@ -29,7 +10,6 @@ import {
   SAMPLE_DEPARTMENT_COLORS,
   SAMPLE_ORG,
   type SamplePerson,
-  type SampleService,
   withoutPhotos,
 } from '../../testing/org-chart-sample';
 import { AndesButton } from '../button/button';
@@ -52,25 +32,6 @@ function byDepartment(node: SamplePerson): SamplePerson {
     children: node.children?.map(byDepartment),
   };
 }
-
-/** The lucide icon of each service category for the architecture story. */
-const ICONS: Readonly<Record<SampleService['icon'], string>> = {
-  cloud: 'lucideCloud',
-  compute: 'lucideCpu',
-  storage: 'lucideDatabase',
-  network: 'lucideNetwork',
-  data: 'lucideTable',
-  server: 'lucideServer',
-  box: 'lucideBox',
-  bolt: 'lucideZap',
-  disk: 'lucideHardDrive',
-  archive: 'lucideArchive',
-  globe: 'lucideGlobe',
-  route: 'lucideRoute',
-  table: 'lucideTable',
-  stream: 'lucideActivity',
-  cache: 'lucideLayers',
-};
 
 /**
  * Adds page-level CSS for a story. Classes from `nodeClass` and `connectorClass` land inside the
@@ -95,7 +56,6 @@ const meta: Meta<AndesOrgChart> = {
   decorators: [
     moduleMetadata({
       imports: [
-        NgIcon,
         AndesButton,
         AndesOrgChartConnectorTemplate,
         AndesOrgChartEmptyTemplate,
@@ -103,26 +63,6 @@ const meta: Meta<AndesOrgChart> = {
         AndesOrgChartToggleIconTemplate,
         AndesOrgChartToggleTemplate,
         AndesOrgChartToolbarTemplate,
-      ],
-      providers: [
-        provideIcons({
-          lucideActivity,
-          lucideArchive,
-          lucideBox,
-          lucideCloud,
-          lucideCpu,
-          lucideDatabase,
-          lucideGlobe,
-          lucideHardDrive,
-          lucideLayers,
-          lucideMinus,
-          lucideNetwork,
-          lucidePlus,
-          lucideRoute,
-          lucideServer,
-          lucideTable,
-          lucideZap,
-        }),
       ],
     }),
   ],
@@ -133,16 +73,15 @@ export default meta;
 type Story = StoryObj<AndesOrgChart>;
 
 /**
- * Custom content: a cloud architecture drawn with `andesOrgChartNode` (an icon tile tinted by
- * the service category, a title and a description), and `andesOrgChartToggleIcon` replacing the
- * toggle's chevron with plus and minus.
+ * Custom content: a cloud architecture drawn with `andesOrgChartNode`, plain text only (a title
+ * and a description), and `andesOrgChartToggleIcon` replacing the toggle's chevron with a plus
+ * and a minus sign.
  */
 export const Content: Story = {
   render: () => ({
     props: {
       data: SAMPLE_ARCHITECTURE,
-      icons: ICONS,
-      cardSize: { width: 256, height: 72 },
+      cardSize: { width: 240, height: 56 },
     },
     template: `
       <andes-org-chart
@@ -155,20 +94,13 @@ export const Content: Story = {
         leafLayout="hanging"
       >
         <ng-template andesOrgChartNode let-service>
-          <span
-            style="display: grid; place-items: center; flex: none; width: 2.5rem; height: 2.5rem; border-radius: 0.5rem;"
-            [style.background]="'color-mix(in srgb, ' + service.color + ' 14%, transparent)'"
-            [style.color]="'color-mix(in srgb, ' + service.color + ' 75%, var(--andes-color-foreground))'"
-          >
-            <ng-icon [name]="icons[service.icon]" size="18" strokeWidth="1.75" aria-hidden="true" />
-          </span>
           <span style="display: grid; gap: 2px; min-width: 0;">
             <span style="font-size: 0.875rem; line-height: 1.25rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ service.title }}</span>
             <span style="font-size: 0.75rem; line-height: 1rem; color: var(--andes-color-muted-foreground); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ service.description }}</span>
           </span>
         </ng-template>
         <ng-template andesOrgChartToggleIcon let-expanded>
-          <ng-icon [name]="expanded ? 'lucideMinus' : 'lucidePlus'" size="12" strokeWidth="2.5" aria-hidden="true" />
+          <span aria-hidden="true" style="font-size: 0.875rem; line-height: 1;">{{ expanded ? '−' : '+' }}</span>
         </ng-template>
       </andes-org-chart>
     `,

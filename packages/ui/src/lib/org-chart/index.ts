@@ -22,6 +22,10 @@ export type {
   AndesOrgChartViewport,
   AndesOrgChartWheel,
 } from './org-chart';
+export type {
+  AndesOrgChartExportFormat,
+  AndesOrgChartExportOptions,
+} from './org-chart-export';
 export {
   AndesOrgChartConnectorTemplate,
   AndesOrgChartEmptyTemplate,

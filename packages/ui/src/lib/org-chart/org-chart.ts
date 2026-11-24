@@ -42,6 +42,13 @@ import {
 
 import { AndesButton } from '../button/button';
 import {
+  type AndesOrgChartExportFormat,
+  type AndesOrgChartExportOptions,
+  exportBlob,
+  exportExtension,
+  saveBlob,
+} from './org-chart-export';
+import {
   andesOrgChartLinkPath,
   AndesOrgChartConnectorStyle,
   andesOrgChartSecondaryPath,
@@ -1752,9 +1759,10 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
 
   /**
    * The chart as a standalone SVG document: connectors, and each visible card as a rounded
-   * box with its name and title. Colors are read from the chart's current styles.
+   * box with its name and title. Colors are read from the chart's current styles. A
+   * `background` color fills behind the chart; without one the document is transparent.
    */
-  exportSvg(): string {
+  exportSvg(background?: string): string {
     const style =
       typeof getComputedStyle === 'function'
         ? getComputedStyle(this.host.nativeElement)
@@ -1775,6 +1783,9 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
     const height = this.canvasHeight();
     const parts: string[] = [
       `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+      background
+        ? `<rect width="${width}" height="${height}" fill="${escape(background)}"/>`
+        : '',
       `<g fill="none" stroke="${escape(border)}" stroke-width="1.5">`,
       ...this.links().map((link) => `<path d="${link.d}"/>`),
       ...this.secondaryViews().map(
@@ -1797,6 +1808,49 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
     }
     parts.push('</svg>');
     return parts.join('');
+  }
+
+  /**
+   * The chart as a file of the given format: SVG, or a PNG, JPEG or WebP image drawn from it.
+   * The image is `scale` times the size of the canvas (2 by default) and has the whole chart,
+   * whatever part of it is in view.
+   */
+  exportImage(
+    format: AndesOrgChartExportFormat = 'png',
+    options: AndesOrgChartExportOptions = {},
+  ): Promise<Blob> {
+    const background =
+      options.background ??
+      (format === 'jpeg'
+        ? this.readColor('--andes-color-card', '#ffffff')
+        : undefined);
+    return exportBlob(
+      this.exportSvg(format === 'svg' ? background : undefined),
+      this.canvasWidth(),
+      this.canvasHeight(),
+      format,
+      { ...options, background },
+    );
+  }
+
+  /** Saves the chart as `<filename>.<format>` (`org-chart` by default) through the browser. */
+  async download(
+    format: AndesOrgChartExportFormat = 'png',
+    options: AndesOrgChartExportOptions = {},
+  ): Promise<void> {
+    const blob = await this.exportImage(format, options);
+    saveBlob(
+      blob,
+      `${options.filename ?? 'org-chart'}.${exportExtension(format)}`,
+    );
+  }
+
+  private readColor(name: string, fallback: string): string {
+    const style =
+      typeof getComputedStyle === 'function'
+        ? getComputedStyle(this.host.nativeElement)
+        : null;
+    return style?.getPropertyValue(name).trim() || fallback;
   }
 
   // ------------------------------------------------------------------ node events

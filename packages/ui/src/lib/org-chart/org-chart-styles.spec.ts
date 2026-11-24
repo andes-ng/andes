@@ -223,7 +223,7 @@ describe('AndesOrgChart styles', () => {
     );
     expectLength(
       toggle.blockSize,
-      'var(--andes-org-chart-toggle-size, 1.25rem)',
+      'var(--andes-org-chart-toggle-size, 1.5rem)',
     );
     expect(declared('.andes-org-chart__toggle', 'border-radius')).toBe(
       'var(--andes-radius-full)',
@@ -251,7 +251,9 @@ describe('AndesOrgChart styles', () => {
   });
 
   it('draws the checkbox, filled when checked or mixed', () => {
-    expect(declared('.andes-org-chart__checkbox', 'inline-size')).toBe('1rem');
+    expect(declared('.andes-org-chart__checkbox', 'inline-size')).toBe(
+      '1.25rem',
+    );
     expect(
       declared(
         '.andes-org-chart__node[data-checked] .andes-org-chart__checkbox',

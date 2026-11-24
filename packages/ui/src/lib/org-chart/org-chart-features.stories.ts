@@ -501,44 +501,62 @@ export const DynamicData: Story = {
 
 /**
  * The imperative API through the `andesOrgChart` reference: `fitView()`, `zoomTo()`,
- * `resetView()`, `expandAllNodes()`, `collapseAll()`, `scrollToNode()` and `exportSvg()`.
+ * `resetView()`, `expandAllNodes()`, `collapseAll()` and `scrollToNode()`.
  */
 export const ImperativeApi: Story = {
-  render: () => {
-    const exported = signal('');
-    return {
-      props: {
-        data: SAMPLE_ORG,
-        exported,
-        exportChart(chart: AndesOrgChart) {
-          exported.set(
-            `Exported ${Math.round(chart.exportSvg().length / 1024)} kB of SVG`,
-          );
-        },
-      },
-      template: `
-        <div style="display: grid; gap: 0.75rem;">
-          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-            <andes-button size="sm" variant="outline" (click)="chart.fitView()">Fit</andes-button>
-            <andes-button size="sm" variant="outline" (click)="chart.zoomTo(1.5)">Zoom to 150%</andes-button>
-            <andes-button size="sm" variant="outline" (click)="chart.resetView()">Reset</andes-button>
-            <andes-button size="sm" variant="outline" (click)="chart.expandAllNodes()">Expand all</andes-button>
-            <andes-button size="sm" variant="outline" (click)="chart.collapseAll()">Collapse all</andes-button>
-            <andes-button size="sm" (click)="chart.scrollToNode('ml', { select: true })">Find Amara Nwosu</andes-button>
-            <andes-button size="sm" variant="outline" (click)="exportChart(chart)">Export SVG</andes-button>
-            <span style="${READOUT}">{{ exported() }}</span>
-          </div>
-          <andes-org-chart
-            #chart="andesOrgChart"
-            aria-label="Company organization"
-            style="--andes-org-chart-height: 32rem"
-            [data]="data"
-            [defaultExpandDepth]="1"
-          />
+  render: () => ({
+    props: { data: SAMPLE_ORG },
+    template: `
+      <div style="display: grid; gap: 0.75rem;">
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+          <andes-button size="sm" variant="outline" (click)="chart.fitView()">Fit</andes-button>
+          <andes-button size="sm" variant="outline" (click)="chart.zoomTo(1.5)">Zoom to 150%</andes-button>
+          <andes-button size="sm" variant="outline" (click)="chart.resetView()">Reset</andes-button>
+          <andes-button size="sm" variant="outline" (click)="chart.expandAllNodes()">Expand all</andes-button>
+          <andes-button size="sm" variant="outline" (click)="chart.collapseAll()">Collapse all</andes-button>
+          <andes-button size="sm" (click)="chart.scrollToNode('ml', { select: true })">Find Amara Nwosu</andes-button>
         </div>
-      `,
-    };
-  },
+        <andes-org-chart
+          #chart="andesOrgChart"
+          aria-label="Company organization"
+          style="--andes-org-chart-height: 32rem"
+          [data]="data"
+          [defaultExpandDepth]="1"
+        />
+      </div>
+    `,
+  }),
+};
+
+/**
+ * Exporting the chart: `download(format)` saves the whole chart (not just what is in view) as
+ * `svg`, `png`, `jpeg` or `webp`, and `exportImage(format)` returns the same file as a `Blob`.
+ * `scale` sets the pixel ratio of an image (2 by default), `background` fills behind the chart
+ * (JPEG always gets one) and `filename` names the file. The chart shows the nodes that are
+ * expanded at the time of the export.
+ */
+export const Export: Story = {
+  render: () => ({
+    props: { data: SAMPLE_ORG },
+    template: `
+      <div style="display: grid; gap: 0.75rem;">
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+          <andes-button size="sm" variant="outline" (click)="chart.expandAllNodes()">Expand all</andes-button>
+          <andes-button size="sm" (click)="chart.download('svg', { filename: 'company' })">Download SVG</andes-button>
+          <andes-button size="sm" (click)="chart.download('png', { filename: 'company', scale: 2 })">Download PNG</andes-button>
+          <andes-button size="sm" (click)="chart.download('jpeg', { filename: 'company', quality: 0.92 })">Download JPG</andes-button>
+          <andes-button size="sm" variant="outline" (click)="chart.download('webp', { filename: 'company' })">Download WebP</andes-button>
+        </div>
+        <andes-org-chart
+          #chart="andesOrgChart"
+          aria-label="Company organization"
+          style="--andes-org-chart-height: 32rem"
+          [data]="data"
+          [defaultExpandDepth]="1"
+        />
+      </div>
+    `,
+  }),
 };
 
 /**

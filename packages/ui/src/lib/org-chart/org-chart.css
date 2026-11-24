@@ -1,0 +1,928 @@
+/* Org chart. Cards are absolutely positioned on a canvas that is panned and zoomed with one
+   transform; connectors are SVG paths on the same canvas. Positions are physical (left/top)
+   because the layout already mirrored them for right-to-left charts; card content still
+   follows the page direction.
+
+   The look is deliberately quiet: a canvas one step darker than the cards, cards with a
+   hairline border one step lighter than the card, 1px neutral connectors and a small round
+   toggle on the card edge. No shadows, gradients or accent bars by default.
+
+   Hooks are read with a fallback instead of being declared on :host, so a consumer rule on the
+   element (andes-org-chart { --andes-org-chart-height: 40rem; }) or on a card (through
+   `nodeClass`) is never outranked:
+     --andes-org-chart-height                    block size of the chart (32rem)
+     --andes-org-chart-background                canvas background
+     --andes-org-chart-dot-color                 background dot grid (none unless set)
+     --andes-org-chart-border-color              chart border
+     --andes-org-chart-radius                    chart corner radius
+     --andes-org-chart-node-background           card background
+     --andes-org-chart-node-foreground           card text
+     --andes-org-chart-node-muted-foreground     card secondary text (role)
+     --andes-org-chart-node-border-color         card hairline
+     --andes-org-chart-node-hover-border-color   card hairline on hover
+     --andes-org-chart-node-radius               card corner radius (8px)
+     --andes-org-chart-node-shadow               card shadow (none)
+     --andes-org-chart-node-accent               selection color, and the initials tint of a
+                                                 person with a `color` or a `levelColors` entry
+     --andes-org-chart-node-selected-background  selected card background
+     --andes-org-chart-avatar-size               avatar diameter (40px)
+     --andes-org-chart-avatar-background         initials background
+     --andes-org-chart-avatar-foreground         initials color
+     --andes-org-chart-match-color               border of search matches
+     --andes-org-chart-dimmed-opacity            opacity of photos, toggles and lines off the
+                                                 search path (their text only turns muted)
+     --andes-org-chart-connector-color           connector stroke
+     --andes-org-chart-connector-width           connector stroke width (1px)
+     --andes-org-chart-connector-highlight-color connector on a search path
+     --andes-org-chart-secondary-color           dotted-line (secondary) links
+     --andes-org-chart-secondary-dasharray       dash pattern of secondary links
+     --andes-org-chart-toggle-size               expand / collapse toggle diameter (24px)
+     --andes-org-chart-toggle-background         toggle background
+     --andes-org-chart-toggle-foreground         toggle icon and count
+     --andes-org-chart-toggle-border-color       toggle hairline
+     --andes-org-chart-controls-background       floating bar, search field and trail panels
+     --andes-org-chart-minimap-background        overview panel (the bar's color)
+     --andes-org-chart-minimap-frame-color       frame on the part of the overview in view
+     --andes-org-chart-duration                  animation length (also the `animationDuration`
+                                                 input, which this overrides)
+   Every part carries a data-slot attribute (org-chart-viewport, -canvas, -links, -link,
+   -secondary-link, -tree, -node, -card, -checkbox, -avatar, -name, -title, -toggle, -controls,
+   -zoom, -toolbar, -top, -trail, -search, -matches, -minimap, -empty). The bar carries
+   data-position (top-start | top-end | bottom-start | bottom-end) and data-orientation
+   (vertical | horizontal), and each tool data-tool (zoomIn, zoomOut, fit, reset, fullscreen,
+   capture, export, print, expandAll, collapseAll, expandLevel, search, minimap); the chart carries
+   data-fullscreen and data-focused, and the card the search stepped to data-current. Cards carry data-key (the node key), data-kind (root | branch |
+   leaf), data-selected, data-checked (checked | mixed), data-expanded, data-matched,
+   data-highlighted, data-dimmed, data-disabled, data-readonly, data-assistant, data-accent and
+   data-loading; tree connectors carry data-from, data-to and data-kind (tree | assistant |
+   stack | secondary), for structural styling. */
+
+:host {
+  --_andes-org-chart-motion: var(
+    --andes-org-chart-duration,
+    var(--_andes-org-chart-duration, 240ms)
+  );
+  --_andes-org-chart-ease: var(
+    --andes-motion-ease-out,
+    cubic-bezier(0.2, 0, 0, 1)
+  );
+  --_andes-org-chart-accent: var(--andes-color-primary);
+  /* Theme steps: the canvas sits one step below the card, the hairline one step above it. */
+  --_andes-org-chart-canvas: var(--andes-color-muted);
+  --_andes-org-chart-hairline: color-mix(
+    in srgb,
+    var(--andes-color-border) 65%,
+    var(--andes-color-card)
+  );
+  --_andes-org-chart-hairline-strong: var(--andes-color-border);
+  --_andes-org-chart-line: color-mix(
+    in srgb,
+    var(--andes-color-muted-foreground) 45%,
+    var(--andes-color-muted)
+  );
+
+  position: relative;
+  display: block;
+  overflow: hidden;
+  isolation: isolate;
+  box-sizing: border-box;
+  block-size: var(--andes-org-chart-height, 32rem);
+  border: 1px solid
+    var(--andes-org-chart-border-color, var(--_andes-org-chart-hairline));
+  border-radius: var(--andes-org-chart-radius, var(--andes-radius-lg));
+  background: var(--andes-org-chart-background, var(--_andes-org-chart-canvas));
+  color: var(--andes-color-foreground);
+  font-family: var(--andes-font-family), sans-serif;
+}
+
+/* In the dark theme the muted color equals the card color, so the canvas uses the page
+   background instead, and the hairline the full border color. */
+:host-context([data-andes-theme='dark']) {
+  --_andes-org-chart-canvas: var(--andes-color-background);
+  --_andes-org-chart-hairline: var(--andes-color-border);
+  --_andes-org-chart-hairline-strong: color-mix(
+    in srgb,
+    var(--andes-color-muted-foreground) 45%,
+    var(--andes-color-border)
+  );
+  --_andes-org-chart-line: color-mix(
+    in srgb,
+    var(--andes-color-muted-foreground) 55%,
+    var(--andes-color-background)
+  );
+}
+
+/* ------------------------------------------------------------------ viewport and canvas */
+
+/* A press anywhere can turn into a pan, so text is not selectable on the canvas (it would start
+   a selection under the pointer before the drag is recognised). Form fields keep their own. */
+.andes-org-chart__viewport {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  background-image: radial-gradient(
+    circle,
+    var(--andes-org-chart-dot-color, transparent) 1px,
+    transparent 1.2px
+  );
+  background-size: 24px 24px;
+}
+
+:host([data-panning]) .andes-org-chart__viewport {
+  cursor: grabbing;
+}
+
+.andes-org-chart__canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+:host([data-motion]) .andes-org-chart__canvas[data-smooth] {
+  transition: transform var(--_andes-org-chart-motion)
+    var(--_andes-org-chart-ease);
+}
+
+.andes-org-chart__links {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.andes-org-chart__tree {
+  position: absolute;
+  inset: 0;
+}
+
+.andes-org-chart__empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--andes-space-4);
+  color: var(--andes-color-muted-foreground);
+  font-size: var(--andes-font-size-sm);
+  cursor: default;
+}
+
+/* ------------------------------------------------------------------ connectors */
+
+.andes-org-chart__link {
+  fill: none;
+  stroke: var(--andes-org-chart-connector-color, var(--_andes-org-chart-line));
+  stroke-width: var(--andes-org-chart-connector-width, 1px);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.andes-org-chart__link-group[data-highlighted] .andes-org-chart__link {
+  stroke: var(
+    --andes-org-chart-connector-highlight-color,
+    var(--_andes-org-chart-accent)
+  );
+  stroke-width: calc(var(--andes-org-chart-connector-width, 1px) + 0.5px);
+}
+
+.andes-org-chart__link--secondary {
+  stroke: var(
+    --andes-org-chart-secondary-color,
+    var(--andes-color-muted-foreground)
+  );
+  stroke-dasharray: var(--andes-org-chart-secondary-dasharray, 4 4);
+}
+
+:host([data-searching]) .andes-org-chart__link-group:not([data-highlighted]) {
+  opacity: var(--andes-org-chart-dimmed-opacity, 0.35);
+}
+
+/* ------------------------------------------------------------------ cards */
+
+.andes-org-chart__node {
+  position: absolute;
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
+  outline: none;
+  cursor: default;
+}
+
+:host([data-motion][data-ready]) .andes-org-chart__node {
+  transition:
+    transform var(--_andes-org-chart-motion) var(--_andes-org-chart-ease),
+    opacity var(--_andes-org-chart-motion) var(--_andes-org-chart-ease),
+    width var(--_andes-org-chart-motion) var(--_andes-org-chart-ease),
+    height var(--_andes-org-chart-motion) var(--_andes-org-chart-ease);
+}
+
+:host([data-motion][data-ready]) .andes-org-chart__link-group {
+  transition: opacity var(--_andes-org-chart-motion)
+    var(--_andes-org-chart-ease);
+}
+
+:host([data-motion][data-ready]) .andes-org-chart__link {
+  transition:
+    d var(--_andes-org-chart-motion) var(--_andes-org-chart-ease),
+    stroke var(--_andes-org-chart-motion) var(--_andes-org-chart-ease);
+}
+
+/* New cards grow out of their manager; new lines fade in once the cards are on their way. */
+.andes-org-chart__node.andes-org-chart--entering {
+  animation: andes-org-chart-grow var(--_andes-org-chart-motion)
+    var(--_andes-org-chart-ease) both;
+}
+
+.andes-org-chart__link-group.andes-org-chart--entering {
+  animation: andes-org-chart-fade var(--_andes-org-chart-motion)
+    var(--_andes-org-chart-ease) both;
+}
+
+@keyframes andes-org-chart-grow {
+  from {
+    transform: var(--_andes-org-chart-from) scale(0.6);
+    opacity: 0;
+  }
+}
+
+@keyframes andes-org-chart-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.andes-org-chart__card {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--andes-space-3);
+  box-sizing: border-box;
+  overflow: hidden;
+  padding-block: var(--andes-space-3);
+  padding-inline: var(--andes-space-4);
+  border: 1px solid
+    var(--andes-org-chart-node-border-color, var(--_andes-org-chart-hairline));
+  border-radius: var(--andes-org-chart-node-radius, var(--andes-radius-lg));
+  background: var(--andes-org-chart-node-background, var(--andes-color-card));
+  box-shadow: var(--andes-org-chart-node-shadow, none);
+  color: var(
+    --andes-org-chart-node-foreground,
+    var(--andes-color-card-foreground)
+  );
+  transition:
+    border-color var(--andes-motion-duration-fast, 150ms) ease,
+    background-color var(--andes-motion-duration-fast, 150ms) ease;
+}
+
+.andes-org-chart__node:hover .andes-org-chart__card {
+  border-color: var(
+    --andes-org-chart-node-hover-border-color,
+    var(--_andes-org-chart-hairline-strong)
+  );
+}
+
+.andes-org-chart__node[data-selected] .andes-org-chart__card {
+  border-color: var(
+    --andes-org-chart-node-accent,
+    var(--_andes-org-chart-accent)
+  );
+  background: var(
+    --andes-org-chart-node-selected-background,
+    color-mix(
+      in srgb,
+      var(--andes-org-chart-node-accent, var(--_andes-org-chart-accent)) 8%,
+      var(--andes-org-chart-node-background, var(--andes-color-card))
+    )
+  );
+}
+
+.andes-org-chart__node:focus-visible .andes-org-chart__card {
+  outline: 2px solid var(--andes-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.andes-org-chart__node:focus-visible {
+  z-index: 1;
+}
+
+.andes-org-chart__node[data-matched] .andes-org-chart__card {
+  border-color: var(--andes-org-chart-match-color, var(--andes-color-warning));
+  box-shadow: inset 0 0 0 1px
+    var(--andes-org-chart-match-color, var(--andes-color-warning));
+}
+
+/* Off the search path: decoration fades, the text only turns muted, so it keeps its contrast. */
+.andes-org-chart__node[data-dimmed] .andes-org-chart__avatar-image,
+.andes-org-chart__node[data-dimmed] .andes-org-chart__toggle {
+  opacity: var(--andes-org-chart-dimmed-opacity, 0.35);
+}
+
+.andes-org-chart__node[data-dimmed] .andes-org-chart__name,
+.andes-org-chart__node[data-dimmed] .andes-org-chart__title {
+  color: var(--andes-color-muted-foreground);
+}
+
+.andes-org-chart__node[data-dimmed] .andes-org-chart__avatar {
+  background: var(--andes-color-muted);
+  color: var(--andes-color-muted-foreground);
+}
+
+.andes-org-chart__node[data-disabled] .andes-org-chart__card {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.andes-org-chart__node[data-assistant] .andes-org-chart__card {
+  border-style: dashed;
+}
+
+/* Default card content: avatar, name, role. */
+
+.andes-org-chart__avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  overflow: hidden;
+  inline-size: var(--andes-org-chart-avatar-size, 2.5rem);
+  block-size: var(--andes-org-chart-avatar-size, 2.5rem);
+  border-radius: var(--andes-radius-full);
+  background: var(
+    --andes-org-chart-avatar-background,
+    var(--andes-color-secondary)
+  );
+  color: var(
+    --andes-org-chart-avatar-foreground,
+    color-mix(
+      in srgb,
+      var(--andes-color-foreground) 80%,
+      var(--andes-color-secondary)
+    )
+  );
+  font-size: var(--andes-font-size-sm);
+  font-weight: var(--andes-font-weight-medium);
+  line-height: 1;
+  letter-spacing: 0.01em;
+  user-select: none;
+}
+
+/* A person with a color (own field or level color) gets a tinted initials circle. */
+.andes-org-chart__node[data-accent] .andes-org-chart__avatar {
+  background: color-mix(
+    in srgb,
+    var(--andes-org-chart-node-accent) 18%,
+    var(--andes-org-chart-node-background, var(--andes-color-card))
+  );
+  color: color-mix(
+    in srgb,
+    var(--andes-org-chart-node-accent) 45%,
+    var(--andes-org-chart-node-foreground, var(--andes-color-card-foreground))
+  );
+}
+
+.andes-org-chart__avatar-image {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+.andes-org-chart__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+.andes-org-chart__name,
+.andes-org-chart__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.andes-org-chart__name {
+  font-size: var(--andes-font-size-sm);
+  font-weight: var(--andes-font-weight-semibold);
+  line-height: var(--andes-line-height-sm);
+}
+
+.andes-org-chart__title {
+  color: var(
+    --andes-org-chart-node-muted-foreground,
+    var(--andes-color-muted-foreground)
+  );
+  font-size: var(--andes-font-size-xs);
+  line-height: var(--andes-line-height-xs);
+}
+
+/* ------------------------------------------------------------------ checkbox */
+
+.andes-org-chart__checkbox {
+  display: inline-flex;
+  flex: none;
+  cursor: pointer;
+}
+
+/* The card toggles the selection: the library checkbox only draws the state. */
+.andes-org-chart__checkbox andes-checkbox {
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------------ expand / collapse toggle */
+
+.andes-org-chart__toggle {
+  --_andes-org-chart-chevron: 0deg;
+
+  position: absolute;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  box-sizing: border-box;
+  min-inline-size: var(--andes-org-chart-toggle-size, 1.5rem);
+  block-size: var(--andes-org-chart-toggle-size, 1.5rem);
+  margin: 0;
+  padding: 0;
+  border: 1px solid
+    var(
+      --andes-org-chart-toggle-border-color,
+      var(--_andes-org-chart-hairline-strong)
+    );
+  border-radius: var(--andes-radius-full);
+  background: var(--andes-org-chart-toggle-background, var(--andes-color-card));
+  color: var(
+    --andes-org-chart-toggle-foreground,
+    var(--andes-color-muted-foreground)
+  );
+  font: inherit;
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--andes-font-weight-medium);
+  line-height: 1;
+  cursor: pointer;
+  translate: -50% -50%;
+  transition:
+    border-color var(--andes-motion-duration-fast, 150ms) ease,
+    color var(--andes-motion-duration-fast, 150ms) ease;
+}
+
+/* With a count the circle becomes a small pill. */
+.andes-org-chart__toggle[data-count] {
+  padding-inline: 0.375rem 0.25rem;
+}
+
+.andes-org-chart__toggle:hover {
+  border-color: var(--andes-color-muted-foreground);
+  color: var(--andes-color-foreground);
+}
+
+/* The toggle sits on the card edge that faces the reports. */
+:host([data-children-side='bottom']) .andes-org-chart__toggle {
+  top: 100%;
+  left: 50%;
+}
+
+:host([data-children-side='top']) .andes-org-chart__toggle {
+  --_andes-org-chart-chevron: 180deg;
+
+  top: 0;
+  left: 50%;
+}
+
+:host([data-children-side='right']) .andes-org-chart__toggle {
+  --_andes-org-chart-chevron: -90deg;
+
+  top: 50%;
+  left: 100%;
+}
+
+:host([data-children-side='left']) .andes-org-chart__toggle {
+  --_andes-org-chart-chevron: 90deg;
+
+  top: 50%;
+  left: 0;
+}
+
+.andes-org-chart__toggle-icon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+}
+
+/* Every glyph is a lucide icon in an `ng-icon` at its default size (1em) and stroke; as a flex
+   box its svg never sits on a text baseline. */
+.andes-org-chart__chevron,
+.andes-org-chart__spinner {
+  display: flex;
+  flex: none;
+  font-size: 1rem;
+}
+
+.andes-org-chart__chevron {
+  rotate: var(--_andes-org-chart-chevron);
+  transition: rotate var(--_andes-org-chart-motion) var(--_andes-org-chart-ease);
+}
+
+/* Expanded: the chevron points back at the card ("collapse into it"). */
+.andes-org-chart__toggle[data-expanded] .andes-org-chart__chevron {
+  rotate: calc(var(--_andes-org-chart-chevron) + 180deg);
+}
+
+.andes-org-chart__toggle[data-loading] {
+  cursor: progress;
+}
+
+.andes-org-chart__spinner {
+  animation: andes-org-chart-spin 0.8s linear infinite;
+}
+
+@keyframes andes-org-chart-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+/* ------------------------------------------------------------------ controls */
+
+/* The bar floats in one of the four corners (`controlsPosition`, logical, so it mirrors under
+   right-to-left) as a column or a row (`controlsOrientation`). The consumer's own toolbar and
+   the trail of an isolated team share the top start corner: when the bar is there too they step
+   aside by the thickness of the bar (two small buttons, a hairline and the padding). */
+:host {
+  --_andes-org-chart-gap: var(--andes-space-3);
+  --_andes-org-chart-bar: calc(
+    var(--andes-control-height-md, 2rem) + 2 * var(--andes-space-1) + 2px
+  );
+}
+
+.andes-org-chart__controls {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--andes-space-1);
+  border: 1px solid var(--_andes-org-chart-hairline);
+  border-radius: var(--andes-radius-lg);
+  background: var(
+    --andes-org-chart-controls-background,
+    var(--andes-color-popover)
+  );
+  color: var(--andes-color-popover-foreground);
+}
+
+.andes-org-chart__controls[data-orientation='horizontal'] {
+  flex-direction: row;
+}
+
+.andes-org-chart__controls[data-position='bottom-end'] {
+  inset-block-end: var(--_andes-org-chart-gap);
+  inset-inline-end: var(--_andes-org-chart-gap);
+}
+
+.andes-org-chart__controls[data-position='bottom-start'] {
+  inset-block-end: var(--_andes-org-chart-gap);
+  inset-inline-start: var(--_andes-org-chart-gap);
+}
+
+.andes-org-chart__controls[data-position='top-end'] {
+  inset-block-start: var(--_andes-org-chart-gap);
+  inset-inline-end: var(--_andes-org-chart-gap);
+}
+
+.andes-org-chart__controls[data-position='top-start'] {
+  inset-block-start: var(--_andes-org-chart-gap);
+  inset-inline-start: var(--_andes-org-chart-gap);
+}
+
+.andes-org-chart__controls ng-icon {
+  display: flex;
+}
+
+/* The tooltip of a tool is anchored to its `andes-button` element. That element is inline, so its
+   box is a line of text (about 20px) while the button inside is 32px: the arrow would point
+   a couple of pixels off the center of the button. As a flex box it is exactly the button. */
+.andes-org-chart__controls andes-button {
+  display: flex;
+}
+
+/* A tool with a menu has two triggers that cannot share an element, so the tooltip is anchored to
+   this box, which is exactly the button. */
+.andes-org-chart__tool,
+.andes-org-chart__tool andes-dropdown-menu {
+  display: flex;
+}
+
+/* An open toggle (search, overview) is the secondary button; this keeps it from reading as
+   hovered only. */
+.andes-org-chart__controls [data-active] {
+  color: var(--andes-color-foreground);
+}
+
+.andes-org-chart__zoom {
+  min-inline-size: 2.25rem;
+  color: var(--andes-color-muted-foreground);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25rem;
+  text-align: center;
+  user-select: none;
+}
+
+.andes-org-chart__divider {
+  inline-size: 60%;
+  block-size: 1px;
+  margin-block: 2px;
+  background: var(--_andes-org-chart-hairline);
+}
+
+.andes-org-chart__controls[data-orientation='horizontal']
+  .andes-org-chart__divider {
+  inline-size: 1px;
+  block-size: 60%;
+  margin-block: 0;
+  margin-inline: 2px;
+  align-self: center;
+  min-block-size: 1.25rem;
+}
+
+.andes-org-chart__tip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.andes-org-chart__kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-inline-size: 1.25rem;
+  block-size: 1.25rem;
+  padding-inline: 0.25rem;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: 0.6875rem;
+  line-height: 1;
+  opacity: 0.75;
+}
+
+/* The search field opens beside a column bar and above or under a row bar, towards the inside
+   of the chart, level with the corner the bar is in. */
+.andes-org-chart__search {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: var(--andes-space-1);
+  border: 1px solid var(--_andes-org-chart-hairline);
+  border-radius: var(--andes-radius-lg);
+  background: var(
+    --andes-org-chart-controls-background,
+    var(--andes-color-popover)
+  );
+  color: var(--andes-color-popover-foreground);
+  inline-size: min(28rem, calc(100% - 2 * var(--_andes-org-chart-gap)));
+}
+
+.andes-org-chart__search-input {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+/* Nothing to count yet: the field takes the room instead of leaving a gap. */
+.andes-org-chart__matches:empty {
+  display: none;
+}
+
+.andes-org-chart__matches {
+  min-inline-size: 4.5rem;
+  padding-inline: var(--andes-space-2);
+  color: var(--andes-color-muted-foreground);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.andes-org-chart__search[data-orientation='vertical'] {
+  --_andes-org-chart-offset: calc(
+    var(--_andes-org-chart-gap) + var(--_andes-org-chart-bar) + 0.5rem
+  );
+}
+
+.andes-org-chart__search[data-orientation='horizontal'] {
+  --_andes-org-chart-offset: calc(
+    var(--_andes-org-chart-gap) + var(--_andes-org-chart-bar) + 0.5rem
+  );
+}
+
+/* Column bar: the field is level with the corner and clear of the bar sideways. */
+.andes-org-chart__search[data-orientation='vertical'][data-position$='-end'] {
+  inset-inline-end: var(--_andes-org-chart-offset);
+}
+
+.andes-org-chart__search[data-orientation='vertical'][data-position$='-start'] {
+  inset-inline-start: var(--_andes-org-chart-offset);
+}
+
+.andes-org-chart__search[data-orientation='vertical'][data-position^='bottom'] {
+  inset-block-end: var(--_andes-org-chart-gap);
+}
+
+.andes-org-chart__search[data-orientation='vertical'][data-position^='top'] {
+  inset-block-start: var(--_andes-org-chart-gap);
+}
+
+/* Row bar: the field is on the same edge as the bar and clear of it up or down. */
+.andes-org-chart__search[data-orientation='horizontal'][data-position$='-end'] {
+  inset-inline-end: var(--_andes-org-chart-gap);
+}
+
+.andes-org-chart__search[data-orientation='horizontal'][data-position$='-start'] {
+  inset-inline-start: var(--_andes-org-chart-gap);
+}
+
+.andes-org-chart__search[data-orientation='horizontal'][data-position^='bottom'] {
+  inset-block-end: var(--_andes-org-chart-offset);
+}
+
+.andes-org-chart__search[data-orientation='horizontal'][data-position^='top'] {
+  inset-block-start: var(--_andes-org-chart-offset);
+}
+
+/* The top start corner: the consumer's toolbar and, under it, the trail of an isolated team. */
+.andes-org-chart__top {
+  position: absolute;
+  z-index: 2;
+  inset-block-start: var(--_andes-org-chart-gap);
+  inset-inline-start: var(--_andes-org-chart-gap);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--andes-space-2);
+  max-inline-size: calc(100% - 2 * var(--_andes-org-chart-gap));
+  pointer-events: none;
+}
+
+.andes-org-chart__top > * {
+  pointer-events: auto;
+}
+
+:host([data-controls='top-start'][data-controls-orientation='vertical'])
+  .andes-org-chart__top {
+  inset-inline-start: calc(
+    var(--_andes-org-chart-gap) + var(--_andes-org-chart-bar) + 0.5rem
+  );
+  max-inline-size: calc(
+    100% - 2 * var(--_andes-org-chart-gap) - var(--_andes-org-chart-bar) -
+      0.5rem
+  );
+}
+
+:host([data-controls='top-start'][data-controls-orientation='horizontal'])
+  .andes-org-chart__top {
+  inset-block-start: calc(
+    var(--_andes-org-chart-gap) + var(--_andes-org-chart-bar) + 0.5rem
+  );
+}
+
+.andes-org-chart__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--andes-space-2);
+}
+
+.andes-org-chart__trail {
+  padding: var(--andes-space-1) var(--andes-space-3);
+  border: 1px solid var(--_andes-org-chart-hairline);
+  border-radius: var(--andes-radius-lg);
+  background: var(
+    --andes-org-chart-controls-background,
+    var(--andes-color-popover)
+  );
+}
+
+/* The overview sits at the bottom, on the side the bar is not. */
+.andes-org-chart__minimap {
+  position: absolute;
+  z-index: 2;
+  inset-block-end: var(--_andes-org-chart-gap);
+}
+
+.andes-org-chart__minimap[data-corner='bottom-start'] {
+  inset-inline-start: var(--_andes-org-chart-gap);
+}
+
+.andes-org-chart__minimap[data-corner='bottom-end'] {
+  inset-inline-end: var(--_andes-org-chart-gap);
+}
+
+/* ------------------------------------------------------------------ search, focus, full screen */
+
+/* The match the search stepped to stands out from the other matches. */
+.andes-org-chart__node[data-current] .andes-org-chart__card {
+  border-color: var(--andes-org-chart-match-color, var(--andes-color-warning));
+  box-shadow:
+    inset 0 0 0 2px
+      var(--andes-org-chart-match-color, var(--andes-color-warning)),
+    0 0 0 3px
+      color-mix(
+        in srgb,
+        var(--andes-org-chart-match-color, var(--andes-color-warning)) 30%,
+        transparent
+      );
+}
+
+/* Full screen: the chart takes the whole screen, with no frame. */
+:host(:fullscreen) {
+  block-size: 100%;
+  inline-size: 100%;
+  max-block-size: none;
+  border: 0;
+  border-radius: 0;
+}
+
+/* On paper the chart is only its picture: no bar, toolbar, trail or overview. */
+@media print {
+  .andes-org-chart__controls,
+  .andes-org-chart__search,
+  .andes-org-chart__top,
+  .andes-org-chart__minimap {
+    display: none !important;
+  }
+
+  :host {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
+
+/* ------------------------------------------------------------------ preferences */
+
+@media (prefers-reduced-motion: reduce) {
+  .andes-org-chart__canvas,
+  .andes-org-chart__node,
+  .andes-org-chart__link,
+  .andes-org-chart__link-group,
+  .andes-org-chart__card,
+  .andes-org-chart__toggle,
+  .andes-org-chart__chevron {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .andes-org-chart__spinner {
+    animation-duration: 2.4s;
+  }
+}
+
+@media (forced-colors: active) {
+  .andes-org-chart__viewport {
+    background-image: none;
+  }
+
+  .andes-org-chart__card {
+    border-color: CanvasText;
+    box-shadow: none;
+  }
+
+  .andes-org-chart__node[data-selected] .andes-org-chart__card {
+    border-color: Highlight;
+    outline: 2px solid Highlight;
+    outline-offset: -3px;
+  }
+
+  .andes-org-chart__node:focus-visible .andes-org-chart__card {
+    outline: 2px solid CanvasText;
+  }
+
+  .andes-org-chart__node[data-matched] .andes-org-chart__card {
+    border-width: 3px;
+  }
+
+  .andes-org-chart__link {
+    stroke: CanvasText;
+  }
+
+  .andes-org-chart__link-group[data-highlighted] .andes-org-chart__link {
+    stroke: Highlight;
+  }
+
+  .andes-org-chart__toggle {
+    border-color: ButtonText;
+    background: ButtonFace;
+    color: ButtonText;
+  }
+}

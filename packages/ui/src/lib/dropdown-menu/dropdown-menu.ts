@@ -296,6 +296,13 @@ export class AndesDropdownMenu
   /** Grace period before a submenu closes when the pointer moves to a sibling, in ms. Default `100`. */
   readonly subMenuCloseDelay = input(100, { transform: numberAttribute });
 
+  /**
+   * Gap in px between the trigger and the menu. Default `4`. A trigger that sits inside a padded
+   * toolbar can raise it so the menu clears the toolbar and not only the button. Ignored while
+   * the `arrow` is on, which has its own gap.
+   */
+  readonly sideOffset = input(SIDE_OFFSET, { transform: numberAttribute });
+
   /** Emits every open-state change the user caused, with its source. */
   readonly openStateChange = output<AndesDropdownMenuOpenChange>();
   /** Emits when an item with a `key` is activated. */
@@ -346,7 +353,7 @@ export class AndesDropdownMenu
         kind: 'anchored',
         side,
         align,
-        sideOffset: this.arrowEnabled() ? ARROW_SIDE_OFFSET : SIDE_OFFSET,
+        sideOffset: this.arrowEnabled() ? ARROW_SIDE_OFFSET : this.sideOffset(),
         alignOffset: this.pointAtCenterOffset(),
         flip: adjust,
         shift: adjust,

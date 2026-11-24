@@ -1,0 +1,46 @@
+/* The overview of the whole chart: a small panel with a block per card and a frame on the part
+   that is in view. Colors are the chart's theme tokens; hooks:
+     --andes-org-chart-minimap-background   panel background (the controls panel color)
+     --andes-org-chart-minimap-frame-color  frame around the part in view (the accent color) */
+
+:host {
+  display: block;
+  padding: var(--andes-space-1);
+  border: 1px solid var(--_andes-org-chart-hairline);
+  border-radius: var(--andes-radius-lg);
+  background: var(
+    --andes-org-chart-minimap-background,
+    var(--andes-org-chart-controls-background, var(--andes-color-popover))
+  );
+  color: var(--andes-color-muted-foreground);
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.andes-org-chart-minimap__map {
+  position: relative;
+}
+
+.andes-org-chart-minimap__canvas {
+  display: block;
+  color: inherit;
+}
+
+.andes-org-chart-minimap__frame {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1.5px solid
+    var(
+      --andes-org-chart-minimap-frame-color,
+      var(--_andes-org-chart-accent, var(--andes-color-primary))
+    );
+  border-radius: 2px;
+  background: color-mix(
+    in srgb,
+    var(--andes-org-chart-minimap-frame-color, var(--andes-color-primary)) 10%,
+    transparent
+  );
+  pointer-events: none;
+}

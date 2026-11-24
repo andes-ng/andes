@@ -89,6 +89,8 @@ export * from './lib/mentions';
 
 // @slot navigation-menu
 
+export * from './lib/org-chart';
+
 export * from './lib/pagination';
 
 export * from './lib/palette';

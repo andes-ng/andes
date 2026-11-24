@@ -1147,7 +1147,7 @@ describe('AndesSlider', () => {
         (valueCommit)="commits.push($event)"
       />`,
     })
-    class ParityHost {
+    class ExtendedHost {
       readonly slider = viewChild.required(AndesSlider);
       readonly value = signal<AndesSliderValue | undefined>(undefined);
       readonly min = signal(0);
@@ -1176,8 +1176,8 @@ describe('AndesSlider', () => {
       readonly commits: AndesSliderValue[] = [];
     }
 
-    function mount(setup: (host: ParityHost) => void = () => undefined) {
-      const fixture = TestBed.createComponent(ParityHost);
+    function mount(setup: (host: ExtendedHost) => void = () => undefined) {
+      const fixture = TestBed.createComponent(ExtendedHost);
       setup(fixture.componentInstance);
       fixture.detectChanges();
       const root = fixture.nativeElement as HTMLElement;

@@ -49,7 +49,7 @@ export * from './lib/date-picker';
 
 export * from './lib/dialog';
 
-// @slot divider
+export * from './lib/divider';
 
 // @slot drawer
 

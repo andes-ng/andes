@@ -269,6 +269,13 @@ export class AndesOverlayPrimitive {
   private explicitRestoreTarget: HTMLElement | null = null;
   private openSubscriptions = new Subscription();
   private pendingExit: AndesOverlayPendingExit | null = null;
+  /**
+   * The element last registered through {@link registerContent}. A content directive
+   * that sits on content projected from the consumer's view registers once, when that
+   * view is created, and the same element is moved into every pane; so this is what each
+   * new pane is checked against, to publish {@link contentElement} again.
+   */
+  private registeredContent: HTMLElement | null = null;
   private attachedContent: AndesOverlayContent<unknown> | null = null;
   private attachedContext: unknown = undefined;
   private placement = new Subscription();
@@ -331,7 +338,8 @@ export class AndesOverlayPrimitive {
   registerContent(
     element: HTMLElement | ElementRef<HTMLElement> | null | undefined,
   ): void {
-    this._contentElement.set(toElement(element));
+    this.registeredContent = toElement(element);
+    this._contentElement.set(this.registeredContent);
   }
 
   /**
@@ -401,6 +409,14 @@ export class AndesOverlayPrimitive {
     this.attachedContext = options.context;
     this._panelElement.set(ref.overlayElement);
     this._backdropElement.set(ref.backdropElement);
+    // Cleared on every detach, so projected content, which does not register again,
+    // would otherwise stay unknown from the second opening on.
+    if (
+      this.registeredContent &&
+      ref.overlayElement.contains(this.registeredContent)
+    ) {
+      this._contentElement.set(this.registeredContent);
+    }
     this._isOpen.set(true);
 
     this.applyInertBackground(ref, config);

@@ -8,7 +8,9 @@ branch="${1:?usage: open-component-pr.sh feature/<name>-component}"
 root=$(git rev-parse --show-toplevel)
 base=develop
 parent=$(awk -v b="$branch" '$1 == b {print $2}' "$root/.github/component-stacks.txt")
-if [ -n "$parent" ] && ! git merge-base --is-ancestor "origin/$parent" origin/develop 2>/dev/null; then base="$parent"; fi
+# A base that no longer exists on origin was merged and deleted: the pull request targets develop.
+if [ -n "$parent" ] && git rev-parse -q --verify "origin/$parent" >/dev/null \
+  && ! git merge-base --is-ancestor "origin/$parent" origin/develop 2>/dev/null; then base="$parent"; fi
 name=${branch#feature/}; name=${name%-components}; name=${name%-component}
 title=$(git log --reverse --format=%s "origin/develop..origin/$branch" | grep -m1 '^feat' || true)
 [ -n "$title" ] || title="feat(ui): add the $name component"

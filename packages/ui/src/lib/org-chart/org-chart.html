@@ -306,49 +306,61 @@
     >{{ zoomPercent() }}</span
   >
   } @case ('export') {
-  <andes-dropdown-menu
-    [placement]="menuPlacement()"
-    [items]="exportItems()"
-    (itemClick)="onExport($event)"
-  >
-    <andes-button
-      andesDropdownMenuTrigger
-      data-tool="export"
-      variant="ghost"
-      size="icon"
-      [aria-label]="part.label"
-    >
-      <ng-icon
-        [name]="part.icon"
-        [attr.data-icon]="part.icon"
-        aria-hidden="true"
-      />
-    </andes-button>
-  </andes-dropdown-menu>
+  <andes-tooltip [side]="tipSide()" [disabled]="!controlTooltips()">
+    <span andesTooltipTrigger class="andes-org-chart__tool">
+      <andes-dropdown-menu
+        [placement]="menuPlacement()"
+        [sideOffset]="menuGap"
+        [items]="exportItems()"
+        (itemClick)="onExport($event)"
+      >
+        <andes-button
+          andesDropdownMenuTrigger
+          data-tool="export"
+          variant="ghost"
+          size="icon"
+          [aria-label]="part.label"
+        >
+          <ng-icon
+            [name]="part.icon"
+            [attr.data-icon]="part.icon"
+            aria-hidden="true"
+          />
+        </andes-button>
+      </andes-dropdown-menu>
+    </span>
+    <ng-template andesTooltipContent>{{ part.label }}</ng-template>
+  </andes-tooltip>
   } @case ('levels') {
-  <andes-dropdown-menu
-    selectable
-    [placement]="menuPlacement()"
-    [items]="levelItems()"
-    [selectedKeys]="shownLevelKeys()"
-    [disabled]="levelItems().length < 2"
-    (itemClick)="onLevel($event)"
-  >
-    <andes-button
-      andesDropdownMenuTrigger
-      data-tool="expandLevel"
-      variant="ghost"
-      size="icon"
-      [aria-label]="part.label"
-      [disabled]="levelItems().length < 2"
-    >
-      <ng-icon
-        [name]="part.icon"
-        [attr.data-icon]="part.icon"
-        aria-hidden="true"
-      />
-    </andes-button>
-  </andes-dropdown-menu>
+  <andes-tooltip [side]="tipSide()" [disabled]="!controlTooltips()">
+    <span andesTooltipTrigger class="andes-org-chart__tool">
+      <andes-dropdown-menu
+        selectable
+        [placement]="menuPlacement()"
+        [sideOffset]="menuGap"
+        [items]="levelItems()"
+        [selectedKeys]="shownLevelKeys()"
+        [disabled]="levelItems().length < 2"
+        (itemClick)="onLevel($event)"
+      >
+        <andes-button
+          andesDropdownMenuTrigger
+          data-tool="expandLevel"
+          variant="ghost"
+          size="icon"
+          [aria-label]="part.label"
+          [disabled]="levelItems().length < 2"
+        >
+          <ng-icon
+            [name]="part.icon"
+            [attr.data-icon]="part.icon"
+            aria-hidden="true"
+          />
+        </andes-button>
+      </andes-dropdown-menu>
+    </span>
+    <ng-template andesTooltipContent>{{ part.label }}</ng-template>
+  </andes-tooltip>
   } @default {
   <andes-tooltip [side]="tipSide()" [disabled]="!controlTooltips()">
     <andes-button

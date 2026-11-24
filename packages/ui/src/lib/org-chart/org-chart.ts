@@ -2874,6 +2874,9 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
   );
 
   /** Which side of a tool its tooltip opens on. */
+  /** Gap between a tool and its menu: the padding of the bar plus the room of a tooltip. */
+  protected readonly menuGap = 12;
+
   protected readonly tipSide = computed<'top' | 'bottom' | 'left' | 'right'>(
     () => {
       if (this.controlsOrientation() === 'horizontal') {

@@ -250,6 +250,12 @@ describe('AndesOrgChart styles', () => {
     );
   });
 
+  it('makes the tool button element as large as its button, so a tooltip centers on it', () => {
+    expect(declared('.andes-org-chart__controls andes-button', 'display')).toBe(
+      'flex',
+    );
+  });
+
   it('lets the card toggle the selection: the library checkbox only draws the state', () => {
     expect(
       declared('.andes-org-chart__checkbox andes-checkbox', 'pointer-events'),

@@ -177,7 +177,7 @@ async function settle(fixture: ComponentFixture<unknown>) {
 @Component({
   imports: [AndesDropdownMenu, AndesDropdownMenuTrigger],
   template: `
-    <andes-dropdown-menu [items]="items" [arrow]="arrow()">
+    <andes-dropdown-menu [items]="items" [arrow]="arrow()" [sideOffset]="gap()">
       <button type="button" id="trigger" andesDropdownMenuTrigger>
         Trigger
       </button>
@@ -187,6 +187,7 @@ async function settle(fixture: ComponentFixture<unknown>) {
 class GapHost {
   readonly menu = viewChild.required(AndesDropdownMenu);
   readonly arrow = signal(false);
+  readonly gap = signal(4);
   readonly items: AndesDropdownMenuItemDef[] = [{ key: 'a', label: 'A' }];
 }
 
@@ -208,6 +209,12 @@ describe('AndesDropdownMenu spacing', () => {
 
   it('keeps a 4px gap between the trigger and the panel', () => {
     expect(overlay().config().positioning).toMatchObject({ sideOffset: 4 });
+  });
+
+  it('takes the gap from sideOffset, for a trigger inside a padded toolbar', async () => {
+    fixture.componentInstance.gap.set(12);
+    await settle(fixture);
+    expect(overlay().config().positioning).toMatchObject({ sideOffset: 12 });
   });
 
   it('keeps 11.5px for an arrow: its 5.5px tip and a 6px gap', async () => {

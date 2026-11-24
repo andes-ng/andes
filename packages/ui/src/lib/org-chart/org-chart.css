@@ -607,6 +607,20 @@
   display: flex;
 }
 
+/* The tooltip of a tool is anchored to its `andes-button` element. That element is inline, so its
+   box is a line of text (about 20px) while the button inside is 32px: the arrow would point
+   a couple of pixels off the center of the button. As a flex box it is exactly the button. */
+.andes-org-chart__controls andes-button {
+  display: flex;
+}
+
+/* A tool with a menu has two triggers that cannot share an element, so the tooltip is anchored to
+   this box, which is exactly the button. */
+.andes-org-chart__tool,
+.andes-org-chart__tool andes-dropdown-menu {
+  display: flex;
+}
+
 /* An open toggle (search, overview) is the secondary button; this keeps it from reading as
    hovered only. */
 .andes-org-chart__controls [data-active] {
@@ -668,12 +682,17 @@
     var(--andes-color-popover)
   );
   color: var(--andes-color-popover-foreground);
-  max-inline-size: calc(100% - 2 * var(--_andes-org-chart-gap));
+  inline-size: min(28rem, calc(100% - 2 * var(--_andes-org-chart-gap)));
 }
 
 .andes-org-chart__search-input {
-  inline-size: 14rem;
+  flex: 1 1 auto;
   min-inline-size: 0;
+}
+
+/* Nothing to count yet: the field takes the room instead of leaving a gap. */
+.andes-org-chart__matches:empty {
+  display: none;
 }
 
 .andes-org-chart__matches {

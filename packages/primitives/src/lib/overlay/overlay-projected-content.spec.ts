@@ -1,6 +1,7 @@
 import { Component, inject, TemplateRef, viewChild } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
+import { andesOverlayPreset } from './overlay-config';
 import { AndesOverlayContentPrimitive } from './overlay-content-primitive';
 import {
   AndesOverlayPrimitive,
@@ -28,6 +29,7 @@ class ProjectingOverlay {
     <andes-test-projecting-overlay>
       <div andesOverlayContent class="projected">Projected</div>
     </andes-test-projecting-overlay>
+    <button type="button" id="anchor">Anchor</button>
   `,
 })
 class ProjectedContentHost {
@@ -85,5 +87,31 @@ describe('AndesOverlayPrimitive with projected overlay content', () => {
     open();
     expect(overlay.contentElement()).toBe(projected);
     expect(projected.getAttribute('data-state')).toBe('open');
+  });
+
+  it('does not carry the side it was placed on into the next pane', async () => {
+    const { fixture, overlay, open, close } = createHost();
+    overlay.configure(andesOverlayPreset('popover'));
+    overlay.registerAnchor(
+      (fixture.nativeElement as HTMLElement).querySelector('#anchor'),
+    );
+
+    open();
+    await fixture.whenStable();
+    const projected = overlay.contentElement() as HTMLElement;
+    expect(overlay.placedSide()).toBe('bottom');
+    expect(projected.getAttribute('data-placed-side')).toBe('bottom');
+
+    close();
+    expect(overlay.panelElement()).toBeNull();
+    // The element outlives the pane; a leftover side would style the next opening, on
+    // whatever side it lands, until the new placement is measured.
+    expect(projected.hasAttribute('data-placed-side')).toBe(false);
+
+    open();
+    await fixture.whenStable();
+    expect(projected.getAttribute('data-placed-side')).toBe('bottom');
+    close();
+    expect(projected.hasAttribute('data-placed-side')).toBe(false);
   });
 });

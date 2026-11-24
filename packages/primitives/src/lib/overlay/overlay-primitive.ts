@@ -620,6 +620,8 @@ export class AndesOverlayPrimitive {
 
     this.placement.unsubscribe();
     this._placedSide.set(null);
+    // Taken before the dispose: the nodes are no longer the pane's children afterwards.
+    const placed = Array.from(this.overlayRef?.overlayElement.children ?? []);
     this.overlayRef?.dispose();
     this.overlayRef = null;
     this.attachedContent = null;
@@ -628,6 +630,11 @@ export class AndesOverlayPrimitive {
     // content belongs to the consumer's view and is moved into the next pane as is:
     // left marked, it would replay the exit animation there and stay invisible.
     this.clearExitMarks(exit);
+    // The side the pane was placed on is also a mark on projected content, and the next
+    // pane may place it on the other one: until it is measured again there is none.
+    for (const element of placed) {
+      element.removeAttribute(ANDES_OVERLAY_PLACED_SIDE_ATTRIBUTE);
+    }
 
     this._panelElement.set(null);
     this._backdropElement.set(null);

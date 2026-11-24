@@ -26,7 +26,7 @@ import { AndesPopoverTrigger } from './popover-trigger';
   ],
   template: `
     <button type="button" id="outside">Outside</button>
-    <andes-popover>
+    <andes-popover (openChange)="changes?.push($event)">
       <button type="button" id="trigger" andesPopoverTrigger>Open</button>
       <andes-popover-content data-popover="projected">
         <button
@@ -43,6 +43,8 @@ import { AndesPopoverTrigger } from './popover-trigger';
 })
 class ProjectedPopoverHost {
   readonly actions = signal(0);
+  /** Every `openChange` the popover reports, once a test starts collecting them. */
+  changes: boolean[] | null = null;
 }
 
 describe('AndesPopover - opening again after a close', () => {
@@ -195,5 +197,154 @@ describe('AndesPopover - opening again after a close', () => {
     const second = await open();
     expect(second).toBe(first);
     expect(originOf(second)).toBe('190px');
+  });
+
+  describe('the trigger pressed while the panel is still leaving', () => {
+    /** The panel has been dismissed from the page and its exit animation is playing. */
+    async function leavingAfter(dismiss: () => void) {
+      const panel = await open();
+      dismiss();
+      fixture.detectChanges();
+      expect(isClosing(panel)).toBe(true);
+      expect(byId('trigger').getAttribute('aria-expanded')).toBe('false');
+      return panel;
+    }
+
+    const dismissals: readonly {
+      readonly name: string;
+      readonly dismiss: () => void;
+    }[] = [
+      { name: 'Escape', dismiss: pressEscape },
+      { name: 'a click outside', dismiss: () => clickOn(byId('outside')) },
+    ];
+
+    for (const { name, dismiss } of dismissals) {
+      it(`brings the same panel back with one click after ${name}`, async () => {
+        const leaving = await leavingAfter(dismiss);
+        const changes: boolean[] = [];
+        fixture.componentInstance.changes = changes;
+        const pane = paneOf(leaving);
+
+        byId('trigger').click();
+        await settle();
+
+        // The exit is cancelled on the pane that was still there: no second pane, no
+        // flicker, and the panel shows and takes clicks again.
+        expect(shownPanel()).toBe(leaving);
+        expect(paneOf(leaving)).toBe(pane);
+        expect(isClosing(leaving)).toBe(false);
+        expect(pane.style.pointerEvents).not.toBe('none');
+        expect(byId('trigger').getAttribute('aria-expanded')).toBe('true');
+
+        // The exit animation that was cancelled ending changes nothing.
+        exits.finishAll();
+        await settle();
+        expect(shownPanel()).toBe(leaving);
+        expect(byId('trigger').getAttribute('aria-expanded')).toBe('true');
+        byId('action').click();
+        expect(fixture.componentInstance.actions()).toBe(1);
+        // The model never said it closed, so it never has to say it opened again.
+        expect(changes).toEqual([]);
+      });
+    }
+
+    it('closes it with the next click, as an open panel does', async () => {
+      await leavingAfter(pressEscape);
+      byId('trigger').click();
+      await settle();
+      expect(byId('trigger').getAttribute('aria-expanded')).toBe('true');
+
+      fixture.componentInstance.changes = [];
+      byId('trigger').click();
+      await finishClose();
+      expect(fixture.componentInstance.changes).toEqual([false]);
+    });
+
+    it('does not toggle twice for one click on the trigger', async () => {
+      await leavingAfter(pressEscape);
+      byId('trigger').click();
+      await settle();
+      exits.finishAll();
+      await settle();
+
+      expect(shownPanel()).not.toBeNull();
+      expect(
+        document.querySelectorAll(`.${ANDES_OVERLAY_PANE_CLASS}`),
+      ).toHaveLength(1);
+    });
+
+    it('still lets a closed panel open with a single click', async () => {
+      await leavingAfter(pressEscape);
+      exits.finishAll();
+      await settle();
+      expect(shownPanel()).toBeNull();
+
+      byId('trigger').click();
+      await settle();
+      expect(shownPanel()).not.toBeNull();
+      expect(byId('trigger').getAttribute('aria-expanded')).toBe('true');
+    });
+  });
+});
+
+@Component({
+  imports: [AndesPopover, AndesPopoverTrigger, AndesPopoverContent],
+  template: `
+    <andes-popover trigger="hover" [openDelay]="0" [closeDelay]="0">
+      <button type="button" id="trigger" andesPopoverTrigger>Hover</button>
+      <andes-popover-content data-popover="projected"
+        >Hint</andes-popover-content
+      >
+    </andes-popover>
+  `,
+})
+class HoverPopoverHost {}
+
+describe('AndesPopover - hovering back while a dismissed panel is leaving', () => {
+  withElementGeometry();
+  const exits = withExitAnimations();
+
+  it('shows the same panel again instead of losing the pointer entering', async () => {
+    const fixture = TestBed.createComponent(HoverPopoverHost);
+    fixture.detectChanges();
+    const trigger = fixture.nativeElement.querySelector(
+      '#trigger',
+    ) as HTMLElement;
+    const settle = async () => {
+      fixture.detectChanges();
+      await fixture.whenStable();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      fixture.detectChanges();
+    };
+    const panes = () =>
+      Array.from(
+        document.querySelectorAll<HTMLElement>(`.${ANDES_OVERLAY_PANE_CLASS}`),
+      );
+
+    trigger.dispatchEvent(new MouseEvent('mouseenter'));
+    await settle();
+    const pane = panes()[0];
+    expect(pane).toBeTruthy();
+
+    // Escape dismisses a hover panel while the pointer is still on the trigger.
+    document.body.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Escape',
+        keyCode: 27,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+    fixture.detectChanges();
+    expect(isClosing(pane)).toBe(true);
+
+    trigger.dispatchEvent(new MouseEvent('mouseenter'));
+    await settle();
+    expect(panes()).toEqual([pane]);
+    expect(isClosing(pane)).toBe(false);
+
+    exits.finishAll();
+    await settle();
+    expect(panes()).toEqual([pane]);
   });
 });

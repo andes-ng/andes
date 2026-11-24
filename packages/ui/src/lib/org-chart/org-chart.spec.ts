@@ -92,6 +92,25 @@ function report(person: Person, ...path: number[]): Person {
   return current;
 }
 
+/** A chief with `teams` managers of `perTeam` reports each: 1 + teams * (1 + perTeam) people. */
+function bigOrg(teams = 60, perTeam = 5): Person {
+  return {
+    id: 'ceo',
+    name: 'Chief',
+    title: 'Chief Executive',
+    children: Array.from({ length: teams }, (_, team) => ({
+      id: `m${team}`,
+      name: `Manager ${team}`,
+      title: 'Manager',
+      children: Array.from({ length: perTeam }, (_, member) => ({
+        id: `m${team}-${member}`,
+        name: `Member ${team}-${member}`,
+        title: 'Engineer',
+      })),
+    })),
+  };
+}
+
 @Component({
   imports: [AndesOrgChart],
   template: `<andes-org-chart
@@ -1588,6 +1607,270 @@ describe('AndesOrgChart', () => {
       s.render();
       expect(calls).toContain('team');
       expect(s.cardOrNull('m1')).not.toBeNull();
+    });
+  });
+
+  describe('virtualization', () => {
+    const TOTAL = 1 + 60 * 6;
+
+    async function large(
+      configure: (host: HostComponent) => void = () => undefined,
+    ): Promise<Setup> {
+      const s = setup((host) => {
+        host.data.set(bigOrg());
+        host.depth.set(2);
+        configure(host);
+      });
+      await sized(s);
+      return s;
+    }
+
+    const paths = (el: HTMLElement) =>
+      el.querySelectorAll('path.andes-org-chart__link').length;
+    const windowed = (s: Setup) =>
+      s.el.querySelector('andes-org-chart')?.hasAttribute('data-windowed');
+
+    afterEach(() => {
+      document.body.innerHTML = '';
+    });
+
+    it('renders only the cards and connectors near the viewport', async () => {
+      const s = await large();
+      const rendered = s.keys();
+      expect(rendered.length).toBeGreaterThan(0);
+      expect(rendered.length).toBeLessThan(TOTAL / 4);
+      expect(rendered).toContain('ceo');
+      expect(s.cardOrNull('m0-0')).toBeNull();
+      expect(s.cardOrNull('m59-4')).toBeNull();
+      expect(windowed(s)).toBe(true);
+      expect(paths(s.el)).toBeLessThan(TOTAL / 4);
+      expect(paths(s.el)).toBeGreaterThan(0);
+    });
+
+    it('keeps the position and the set size of the cards that are rendered', async () => {
+      const s = await large();
+      const nearby = s.keys().find((key) => /^m\d+$/.test(key)) as string;
+      const index = Number(nearby.slice(1));
+      expect(s.card(nearby).getAttribute('aria-posinset')).toBe(
+        String(index + 1),
+      );
+      expect(s.card(nearby).getAttribute('aria-setsize')).toBe('60');
+      expect(s.card(nearby).getAttribute('aria-level')).toBe('2');
+    });
+
+    it('renders every card of a chart below the threshold', async () => {
+      const s = await large((host) => host.depth.set(0));
+      expect(s.keys()).toEqual(['ceo']);
+      expect(windowed(s)).toBe(false);
+    });
+
+    it('renders every card when virtualizeAbove is raised past the size', async () => {
+      @Component({
+        imports: [AndesOrgChart],
+        template: `<andes-org-chart
+          [data]="data"
+          [virtualizeAbove]="1000"
+          [fitOnInit]="false"
+          [animated]="false"
+        />`,
+      })
+      class AllHost {
+        readonly data = bigOrg();
+      }
+      const fixture = TestBed.createComponent(AllHost);
+      fixture.detectChanges();
+      FakeResizeObserver.resize(800, 600);
+      await new Promise((resolve) => setTimeout(resolve, 40));
+      fixture.detectChanges();
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelectorAll('[data-slot="org-chart-node"]')).toHaveLength(
+        TOTAL,
+      );
+      expect(
+        el.querySelector('andes-org-chart')?.hasAttribute('data-windowed'),
+      ).toBe(false);
+    });
+
+    it('moves the canvas without touching the cards while the view stays inside the margin', async () => {
+      const s = await large();
+      const before = s.keys();
+      const view = canvasView(s.el);
+      s.host.chart().panBy(-40, 10);
+      // The transform is written at once, before any change detection.
+      expect(canvasView(s.el)).toEqual({
+        x: view.x - 40,
+        y: view.y + 10,
+        scale: view.scale,
+      });
+      s.render();
+      expect(s.keys()).toEqual(before);
+    });
+
+    it('renders the cards that come into view after a pan', async () => {
+      const s = await large();
+      expect(s.cardOrNull('m0')).toBeNull();
+      const { x } = canvasView(s.el);
+      // The first manager is about 33,000px to the left of the chief.
+      s.host.chart().panBy(33000, 0);
+      s.render();
+      expect(s.cardOrNull('m0')).not.toBeNull();
+      expect(s.cardOrNull('m0-2')).not.toBeNull();
+      expect(s.cardOrNull('m1')).not.toBeNull();
+      expect(s.cardOrNull('m59')).toBeNull();
+      expect(canvasView(s.el).x).toBe(x + 33000);
+      // What scrolled out of the render area left the page; the tab stop stays.
+      expect(s.cardOrNull('m30')).toBeNull();
+      expect(s.cardOrNull('ceo')).not.toBeNull();
+    });
+
+    it('does not render connectors far from the viewport and draws them on arrival', async () => {
+      const s = await large();
+      const target = (key: string) =>
+        s.el.querySelector(`[data-slot="org-chart-link"][data-to="${key}"]`);
+      expect(target('m0-2')).toBeNull();
+      s.host.chart().panBy(33000, 0);
+      s.render();
+      expect(target('m0-2')).not.toBeNull();
+      expect(target('m0')).not.toBeNull();
+      expect(target('m59-2')).toBeNull();
+      expect(paths(s.el)).toBeLessThan(TOTAL / 4);
+    });
+
+    it('scrollToNode renders a card that was far away, and selects and focuses it', async () => {
+      const s = await large();
+      document.body.append(s.el);
+      expect(s.cardOrNull('m59-4')).toBeNull();
+      s.host.chart().scrollToNode('m59-4', {
+        animate: false,
+        select: true,
+        focus: true,
+      });
+      s.render();
+      await flush();
+      const card = s.card('m59-4');
+      expect(card.getAttribute('aria-selected')).toBe('true');
+      expect(document.activeElement).toBe(card);
+      expect(s.host.selected()).toEqual(['m59-4']);
+    });
+
+    it('fitView still frames the whole chart and renders what it shows', async () => {
+      const s = await large();
+      s.host.chart().fitView({ animate: false });
+      s.render();
+      const { scale } = canvasView(s.el);
+      expect(scale).toBeCloseTo(0.1, 5);
+      expect(s.keys().length).toBeGreaterThan(1);
+      expect(s.keys().length).toBeLessThan(TOTAL);
+      // A card on screen is where the transform says it is.
+      const key = s.keys().find((entry) => entry !== 'ceo') as string;
+      const { x, y } = translateOf(s.card(key));
+      const view = canvasView(s.el);
+      const left = x * view.scale + view.x;
+      const top = y * view.scale + view.y;
+      expect(left).toBeGreaterThan(-400);
+      expect(left).toBeLessThan(1200);
+      expect(top).toBeGreaterThan(-400);
+      expect(top).toBeLessThan(1000);
+    });
+
+    it('moves focus to a card that is not rendered and brings it into view', async () => {
+      const s = await large();
+      document.body.append(s.el);
+      s.card('ceo').focus();
+      expect(s.cardOrNull('m59-4')).toBeNull();
+      key(s.card('ceo'), 'End');
+      s.render();
+      await flush();
+      s.render();
+      const last = s.card('m59-4');
+      expect(document.activeElement).toBe(last);
+      expect(last.getAttribute('tabindex')).toBe('0');
+      // The view followed: the card sits inside the viewport.
+      const { x, y } = translateOf(last);
+      const view = canvasView(s.el);
+      expect(x * view.scale + view.x).toBeGreaterThanOrEqual(0);
+      expect(x * view.scale + view.x + 200 * view.scale).toBeLessThanOrEqual(
+        800,
+      );
+      expect(y * view.scale + view.y).toBeGreaterThanOrEqual(0);
+      // The card that held the tab stop is far away and no longer rendered.
+      expect(s.cardOrNull('ceo')).toBeNull();
+    });
+
+    it('walks between far cards with the keyboard in reading order', async () => {
+      const s = await large();
+      document.body.append(s.el);
+      s.card('ceo').focus();
+      key(s.card('ceo'), 'ArrowDown');
+      s.render();
+      await flush();
+      expect(
+        (document.activeElement as HTMLElement | null)?.dataset['key'],
+      ).toBe('m0');
+      // `m0` was 33,000px away: the view moved to it.
+      expect(s.cardOrNull('m0-0')).not.toBeNull();
+      key(s.card('m0'), 'ArrowDown');
+      s.render();
+      await flush();
+      expect(
+        (document.activeElement as HTMLElement | null)?.dataset['key'],
+      ).toBe('m0-0');
+    });
+
+    it('keeps keyboard focus on a card while the view is dragged far away', async () => {
+      const s = await large();
+      document.body.append(s.el);
+      s.card('ceo').focus();
+      s.host.chart().panBy(33000, 0);
+      s.render();
+      expect(s.cardOrNull('m0')).not.toBeNull();
+      expect(document.activeElement).toBe(s.card('ceo'));
+    });
+
+    it('marks matches of a search on cards that are not rendered yet', async () => {
+      const s = await large((host) => host.search.set('member 59-4'));
+      s.render();
+      expect(s.host.chart().matchedKeys()).toEqual(['m59-4']);
+      expect(s.cardOrNull('m59-4')).toBeNull();
+      s.host.chart().scrollToNode('m59-4', { animate: false });
+      s.render();
+      const card = s.card('m59-4');
+      expect(card.hasAttribute('data-matched')).toBe(true);
+      expect(card.hasAttribute('data-highlighted')).toBe(true);
+      // The managers on the path to the match light up, the rest is dimmed.
+      expect(s.card('m59').hasAttribute('data-highlighted')).toBe(true);
+      const other = s.keys().find((entry) => /^m59-[0-3]$/.test(entry));
+      expect(other).toBeDefined();
+      expect(s.card(other as string).hasAttribute('data-dimmed')).toBe(true);
+    });
+
+    it('shows the selection on cards that scroll into view', async () => {
+      const s = await large((host) => host.selected.set(['m0-1']));
+      expect(s.cardOrNull('m0-1')).toBeNull();
+      s.host.chart().panBy(33000, 0);
+      s.render();
+      expect(s.card('m0-1').getAttribute('aria-selected')).toBe('true');
+      expect(s.card('m0-2').getAttribute('aria-selected')).toBe('false');
+    });
+
+    it('exports every card, not only the rendered ones', async () => {
+      const s = await large();
+      const svg = s.host.chart().exportSvg();
+      expect(svg).toContain('Member 59-4');
+      expect(svg).toContain('Member 0-0');
+      expect(svg.match(/<path /g)).toHaveLength(TOTAL - 1);
+    });
+
+    it('re-renders around the view when the chart is collapsed to fewer cards', async () => {
+      const s = await large();
+      s.host.chart().collapseAll();
+      s.render();
+      expect(s.keys()).toEqual(['ceo']);
+      expect(windowed(s)).toBe(false);
+      s.host.chart().expandAllNodes();
+      s.render();
+      expect(windowed(s)).toBe(true);
+      expect(s.keys().length).toBeLessThan(TOTAL / 4);
     });
   });
 

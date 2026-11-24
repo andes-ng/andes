@@ -23,9 +23,10 @@
   </div>
   } @else {
   <div
+    #canvas
     class="andes-org-chart__canvas"
     data-slot="org-chart-canvas"
-    [attr.data-smooth]="smoothView() ? '' : null"
+    [attr.data-smooth]="smoothAttr()"
     [style.width.px]="canvasWidth()"
     [style.height.px]="canvasHeight()"
     [style.transform]="canvasTransform()"
@@ -48,8 +49,8 @@
         [attr.data-to]="link.context.to"
         [attr.data-kind]="link.kind"
         [attr.data-highlighted]="link.highlighted ? '' : null"
-        [animate.enter]="enterClass()"
-        (animate.leave)="onLinkLeave($event)"
+        [animate.enter]="link.enterClass"
+        (animate.leave)="onLinkLeave($event, link.context.to)"
       >
         @if (resolvedConnectorTemplate(); as connectorTemplate) {
         <ng-container
@@ -70,8 +71,8 @@
         data-slot="org-chart-secondary-link"
         data-kind="secondary"
         [class]="link.classes"
-        [animate.enter]="enterClass()"
-        (animate.leave)="onLinkLeave($event)"
+        [animate.enter]="link.enterClass"
+        (animate.leave)="onLinkLeave($event, link.context.to)"
       >
         @if (resolvedConnectorTemplate(); as connectorTemplate) {
         <ng-container
@@ -137,7 +138,7 @@
         [style.width.px]="node.width"
         [style.height.px]="node.height"
         [style.transform]="'translate(' + node.x + 'px, ' + node.y + 'px)'"
-        [animate.enter]="enterClass()"
+        [animate.enter]="node.enterClass"
         (animate.leave)="onNodeLeave($event, node)"
         (click)="onNodeClick(node, $event)"
         (dblclick)="onNodeDblClick(node, $event)"

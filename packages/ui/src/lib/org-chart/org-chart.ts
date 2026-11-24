@@ -272,6 +272,29 @@ const CANVAS_PADDING = 32;
  */
 const BULK_ANIMATION_LIMIT = 150;
 
+/**
+ * Charts with more visible cards than this render only the cards near the viewport (see
+ * `virtualizeAbove`).
+ */
+const DEFAULT_VIRTUALIZE_ABOVE = 150;
+
+/**
+ * How far past the viewport cards are kept rendered, as a fraction of the viewport on each
+ * side, and the least distance in canvas pixels. A pan only touches the DOM once the viewport
+ * leaves that area, so a drag renders nothing on most frames.
+ */
+const WINDOW_MARGIN = 0.4;
+const MIN_WINDOW_MARGIN = 200;
+
+/** The render area is rebuilt when it grows more than this many times past what is needed. */
+const MAX_WINDOW_SLACK = 6;
+
+/** What a not yet measured viewport is assumed to be, so a large chart never renders in full. */
+const FALLBACK_VIEWPORT = { width: 1600, height: 1000 } as const;
+
+/** Room the toggle button and focus ring take outside a card's box. */
+const CARD_OVERHANG = 28;
+
 /** Pointer travel before a press on the chart becomes a pan instead of a click. */
 const PAN_THRESHOLD = 4;
 
@@ -352,6 +375,8 @@ interface NodeView<T> {
    * the team is closed: the stylesheet centers the toggle on the edge then.
    */
   readonly toggleAt: { readonly x: number; readonly y: number } | null;
+  /** Class that plays the grow-from-the-manager animation, `''` when the card does not. */
+  readonly enterClass: string;
 }
 
 /** A connector as the template renders it. */
@@ -363,6 +388,38 @@ interface LinkView<T> {
   readonly classes: string | null;
   readonly label: string | null;
   readonly context: AndesOrgChartConnectorContext<T>;
+  /** Class that plays the fade-in animation, `''` when the line does not. */
+  readonly enterClass: string;
+}
+
+/** The area of the canvas whose cards and connectors are rendered, in canvas pixels. */
+interface RenderArea {
+  readonly left: number;
+  readonly top: number;
+  readonly right: number;
+  readonly bottom: number;
+}
+
+/**
+ * Where every card and connector of the current layout is, as flat arrays: finding what is near
+ * the viewport is one pass over numbers, with no object per card.
+ */
+interface Placement<T> {
+  readonly records: readonly OrgChartRecord<T>[];
+  readonly indexOf: ReadonlyMap<AndesOrgChartKey, number>;
+  readonly cardLeft: Float64Array;
+  readonly cardTop: Float64Array;
+  readonly cardRight: Float64Array;
+  readonly cardBottom: Float64Array;
+  readonly linkLeft: Float64Array;
+  readonly linkTop: Float64Array;
+  readonly linkRight: Float64Array;
+  readonly linkBottom: Float64Array;
+  /** Where each manager's connectors leave its card (canvas-relative to the card's box). */
+  readonly exits: ReadonlyMap<
+    AndesOrgChartKey,
+    { readonly x: number; readonly y: number }
+  >;
 }
 
 /**
@@ -381,6 +438,10 @@ interface LinkView<T> {
  *   collapse or go to the manager (mirrored right to left), Home/End, `*` expands the
  *   siblings, typing jumps by name, Alt+Down/Alt+Up expand/collapse, Enter/Space select,
  *   `+`/`-` zoom and `0` fits the chart. A card that receives focus is panned into view.
+ * - **Large charts**: with more than `virtualizeAbove` visible cards only the cards and connectors
+ *   near the viewport are in the page, so panning, zooming, searching and expanding cost what is
+ *   on screen rather than the size of the organization. Moving focus to a card that is not
+ *   rendered renders it and pans it into view.
  *
  * Styling is through CSS custom properties (`--andes-org-chart-*`), see the stylesheet.
  */
@@ -425,6 +486,7 @@ interface LinkView<T> {
     '[attr.data-children-side]': 'childrenSide()',
     '[attr.data-motion]': "motion() ? '' : null",
     '[attr.data-ready]': "ready() ? '' : null",
+    '[attr.data-windowed]': "windowing() ? '' : null",
     '[attr.data-panning]': "panning() ? '' : null",
     '[attr.data-searching]': "searching() ? '' : null",
     '[attr.data-connector]': 'connector()',
@@ -545,6 +607,15 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
   readonly animated = input(true, { transform: booleanAttribute });
   /** Length of the animations, in milliseconds. */
   readonly animationDuration = input(280, { transform: numberAttribute });
+  /**
+   * With more visible cards than this, only the cards and connectors near the viewport are in
+   * the page (every card keeps its `aria-posinset` and `aria-setsize`, and keyboard focus,
+   * `scrollToNode` and `fitView` still reach the ones that are not). Pass `Infinity` to always
+   * render every card.
+   */
+  readonly virtualizeAbove = input(DEFAULT_VIRTUALIZE_ABOVE, {
+    transform: numberAttribute,
+  });
 
   // ------------------------------------------------------------------ templates and classes
 
@@ -677,8 +748,14 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
     y: 0,
     scale: 1,
   });
-  /** Whether the next view change should animate. */
-  private readonly smooth = signal(false);
+  /**
+   * Whether the view change in flight animates. A plain field: the canvas transform is written
+   * straight to the element, so panning and zooming never go through Angular.
+   */
+  private smoothNow = false;
+  private readonly canvasRef = viewChild<ElementRef<HTMLElement>>('canvas');
+  /** The area of the canvas that is rendered; `null` renders everything. */
+  private readonly renderArea = signal<RenderArea | null>(null);
   protected readonly panning = signal(false);
   protected readonly ready = signal(false);
 
@@ -775,14 +852,25 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
     for (const record of this.inOrder()) {
       const hit = custom
         ? custom(record.data, query)
-        : normalizeText(record.name).includes(needle) ||
-          normalizeText(record.title).includes(needle);
+        : this.searchText(record).includes(needle);
       if (hit) {
         keys.push(record.key);
       }
     }
     return keys;
   });
+
+  /** Name and title as typed into the search box would be compared: normalized once per person. */
+  private readonly searchTexts = new WeakMap<OrgChartRecord<T>, string>();
+
+  private searchText(record: OrgChartRecord<T>): string {
+    let text = this.searchTexts.get(record);
+    if (text === undefined) {
+      text = `${normalizeText(record.name)}\u0000${normalizeText(record.title)}`;
+      this.searchTexts.set(record, text);
+    }
+    return text;
+  }
 
   private readonly matchedSet = computed(
     () => new Set<AndesOrgChartKey>(this.matchedKeys()),
@@ -933,8 +1021,200 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
     };
   }
 
+  // ------------------------------------------------------------------ windowing
+
+  /** Where each card and connector of the layout is, as flat arrays. */
+  private readonly placement = computed<Placement<T>>(() => {
+    const layout = this.layout();
+    const records = this.visible().records;
+    const count = records.length;
+    const indexOf = new Map<AndesOrgChartKey, number>();
+    const cardLeft = new Float64Array(count);
+    const cardTop = new Float64Array(count);
+    const cardRight = new Float64Array(count);
+    const cardBottom = new Float64Array(count);
+    for (let index = 0; index < count; index++) {
+      const key = records[index].key;
+      const box = layout.boxes.get(key) as AndesOrgChartBox;
+      indexOf.set(key, index);
+      cardLeft[index] = box.x + CANVAS_PADDING;
+      cardTop[index] = box.y + CANVAS_PADDING;
+      cardRight[index] = box.x + CANVAS_PADDING + box.width;
+      cardBottom[index] = box.y + CANVAS_PADDING + box.height;
+    }
+    const links = layout.links;
+    const linkLeft = new Float64Array(links.length);
+    const linkTop = new Float64Array(links.length);
+    const linkRight = new Float64Array(links.length);
+    const linkBottom = new Float64Array(links.length);
+    const exits = new Map<AndesOrgChartKey, { x: number; y: number }>();
+    for (let index = 0; index < links.length; index++) {
+      const link = links[index];
+      let left = Infinity;
+      let top = Infinity;
+      let right = -Infinity;
+      let bottom = -Infinity;
+      for (const point of link.points) {
+        left = Math.min(left, point.x);
+        top = Math.min(top, point.y);
+        right = Math.max(right, point.x);
+        bottom = Math.max(bottom, point.y);
+      }
+      linkLeft[index] = left + CANVAS_PADDING;
+      linkTop[index] = top + CANVAS_PADDING;
+      linkRight[index] = right + CANVAS_PADDING;
+      linkBottom[index] = bottom + CANVAS_PADDING;
+      if (!exits.has(link.from)) {
+        exits.set(link.from, link.points[0]);
+      }
+    }
+    return {
+      records,
+      indexOf,
+      cardLeft,
+      cardTop,
+      cardRight,
+      cardBottom,
+      linkLeft,
+      linkTop,
+      linkRight,
+      linkBottom,
+      exits,
+    };
+  });
+
+  /** Whether the chart is large enough to render only what is near the viewport. */
+  protected readonly windowing = computed(
+    () => this.visible().records.length > this.virtualizeAbove(),
+  );
+
+  /**
+   * The cards to render: the ones in the render area, and the card that holds the tab stop (it
+   * is where keyboard focus lives, so it stays in the page however far the view moves).
+   */
+  private readonly renderedIndices = computed<readonly number[]>(() => {
+    const placement = this.placement();
+    const count = placement.records.length;
+    const area = this.activeArea();
+    if (!area) {
+      return Array.from({ length: count }, (_, index) => index);
+    }
+    const tabbable = this.navigation.tabbableKey();
+    const pinned =
+      tabbable === null ? -1 : (placement.indexOf.get(tabbable) ?? -1);
+    const { cardLeft, cardTop, cardRight, cardBottom } = placement;
+    const left = area.left - CARD_OVERHANG;
+    const top = area.top - CARD_OVERHANG;
+    const right = area.right + CARD_OVERHANG;
+    const bottom = area.bottom + CARD_OVERHANG;
+    const indices: number[] = [];
+    for (let index = 0; index < count; index++) {
+      if (
+        index === pinned ||
+        (cardRight[index] >= left &&
+          cardLeft[index] <= right &&
+          cardBottom[index] >= top &&
+          cardTop[index] <= bottom)
+      ) {
+        indices.push(index);
+      }
+    }
+    return indices;
+  });
+
+  /** The part of the canvas the viewport shows right now, in canvas pixels. */
+  private seenArea(): RenderArea {
+    const measured = this.viewportSize.measured();
+    const size = measured ? this.viewportSize.size() : FALLBACK_VIEWPORT;
+    const { x, y, scale } = this.view();
+    return {
+      left: -x / scale,
+      top: -y / scale,
+      right: (size.width - x) / scale,
+      bottom: (size.height - y) / scale,
+    };
+  }
+
+  /** The seen area with the margin of cards kept rendered around it. */
+  private paddedArea(seen: RenderArea): RenderArea {
+    const marginX = Math.max(
+      (seen.right - seen.left) * WINDOW_MARGIN,
+      MIN_WINDOW_MARGIN,
+    );
+    const marginY = Math.max(
+      (seen.bottom - seen.top) * WINDOW_MARGIN,
+      MIN_WINDOW_MARGIN,
+    );
+    return {
+      left: seen.left - marginX,
+      top: seen.top - marginY,
+      right: seen.right + marginX,
+      bottom: seen.bottom + marginY,
+    };
+  }
+
+  /** The area to render, `null` when the whole chart is. */
+  private readonly activeArea = computed<RenderArea | null>(() => {
+    if (!this.windowing()) {
+      return null;
+    }
+    // Before the first sync (the effect that keeps it runs with the first change detection)
+    // the area around the starting view stands in, so a large chart never renders in full.
+    return (
+      this.renderArea() ?? untracked(() => this.paddedArea(this.seenArea()))
+    );
+  });
+
+  /**
+   * Keeps the render area around the viewport. The area is only rebuilt when the viewport
+   * leaves it (or it has grown far past what is needed, after zooming in), so most pan frames
+   * change nothing; `grow` keeps the area the move starts from too, for moves that animate.
+   */
+  private syncRenderArea(grow = false): void {
+    if (!this.windowing()) {
+      if (this.renderArea() !== null) {
+        this.renderArea.set(null);
+      }
+      return;
+    }
+    const seen = this.seenArea();
+    const area = this.renderArea();
+    if (
+      area &&
+      area.left <= seen.left &&
+      area.top <= seen.top &&
+      area.right >= seen.right &&
+      area.bottom >= seen.bottom &&
+      (area.right - area.left) * (area.bottom - area.top) <=
+        (seen.right - seen.left) * (seen.bottom - seen.top) * MAX_WINDOW_SLACK
+    ) {
+      return;
+    }
+    let next = this.paddedArea(seen);
+    if (grow && area) {
+      const hull = {
+        left: Math.min(area.left, next.left),
+        top: Math.min(area.top, next.top),
+        right: Math.max(area.right, next.right),
+        bottom: Math.max(area.bottom, next.bottom),
+      };
+      if (
+        (hull.right - hull.left) * (hull.bottom - hull.top) <=
+        (next.right - next.left) * (next.bottom - next.top) * 3
+      ) {
+        next = hull;
+      }
+    }
+    this.renderArea.set(next);
+  }
+
+  /**
+   * The cards as the template renders them: only the ones near the viewport in a large chart,
+   * each with the state it shows. Nothing here runs while the view pans inside the render area.
+   */
   protected readonly nodes = computed<readonly NodeView<T>[]>(() => {
     const layout = this.layout();
+    const placement = this.placement();
     const nodeClass = this.nodeClass();
     const countMode = this.toggleCount();
     const collapsible = this.collapsible();
@@ -942,20 +1222,18 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
     const half = this.checkedTree.halfChecked();
     const roots = this.tree().roots;
     const position = this.siblingIndex();
-    const exits = new Map<AndesOrgChartKey, { x: number; y: number }>();
-    for (const link of layout.links) {
-      if (!exits.has(link.from)) {
-        exits.set(link.from, link.points[0]);
-      }
-    }
+    const entering = this.enteringKeys();
+    const enterClass = entering ? 'andes-org-chart--entering' : '';
     const views: NodeView<T>[] = [];
-    for (const record of this.visible().records) {
+    for (const index of this.renderedIndices()) {
+      const record = placement.records[index];
       const box = layout.boxes.get(record.key) as AndesOrgChartBox;
       const parent = record.parent
         ? (layout.boxes.get(record.parent.key) ?? box)
         : box;
       const context = this.contextFor(record);
       const siblings = record.parent?.children ?? roots;
+      const exit = placement.exits.get(record.key);
       views.push({
         key: record.key,
         record,
@@ -976,10 +1254,7 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
         posInSet: (position.get(record.key) ?? 0) + 1,
         setSize: siblings.length,
         toggleable: collapsible && context.expandable,
-        toggleAt: (() => {
-          const exit = exits.get(record.key);
-          return exit ? { x: exit.x - box.x, y: exit.y - box.y } : null;
-        })(),
+        toggleAt: exit ? { x: exit.x - box.x, y: exit.y - box.y } : null,
         checkState: !checkable
           ? 'false'
           : context.selected
@@ -996,6 +1271,7 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
                   ? record.descendants
                   : record.children.length,
               ),
+        enterClass: entering?.has(record.key) ? enterClass : '',
       });
     }
     return views;
@@ -1006,24 +1282,54 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
     return typeof value === 'function' ? (value(info) ?? null) : value;
   }
 
+  /** The path of each connector, drawn when it first comes near the viewport. */
+  private readonly linkPaths = computed(() => {
+    this.layout();
+    this.connector();
+    this.connectorRadius();
+    return new Map<number, string>();
+  });
+
+  private linkPathAt(index: number, cache: Map<number, string> | null): string {
+    const cached = cache?.get(index);
+    if (cached !== undefined) {
+      return cached;
+    }
+    const link = this.layout().links[index];
+    const d = andesOrgChartLinkPath(
+      link.points.map((point) => ({
+        x: point.x + CANVAS_PADDING,
+        y: point.y + CANVAS_PADDING,
+      })),
+      link.kind,
+      this.connector(),
+      this.connectorRadius(),
+    );
+    cache?.set(index, d);
+    return d;
+  }
+
   protected readonly links = computed<readonly LinkView<T>[]>(() => {
     const layout = this.layout();
+    const placement = this.placement();
     const byKey = this.tree().byKey;
     const path = this.pathSet();
-    const style = this.connector();
-    const radius = this.connectorRadius();
-    const offset = (point: { x: number; y: number }) => ({
-      x: point.x + CANVAS_PADDING,
-      y: point.y + CANVAS_PADDING,
-    });
+    const cache = this.linkPaths();
+    const entering = this.enteringKeys();
+    const area = this.activeArea();
     const views: LinkView<T>[] = [];
-    for (const link of layout.links) {
-      const d = andesOrgChartLinkPath(
-        link.points.map(offset),
-        link.kind,
-        style,
-        radius,
-      );
+    for (let index = 0; index < layout.links.length; index++) {
+      if (
+        area &&
+        (placement.linkRight[index] < area.left ||
+          placement.linkLeft[index] > area.right ||
+          placement.linkBottom[index] < area.top ||
+          placement.linkTop[index] > area.bottom)
+      ) {
+        continue;
+      }
+      const link = layout.links[index];
+      const d = this.linkPathAt(index, cache);
       const fromData = byKey.get(link.from)?.data as T;
       const toData = byKey.get(link.to)?.data as T;
       const highlighted = path.has(link.from) && path.has(link.to);
@@ -1042,12 +1348,14 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
         classes: this.linkClass(info),
         label: null,
         context: { ...info, $implicit: d, d, highlighted },
+        enterClass: entering?.has(link.to) ? 'andes-org-chart--entering' : '',
       });
     }
     return views;
   });
 
-  protected readonly secondaryViews = computed<readonly LinkView<T>[]>(() => {
+  /** Every dotted-line link whose both cards are placed, with its geometry. */
+  private readonly secondaryAll = computed(() => {
     const layout = this.layout();
     const byKey = this.tree().byKey;
     const pad = (box: AndesOrgChartBox): AndesOrgChartBox => ({
@@ -1055,41 +1363,87 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
       x: box.x + CANVAS_PADDING,
       y: box.y + CANVAS_PADDING,
     });
-    const views: LinkView<T>[] = [];
+    const items: {
+      readonly link: AndesOrgChartSecondaryLink;
+      readonly d: string;
+      readonly area: RenderArea;
+      readonly info: AndesOrgChartConnectorInfo<T>;
+    }[] = [];
     for (const link of this.secondaryLinks()) {
       const from = layout.boxes.get(link.from);
       const to = layout.boxes.get(link.to);
       if (!from || !to || link.from === link.to) {
         continue;
       }
-      const d = andesOrgChartSecondaryPath(pad(from), pad(to));
-      const info = {
-        from: link.from,
-        to: link.to,
-        kind: 'secondary' as const,
-        fromData: byKey.get(link.from)?.data as T,
-        toData: byKey.get(link.to)?.data as T,
-      };
-      const classes = [this.linkClass(info), link.class]
-        .filter(Boolean)
-        .join(' ');
-      views.push({
-        id: `${String(link.from)}\u0001${String(link.to)}`,
-        d,
-        kind: 'secondary',
-        highlighted: false,
-        classes: classes || null,
-        label: link.label ?? null,
-        context: { ...info, $implicit: d, d, highlighted: false },
+      const a = pad(from);
+      const b = pad(to);
+      items.push({
+        link,
+        d: andesOrgChartSecondaryPath(a, b),
+        area: {
+          left: Math.min(a.x, b.x),
+          top: Math.min(a.y, b.y),
+          right: Math.max(a.x + a.width, b.x + b.width),
+          bottom: Math.max(a.y + a.height, b.y + b.height),
+        },
+        info: {
+          from: link.from,
+          to: link.to,
+          kind: 'secondary' as const,
+          fromData: byKey.get(link.from)?.data as T,
+          toData: byKey.get(link.to)?.data as T,
+        },
       });
     }
-    return views;
+    return items;
   });
 
-  protected readonly canvasTransform = computed(() => {
-    const { x, y, scale } = this.view();
-    return `translate(${x}px, ${y}px) scale(${scale})`;
+  private secondaryView(
+    item: ReturnType<typeof this.secondaryAll>[number],
+  ): LinkView<T> {
+    const { link, d, info } = item;
+    const classes = [this.linkClass(info), link.class]
+      .filter(Boolean)
+      .join(' ');
+    return {
+      id: `${String(link.from)}\u0001${String(link.to)}`,
+      d,
+      kind: 'secondary',
+      highlighted: false,
+      classes: classes || null,
+      label: link.label ?? null,
+      context: { ...info, $implicit: d, d, highlighted: false },
+      enterClass: this.enteringKeys() ? 'andes-org-chart--entering' : '',
+    };
+  }
+
+  protected readonly secondaryViews = computed<readonly LinkView<T>[]>(() => {
+    const area = this.activeArea();
+    return this.secondaryAll()
+      .filter(
+        ({ area: box }) =>
+          !area ||
+          (box.right >= area.left &&
+            box.left <= area.right &&
+            box.bottom >= area.top &&
+            box.top <= area.bottom),
+      )
+      .map((item) => this.secondaryView(item));
   });
+
+  /**
+   * The transform of the canvas. Read without tracking on purpose: pans and zooms write it to
+   * the element themselves (see {@link paintView}), so the template never re-runs for a frame
+   * and this only seeds the element the first time it is created.
+   */
+  protected canvasTransform(): string {
+    const { x, y, scale } = untracked(this.view);
+    return `translate(${x}px, ${y}px) scale(${scale})`;
+  }
+
+  protected smoothAttr(): '' | null {
+    return this.smoothNow ? '' : null;
+  }
 
   /** Zoom as a whole percentage, for the controls. */
   protected readonly zoomPercent = computed(
@@ -1288,6 +1642,21 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
         }
       });
     });
+
+    // The render area follows the viewport size and the chart growing past the threshold.
+    effect(() => {
+      this.windowing();
+      this.viewportSize.size();
+      this.viewportSize.measured();
+      untracked(() => this.syncRenderArea());
+    });
+
+    // Keyboard navigation reached a card that is not rendered: bring its place into view. The
+    // card is rendered as soon as it holds the tab stop and takes focus when it appears.
+    const reveal = navigation.revealRequested.subscribe(({ key }) =>
+      this.revealNode(key),
+    );
+    this.destroyRef.onDestroy(() => reveal.unsubscribe());
 
     afterNextRender(() => {
       this.domDirection.set(this.readDirection());
@@ -1566,9 +1935,18 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
 
   // ------------------------------------------------------------------ view
 
+  /**
+   * Moves the view. The canvas is written directly (transform, and whether it eases), so a pan
+   * or zoom frame costs one style write; Angular only gets involved when the cards near the
+   * viewport change (see {@link syncRenderArea}) or the zoom label does.
+   */
   private emitView(next: AndesOrgChartViewport, animate: boolean): void {
-    this.smooth.set(animate && this.motion());
+    this.smoothNow = animate && this.motion();
     const current = this.view();
+    const canvas = this.canvasRef()?.nativeElement;
+    if (canvas) {
+      this.paintView(canvas, next);
+    }
     if (
       current.x === next.x &&
       current.y === next.y &&
@@ -1577,39 +1955,65 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
       return;
     }
     this.view.set(next);
+    this.syncRenderArea(this.smoothNow);
     this.viewportChange.emit(next);
   }
 
-  protected readonly smoothView = this.smooth.asReadonly();
+  private paintView(canvas: HTMLElement, view: AndesOrgChartViewport): void {
+    if (this.smoothNow) {
+      canvas.setAttribute('data-smooth', '');
+    } else {
+      canvas.removeAttribute('data-smooth');
+    }
+    canvas.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.scale})`;
+  }
 
-  /** How many cards the last change added and removed. */
+  /** How many cards the last change added and removed, and which ones are new. */
   private readonly churn = linkedSignal<
-    readonly NodeView<T>[],
-    { readonly entering: number; readonly leaving: number }
+    readonly OrgChartRecord<T>[],
+    {
+      readonly entering: number;
+      readonly leaving: number;
+      readonly fresh: ReadonlySet<AndesOrgChartKey> | null;
+      readonly at: number;
+    }
   >({
-    source: () => this.nodes(),
-    computation: (views, previous) => {
+    source: () => this.visible().records,
+    computation: (records, previous) => {
       if (!previous) {
-        return { entering: 0, leaving: 0 };
+        return { entering: 0, leaving: 0, fresh: null, at: 0 };
       }
-      const before = new Set(previous.source.map((view) => view.key));
-      const after = new Set(views.map((view) => view.key));
-      let entering = 0;
-      for (const key of after) {
-        entering += before.has(key) ? 0 : 1;
+      const before = new Set(previous.source.map((record) => record.key));
+      const fresh = new Set<AndesOrgChartKey>();
+      for (const record of records) {
+        if (!before.has(record.key)) {
+          fresh.add(record.key);
+        }
       }
-      return { entering, leaving: before.size - (after.size - entering) };
+      return {
+        entering: fresh.size,
+        leaving: before.size - (records.length - fresh.size),
+        fresh,
+        at: Date.now(),
+      };
     },
   });
 
-  /** The class that plays the grow-from-the-manager animation on new cards and lines. */
-  protected readonly enterClass = computed(() =>
-    this.ready() &&
-    this.motion() &&
-    this.churn().entering <= BULK_ANIMATION_LIMIT
-      ? 'andes-org-chart--entering'
-      : '',
-  );
+  /**
+   * The cards and lines that play the grow-from-the-manager animation: the ones a recent change
+   * added, unless there are so many that animating them costs more than it shows. A card that
+   * only comes into the render area because the view moved never animates.
+   */
+  private enteringKeys(): ReadonlySet<AndesOrgChartKey> | null {
+    const { entering, fresh, at } = this.churn();
+    return fresh &&
+      this.ready() &&
+      this.motion() &&
+      entering <= BULK_ANIMATION_LIMIT &&
+      Date.now() - at < this.animationDuration() + 200
+      ? fresh
+      : null;
+  }
 
   private animateLeave(): boolean {
     return (
@@ -1812,28 +2216,36 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
         .replace(/"/g, '&quot;');
     const width = this.canvasWidth();
     const height = this.canvasHeight();
+    const layout = this.layout();
+    const colors = this.levelColors();
     const parts: string[] = [
       `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
       background
         ? `<rect width="${width}" height="${height}" fill="${escape(background)}"/>`
         : '',
       `<g fill="none" stroke="${escape(border)}" stroke-width="1.5">`,
-      ...this.links().map((link) => `<path d="${link.d}"/>`),
-      ...this.secondaryViews().map(
-        (link) => `<path d="${link.d}" stroke-dasharray="6 4"/>`,
-      ),
-      '</g>',
     ];
-    for (const node of this.nodes()) {
-      const accent = node.context.color;
+    // Every card and line of the chart, not only the ones rendered near the viewport.
+    for (let index = 0; index < layout.links.length; index++) {
+      parts.push(`<path d="${this.linkPathAt(index, null)}"/>`);
+    }
+    for (const { d } of this.secondaryAll()) {
+      parts.push(`<path d="${d}" stroke-dasharray="6 4"/>`);
+    }
+    parts.push('</g>');
+    for (const record of this.visible().records) {
+      const box = layout.boxes.get(record.key) as AndesOrgChartBox;
+      const accent =
+        record.color ??
+        (colors.length ? colors[record.depth % colors.length] : null);
       parts.push(
-        `<g transform="translate(${node.x} ${node.y})">`,
-        `<rect width="${node.width}" height="${node.height}" rx="8" fill="${escape(card)}" stroke="${escape(border)}"/>`,
+        `<g transform="translate(${box.x + CANVAS_PADDING} ${box.y + CANVAS_PADDING})">`,
+        `<rect width="${box.width}" height="${box.height}" rx="8" fill="${escape(card)}" stroke="${escape(border)}"/>`,
         accent
-          ? `<rect width="4" height="${node.height}" rx="2" fill="${escape(accent)}"/>`
+          ? `<rect width="4" height="${box.height}" rx="2" fill="${escape(accent)}"/>`
           : '',
-        `<text x="16" y="${node.height / 2 - 4}" font-family="sans-serif" font-size="14" font-weight="600" fill="${escape(text)}">${escape(node.record.name)}</text>`,
-        `<text x="16" y="${node.height / 2 + 14}" font-family="sans-serif" font-size="12" fill="${escape(muted)}">${escape(node.record.title)}</text>`,
+        `<text x="16" y="${box.height / 2 - 4}" font-family="sans-serif" font-size="14" font-weight="600" fill="${escape(text)}">${escape(record.name)}</text>`,
+        `<text x="16" y="${box.height / 2 + 14}" font-family="sans-serif" font-size="12" fill="${escape(muted)}">${escape(record.title)}</text>`,
         '</g>',
       );
     }
@@ -1845,6 +2257,8 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
    * The chart as a file of the given format: SVG, or a PNG, JPEG or WebP image. It is the chart
    * as it looks on screen (cards, templates, avatars, colors and theme), the whole canvas and
    * not just the part in view. An image is `scale` times the size of the canvas (2 by default).
+   * A chart large enough to be windowed (see `virtualizeAbove`) is drawn from its layout instead,
+   * as {@link exportSvg} does, so that every card is in the file.
    */
   async exportImage(
     format: AndesOrgChartExportFormat = 'png',
@@ -1861,10 +2275,12 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
       (format === 'jpeg'
         ? this.readColor('--andes-color-card', '#ffffff')
         : undefined);
-    // The document the user sees; the drawn summary is only the fallback of a chart not on screen.
-    const svg = canvas
-      ? await snapshotSvg(host, canvas, width, height, options.background)
-      : this.exportSvg(background);
+    // The document the user sees; the drawn summary is the fallback of a chart not on screen and
+    // of a windowed chart, whose page holds only the cards near the viewport.
+    const svg =
+      canvas && !this.windowing()
+        ? await snapshotSvg(host, canvas, width, height, options.background)
+        : this.exportSvg(background);
     return exportBlob(svg, width, height, format, { ...options, background });
   }
 
@@ -1975,7 +2391,8 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
     view: NodeView<T>,
   ): void {
     const element = event.target as HTMLElement;
-    if (!this.animateLeave()) {
+    if (!this.animateLeave() || this.layout().boxes.has(view.key)) {
+      // A card that is still on the chart only left the render area: nothing to animate.
       event.animationComplete();
       return;
     }
@@ -1998,9 +2415,12 @@ export class AndesOrgChart<T = unknown> implements OrgChartNodeHost {
   }
 
   /** Connectors fade out when they leave. */
-  protected onLinkLeave(event: AnimationCallbackEvent): void {
+  protected onLinkLeave(
+    event: AnimationCallbackEvent,
+    to: AndesOrgChartKey,
+  ): void {
     const element = event.target as SVGElement;
-    if (!this.animateLeave()) {
+    if (!this.animateLeave() || this.layout().boxes.has(to)) {
       event.animationComplete();
       return;
     }

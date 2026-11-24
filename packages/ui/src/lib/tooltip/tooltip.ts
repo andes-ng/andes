@@ -785,6 +785,9 @@ export class AndesTooltip {
       return;
     }
     this.openSource = source;
+    // A close that was still fading out and is now undone must not lend its source to
+    // whatever closes the tooltip next.
+    this.closeSource = null;
 
     // A disabled trigger is `pointer-events: none` inside the host, which
     // has turned `inline-block` around it - anchor to that wrapper, so the

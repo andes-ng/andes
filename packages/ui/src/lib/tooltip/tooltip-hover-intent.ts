@@ -363,6 +363,9 @@ export class AndesTooltipHoverIntent {
     this.clearTimers();
 
     if (
+      // Still fading out: the tooltip is on screen, so it comes back at once rather than
+      // after `openDelay` - a timer that the close finishing would cancel anyway.
+      this.overlay.panelElement() !== null ||
       this.group.wasRecentlyClosed(this.config.instantReopenWindow) ||
       (this.config.unique && this.group.hasOpen())
     ) {

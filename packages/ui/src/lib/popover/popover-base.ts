@@ -526,7 +526,7 @@ export abstract class AndesPopoverBase {
 
   /** Opens if closed, closes if open. */
   toggle(): void {
-    if (this.open()) {
+    if (this.open() && !this.isLeaving()) {
       this.requestClose('imperative');
     } else {
       this.requestOpen('click', 'imperative');
@@ -599,7 +599,7 @@ export abstract class AndesPopoverBase {
     if (blocked || !this.triggerActions().has('click')) {
       return;
     }
-    if (!this.open()) {
+    if (!this.open() || this.isLeaving()) {
       this.requestOpen('click');
     } else if (this.openedBy === 'hover' || this.openedBy === 'focus') {
       // Clicking a hover/focus-opened panel pins it instead of closing it.
@@ -615,7 +615,7 @@ export abstract class AndesPopoverBase {
       return;
     }
     event.preventDefault();
-    if (!this.open()) {
+    if (!this.open() || this.isLeaving()) {
       this.requestOpen('click', 'contextMenu');
     } else if (this.openedBy === 'hover' || this.openedBy === 'focus') {
       this.pin();
@@ -628,7 +628,7 @@ export abstract class AndesPopoverBase {
       return;
     }
     this.cancelClose();
-    if (!this.open()) {
+    if (!this.open() || this.isLeaving()) {
       this.scheduleOpen();
     }
   }
@@ -741,7 +741,17 @@ export abstract class AndesPopoverBase {
     change?: AndesPopoverChangeSource,
   ): void {
     this.clearTimers();
-    if (this.disabled() || this.open()) {
+    if (this.disabled()) {
+      return;
+    }
+    if (this.open()) {
+      // The panel the model still counts as open is on its way out (Escape, a click
+      // outside): what the user sees is closed, so asking to open brings it back.
+      const template = this.panelTemplate();
+      if (this.isLeaving() && template) {
+        this.pendingSource = source;
+        this.present(template);
+      }
       return;
     }
     this.pendingSource = source;
@@ -757,6 +767,16 @@ export abstract class AndesPopoverBase {
     if (this.open()) {
       this.commit(false, source);
     }
+  }
+
+  /**
+   * Whether the panel is playing its exit animation. The overlay turns closed at once, but
+   * `open` only follows when it detaches (`closed`), so for that long the model says open
+   * about a panel the user sees closing. Not true between `open` being set and the panel
+   * being rendered: no pane exists yet.
+   */
+  private isLeaving(): boolean {
+    return !this.overlay.isOpen() && this.overlay.panelElement() !== null;
   }
 
   private commit(open: boolean, source: AndesPopoverChangeSource): void {
@@ -859,6 +879,8 @@ export abstract class AndesPopoverBase {
       restoreFocusTo: this.focusTarget ?? undefined,
     });
     this.applyZIndex();
+    // A panel brought back during its exit is still tracked from the first opening.
+    this.stopTracking();
     this.startTracking();
     afterNextRender(
       { read: () => this.reposition() },

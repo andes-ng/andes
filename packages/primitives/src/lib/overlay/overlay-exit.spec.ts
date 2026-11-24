@@ -514,6 +514,175 @@ describe('AndesOverlayPrimitive exit animations', () => {
       });
     });
 
+    describe('listeners while the pane is leaving', () => {
+      /**
+       * The document listeners the overlay holds, by type: `addEventListener` and
+       * `removeEventListener` are wrapped to keep the live set.
+       */
+      function trackDocumentListeners() {
+        const entries: { type: string; listener: unknown; capture: boolean }[] =
+          [];
+        const add = vi
+          .spyOn(document, 'addEventListener')
+          .mockImplementation(function (
+            this: Document,
+            type: string,
+            listener: EventListenerOrEventListenerObject,
+            options?: boolean | AddEventListenerOptions,
+          ) {
+            entries.push({
+              type,
+              listener,
+              capture:
+                options === true ||
+                (typeof options === 'object' && !!options?.capture),
+            });
+            return EventTarget.prototype.addEventListener.call(
+              this,
+              type,
+              listener,
+              options,
+            );
+          } as typeof document.addEventListener);
+        const remove = vi
+          .spyOn(document, 'removeEventListener')
+          .mockImplementation(function (
+            this: Document,
+            type: string,
+            listener: EventListenerOrEventListenerObject,
+            options?: boolean | EventListenerOptions,
+          ) {
+            const index = entries.findIndex(
+              (entry) => entry.type === type && entry.listener === listener,
+            );
+            if (index >= 0) {
+              entries.splice(index, 1);
+            }
+            return EventTarget.prototype.removeEventListener.call(
+              this,
+              type,
+              listener,
+              options,
+            );
+          } as typeof document.removeEventListener);
+        return {
+          // Capture-phase only: what the overlay adds, not what the CDK adds around it.
+          count: (type: string) =>
+            entries.filter((entry) => entry.type === type && entry.capture)
+              .length,
+          restore: () => {
+            add.mockRestore();
+            remove.mockRestore();
+          },
+        };
+      }
+
+      it('holds none of its document listeners while it leaves, nor after it left', async () => {
+        const exit = new FakeAnimation();
+        animations.pane = [exit];
+        const tracked = trackDocumentListeners();
+        try {
+          const { overlay, pane } = await createHost(
+            andesOverlayPreset('popover'),
+          );
+          // Follows the scrolling ancestors of the anchor, and hears clicks on the root.
+          expect(tracked.count('scroll')).toBe(1);
+          expect(tracked.count('click')).toBe(1);
+
+          overlay.close();
+          expect(pane.isConnected).toBe(true);
+          expect(tracked.count('scroll')).toBe(0);
+          expect(tracked.count('click')).toBe(0);
+
+          exit.finish();
+          await flushMicrotasks();
+          expect(pane.isConnected).toBe(false);
+          expect(tracked.count('scroll')).toBe(0);
+          expect(tracked.count('click')).toBe(0);
+        } finally {
+          tracked.restore();
+        }
+      });
+
+      it('stops reacting to the keyboard and to the page while it leaves', async () => {
+        animations.pane = [new FakeAnimation()];
+        const { fixture, overlay } = await createHost(
+          andesOverlayPreset('popover'),
+        );
+        const keys: string[] = [];
+        const outside: string[] = [];
+        overlay.keydownEvents.subscribe((event) => keys.push(event.key));
+        overlay.outsidePointerEvents.subscribe((event) =>
+          outside.push(event.type),
+        );
+        const outsideButton = fixture.nativeElement.querySelector(
+          '#elsewhere',
+        ) as HTMLElement;
+        const press = () =>
+          document.body.dispatchEvent(
+            new KeyboardEvent('keydown', {
+              key: 'a',
+              keyCode: 65,
+              bubbles: true,
+              cancelable: true,
+            }),
+          );
+        const clickOutside = () => {
+          outsideButton.dispatchEvent(
+            new MouseEvent('click', { bubbles: true, cancelable: true }),
+          );
+        };
+
+        press();
+        clickOutside();
+        expect(keys).toEqual(['a']);
+        expect(outside).toEqual(['click']);
+
+        overlay.close();
+        press();
+        clickOutside();
+        expect(keys).toEqual(['a']);
+        expect(outside).toEqual(['click']);
+      });
+
+      it('hears them again once the close is cancelled, and again holds the listeners', async () => {
+        animations.pane = [new FakeAnimation()];
+        const tracked = trackDocumentListeners();
+        try {
+          const { fixture, overlay, pane } = await createHost(
+            andesOverlayPreset('popover'),
+          );
+          const keys: string[] = [];
+          overlay.keydownEvents.subscribe((event) => keys.push(event.key));
+
+          overlay.close();
+          overlay.open(fixture.componentInstance.content());
+          fixture.detectChanges();
+          expect(overlay.panelElement()).toBe(pane);
+          expect(tracked.count('scroll')).toBe(1);
+          expect(tracked.count('click')).toBe(1);
+
+          document.body.dispatchEvent(
+            new KeyboardEvent('keydown', {
+              key: 'a',
+              keyCode: 65,
+              bubbles: true,
+              cancelable: true,
+            }),
+          );
+          expect(keys).toEqual(['a']);
+
+          // And it is dismissed again by the same means as before the cancelled close.
+          pressEscape();
+          expect(overlay.isOpen()).toBe(false);
+          expect(tracked.count('scroll')).toBe(0);
+          expect(tracked.count('click')).toBe(0);
+        } finally {
+          tracked.restore();
+        }
+      });
+    });
+
     describe('content that outlives the pane', () => {
       function createProjectedHost() {
         const fixture = TestBed.createComponent(ProjectedExitHost);

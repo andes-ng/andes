@@ -247,9 +247,9 @@ export class AndesDropdownMenu
         : booleanAttribute(value),
   });
   /** Hover-open delay in ms, for `trigger="hover"`. Default `150`. */
-  readonly mouseEnterDelay = input(150, { transform: numberAttribute });
+  readonly openDelay = input(150, { transform: numberAttribute });
   /** Hover-close grace period in ms, for `trigger="hover"`. Default `100`. */
-  readonly mouseLeaveDelay = input(100, { transform: numberAttribute });
+  readonly closeDelay = input(100, { transform: numberAttribute });
   /**
    * Wraps the menu in custom popup content. The template's `$implicit` (also `menu`)
    * is the menu panel to render with `ngTemplateOutlet`; `close` closes the popup. The
@@ -676,7 +676,7 @@ export class AndesDropdownMenu
     clearTimeout(this.hoverOpenTimer);
     this.hoverOpenTimer = setTimeout(
       () => this.showMenu('hover'),
-      this.mouseEnterDelay(),
+      this.openDelay(),
     );
   }
 
@@ -758,7 +758,7 @@ export class AndesDropdownMenu
     clearTimeout(this.hoverCloseTimer);
     this.hoverCloseTimer = setTimeout(
       () => this.hide('hover'),
-      this.mouseLeaveDelay(),
+      this.closeDelay(),
     );
   }
 

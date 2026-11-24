@@ -5,8 +5,8 @@ import type { TemplateRef } from '@angular/core';
  * `'context-menu'` open-change source.
  *
  * - `click` - a click (or Enter/Space, which a `<button>` turns into a click) toggles it.
- * - `hover` - pointer hover opens it after `mouseEnterDelay` and closes it
- *   `mouseLeaveDelay` after the pointer has left both the trigger and every open panel.
+ * - `hover` - pointer hover opens it after `openDelay` and closes it
+ *   `closeDelay` after the pointer has left both the trigger and every open panel.
  *   A click still *opens* a hover menu (never closes it), so it stays reachable by
  *   keyboard and touch.
  * - `contextMenu` - a right-click (or the context-menu key / Shift+F10) opens it at the

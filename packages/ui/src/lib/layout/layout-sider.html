@@ -1,0 +1,47 @@
+<aside class="panel" [attr.id]="id" [attr.aria-label]="label()">
+  <div class="body"><ng-content /></div>
+  @if (showTrigger()) {
+  <button
+    type="button"
+    class="trigger"
+    data-slot="layout-sider-trigger"
+    [attr.aria-label]="toggleLabel()"
+    [attr.aria-expanded]="!collapsed()"
+    [attr.aria-controls]="id"
+    (click)="toggle()"
+  >
+    @if (trigger(); as custom) {
+    <ng-container [ngTemplateOutlet]="custom" />
+    } @else {
+    <ng-icon
+      class="arrow"
+      name="lucideChevronLeft"
+      size="16"
+      [attr.data-pointing]="pointing()"
+    />
+    }
+  </button>
+  }
+</aside>
+@if (showZeroTrigger()) {
+<button
+  type="button"
+  class="zero-trigger"
+  data-slot="layout-sider-zero-trigger"
+  [attr.aria-label]="toggleLabel()"
+  [attr.aria-expanded]="!collapsed()"
+  [attr.aria-controls]="id"
+  (click)="toggle()"
+>
+  @if (trigger(); as custom) {
+  <ng-container [ngTemplateOutlet]="custom" />
+  } @else {
+  <ng-icon
+    class="arrow"
+    name="lucideChevronLeft"
+    size="16"
+    [attr.data-pointing]="pointing()"
+  />
+  }
+</button>
+}
